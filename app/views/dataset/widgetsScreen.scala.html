@@ -61,6 +61,11 @@
             populateFieldTypeaheadFromUrlAux(fieldPrefix, url, isFucus)
         }
 
+        function populateBooleanTypeahead(fieldPrefix, isFucus) {
+            var url = '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Boolean)).url)'
+            populateFieldTypeaheadFromUrlAux(fieldPrefix, url, isFucus)
+        }
+
         function populateMultiNumericalTypeahead(fieldPrefixes, isFucus) {
             var url = '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Integer, FieldTypeId.Double, FieldTypeId.Date)).url)'
             populateMultiFieldTypeaheadFromUrlAux(fieldPrefixes, url, isFucus)

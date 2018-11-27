@@ -426,6 +426,7 @@ class RCPredictionServiceImpl @Inject()(
 
     val correlationWidget = CorrelationWidgetSpec(
       fieldNames = weightFieldNames.take(15),
+      correlationType = CorrelationType.Pearson,
       displayOptions = BasicDisplayOptions(gridWidth = Some(6))
     )
 
@@ -445,7 +446,10 @@ class RCPredictionServiceImpl @Inject()(
 
     val boxPlotWidgets = weightFieldNames.take(10).map(BoxWidgetSpec(_, None))
 
-    val correlationWidget = CorrelationWidgetSpec(fieldNames = weightFieldNames.take(15))
+    val correlationWidget = CorrelationWidgetSpec(
+      fieldNames = weightFieldNames.take(15),
+      correlationType = CorrelationType.Pearson
+    )
 
     DataView(
       None,

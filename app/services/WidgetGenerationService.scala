@@ -134,6 +134,7 @@ class WidgetGenerationServiceImpl @Inject() (
           case p: CumulativeCountWidgetSpec => if (p.numericBinCount.isDefined && isScalar(p.fieldName)) Left(p) else Right(p)
           case p: TemplateHtmlWidgetSpec => Left(p)
           case p: GridDistributionCountWidgetSpec => Left(p)
+          case p: HeatmapAggWidgetSpec => Right(p)
           case p: ScatterWidgetSpec => Right(p)
           case p: HeatmapAggWidgetSpec => Right(p)
           case p: CorrelationWidgetSpec => Right(p)
@@ -711,8 +712,11 @@ class WidgetGenerationServiceImpl @Inject() (
         val minMaxValues = minMaxes
         aux(GridDistributionCountWidgetGenerator(minMaxValues(0), minMaxValues(1)))
 
-      case spec: CorrelationWidgetSpec =>
-        aux(CorrelationWidgetGenerator(Some(streamedCorrelationCalcParallelism)))
+      case spec: CorrelationWidgetSpec if spec.correlationType == CorrelationType.Pearson =>
+        aux(PearsonCorrelationWidgetGenerator(Some(streamedCorrelationCalcParallelism)))
+
+      case spec: CorrelationWidgetSpec if spec.correlationType == CorrelationType.Matthews =>
+        aux(MatthewsCorrelationWidgetGenerator(Some(streamedCorrelationCalcParallelism)))
 
       case spec: BasicStatsWidgetSpec =>
         aux(BasicStatsWidgetGenerator)

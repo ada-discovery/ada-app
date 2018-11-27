@@ -1,6 +1,6 @@
 package controllers.dataset
 
-import models.AggType
+import models.{AggType, CorrelationType}
 import org.incal.core.FilterCondition
 import org.incal.play.controllers.CrudController
 import play.api.mvc.{Action, AnyContent}
@@ -64,7 +64,8 @@ trait DataViewController extends CrudController[BSONObjectID] {
   ): Action[AnyContent]
 
   def addCorrelation(
-    dataViewId: BSONObjectID
+    dataViewId: BSONObjectID,
+    correlationType: CorrelationType.Value
   ): Action[AnyContent]
 
   def addHeatmap(

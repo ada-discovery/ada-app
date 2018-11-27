@@ -772,42 +772,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  override def getTable(
-    page: Int,
-    orderBy: String,
-    fieldNames: Seq[String],
-    filterOrId: FilterOrId
-  ) = Action.async { implicit request =>
-    val filterFuture = filterRepo.resolve(filterOrId)
-
-    val fieldsFuture = getFields(fieldNames)
-
-    for {
-    // use a given filter conditions or load one
-      resolvedFilter <- filterFuture
-
-      // get the fields
-      fields <- fieldsFuture
-
-      // create a name->field map
-      nameFieldMap = fields.map(field => (field.name, field)).toMap
-
-      // resolve criteria
-      criteria <- toCriteria(resolvedFilter.conditions)
-
-      // retrieve all the table items
-      tableItems <- getTableItems(page, orderBy, criteria, nameFieldMap, fieldNames)
-
-      // get the total count
-      count <- repo.count(criteria)
-    } yield {
-      val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy)
-      val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
-
-      Ok(dataset.view.viewTable(tablePage, Some(resolvedFilter), fieldsInOrder, true)(request, router))
-    }
-  }
-
   private def setBoxPlotMinMax(
     widgets: Seq[Traversable[Option[Widget]]]
   ): Seq[Traversable[Option[Widget]]] = {
@@ -1259,7 +1223,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }.recover(handleExceptions("a scatter"))
   }
 
-  override def getCorrelations(
+  override def getPearsonCorrelations(
     filterOrId: FilterOrId
   ) = AuthAction { implicit request => {
     for {
@@ -1268,19 +1232,19 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     } yield
 
       render {
-        case Accepts.Html() => Ok(dataset.correlation(
+        case Accepts.Html() => Ok(dataset.pearsonCorrelation(
           dataSetName,
           filter,
           setting.filterShowFieldStyle,
           dataSpaceTree
         ))
-        case Accepts.Json() => BadRequest("The function getCorrelations function doesn't support JSON response.")
+        case Accepts.Json() => BadRequest("The function getPearsonCorrelations function doesn't support JSON response.")
       }
 
-    }.recover(handleExceptions("a correlation"))
+    }.recover(handleExceptions("a Pearson correlation"))
   }
 
-  override def calcCorrelations(
+  override def calcPearsonCorrelations(
     filterOrId: FilterOrId
   ) = AuthAction { implicit request =>
     val fieldNames = request.body.asFormUrlEncoded.flatMap(_.get("fieldNames[]")).getOrElse(Nil)
@@ -1292,6 +1256,78 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         // generate the required widget(s)
         response <- fields match {
+          case Nil => Future(BadRequest(s"No fields provided."))
+
+          case _ =>
+            val widgetSpecs = Seq(
+              CorrelationWidgetSpec(
+                fieldNames,
+                CorrelationType.Pearson,
+                None,
+                BasicDisplayOptions(height = Some(Math.max(550, fields.size * 20)))
+              )
+            )
+
+            getFilterAndWidgetsCallbackAux(
+              widgetSpecs,
+              correlationsGenMethod,
+              filterOrId,
+              Some(processCorrelationsWidgets(fields.size))
+            )
+        }
+      } yield
+        response
+    }.recover(handleExceptions("Pearson correlations"))
+  }
+
+  private def processCorrelationsWidgets(fieldsCount: Int) = { widgets: Traversable[Widget] =>
+    // if we have more than 50 fields for performance purposed we round correlation to 3 decimal places
+    if (fieldsCount > 50) {
+      widgets.map {widget =>
+        if (widgets.isInstanceOf[HeatmapWidget]) {
+          val heatmapWidget = widget.asInstanceOf[HeatmapWidget]
+          val newData = heatmapWidget.data.map(_.map(_.map(value => Math.round(value * 1000).toDouble / 1000)))
+          heatmapWidget.copy(data = newData)
+        } else
+          widget
+      }
+    } else
+      widgets
+  }
+
+  override def getMatthewsCorrelations(
+    filterOrId: FilterOrId
+  ) = AuthAction { implicit request => {
+    for {
+    // get the filter (with labels), data set name, the data space tree, and the setting
+      (filter, dataSetName, dataSpaceTree, setting) <- getFilterAndEssentials(filterOrId)
+    } yield
+
+      render {
+        case Accepts.Html() => Ok(dataset.matthewsCorrelation(
+          dataSetName,
+          filter,
+          setting.filterShowFieldStyle,
+          dataSpaceTree
+        ))
+        case Accepts.Json() => BadRequest("The function getMatthewsCorrelations function doesn't support JSON response.")
+      }
+
+  }.recover(handleExceptions("a Matthews correlation"))
+  }
+
+  override def calcMatthewsCorrelations(
+    filterOrId: FilterOrId
+  ) = AuthAction { implicit request =>
+    val fieldNames = request.body.asFormUrlEncoded.flatMap(_.get("fieldNames[]")).getOrElse(Nil)
+
+    {
+      for {
+      // the correlation fields
+        fields <- getFields(fieldNames)
+
+        // generate the required widget(s)
+        response <- fields match {
           case Nil =>
             Future(BadRequest(s"No fields provided."))
 
@@ -1299,31 +1335,22 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             val widgetSpecs = Seq(
               CorrelationWidgetSpec(
                 fieldNames,
+                CorrelationType.Matthews,
                 None,
                 BasicDisplayOptions(height = Some(Math.max(550, fields.size * 20)))
               )
             )
 
-            val processCorrelationsWidgets = { widgets: Traversable[Widget] =>
-              // if we have more than 50 fields for performance purposed we round correlation to 3 decimal places
-              if (fields.size > 50) {
-                widgets.map {widget =>
-                  if (widgets.isInstanceOf[HeatmapWidget]) {
-                    val heatmapWidget = widget.asInstanceOf[HeatmapWidget]
-                    val newData = heatmapWidget.data.map(_.map(_.map(value => Math.round(value * 1000).toDouble / 1000)))
-                    heatmapWidget.copy(data = newData)
-                  } else
-                    widget
-                }
-              } else
-                widgets
-            }
-
-            getFilterAndWidgetsCallbackAux(widgetSpecs, correlationsGenMethod, filterOrId, Some(processCorrelationsWidgets))
+            getFilterAndWidgetsCallbackAux(
+              widgetSpecs,
+              correlationsGenMethod,
+              filterOrId,
+              Some(processCorrelationsWidgets(fields.size))
+            )
         }
       } yield
         response
-    }.recover(handleExceptions("correlations"))
+    }.recover(handleExceptions("Matthews correlations"))
   }
 
   override def getHeatmap(
@@ -1429,6 +1456,42 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
 
     }.recover(handleExceptions("a table"))
+  }
+
+  override def generateTable(
+    page: Int,
+    orderBy: String,
+    fieldNames: Seq[String],
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
+    val filterFuture = filterRepo.resolve(filterOrId)
+
+    val fieldsFuture = getFields(fieldNames)
+
+    for {
+    // use a given filter conditions or load one
+      resolvedFilter <- filterFuture
+
+      // get the fields
+      fields <- fieldsFuture
+
+      // create a name->field map
+      nameFieldMap = fields.map(field => (field.name, field)).toMap
+
+      // resolve criteria
+      criteria <- toCriteria(resolvedFilter.conditions)
+
+      // retrieve all the table items
+      tableItems <- getTableItems(page, orderBy, criteria, nameFieldMap, fieldNames)
+
+      // get the total count
+      count <- repo.count(criteria)
+    } yield {
+      val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy)
+      val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
+
+      Ok(dataset.view.viewTable(tablePage, Some(resolvedFilter), fieldsInOrder, true)(request, router))
+    }
   }
 
   override def getCategoriesWithFieldsAsTreeNodes(

@@ -17,7 +17,8 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val getScatter = routes.getScatter _ map route
   val getDistribution = routes.getDistribution _ map route
   val getCumulativeCount = routes.getCumulativeCount _ map route
-  val getCorrelations = routes.getCorrelations _ map route
+  val getPearsonCorrelations = routes.getPearsonCorrelations _ map route
+  val getMatthewsCorrelations = routes.getMatthewsCorrelations _ map route
   val getHeatmap = routes.getHeatmap _ map route
   val getClusterization = routeFun(_.getClusterization)
   val getIndependenceTest = routes.getIndependenceTest _ map route
@@ -28,7 +29,7 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val runSeriesTransformation = routeFun(_.runSeriesTransformation)
   val getFractalis = routes.getFractalis _ map route
   val getTableScreen = routes.getTableScreen _ map route
-  val getTable = routes.getTable _ map route
+  val generateTable = routes.generateTable _ map route
   val fields = routes.getFields _ map route
   val fieldNamesAndLabels = routes.getFieldNamesAndLabels _ map route
   val allFields = routeFun(_.getFields())
@@ -55,8 +56,9 @@ final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.ja
   val cluster = routeFun(_.cluster)
   val testIndependence = routeFun(_.testIndependence)
   val testIndependenceForViewFilters = routeFun(_.testIndependenceForViewFilters)
-  val calcCorrelations = routeFun(_.calcCorrelations)
-  val getTable = routeFun(_.getTable)
+  val calcPearsonCorrelations = routeFun(_.calcPearsonCorrelations)
+  val calcMatthewsCorrelations = routeFun(_.calcMatthewsCorrelations)
+  val generateTable = routeFun(_.generateTable)
   val getViewElementsAndWidgetsCallback = routeFun(_.getViewElementsAndWidgetsCallback)
   val getNewFilterViewElementsAndWidgetsCallback = routeFun(_.getNewFilterViewElementsAndWidgetsCallback)
 }

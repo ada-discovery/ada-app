@@ -442,7 +442,8 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   }
 
   override def addCorrelation(
-    dataViewId: BSONObjectID
+    dataViewId: BSONObjectID,
+    correlationType: CorrelationType.Value
   ) = Action.async { implicit request =>
     val fieldNames = request.body.asFormUrlEncoded.flatMap(_.get("fieldNames[]")).getOrElse(Nil)
 
@@ -450,7 +451,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       Future(BadRequest("No field names provided for addCorrelation function."))
     else
       processDataViewAux(dataViewId)(
-        addWidgetsAndUpdateView(Seq(CorrelationWidgetSpec(fieldNames)))
+        addWidgetsAndUpdateView(Seq(CorrelationWidgetSpec(fieldNames, correlationType)))
       )
   }
 

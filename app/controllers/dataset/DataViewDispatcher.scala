@@ -6,7 +6,7 @@ import be.objectify.deadbolt.scala.DeadboltHandler
 import controllers.core.AdminOrOwnerControllerDispatcherExt
 import org.incal.play.controllers.SecureControllerDispatcher
 import models.security.UserManager
-import models.{AdaException, AggType}
+import models.{AdaException, AggType, CorrelationType}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
@@ -96,8 +96,9 @@ class DataViewDispatcher @Inject()(
   ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addTableFields(dataViewId, fieldNames))
 
   override def addCorrelation(
-    dataViewId: BSONObjectID
-  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addCorrelation(dataViewId))
+    dataViewId: BSONObjectID,
+    correlationType: CorrelationType.Value
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addCorrelation(dataViewId, correlationType))
 
   override def addScatter(
     dataViewId: BSONObjectID,

@@ -3,7 +3,7 @@ package services.widgetgen
 import models._
 import services.stats.calc.PearsonCorrelationCalcTypePack
 
-private class CorrelationWidgetGenerator(flowParallelism: Option[Int]) extends CalculatorWidgetGenerator[CorrelationWidgetSpec, HeatmapWidget, PearsonCorrelationCalcTypePack] {
+private class PearsonCorrelationWidgetGenerator(flowParallelism: Option[Int]) extends CalculatorWidgetGenerator[CorrelationWidgetSpec, HeatmapWidget, PearsonCorrelationCalcTypePack] {
 
   override protected val seqExecutor = pearsonCorrelationExec
 
@@ -25,13 +25,17 @@ private class CorrelationWidgetGenerator(flowParallelism: Option[Int]) extends C
         val fieldLabels = fields.map(_.labelOrElseName)
 
         val widget = HeatmapWidget(
-          title(spec).getOrElse("Correlations"), fieldLabels, fieldLabels, None, None, correlations, Some(-1), Some(1), true, spec.displayOptions
+          title(spec).getOrElse("Pearson Correlations"), fieldLabels, fieldLabels, None, None, correlations, Some(-1), Some(1), true, spec.displayOptions
         )
         Some(widget)
       } else
         None
 }
 
-object CorrelationWidgetGenerator {
-  def apply(flowParallelism: Option[Int]): CalculatorWidgetGenerator[CorrelationWidgetSpec, HeatmapWidget, PearsonCorrelationCalcTypePack] = new CorrelationWidgetGenerator(flowParallelism)
+object PearsonCorrelationWidgetGenerator {
+
+  def apply(
+    flowParallelism: Option[Int]
+  ): CalculatorWidgetGenerator[CorrelationWidgetSpec, HeatmapWidget, PearsonCorrelationCalcTypePack] =
+    new PearsonCorrelationWidgetGenerator(flowParallelism)
 }

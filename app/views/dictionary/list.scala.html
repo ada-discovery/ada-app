@@ -112,8 +112,13 @@
                 </a>
             </li>
             <li>
-                <a href="#" onclick="addFieldCorrelation();return false" data-toggle="tooltip" title="Add Correlation To View">
-                    Correlation
+                <a href="#" onclick="addFieldCorrelation('@CorrelationType.Pearson');return false" data-toggle="tooltip" title="Add Pearson Correlation To View">
+                    Pearson Correlation
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="addFieldCorrelation('@CorrelationType.Matthews');return false" data-toggle="tooltip" title="Add Matthews Correlation To View">
+                    Matthews Correlation
                 </a>
             </li>
             <li>
@@ -244,9 +249,9 @@
         $("#dataViewSelectionModal").modal('show');
     }
 
-    function addFieldCorrelation() {
+    function addFieldCorrelation(correlationType) {
         var handler = function(e) {
-            addFieldCorrelationToView();
+            addFieldCorrelationToView(correlationType);
         };
 
         $("#dataViewSelectionModal #submitButton").one( "click", handler );
@@ -322,7 +327,7 @@
         });
     }
 
-    function addFieldCorrelationToView() {
+    function addFieldCorrelationToView(correlationType) {
         var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
         var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
         var fieldNames = getCheckedTableIds("dictionaryTable", "id")
@@ -330,12 +335,12 @@
         if (fieldNames.length == 0) {
             showError("No fields defined.");
         } else {
-            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId).ajax({
+            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId, correlationType).ajax({
                 data: {
                     "fieldNames": fieldNames
                 },
                 success: function() {
-                    showMessage("Correlation for the field(s) '" + fieldNames.join(", ") + "' has been successfully added to the view '" + dataViewName + "'.");
+                    showMessage(correlationType + " correlation for the field(s) '" + fieldNames.join(", ") + "' has been successfully added to the view '" + dataViewName + "'.");
                 },
                 error: showErrorResponse
             });

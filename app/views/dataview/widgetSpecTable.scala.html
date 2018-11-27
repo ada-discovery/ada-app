@@ -35,6 +35,7 @@
     <input type="hidden" id="@id" value="@value">
 }
 
+
 @fieldLabel(fieldName: String) = @{
     nameFieldMap.get(fieldName).map(nameOrLabel(showFieldStyle.getOrElse(FilterShowFieldStyle.LabelsOnly))).getOrElse(fieldName)
 }
@@ -181,6 +182,11 @@
                             x.topCount.map( count => "Top Count: " + count)
                         )
 
+                    case x: CorrelationWidgetSpec =>
+                        Seq(
+                            Some("Type: " + x.correlationType)
+                        )
+
                     case x: TemplateHtmlWidgetSpec =>
                         Seq(
                             Some("Content: " + Html(util.shorten(x.content, 50)))
@@ -264,7 +270,7 @@
         }
 
         if (isCorrelationType) {
-            isDefined = values["fieldNames"] != null && values["fieldNames"].length > 0
+            isDefined = values["fieldNames"] != null && values["fieldNames"].length > 0 && values["correlationType"].length > 0
         }
 
         if (isIndependenceTest) {
@@ -318,8 +324,10 @@
                 displayElements.push("Content: " + values["content"])
 
             // correlation
-            if (isCorrelationType)
+            if (isCorrelationType) {
+                displayElements.push("Correlation Type: " + values["correlationType"])
                 displayElements.push("Fields: " + values["fieldNames"])
+            }
 
             if (isGridDistributionCountType || isHeatmapAggType) {
                 displayElements.push("X Bin Count: " + values["xBinCount"])
@@ -542,6 +550,13 @@
             }
         </div>
 
+
+        <div id="correlationTypeDiv" style="display: none">
+            @labelValueAux("correlationType", "Type") {
+                @selectEnum("correlationType", CorrelationType, false)
+            }
+        </div>
+
         @labelValueAux("subFilterId", "Sub Filter") {
             <input type="text" id="subFilterTypeahead" class="typeahead">
             <input type="hidden" id="subFilterId">
@@ -715,6 +730,7 @@
         $("#" + modalName + " #useDateMonthBinsDiv").hide();
         $("#" + modalName + " #excludeUndefinedDiv").hide();
         $("#" + modalName + " #topCountDiv").hide();
+        $("#" + modalName + " #correlationTypeDiv").hide();
         $("#" + modalName + " #inputFieldNamesDiv").hide();
     }
 
@@ -750,6 +766,8 @@
         $('#edit_widgetSpecModal #useDateMonthBins').prop('checked', model["useDateMonthBins"]);
         $('#edit_widgetSpecModal #keepUndefined').prop('checked', model["keepUndefined"]);
         $('#edit_widgetSpecModal #topCount').val(model["topCount"]);
+
+        $('#edit_widgetSpecModal #correlationType').val(model["correlationType"]);
 
         $('#edit_widgetSpecModal #content').val(model["content"]);
 

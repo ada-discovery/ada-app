@@ -34,18 +34,18 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     totalCount: Int
   ): Action[AnyContent]
 
+  def getWidgets: Action[AnyContent]
+
   def getTableScreen(
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
-  def getTable(
+  def generateTable(
     page: Int,
     orderBy: String,
     fieldNames: Seq[String],
     filterOrId: FilterOrId
   ): Action[AnyContent]
-
-  def getWidgets: Action[AnyContent]
 
   def getDistribution(
     filterOrId: FilterOrId
@@ -78,11 +78,19 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
-  def getCorrelations(
+  def getPearsonCorrelations(
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
-  def calcCorrelations(
+  def calcPearsonCorrelations(
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
+  def getMatthewsCorrelations(
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
+  def calcMatthewsCorrelations(
     filterOrId: FilterOrId
   ): Action[AnyContent]
 

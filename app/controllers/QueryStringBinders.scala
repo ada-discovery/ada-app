@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonParseException
 import controllers.mpower.AggFunction
 import models.Filter._
 import controllers.FilterConditionExtraFormats.eitherFilterOrIdFormat
-import models.{AggType, FieldTypeId, Filter}
+import models.{AggType, CorrelationType, FieldTypeId, Filter}
 import models.ml._
 import models.DataSetFormattersAndIds.enumTypeFormat
 import models.ml.ClassificationResult._
@@ -59,4 +59,5 @@ object QueryStringBinders {
   implicit val regressionEvalMetricQueryStringBinder = new EnumStringBindable(RegressionEvalMetric)
   implicit val aggFunctionQueryStringBinder = new EnumStringBindable(AggFunction)
   implicit val aggTypeQueryStringBinder = new EnumStringBindable(AggType)
+  implicit val correlationTypeStringBinder = new EnumStringBindable(CorrelationType)
 }

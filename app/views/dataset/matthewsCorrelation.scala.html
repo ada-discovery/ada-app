@@ -1,4 +1,5 @@
 @import models.Field
+@import models.CorrelationType
 @import views.html.dataset.{widgetsScreen, dynamicFieldTable}
 @import views.html.table.dynamicTableJsImport
 @import models.DataSpaceMetaInfo
@@ -29,7 +30,7 @@
 @bottomResources = {
 
     @helper.javascriptRouter("dataSetJsRoutes")(
-        dataSetJsRouter.calcCorrelations,
+        dataSetJsRouter.calcMatthewsCorrelations,
         dataSetJsRouter.getWidgets
     )
 
@@ -39,7 +40,7 @@
 
     <script type="text/javascript">
         $(function () {
-            populateNumericalTypeahead("field")
+            populateBooleanTypeahead("field")
 
             $("#dataViewSelectionModal #submitButton").on("click", addCorrelationToView);
 
@@ -55,17 +56,17 @@
             var filterOrIdJson = JSON.stringify(filterOrId);
 
             if (inputFieldNames.length == 0) {
-                showError("Correlation calculation cannot be launched. No fields specified.");
+                showError("Matthews correlation calculation cannot be launched. No fields specified.");
             } else {
-                var ajaxHandler = handleResponse("Correlation calculation finished.")
+                var ajaxHandler = handleResponse("Matthews correlation calculation finished.")
                 ajaxHandler["data"] = {
                     "fieldNames": inputFieldNames
                 };
 
-                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcCorrelations(filterOrIdJson).ajax(ajaxHandler)
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcMatthewsCorrelations(filterOrIdJson).ajax(ajaxHandler)
 
                 hideErrors();
-                showMessage("Correlation calculation for " + inputFieldNames.length + " fields launched.")
+                showMessage("Matthews correlation calculation for " + inputFieldNames.length + " fields launched.")
             }
         }
 
@@ -74,11 +75,12 @@
             var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
 
             var fieldNames = getFieldNames()
+            var correlationType = '@CorrelationType.Matthews'
 
             if (fieldNames.length == 0) {
                 showError("No fields defined.");
             } else {
-                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId).ajax({
+                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId, correlationType).ajax({
                     data: {
                         "fieldNames": fieldNames
                     },
@@ -97,7 +99,7 @@
 
         function addAllFields() {
             $.ajax({
-                url: '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
+                url: '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Boolean)).url)',
                 success: function (data) {
                     $.each(data, function(index, field) {
                         var values = {};
@@ -134,7 +136,7 @@
 }
 
 @widgetsScreen(
-    Messages("correlation.title", dataSetName),
+    Messages("matthewsCorrelation.title", dataSetName),
     filterSpec,
     filterShowFieldStyle,
     dataSpaceMetaInfos,

@@ -17,7 +17,7 @@
     @jsonTable(
         page,
         tableFields,
-        dataSetRouter.getTable(_, _,
+        dataSetRouter.generateTable(_, _,
             tableFields.map(_.name).toSeq,
             filter.map(_.conditionsOrId).getOrElse(Left(Nil))
         ),

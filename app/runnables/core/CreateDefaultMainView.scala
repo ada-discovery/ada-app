@@ -57,6 +57,7 @@ class CreateDefaultMainView extends DsaInputFutureRunnable[CreateDefaultMainView
 
     val correlationWidget = CorrelationWidgetSpec(
       fieldNames = doubleFieldNames,
+      correlationType = CorrelationType.Pearson,
       displayOptions = BasicDisplayOptions(gridWidth = spec.correlationWidgetGridWidth)
     )
 

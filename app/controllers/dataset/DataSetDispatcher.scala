@@ -66,12 +66,12 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     filterOrId: FilterOrId
   ) = dispatch(_.getTableScreen(filterOrId))
 
-  override def getTable(
+  override def generateTable(
     page: Int,
     orderBy: String,
     fieldNames: Seq[String],
     filterOrId: FilterOrId
-  ) = dispatchAjax(_.getTable(page, orderBy, fieldNames, filterOrId))
+  ) = dispatchAjax(_.generateTable(page, orderBy, fieldNames, filterOrId))
 
   override def getWidgets = dispatchAjax(_.getWidgets)
 
@@ -106,13 +106,21 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     filterOrId: FilterOrId
   ) = dispatchAjax(_.calcScatter(xFieldName, yFieldName, groupOrValueFieldName, filterOrId))
 
-  override def getCorrelations(
+  override def getPearsonCorrelations(
     filterOrId: FilterOrId
-  ) = dispatch(_.getCorrelations(filterOrId))
+  ) = dispatch(_.getPearsonCorrelations(filterOrId))
 
-  override def calcCorrelations(
+  override def calcPearsonCorrelations(
     filterOrId: FilterOrId
-  ) = dispatchAjax(_.calcCorrelations(filterOrId))
+  ) = dispatchAjax(_.calcPearsonCorrelations(filterOrId))
+
+  override def getMatthewsCorrelations(
+    filterOrId: FilterOrId
+  ) = dispatch(_.getMatthewsCorrelations(filterOrId))
+
+  override def calcMatthewsCorrelations(
+    filterOrId: FilterOrId
+  ) = dispatchAjax(_.calcMatthewsCorrelations(filterOrId))
 
   override def getHeatmap(
     filterOrId: FilterOrId
