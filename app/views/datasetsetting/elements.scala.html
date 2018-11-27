@@ -1,4 +1,5 @@
-@import views.html.elements.{inputText, inputTextReadonly, labelValue, checkbox, select}
+@import views.html.elements.{inputText, inputTextReadonly, labelValue, checkbox, select, inputFieldTypeahead}
+@import views.html.elements.fieldTypeahead
 @import views.html.attributeLabel
 @import models.DataSetSetting
 @import util.toHumanReadableCamel
@@ -11,19 +12,18 @@
     StorageType.values.toSeq.sortBy(_.id).map(value => (value.toString, value.toString)), false
 )
 @checkbox("dataSetSetting", "mongoAutoCreateIndexForProjection", form)
-@checkbox("dataSetSetting", "cacheDataSet", form)
 
 <hr/>
 
-@inputText("dataSetSetting", "keyFieldName", form)
-@inputText("dataSetSetting", "exportOrderByFieldName", form)
-@inputText("dataSetSetting", "defaultDistributionFieldName", form)
-@inputText("dataSetSetting", "defaultScatterXFieldName", form)
-@inputText("dataSetSetting", "defaultScatterYFieldName", form)
-@inputText("dataSetSetting", "defaultCumulativeCountFieldName", form)
+@inputFieldTypeahead("dataSetSetting", "keyField", form)
+@inputFieldTypeahead("dataSetSetting", "exportOrderByField", form)
+@inputFieldTypeahead("dataSetSetting", "defaultDistributionField", form)
+@inputFieldTypeahead("dataSetSetting", "defaultScatterXField", form)
+@inputFieldTypeahead("dataSetSetting", "defaultScatterYField", form)
+@inputFieldTypeahead("dataSetSetting", "defaultCumulativeCountField", form)
+
 @select("dataSetSetting", "filterShowFieldStyle", form,
     FilterShowFieldStyle.values.toSeq.sortBy(_.id).map(value => (value.toString, toHumanReadableCamel(value.toString))), true
 )
+
 @checkbox("dataSetSetting", "filterShowNonNullCount", form)
-@inputText("dataSetSetting", "tranSMARTVisitFieldName", form)
-@inputText("dataSetSetting", "tranSMARTReplacements", form)

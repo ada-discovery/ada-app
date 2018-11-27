@@ -1,5 +1,5 @@
 @import views.html.layout
-@import views.html.datasetsetting.elements
+@import views.html.datasetsetting.{elements, fieldTypeaheadsActivationJs}
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
 @import models.DataSpaceMetaInfo
 @import models.DataSetSetting
@@ -22,6 +22,7 @@
 	updateCall = updateCall,
     cancelCall = cancelCall,
     deleteCall = None,
-    Some(datasetMenu(dataSpaceMetaInfos)),
-    Some(datasetSubNavWithJs())
+    sideBar = Some(datasetMenu(dataSpaceMetaInfos)),
+    topContentBar = Some(datasetSubNavWithJs()),
+    bottomResources = Some(fieldTypeaheadsActivationJs(form))
 )

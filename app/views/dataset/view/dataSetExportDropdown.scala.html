@@ -1,20 +1,29 @@
 @import views.html.{exportModal, exportDropdown}
-@import views.html.elements.labelValue
+@import views.html.elements.{labelValue, fieldTypeahead}
 @import controllers.dataset.DataSetWebContext
 @import controllers.dataset.DataSetWebContext._
 @import reactivemongo.bson.BSONObjectID
+@import models.FilterShowFieldStyle
 
 @(
     dataViewId: BSONObjectID,
-    dataSetName: String
+    dataSetName: String,
+    showFieldStyle: Option[FilterShowFieldStyle.Value]
 )(
     implicit context: DataSetWebContext
 )
 
-@modalBody(defaultDelimiter: String) = {
+@transmartModalBody(defaultDelimiter: String) = {
     <fieldset>
-        @labelValue("delimiter", "Delimiter") {
+        @labelValue("delimiter", "Delimiter", labelGridWidth = 3) {
             <input id="delimiter" name="delimiter" value="@defaultDelimiter">
+        }
+        @labelValue("visitFieldName", "Visit Field", labelGridWidth = 3) {
+            @fieldTypeahead(None, "visitField")
+        }
+        @labelValue("replaceEolWithSpace", "Remove \'\\r\'&\'\\n\'?", helpText = Some("Replace \'\\r\' and \'\\n\' with white space"), labelGridWidth = 3) {
+            <input type="checkbox" class="replaceEolWithSpaceCheckbox" checked="checked">
+            <input type="hidden" id="replaceEolWithSpace" name="replaceEolWithSpace" value="true">
         }
     </fieldset>
 }
@@ -52,16 +61,42 @@
         </a>
     </li>
 } {
-    @exportModal("exportTranSMARTDataModal", "CSV TranSMART Data Export", dataSetRouter.exportTranSMARTData, modalBody("\\t"))
-    @exportModal("exportTranSMARTMappingModal", "CSV TranSMART Mapping Export", dataSetRouter.exportTranSMARTMapping, modalBody("\\t"))
+    @exportModal("exportTranSMARTDataModal", "CSV TranSMART Data Export", dataSetRouter.exportTranSMARTData, transmartModalBody("\\t"))
+    @exportModal("exportTranSMARTMappingModal", "CSV TranSMART Mapping Export", dataSetRouter.exportTranSMARTMapping, transmartModalBody("\\t"))
 }
 
 <script type="text/javascript">
+
+    $(function() {
+        $("#visitFieldTypeahead").click(function() {
+            if(!$(this).hasClass("tt-input")) {
+                activateTranSMARTFieldTypeaheads();
+            }
+        })
+    })
+
     var chartsExportFileName = '@{dataSetName.replaceAllLiterally(".","_").replaceAllLiterally(" ", "_").toLowerCase + "-charts"}'
+
     function exportCharts(type) {
         var chartIds = $.map($(".chart-holder"), function (chart, i) {
             return chart.id;
         })
+
         Highcharts.exportCharts(chartIds, {type: type, filename: chartsExportFileName});
+    }
+
+    function activateTranSMARTFieldTypeaheads() {
+        var showOption = @showFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+
+        $.ajax({
+            url: '@Html(dataSetRouter.allFieldNamesAndLabels.url)',
+            success: function (fieldNameAndLabels) {
+                var fieldNamesAndLabelsWithNone = fieldNameAndLabels.concat([["", "[None]"]])
+
+                populateFieldTypeahed($('#exportTranSMARTDataModal #visitFieldTypeahead'), $('#exportTranSMARTDataModal #visitFieldName'), fieldNamesAndLabelsWithNone, showOption, true);
+                populateFieldTypeahed($('#exportTranSMARTMappingModal #visitFieldTypeahead'), $('#exportTranSMARTMappingModal #visitFieldName'), fieldNamesAndLabelsWithNone, showOption, true);
+            },
+            error: showErrorResponse
+         });
     }
 </script>

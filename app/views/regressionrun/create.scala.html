@@ -1,6 +1,7 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs, inputFieldAndFilterResources, mlElements, trainingSettingFields}
+@import views.html.elements.{fieldTypeahead, typeahead}
 @import play.api.i18n.Messages
 @import models.{DataSpaceMetaInfo, FilterShowFieldStyle}
 @import views.html.elements._
@@ -175,8 +176,7 @@
         @selectEnum("crossValidationEvalMetric", RegressionEvalMetric, true, Some("input-lg"))
     }
     @labelValueAux("replicationFilterId", "Replication Data") {
-        <input id="replicationFilterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="filter" value="">
-        <input id="replicationFilterId" name="replicationFilterId" type="hidden" value="">
+        @typeahead("replicationFilterNameTypeahead", "replicationFilterId", "Filter", true)
     }
     @labelValueAux("saveResults", "Save Results?") {
         <input id="saveResults" type="checkbox"/>

@@ -1,6 +1,6 @@
 @import models.Field
 @import views.html.dataset.widgetsScreen
-@import views.html.elements.fieldTypeahead
+@import views.html.elements.fieldTypeaheadDiv
 @import models.DataSpaceMetaInfo
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
@@ -113,8 +113,8 @@
 }
 
 @inputElements = {
-    @fieldTypeahead(field, Some("col-md-3 col-sm-6"), "field", "Field")
-    @fieldTypeahead(groupField, Some("col-md-offset-1 col-md-5 col-sm-12"), "groupField", "Group Field")
+    @fieldTypeaheadDiv(field, Some("col-md-3 col-sm-6"), "field", "Field")
+    @fieldTypeaheadDiv(groupField, Some("col-md-offset-1 col-md-5 col-sm-12"), "groupField", "Group Field")
 }
 
 @widgetsScreen(

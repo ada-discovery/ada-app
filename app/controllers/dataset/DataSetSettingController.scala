@@ -59,11 +59,9 @@ class DataSetSettingController @Inject() (
       "defaultCumulativeCountFieldName" -> optional(text),
       "filterShowFieldStyle" -> optional(of[FilterShowFieldStyle.Value]),
       "filterShowNonNullCount" -> boolean,
-      "tranSMARTVisitFieldName" -> optional(text),
-      "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " ")),
       "storageType" -> of[StorageType.Value],
       "mongoAutoCreateIndexForProjection" -> boolean,
-      "cacheDataSet" -> boolean
+      "cacheDataSet" -> ignored(false)
     )(DataSetSetting.apply)(DataSetSetting.unapply)
   )
 
@@ -71,7 +69,9 @@ class DataSetSettingController @Inject() (
 
   // create view
 
-  override protected def createView = { implicit ctx => view.create(_) }
+  override protected def createView = { implicit ctx =>
+    throw new IllegalArgumentException("Create function not available for data set setting.")
+  }
 
   // edit view and data (show view = edit view)
 
@@ -98,8 +98,16 @@ class DataSetSettingController @Inject() (
     }
   }
 
-  override protected def editView = { implicit ctx =>
-    (view.editNormal(_, _)).tupled
+  override protected def editView = { implicit ctx => data: (BSONObjectID, Form[DataSetSetting]) =>
+    val (id, form) = data
+    form.value.map(_.dataSetId) match {
+      case Some(dataSetId) =>
+        implicit val context = DataSetWebContext(dataSetId)
+
+        view.editNormal(id, form)
+
+      case None => throw new IllegalArgumentException(s"No data set setting found for an id ${id.stringify}.")
+    }
   }
 
   // list view
@@ -152,12 +160,12 @@ class DataSetSettingController @Inject() (
   override protected def updateCall(
     item: DataSetSetting)(
     implicit request: Request[AnyContent]
-  ): Future[BSONObjectID] = {
+  ): Future[BSONObjectID] =
     repo.update(item).map { id =>
       // update data set repo since we change the setting, which could affect how the data set is accessed
       dsaf(item.dataSetId).foreach(_.updateDataSetRepo(item))
       // return id
       id
     }
-  }
+
 }

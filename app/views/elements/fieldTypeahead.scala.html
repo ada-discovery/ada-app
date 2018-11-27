@@ -1,13 +1,11 @@
 @import models.Field
+@import views.html.elements.typeahead
 
 @(
     field: Option[Field],
-    divClass: Option[String] = None,
     fieldPrefix: String = "field",
-    placeholder: String = "Field Name"
+    placeholder: String = "Field Name",
+    isLarge: Boolean = false
 )
 
-<div class='@divClass.getOrElse("")'>
-    <input id="@{fieldPrefix}Typeahead" class="typeahead typeahead-large" type="text" placeholder="@placeholder" value="@field.map(_.labelOrElseName)">
-    <input id="@{fieldPrefix}Name" name="fieldName" type="hidden" value="@field.map(_.name)">
-</div>
+@typeahead(fieldPrefix + "Typeahead", fieldPrefix + "Name", placeholder, isLarge, field.map(_.labelOrElseName), field.map(_.name))

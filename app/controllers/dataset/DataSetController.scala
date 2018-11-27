@@ -163,9 +163,17 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     tableColumnsOnly: Boolean
   ): Action[AnyContent]
 
-  def exportTranSMARTDataFile(delimiter : String): Action[AnyContent]
+  def exportTranSMARTDataFile(
+    delimiter : String,
+    visitFieldName: Option[String],
+    replaceEolWithSpace: Boolean
+  ): Action[AnyContent]
 
-  def exportTranSMARTMappingFile(delimiter : String): Action[AnyContent]
+  def exportTranSMARTMappingFile(
+    delimiter : String,
+    visitFieldName: Option[String],
+    replaceEolWithSpace: Boolean
+  ): Action[AnyContent]
 
   def getCategoriesWithFieldsAsTreeNodes(filterOrId: FilterOrId): Action[AnyContent]
 

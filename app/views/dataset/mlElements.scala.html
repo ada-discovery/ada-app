@@ -1,4 +1,5 @@
 @import views.html.elements.{labelValue, selectEnum}
+@import views.html.elements.{fieldTypeahead, typeahead}
 @import views.html.table.dynamicTableJsImport
 @import views.html.dataset.dynamicFieldTable
 @import models.ml.VectorTransformType
@@ -34,13 +35,11 @@
         <fieldset>
             <div class="col-md-6">
                 @labelValueAux("mlModel", "ML Model") {
-                    <input id="mlModelTypeahead" class="typeahead typeahead-large" type="text" placeholder="" value="">
-                    <input id="mlModelId" name="mlModelId" type="hidden" value="">
+                    @typeahead("mlModelTypeahead", "mlModelId", "", true)
                 }
                 @if(includeOutputField) {
                     @labelValueAux("outputField", "Output Field") {
-                        <input id="outputFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="" value="">
-                        <input id="outputFieldName" name="outputFieldName" type="hidden" value="">
+                        @fieldTypeahead(None, "outputField", "Field Name", true)
                     }
                 }
                 @labelValueAux("inputFieldNames", "Input Fields") {
@@ -54,8 +53,7 @@
                     )
                 }
                 @labelValueAux("filterId", "Input Data") {
-                    <input id="filterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="filter" value="">
-                    <input id="filterId" name="filterId" type="hidden" value="">
+                    @typeahead("filterNameTypeahead", "filterId", "Filter", true)
                 }
                 <hr/>
                 @labelValueAux("featuresNormalizationType", "Feature Normalization") {

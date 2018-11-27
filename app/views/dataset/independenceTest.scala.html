@@ -5,6 +5,7 @@
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.dataset.dynamicFieldTable
 @import views.html.dataset.dataSetFilterWithJs
+@import views.html.elements.fieldTypeahead
 @import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
 @import views.html.elements._
@@ -183,8 +184,7 @@
         <div class="col-md-5">
             <div class="row">
                 @labelValue("targetField", "Target") {
-                    <input id="targetFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="">
-                    <input id="targetFieldName" name="targetFieldName" type="hidden" value="">
+                    @fieldTypeahead(None, "targetField", "Field Name", true)
                 }
 
                 @labelValue("inputFieldNames", "Input") {

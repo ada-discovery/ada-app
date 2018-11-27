@@ -7,7 +7,7 @@
 @import views.html.dataset.filter.{dataSetFilter, dataSetFilterJs}
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.filter.{filter, filterWithJs}
-@import views.html.elements.fieldTypeahead
+@import views.html.elements.fieldTypeaheadDiv
 @import play.api.libs.json.Json
 @import play.api.i18n.Messages
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
@@ -200,8 +200,8 @@
 }
 
 @inputElements = {
-    @fieldTypeahead(field, Some("col-md-3 col-sm-6"), "field", "Field")
-    @fieldTypeahead(groupField, Some("col-md-offset-1 col-md-5 col-sm-12"), "groupField", "Group Field")
+    @fieldTypeaheadDiv(field, Some("col-md-3 col-sm-6"), "field", "Field")
+    @fieldTypeaheadDiv(groupField, Some("col-md-offset-1 col-md-5 col-sm-12"), "groupField", "Group Field")
 }
 
 @widgetsScreen(

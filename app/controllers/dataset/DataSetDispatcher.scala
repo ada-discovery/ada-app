@@ -205,12 +205,16 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   ) = dispatch(_.exportRecordsAsJson(dataViewId, filter, tableColumnsOnly))
 
   override def exportTranSMARTDataFile(
-    delimiter : String
-  ) = dispatch(_.exportTranSMARTDataFile(delimiter))
+    delimiter: String,
+    visitFieldName: Option[String],
+    replaceEolWithSpace: Boolean
+  ) = dispatch(_.exportTranSMARTDataFile(delimiter, visitFieldName, replaceEolWithSpace))
 
   override def exportTranSMARTMappingFile(
-    delimiter : String
-  ) = dispatch(_.exportTranSMARTMappingFile(delimiter))
+    delimiter: String,
+    visitFieldName: Option[String],
+    replaceEolWithSpace: Boolean
+  ) = dispatch(_.exportTranSMARTMappingFile(delimiter, visitFieldName, replaceEolWithSpace))
 
   // api function
 

@@ -1,6 +1,6 @@
 @import models.Field
 @import views.html.dataset.widgetsScreen
-@import views.html.elements.fieldTypeahead
+@import views.html.elements.fieldTypeaheadDiv
 @import views.html.elements.{selectEnum, labelValue}
 @import models.DataSpaceMetaInfo
 @import controllers.dataset.DataSetWebContext._
@@ -152,9 +152,9 @@
 }
 
 @inputElements = {
-    @fieldTypeahead(xField, Some("col-md-12 top-padded"), "xField", "X Field")
-    @fieldTypeahead(yField, Some("col-md-12 top-padded"), "yField", "Y Field")
-    @fieldTypeahead(valueField, Some("col-md-12 top-padded"), "valueField", "Value Field")
+    @fieldTypeaheadDiv(xField, Some("col-md-12 top-padded"), "xField", "X Field")
+    @fieldTypeaheadDiv(yField, Some("col-md-12 top-padded"), "yField", "Y Field")
+    @fieldTypeaheadDiv(valueField, Some("col-md-12 top-padded"), "valueField", "Value Field")
 
     <div class="col-md-12 aligned-container top-padded">
         <label for="aggType" style="margin-right: 40px;">Aggregation Type</label>

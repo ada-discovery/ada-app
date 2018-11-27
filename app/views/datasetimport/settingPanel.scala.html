@@ -15,7 +15,6 @@
 
             <div id="advancedSetting" class="collapse">
                 @checkbox("dataSetImport", "setting.mongoAutoCreateIndexForProjection", form)
-                @checkbox("dataSetImport", "setting.cacheDataSet", form)
                 @inputText("dataSetImport", "setting.keyFieldName", form)
                 @inputText("dataSetImport", "setting.exportOrderByFieldName", form)
                 @inputText("dataSetImport", "setting.defaultDistributionFieldName", form)
@@ -24,8 +23,6 @@
                 @inputText("dataSetImport", "setting.defaultCumulativeCountFieldName", form)
                 @select("dataSetImport", "setting.filterShowFieldStyle", form, util.enumToValueString(FilterShowFieldStyle), true)
                 @checkbox("dataSetImport", "setting.filterShowNonNullCount", form)
-                @inputText("dataSetImport", "setting.tranSMARTVisitFieldName", form)
-                @inputText("dataSetImport", "setting.tranSMARTReplacements", form)
             </div>
         </div>
     </div>

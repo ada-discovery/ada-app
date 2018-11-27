@@ -51,8 +51,6 @@ case class DataSetSetting(
   defaultCumulativeCountFieldName: Option[String] = None,
   filterShowFieldStyle: Option[FilterShowFieldStyle.Value] = None,
   filterShowNonNullCount: Boolean = false,
-  tranSMARTVisitFieldName: Option[String] = None,
-  tranSMARTReplacements: Map[String, String],
   storageType: StorageType.Value,
   mongoAutoCreateIndexForProjection: Boolean = false,
   cacheDataSet: Boolean = false
@@ -61,7 +59,7 @@ case class DataSetSetting(
     dataSetId: String,
     storageType: StorageType.Value
   ) =
-    this(None, dataSetId, "_id", None, None, None, None, None, None, false, None, Map(("\r", " "), ("\n", " ")), storageType)
+    this(None, dataSetId, "_id", None, None, None, None, None, None, false, storageType)
 
   def this(dataSetId: String) =
     this(dataSetId, StorageType.Mongo)

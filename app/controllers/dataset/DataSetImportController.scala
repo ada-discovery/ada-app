@@ -88,11 +88,9 @@ class DataSetImportController @Inject()(
     "defaultCumulativeCountFieldName" -> optional(text),
     "filterShowFieldStyle" -> optional(of[FilterShowFieldStyle.Value]),
     "filterShowNonNullCount" -> boolean,
-    "tranSMARTVisitFieldName" -> optional(text),
-    "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " ")),
     "storageType" -> of[StorageType.Value],
     "mongoAutoCreateIndexForProjection" -> boolean,
-    "cacheDataSet" -> boolean
+    "cacheDataSet" -> ignored(false)
   )(DataSetSetting.apply)(DataSetSetting.unapply)
 
   private val dataViewMapping: Mapping[DataView] = mapping(

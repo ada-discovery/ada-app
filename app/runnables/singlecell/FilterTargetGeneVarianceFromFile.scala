@@ -30,12 +30,15 @@ class FilterTargetGeneVarianceFromFile @Inject() (dsaf: DataSetAccessorFactory) 
 
       val header = lines.next()
 
-      val newLines = lines.filter { line =>
+      val geneVariances = lines.map { line =>
         val els = line.split(delimiter, -1).map(_.trim)
         val geneName = els(0)
-        genesSet.contains(geneName)
-      }
+        val variance = els(1).toDouble
 
+        (geneName, variance)
+      }.toSeq.sortBy(-_._2)
+
+      val newLines = geneVariances.filter { case (geneName, _) => genesSet.contains(geneName) }.map { case (geneName, variance) => geneName + delimiter + variance }
       val content = (Seq(header) ++ newLines).mkString(eol)
       writeStringAsStream(content, new java.io.File(input.exportFileName))
     }

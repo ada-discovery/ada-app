@@ -4,6 +4,7 @@
 @import views.html.elements._
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs, inputFieldAndFilterResources, mlElements, trainingSettingFields}
 @import views.html.classificationrun.samplingTable
+@import views.html.elements.{fieldTypeahead, typeahead}
 @import play.api.i18n.Messages
 @import models.{DataSpaceMetaInfo, FieldTypeId, FilterShowFieldStyle}
 @import controllers.dataset.DataSetWebContext._
@@ -261,8 +262,7 @@
         @selectEnum("crossValidationEvalMetric", ClassificationEvalMetric, true, Some("input-lg"))
     }
     @labelValueAux("replicationFilterId", "Replication Data") {
-        <input id="replicationFilterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="filter" value="">
-        <input id="replicationFilterId" name="replicationFilterId" type="hidden" value="">
+        @typeahead("replicationFilterNameTypeahead", "replicationFilterId", "Filter", true)
     }
     @labelValueAux("samplings", "Samplings"){
         @samplingTable(Nil)

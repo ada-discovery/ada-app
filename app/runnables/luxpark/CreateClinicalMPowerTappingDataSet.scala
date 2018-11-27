@@ -98,9 +98,7 @@ class CreateClinicalMPowerTappingDataSet @Inject()(dsaf: DataSetAccessorFactory)
           None,
           None,
           false,
-          None,
-          Map(),
-        StorageType.ElasticSearch,
+          StorageType.ElasticSearch,
           false
         )),
         None

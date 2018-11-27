@@ -2050,14 +2050,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   // Export Functions //
   //////////////////////
 
-
   /**
     * Generate and content of TRANSMART data file and create a download.
     *
     * @param delimiter Delimiter for output file.
     * @return View for download.
     */
-  def exportTranSMARTDataFile(delimiter : String) = AuthAction { implicit request =>
+  override def exportTranSMARTDataFile(
+    delimiter : String,
+    visitFieldName: Option[String],
+    replaceEolWithSpace: Boolean
+  ) = AuthAction { implicit request =>
     {
       for {
         setting <- dsa.setting
@@ -2065,7 +2068,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         fileContent <- generateTranSMARTDataFile(
           tranSMARTDataFileName,
           delimiter,
-          setting.exportOrderByFieldName
+          setting.keyFieldName,
+          setting.exportOrderByFieldName,
+          visitFieldName,
+          replaceEolWithSpace
         )
       } yield
         stringToFile(fileContent, tranSMARTDataFileName)
@@ -2080,7 +2086,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param delimiter Delimiter for output file.
     * @return View for download.
     */
-  def exportTranSMARTMappingFile(delimiter : String) = AuthAction { implicit request =>
+  override def exportTranSMARTMappingFile(
+    delimiter: String,
+    visitFieldName: Option[String],
+    replaceEolWithSpace: Boolean
+  ) = AuthAction { implicit request =>
     {
       for {
         setting <- dsa.setting
@@ -2088,7 +2098,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         fileContent <- generateTranSMARTMappingFile(
           tranSMARTDataFileName,
           delimiter,
-          setting.exportOrderByFieldName
+          setting.keyFieldName,
+          setting.exportOrderByFieldName,
+          visitFieldName,
+          replaceEolWithSpace
         )
       } yield
         stringToFile(fileContent, tranSMARTMappingFileName)
@@ -2108,11 +2121,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   protected def generateTranSMARTDataFile(
     dataFilename: String,
     delimiter: String,
-    orderBy: Option[String]
+    keyFieldName: String,
+    orderBy: Option[String],
+    visitFieldName: Option[String],
+    replaceEolWithSpace: Boolean
   ): Future[String] = {
     for {
-      setting <- dsa.setting
-
       records <- repo.find(sort = orderBy.fold(Seq[Sort]())(toSort))
 
       categories <- categoryRepo.find()
@@ -2122,11 +2136,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       fields <- fieldRepo.find()
     } yield {
       val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
+      val replacements = if (replaceEolWithSpace) csvCharReplacements else Map()
 
-      tranSMARTService.createClinicalDataFile(unescapedDelimiter, csvEOL, setting.tranSMARTReplacements)(
+      tranSMARTService.createClinicalDataFile(unescapedDelimiter, csvEOL, replacements)(
         records,
-        setting.keyFieldName,
-        setting.tranSMARTVisitFieldName,
+        keyFieldName,
+        visitFieldName,
         categoryMap,
         fields.map(field => (field.name, ftf(field.fieldTypeSpec))).toMap
       )
@@ -2144,11 +2159,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   protected def generateTranSMARTMappingFile(
     dataFilename: String,
     delimiter: String,
-    orderBy: Option[String]
+    keyFieldName: String,
+    orderBy: Option[String],
+    visitFieldName: Option[String],
+    replaceEolWithSpace: Boolean
   ): Future[String] = {
     for {
-      setting <- dsa.setting
-
       categories <- categoryRepo.find()
 
       categoryMap <- fieldNameCategoryMap(categories)
@@ -2156,11 +2172,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       fieldMap <- fieldLabelMap
     } yield {
       val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
+      val replacements = if (replaceEolWithSpace) csvCharReplacements else Map()
 
-      tranSMARTService.createMappingFile(unescapedDelimiter, csvEOL, setting.tranSMARTReplacements)(
+      println(replacements)
+      println(visitFieldName)
+
+      tranSMARTService.createMappingFile(unescapedDelimiter, csvEOL, replacements)(
         dataFilename,
-        setting.keyFieldName,
-        setting.tranSMARTVisitFieldName,
+        keyFieldName,
+        visitFieldName,
         categoryMap,
         rootCategoryTree(categories),
         fieldMap

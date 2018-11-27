@@ -264,8 +264,8 @@ class TranSMARTServiceImpl extends TranSMARTService {
     * @return Items with defined entries included/ excluded.
     */
   private def createClinicalData(
-    items : Traversable[JsObject],
-    fieldsToInclude : Seq[String],
+    items: Traversable[JsObject],
+    fieldsToInclude: Seq[String],
     nameFieldTypeMap: Map[String, FieldType[_]]
   ) = {
     items.map { item =>
