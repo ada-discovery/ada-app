@@ -140,6 +140,16 @@ tr.clickable-row {
     width: 100%;
 }
 
+.typeahead.form-control,
+.tt-input.form-control {
+    width: 100% !important;
+    height: 38px
+}
+
+.twitter-typeahead, .tt-hint, .tt-input, .tt-menu {
+    width: 100%;
+}
+
 .messageDivider {
     border-top: 3px dotted #eeeeee !important;
 }

@@ -128,7 +128,7 @@ function createBloodhoundSource(data, datumTokenizer) {
 
     dataSource.initialize();
 
-    // Setting of minlength to 0 does not work. To sho ALL items if nothing entered this function needs to be introduced
+    // Setting of minlength to 0 does not work. To show ALL items if nothing entered this function needs to be introduced
     function listSearchWithAll(q, sync) {
         if (q == '')
             sync(dataSource.all());
@@ -237,11 +237,18 @@ function createFieldBloodhoundSource(fieldNameAndLabels, showOption) {
     )
 }
 
-function populateFieldTypeaheds(typeaheadElements, fieldNameElements, fieldNameAndLabels, showOption) {
+function populateFieldTypeaheds(typeaheadElements, fieldNameElements, fieldNameAndLabels, showOption, initSelectByNameElement) {
     var source = createFieldBloodhoundSource(fieldNameAndLabels, showOption)
 
     for(var i = 0; i < typeaheadElements.length; i++){
-        populateFieldTypeahedAux(typeaheadElements[i], fieldNameElements[i], source, showOption)
+        var typeaheadElement = typeaheadElements[i]
+        var fieldNameElement = fieldNameElements[i]
+
+        populateFieldTypeahedAux(typeaheadElement, fieldNameElement, source, showOption)
+
+        if (initSelectByNameElement) {
+            selectByNameElement(typeaheadElement, fieldNameElement, fieldNameAndLabels)
+        }
     }
 }
 
@@ -253,9 +260,27 @@ function populateFieldTypeaheds(typeaheadElements, fieldNameElements, fieldNameA
  * @param showOption 0 - show field names only, 1 - show field labels only,
  *                   2 - show field labels, and field names if no label defined, 3 - show both, field names and labels
  */
-function populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption) {
+function populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption, initSelectByNameElement) {
     var source = createFieldBloodhoundSource(fieldNameAndLabels, showOption)
+
     populateFieldTypeahedAux(typeaheadElement, fieldNameElement, source, showOption)
+
+    if (initSelectByNameElement) {
+        selectByNameElement(typeaheadElement, fieldNameElement, fieldNameAndLabels)
+    }
+}
+
+function selectByNameElement(typeaheadElement, fieldNameElement, fieldNameAndLabels) {
+    var fieldName = fieldNameElement.val();
+
+    var matchedFieldNameLabel = $.grep(fieldNameAndLabels, function (nameLabel) {
+        return nameLabel[0] == fieldName
+    })
+
+    if (matchedFieldNameLabel.length > 0) {
+        typeaheadElement.typeahead('val', matchedFieldNameLabel[0][1]);
+        selectShortestSuggestion(typeaheadElement)
+    }
 }
 
 function populateFieldTypeahedAux(typeaheadElement, fieldNameElement, source, showOption) {
@@ -308,9 +333,20 @@ function populateFieldTypeahedFromUrl(typeaheadElement, fieldNameElement, url, s
                 postFunction()
             }
         },
-        error: function(data){
-            showErrorResponse(data)
-        }
+        error: showErrorResponse
+    });
+}
+
+function populateFieldTypeahedsFromUrl(typeaheadElements, fieldNameElements, url, showOption, initSelectByNameElement, postFunction) {
+    $.ajax({
+        url: url,
+        success: function (fieldNameAndLabels) {
+            populateFieldTypeaheds(typeaheadElements, fieldNameElements, fieldNameAndLabels, showOption, initSelectByNameElement);
+            if (postFunction) {
+                postFunction()
+            }
+        },
+        error: showErrorResponse
     });
 }
 
