@@ -118,8 +118,13 @@ case class GridDistributionCountWidgetSpec(
   override val fieldNames = Seq(xFieldName, yFieldName)
 }
 
+object CorrelationType extends Enumeration {
+  val Pearson, Matthews = Value
+}
+
 case class CorrelationWidgetSpec(
   fieldNames: Seq[String],
+  correlationType: CorrelationType.Value,
   subFilterId: Option[BSONObjectID] = None,
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends WidgetSpec

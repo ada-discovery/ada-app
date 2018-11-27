@@ -194,6 +194,7 @@ object DataSetFormattersAndIds {
 
   implicit val chartTypeFormat = EnumFormat.enumFormat(ChartType)
   implicit val aggTypeFormat = EnumFormat.enumFormat(AggType)
+  implicit val correlationTypeFormat = EnumFormat.enumFormat(CorrelationType)
   implicit val basicDisplayOptionsFormat = Json.format[BasicDisplayOptions]
   implicit val distributionDisplayOptionsFormat = Json.format[MultiChartDisplayOptions]
 
