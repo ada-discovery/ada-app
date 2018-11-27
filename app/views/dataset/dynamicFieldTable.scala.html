@@ -1,6 +1,7 @@
 @import views.html.table.{dynamicTable, displayTable}
 @import views.html.filter.{jsTreeImport, categoricalTree}
 @import util.typeColumns
+@import util.FieldUtil.nameOrLabel
 @import models.Field
 
 @(
@@ -10,7 +11,8 @@
     gridWidth: Int = 5,
     extraActions: Option[Html] = None,
     categoriesOrCall: Option[Either[Traversable[Category], Call]] = None,
-    categoricalTreeId: String = "categoryTree"
+    categoricalTreeId: String = "categoryTree",
+    showFieldStyle: Option[FilterShowFieldStyle.Value] = None
 )(
     implicit request: Request[_], webJarAssets: WebJarAssets
 )
@@ -61,7 +63,7 @@
         typeColumns[Field](
             (None, "", _ => {<input type="checkbox" class="table-selection"/>}),
             (None, "", fieldNameElement),
-            (Some("label"), "", _.labelOrElseName)
+            (Some("label"), "", nameOrLabel(showFieldStyle.getOrElse(FilterShowFieldStyle.LabelsOnly)))
         )
     )
 }

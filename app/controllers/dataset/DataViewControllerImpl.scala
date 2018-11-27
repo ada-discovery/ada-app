@@ -99,16 +99,21 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   // create view and data
 
-  override protected type CreateViewData = (String, Form[DataView])
+  override protected type CreateViewData = (
+    String,
+    Form[DataView],
+    Option[FilterShowFieldStyle.Value]
+  )
 
   override protected def getFormCreateViewData(form: Form[DataView]) =
     for {
       dataSetName <- dsa.dataSetName
+      setting <- dsa.setting
     } yield
-      (dataSetName + " Data View", form)
+      (dataSetName + " Data View", form, setting.filterShowFieldStyle)
 
   override protected def createView = { implicit ctx =>
-    (view.create(_, _)).tupled
+    (view.create(_, _, _)).tupled
   }
 
   // edit view and data (= show view)
@@ -119,7 +124,8 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     Form[DataView],
     Map[String, Field],
     Map[BSONObjectID, String],
-    Traversable[DataSpaceMetaInfo]
+    Traversable[DataSpaceMetaInfo],
+    Option[FilterShowFieldStyle.Value]
   )
 
   override protected def getFormEditViewData(
@@ -128,6 +134,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   ) = { request =>
     val dataSetNameFuture = dsa.dataSetName
     val nameFieldMapFuture = getNameFieldMap
+    val settingFuture = dsa.setting
 
     val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
 
@@ -154,18 +161,19 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
     for {
       dataSetName <- dataSetNameFuture
+      setting <- settingFuture
       nameFieldMap <- nameFieldMapFuture
       tree <- treeFuture
       filters <- filtersFuture
       _ <- setCreatedByFuture
     } yield {
       val idFilterNameMap = filters.map( filter => (filter._id.get, filter.name.getOrElse(""))).toMap
-      (dataSetName + " Data View", id, form, nameFieldMap, idFilterNameMap, tree)
+      (dataSetName + " Data View", id, form, nameFieldMap, idFilterNameMap, tree, setting.filterShowFieldStyle)
     }
   }
 
   override protected def editView = { implicit ctx =>
-    (view.editNormal(_, _, _, _, _, _)).tupled
+    (view.editNormal(_, _, _, _, _, _, _)).tupled
   }
 
   // list view and data
@@ -316,6 +324,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
                   viewData._4,
                   viewData._5,
                   viewData._6,
+                  viewData._7,
                   router.updateAndShowView
                 )
               )

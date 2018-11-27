@@ -3,6 +3,7 @@
 @import util.typeColumns
 @import models.ChartType
 @import models.{WidgetSpec, Field, Filter}
+@import models.FilterShowFieldStyle
 @import models.DataSetFormattersAndIds.{widgetSpecFormat, widgetSpecClasses}
 @import org.incal.core.util.ReflectionUtil.getCaseClassMemberAndTypeNames
 @import play.api.libs.json.Json
@@ -12,11 +13,13 @@
 @import play.api.libs.json.JsArray
 @import reactivemongo.bson.BSONObjectID
 @import util.toHumanReadableCamel
+@import util.FieldUtil.nameOrLabel
 
 @(
     items: Traversable[WidgetSpec],
     nameFieldMap: Map[String,  Field],
-    idFilterNameMap: Map[BSONObjectID, String]
+    idFilterNameMap: Map[BSONObjectID, String],
+    showFieldStyle: Option[FilterShowFieldStyle.Value]
 )
 
 @editableChartType(chartType: Option[ChartType.Value]) = {
@@ -32,9 +35,8 @@
     <input type="hidden" id="@id" value="@value">
 }
 
-
 @fieldLabel(fieldName: String) = @{
-    nameFieldMap.get(fieldName).map(_.labelOrElseName).getOrElse(fieldName)
+    nameFieldMap.get(fieldName).map(nameOrLabel(showFieldStyle.getOrElse(FilterShowFieldStyle.LabelsOnly))).getOrElse(fieldName)
 }
 
 @fieldLabels(widgetSpec: WidgetSpec) = {

@@ -1,13 +1,17 @@
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 
-@()(implicit context: DataSetWebContext)
+@(
+    showFieldStyle: Option[FilterShowFieldStyle.Value]
+)(
+    implicit context: DataSetWebContext
+)
 
 @typeaheadJsImport()
 
 <script type="text/javascript">
     $(function () {
-        var showOption = @{FilterShowFieldStyle.NamesAndLabels.id}
+        var showOption = @{showFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id}
 
         $.ajax({
             url: '@Html(dataSetRouter.allFieldNamesAndLabels.url)',

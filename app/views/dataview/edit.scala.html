@@ -15,20 +15,21 @@
     nameFieldMap: Map[String,  Field],
     idFilterNameMap: Map[BSONObjectID, String],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
+    showFieldStyle: Option[FilterShowFieldStyle.Value],
     updateCall: BSONObjectID => Call
 )(
     implicit context: DataSetWebContext
 )
 
 @bottomResources = {
-    @activateTypeahead()
+    @activateTypeahead(showFieldStyle)
     @datasetSubNavJs()
 }
 
 @layout.edit(
     domainName,
 	form.errors,
-    elements(form, nameFieldMap, idFilterNameMap, dataSetRouter.allFields),
+    elements(form, nameFieldMap, idFilterNameMap, dataSetRouter.allFields, showFieldStyle),
     updateCall(id),
     dataViewRouter.plainList,
     Some(dataViewRouter.delete(id)),

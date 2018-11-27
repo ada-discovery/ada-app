@@ -8,7 +8,8 @@
 
 @(
     domainName : String,
-	form: Form[DataView]
+	form: Form[DataView],
+    showFieldStyle: Option[FilterShowFieldStyle.Value]
 )(
     implicit context: DataSetWebContext
 )
@@ -16,9 +17,9 @@
 @layout.create(
     domainName,
 	form,
-    elements(form, Map(), Map(), dataSetRouter.allFields),
+    elements(form, Map(), Map(), dataSetRouter.allFields, showFieldStyle),
     dataViewRouter.save,
     dataViewRouter.plainList
 )
 
-@activateTypeahead()
+@activateTypeahead(showFieldStyle)

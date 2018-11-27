@@ -12,7 +12,8 @@
     form: Form[DataView],
     nameFieldMap: Map[String,  Field],
     idFilterNameMap: Map[BSONObjectID, String],
-    allFieldsCall: Call
+    allFieldsCall: Call,
+    showFieldStyle: Option[FilterShowFieldStyle.Value]
 )(
     implicit context: DataSetWebContext
 )
@@ -40,7 +41,8 @@
         true,
         5,
         Some(extraFieldButtons),
-        Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(Left(Nil))))
+        Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(Left(Nil)))),
+        showFieldStyle = showFieldStyle
     )
 }
 
@@ -48,7 +50,8 @@
     @widgetSpecTable(
         form.value.map(_.widgetSpecs).getOrElse(Nil),
         nameFieldMap,
-        idFilterNameMap
+        idFilterNameMap,
+        showFieldStyle
     )
 }
 

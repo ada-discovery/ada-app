@@ -1,7 +1,7 @@
 package util
 
 import scala.reflect.runtime.universe._
-import models.{AdaException, Field, FieldTypeId, FieldTypeSpec}
+import models._
 import play.api.libs.json.{JsObject, JsValue}
 import java.{util => ju}
 
@@ -272,4 +272,12 @@ object FieldUtil {
       case _ => None
     }
   }
+
+  def nameOrLabel(showFieldStyle: FilterShowFieldStyle.Value)(field: Field) =
+    showFieldStyle match {
+      case FilterShowFieldStyle.NamesOnly => field.name
+      case FilterShowFieldStyle.LabelsOnly => field.label.getOrElse("")
+      case FilterShowFieldStyle.LabelsAndNamesOnlyIfLabelUndefined => field.labelOrElseName
+      case FilterShowFieldStyle.NamesAndLabels => field.labelOrElseName
+    }
 }

@@ -12,7 +12,8 @@
     form: Form[DataView],
     nameFieldMap: Map[String,  Field],
     idFilterNameMap: Map[BSONObjectID, String],
-    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
+    showFieldStyle: Option[FilterShowFieldStyle.Value]
 )(
     implicit context: DataSetWebContext
 )
@@ -24,5 +25,6 @@
     nameFieldMap,
     idFilterNameMap,
     dataSpaceMetaInfos,
+    showFieldStyle,
     dataViewRouter.update
 )
