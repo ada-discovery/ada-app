@@ -2174,9 +2174,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
       val replacements = if (replaceEolWithSpace) csvCharReplacements else Map()
 
-      println(replacements)
-      println(visitFieldName)
-
       tranSMARTService.createMappingFile(unescapedDelimiter, csvEOL, replacements)(
         dataFilename,
         keyFieldName,

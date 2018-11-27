@@ -247,7 +247,7 @@ function populateFieldTypeaheds(typeaheadElements, fieldNameElements, fieldNameA
         populateFieldTypeahedAux(typeaheadElement, fieldNameElement, source, showOption)
 
         if (initSelectByNameElement) {
-            selectByNameElement(typeaheadElement, fieldNameElement, fieldNameAndLabels)
+            selectByNameElement(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption)
         }
     }
 }
@@ -266,20 +266,34 @@ function populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndL
     populateFieldTypeahedAux(typeaheadElement, fieldNameElement, source, showOption)
 
     if (initSelectByNameElement) {
-        selectByNameElement(typeaheadElement, fieldNameElement, fieldNameAndLabels)
+        selectByNameElement(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption)
     }
 }
 
-function selectByNameElement(typeaheadElement, fieldNameElement, fieldNameAndLabels) {
+function selectByNameElement(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption) {
     var fieldName = fieldNameElement.val();
 
     var matchedFieldNameLabel = $.grep(fieldNameAndLabels, function (nameLabel) {
         return nameLabel[0] == fieldName
-    })
+    });
 
     if (matchedFieldNameLabel.length > 0) {
-        typeaheadElement.typeahead('val', matchedFieldNameLabel[0][1]);
-        selectShortestSuggestion(typeaheadElement)
+        var name = matchedFieldNameLabel[0][0]
+        var label = matchedFieldNameLabel[0][1]
+
+        var selectElement = null;
+
+        switch (showOption) {
+            case 0: selectElement = name; break;
+            case 1: selectElement = label; break;
+            case 2: selectElement = (label != null) ? label : name; break;
+            case 3: selectElement = (label != null) ? label : name; break;
+        }
+
+        if (selectElement) {
+            typeaheadElement.typeahead('val', selectElement);
+            selectShortestSuggestion(typeaheadElement)
+        }
     }
 }
 
