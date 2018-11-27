@@ -24,7 +24,7 @@ case class Filter(
 }
 
 object FilterShowFieldStyle extends Enumeration {
-  var NamesOnly, LabelsOnly, LabelsAndNamesOnlyIfLabelUndefined, NamesAndLabels = Value
+  val NamesOnly, LabelsOnly, LabelsAndNamesOnlyIfLabelUndefined, NamesAndLabels = Value
 }
 
 object Filter {
