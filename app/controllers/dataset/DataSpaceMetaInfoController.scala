@@ -197,27 +197,8 @@ class DataSpaceMetaInfoController @Inject() (
         val dsa = dsaf(dataSetId).get
 
         def unregisterDataSet: Future[_] =
-          for {
-            // remove a data set from the data space
-            _ <- {
-              val filteredDataSetInfos = dataSpaceInfo.dataSetMetaInfos.filterNot(_.id.equals(dataSetId))
-              repo.update(dataSpaceInfo.copy(dataSetMetaInfos = filteredDataSetInfos))
-            }
+          dataSpaceService.unregister(dataSpaceInfo, dataSetId)
 
-            // remove a data set from the data set meta info repo
-            _ <- {
-              dataSpaceInfo.dataSetMetaInfos.find(_.id.equals(dataSetId)).map { dataSetInfoToRemove =>
-                val dataSetMetaInfoRepo = dataSetMetaInfoRepoFactory(dataSpaceInfo._id.get)
-                dataSetMetaInfoRepo.delete(dataSetInfoToRemove._id.get)
-              }.getOrElse(
-                // should never happen
-                Future(())
-              )
-            }
-          } yield
-            ()
-
-        // maybe dropping the entire table/collection would be more appropriate than deleting all the records
         def deleteDataSet: Future[_] =
           for {
             _ <- dsa.updateDataSetRepo

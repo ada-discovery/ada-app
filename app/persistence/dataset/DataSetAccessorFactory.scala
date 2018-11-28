@@ -59,8 +59,6 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     dataSetSettingRepo: DataSetSettingRepo
   ) extends RefreshableCache[String, DataSetAccessor](false) with DataSetAccessorFactory {
 
-  println("Creating DataSetAccessorFactoryImpl!!!")
-
   override protected def createInstance(
     dataSetId: String
   ): Future[Option[DataSetAccessor]] =

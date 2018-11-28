@@ -3,6 +3,7 @@ package services
 import javax.inject.{Inject, Named, Singleton}
 
 import com.google.inject.ImplementedBy
+import dataaccess.DataSetMetaInfoRepoFactory
 import dataaccess.RepoTypes.{DataSetMetaInfoRepo, DataSpaceMetaInfoRepo}
 import models.{DataSpaceMetaInfo, User}
 import models.security.UserManager
@@ -29,12 +30,18 @@ trait DataSpaceService {
     dataSpace: DataSpaceMetaInfo)(
     request: Request[_]
   ): Future[Option[DataSpaceMetaInfo]]
+
+  def unregister(
+    dataSpaceInfo: DataSpaceMetaInfo,
+    dataSetId: String
+  ): Future[Unit]
 }
 
 @Singleton
 class DataSpaceServiceImpl @Inject() (
     val userManager: UserManager,
-    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
+    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
+    dataSetMetaInfoRepoFactory: DataSetMetaInfoRepoFactory
   ) extends DataSpaceService with AdaAuthConfig {
 
   private val r1 = """^[DS:](.*[.].*)""".r
@@ -129,4 +136,28 @@ class DataSpaceServiceImpl @Inject() (
     else
       None
   }
+
+  override def unregister(
+    dataSpaceInfo: DataSpaceMetaInfo,
+    dataSetId: String
+  ) =
+    for {
+      // remove a data set from the data space
+      _ <- {
+        val filteredDataSetInfos = dataSpaceInfo.dataSetMetaInfos.filterNot(_.id.equals(dataSetId))
+        dataSpaceMetaInfoRepo.update(dataSpaceInfo.copy(dataSetMetaInfos = filteredDataSetInfos))
+      }
+
+      // remove a data set from the data set meta info repo
+      _ <- {
+        dataSpaceInfo.dataSetMetaInfos.find(_.id.equals(dataSetId)).map { dataSetInfoToRemove =>
+          val dataSetMetaInfoRepo = dataSetMetaInfoRepoFactory(dataSpaceInfo._id.get)
+          dataSetMetaInfoRepo.delete(dataSetInfoToRemove._id.get)
+        }.getOrElse(
+          // should never happen
+          Future(())
+        )
+      }
+    } yield
+      ()
 }
