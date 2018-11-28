@@ -101,6 +101,8 @@ routesGenerator := InjectedRoutesGenerator
 // pipelineStages := Seq(rjs)
 // pipelineStages := Seq(rjs, uglify, digest, gzip)
 // pipelineStages in Assets := Seq(uglify, digest,gzip)
+// unmanagedResourceDirectories in Assets += baseDirectory.value / "images"
+
 pipelineStages in Assets := Seq(closure, cssCompress, digest, gzip)
 
 excludeFilter in gzip := (excludeFilter in gzip).value || new SimpleFileFilter(file => new File(file.getAbsolutePath + ".gz").exists)
