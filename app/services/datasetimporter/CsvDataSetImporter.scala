@@ -25,13 +25,13 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
         importInfo.eol
       )
 
-      // collect the column names
-      val columnNames = dataSetService.getColumnNames(importInfo.delimiter, lines)
+      // collect the column names and labels
+      val columnNamesAndLabels = dataSetService.getColumnNameLabels(importInfo.delimiter, lines)
 
       // parse lines
       logger.info(s"Parsing lines...")
       val prefixSuffixSeparators = if (importInfo.matchQuotes) Seq(quotePrefixSuffix) else Nil
-      val values = dataSetService.parseLines(columnNames, lines, importInfo.delimiter, importInfo.eol.isDefined, prefixSuffixSeparators)
+      val values = dataSetService.parseLines(columnNamesAndLabels.size, lines, importInfo.delimiter, importInfo.eol.isDefined, prefixSuffixSeparators)
 
       for {
         // create/retrieve a dsa
@@ -40,9 +40,9 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
         // save the jsons and dictionary
         _ <-
           if (importInfo.inferFieldTypes)
-            saveDataAndDictionaryWithTypeInference(dsa, columnNames, values, importInfo)
+            saveDataAndDictionaryWithTypeInference(dsa, columnNamesAndLabels, values, importInfo)
           else
-            saveStringsAndDictionaryWithoutTypeInference(dsa, columnNames, values, importInfo.saveBatchSize)
+            saveStringsAndDictionaryWithoutTypeInference(dsa, columnNamesAndLabels, values, importInfo.saveBatchSize)
       } yield {
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
       }
@@ -53,7 +53,7 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
 
   private def saveDataAndDictionaryWithTypeInference(
     dsa: DataSetAccessor,
-    columnNames: Seq[String],
+    columnNamesAndLabels: Seq[(String, String)],
     values: Iterator[Seq[String]],
     importInfo: CsvDataSetImport
   ): Future[Unit] = {
@@ -67,6 +67,6 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
     val ftf = FieldTypeHelper.fieldTypeFactory(arrayDelimiter = arrayDelimiter, booleanIncludeNumbers = importInfo.booleanIncludeNumbers)
     val ftif = FieldTypeInferrerFactory(ftf, maxEnumValuesCount, minAvgValuesPerEnum, arrayDelimiter)
 
-    saveStringsAndDictionaryWithTypeInference(dsa, columnNames, values, importInfo.saveBatchSize, Some(ftif.apply))
+    saveStringsAndDictionaryWithTypeInference(dsa, columnNamesAndLabels, values, importInfo.saveBatchSize, Some(ftif.apply))
   }
 }

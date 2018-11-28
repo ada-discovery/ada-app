@@ -6,17 +6,17 @@ import javax.inject.Inject
 
 import dataaccess._
 import field.{FieldType, FieldTypeHelper, FieldTypeInferrer}
-import models.{AdaParseException, CsvDataSetImport, DataSetImport, FieldTypeSpec}
+import models._
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json.{JsNumber, JsObject, Json}
 import play.api.Logger
 import services.DataSetService
 import util.{MessageLogger, seqFutures}
+import util.FieldUtil.specToField
 
 import scala.concurrent.Await._
 import scala.concurrent.Future
-import scala.concurrent.duration._
 import scala.io.Source
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -56,41 +56,55 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
     } yield
       dsa
 
-  protected def createJsonsWithFieldTypes(
-    fieldNames: Seq[String],
+  protected def createJsonsWithFields(
+    fieldNamesAndLabels: Seq[(String, String)],
     values: Seq[Seq[String]],
     fti: Option[FieldTypeInferrer[String]] = None
-  ): (Seq[JsObject], Seq[(String, FieldType[_])]) = {
+  ): (Seq[JsObject], Seq[Field]) = {
+    // infer field types
     val fieldTypes = values.transpose.par.map(fti.getOrElse(defaultFti).apply).toList
 
+    // create jsons
     val jsons = values.map( vals =>
       JsObject(
-        (fieldNames, fieldTypes, vals).zipped.map {
-          case (fieldName, fieldType, text) =>
+        (fieldNamesAndLabels, fieldTypes, vals).zipped.map {
+          case ((fieldName, _), fieldType, text) =>
             val jsonValue = fieldType.displayStringToJson(text)
             (fieldName, jsonValue)
         })
     )
 
-    (jsons, fieldNames.zip(fieldTypes))
+    // create fields
+    val fields = fieldNamesAndLabels.zip(fieldTypes).map { case ((name, label), fieldType) =>
+      specToField(name, Some(label), fieldType.spec)
+    }
+
+    (jsons, fields)
   }
 
-  protected def createJsonsWithStringFieldTypes(
-    fieldNames: Seq[String],
+  protected def createJsonsWithStringFields(
+    fieldNamesAndLabels: Seq[(String, String)],
     values: Iterator[Seq[String]]
-  ): (Iterator[JsObject], Seq[(String, FieldType[_])]) = {
-    val fieldTypes = fieldNames.map(_ => ftf.stringScalar)
+  ): (Iterator[JsObject], Seq[Field]) = {
+    // use String types for all the fields
+    val fieldTypes = fieldNamesAndLabels.map(_ => ftf.stringScalar)
 
+    // create jsons
     val jsons = values.map( vals =>
       JsObject(
-        (fieldNames, fieldTypes, vals).zipped.map {
-          case (fieldName, fieldType, text) =>
+        (fieldNamesAndLabels, fieldTypes, vals).zipped.map {
+          case ((fieldName, _), fieldType, text) =>
             val jsonValue = fieldType.displayStringToJson(text)
             (fieldName, jsonValue)
         })
     )
 
-    (jsons, fieldNames.zip(fieldTypes))
+    // create fields
+    val fields = fieldNamesAndLabels.zip(fieldTypes).map { case ((name, label), fieldType) =>
+      specToField(name, Some(label), fieldType.spec)
+    }
+
+    (jsons, fields)
   }
 
   protected def createCsvFileLineIterator(
@@ -120,20 +134,17 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
 
   protected def saveStringsAndDictionaryWithoutTypeInference(
     dsa: DataSetAccessor,
-    columnNames: Seq[String],
+    columnNamesAndLabels: Seq[(String, String)],
     values: Iterator[Seq[String]],
     saveBatchSize: Option[Int]
   ): Future[Unit] = {
     // create jsons and field types
     logger.info(s"Creating JSONs...")
-    val (jsons, fieldNameAndTypes) = createJsonsWithStringFieldTypes(columnNames, values)
+    val (jsons, fields) = createJsonsWithStringFields(columnNamesAndLabels, values)
 
     for {
-    // save, or update the dictionary
-      _ <- {
-        val fieldNameTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
-        dataSetService.updateDictionary(dsa.fieldRepo, fieldNameTypeSpecs, true, true)
-      }
+      // save, or update the dictionary
+      _ <- dataSetService.updateDictionaryFields(dsa.fieldRepo, fields, true, true)
 
       // since we possible changed the dictionary (the data structure) we need to update the data set repo
       _ <- dsa.updateDataSetRepo
@@ -169,7 +180,7 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
 
   protected def saveStringsAndDictionaryWithTypeInference(
     dsa: DataSetAccessor,
-    columnNames: Seq[String],
+    fieldNamesAndLabels: Seq[(String, String)],
     values: Iterator[Seq[String]],
     saveBatchSize: Option[Int] = None,
     fti: Option[FieldTypeInferrer[String]] = None
@@ -177,21 +188,21 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
     // infer field types and create JSONSs
     logger.info(s"Inferring field types and creating JSONs...")
 
-    val (jsons, fieldNameAndTypes) = createJsonsWithFieldTypes(columnNames, values.toSeq, fti)
-    val fieldNameTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
+    val fieldNames = fieldNamesAndLabels.map(_._1)
+    val (jsons, fields) = createJsonsWithFields(fieldNamesAndLabels, values.toSeq, fti)
 
-    saveJsonsAndDictionary(dsa, jsons, fieldNameTypeSpecs, saveBatchSize)
+    saveJsonsAndDictionary(dsa, jsons, fields, saveBatchSize)
   }
 
   protected def saveJsonsAndDictionary(
     dsa: DataSetAccessor,
     jsons: Seq[JsObject],
-    fieldNameAndTypeSpecs: Seq[(String, FieldTypeSpec)],
+    fields: Seq[Field],
     saveBatchSize: Option[Int] = None
   ): Future[Unit] =
     for {
       // save, or update the dictionary
-      _ <- dataSetService.updateDictionary(dsa.fieldRepo, fieldNameAndTypeSpecs, true, true)
+      _ <- dataSetService.updateDictionaryFields(dsa.fieldRepo, fields, true, true)
 
       // since we possible changed the dictionary (the data structure) we need to update the data set repo
       _ <- dsa.updateDataSetRepo

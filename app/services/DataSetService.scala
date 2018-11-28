@@ -8,7 +8,7 @@ import dataaccess.RepoTypes.{FieldRepo, JsonCrudRepo, JsonReadonlyRepo}
 import dataaccess.JsonReadonlyRepoExtra._
 import dataaccess.JsonCrudRepoExtra._
 import dataaccess.{JsonUtil, StreamSpec}
-import _root_.util.{GroupMapList, MessageLogger}
+import _root_.util.{GroupMapList, MessageLogger, nonAlphanumericToUnderscore}
 import _root_.util.FieldUtil.{fieldTypeOrdering, isNumeric}
 import com.google.inject.ImplementedBy
 import models._
@@ -79,13 +79,13 @@ trait DataSetService {
     deleteNonReferenced: Boolean
   ): Future[Unit]
 
-  def getColumnNames(
+  def getColumnNameLabels(
     delimiter: String,
     lineIterator: Iterator[String]
-  ): Seq[String]
+  ): Seq[(String, String)]
 
   def parseLines(
-    columnNames: Seq[String],
+    columnsCount: Int,
     lines: Iterator[String],
     delimiter: String,
     skipFirstLine: Boolean,
@@ -466,14 +466,12 @@ class DataSetServiceImpl @Inject()(
       ()
 
   override def parseLines(
-    columnNames: Seq[String],
+    columnCount: Int,
     lines: Iterator[String],
     delimiter: String,
     skipFirstLine: Boolean,
     prefixSuffixSeparators: Seq[(String, String)] = Nil
   ): Iterator[Seq[String]] = {
-    val columnCount = columnNames.size
-
     val contentLines = if (skipFirstLine) lines.drop(1) else lines
 
     val lineBuffer = ListBuffer[String]()
@@ -2406,14 +2404,16 @@ class DataSetServiceImpl @Inject()(
     (jsons, fieldTypes.map(_._2.spec))
   }
 
-  def getColumnNames(
+  override def getColumnNameLabels(
     delimiter: String,
     lineIterator: Iterator[String]
-  ): Seq[String] =
-    lineIterator.take(1).map {
-      _.split(delimiter).map(columnName =>
-        escapeKey(columnName.replaceAll("\"", "").trim)
-      )}.flatten.toList
+  ): Seq[(String, String)] =
+    lineIterator.take(1).flatMap {
+      _.split(delimiter).map { columnName =>
+        val trimmedName = columnName.trim.replaceAll("\"", "")
+        (nonAlphanumericToUnderscore(trimmedName), trimmedName)
+      }
+    }.toList
 
   // parse the line, returns the parsed items
   override def parseLine(

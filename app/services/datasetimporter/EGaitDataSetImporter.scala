@@ -4,7 +4,7 @@ import java.util.Date
 import javax.inject.Inject
 
 import field.{FieldTypeFactory, FieldTypeHelper, FieldTypeInferrerFactory}
-import models.{AdaException, EGaitDataSetImport, FieldTypeId, FieldTypeSpec}
+import models._
 import models.egait.EGaitKineticData
 import play.api.Configuration
 import play.api.libs.json.{JsObject, Json}
@@ -48,22 +48,22 @@ private class EGaitDataSetImporter @Inject()(
   }
 
   private val rawKineticDataDictionary = Seq(
-    ("sessionId", FieldTypeSpec(FieldTypeId.String)),
-    ("personId", FieldTypeSpec(FieldTypeId.String)),
-    ("instructor", FieldTypeSpec(FieldTypeId.String)),
-    ("startTime", FieldTypeSpec(FieldTypeId.Date)),
-    ("testName", FieldTypeSpec(FieldTypeId.String)),
-    ("testDuration", FieldTypeSpec(FieldTypeId.Integer)),
-    ("rightSensorFileName", FieldTypeSpec(FieldTypeId.String)),
-    ("leftSensorFileName", FieldTypeSpec(FieldTypeId.String)),
-    ("rightSensorStartIndex", FieldTypeSpec(FieldTypeId.Integer)),
-    ("rightSensorStopIndex", FieldTypeSpec(FieldTypeId.Integer)),
-    ("leftSensorStartIndex", FieldTypeSpec(FieldTypeId.Integer)),
-    ("leftSensorStopIndex", FieldTypeSpec(FieldTypeId.Integer)),
-    ("rightAccelerometerPoints", FieldTypeSpec(FieldTypeId.Json, true)),
-    ("rightGyroscopePoints", FieldTypeSpec(FieldTypeId.Json, true)),
-    ("leftAccelerometerPoints", FieldTypeSpec(FieldTypeId.Json, true)),
-    ("leftGyroscopePoints", FieldTypeSpec(FieldTypeId.Json, true))
+    Field("sessionId", None, FieldTypeId.String),
+    Field("personId", None, FieldTypeId.String),
+    Field("instructor", None, FieldTypeId.String),
+    Field("startTime", None, FieldTypeId.Date),
+    Field("testName", None, FieldTypeId.String),
+    Field("testDuration", None, FieldTypeId.Integer),
+    Field("rightSensorFileName", None, FieldTypeId.String),
+    Field("leftSensorFileName", None, FieldTypeId.String),
+    Field("rightSensorStartIndex", None, FieldTypeId.Integer),
+    Field("rightSensorStopIndex", None, FieldTypeId.Integer),
+    Field("leftSensorStartIndex", None, FieldTypeId.Integer),
+    Field("leftSensorStopIndex", None, FieldTypeId.Integer),
+    Field("rightAccelerometerPoints", None, FieldTypeId.Json, true),
+    Field("rightGyroscopePoints", None, FieldTypeId.Json, true),
+    Field("leftAccelerometerPoints", None, FieldTypeId.Json, true),
+    Field("leftGyroscopePoints", None, FieldTypeId.Json, true)
   )
 
   override def apply(importInfo: EGaitDataSetImport): Future[Unit] = {
@@ -110,16 +110,16 @@ private class EGaitDataSetImporter @Inject()(
             all.iterator
           }
 
-      // collect the column names
-      columnNames =  dataSetService.getColumnNames(delimiter.toString, lines)
+      // collect the column names and labels
+      columnNameLabels =  dataSetService.getColumnNameLabels(delimiter.toString, lines)
 
       // parse lines
       values = {
         logger.info(s"Parsing lines...")
-        dataSetService.parseLines(columnNames, lines, delimiter.toString, true, prefixSuffixSeparators)
+        dataSetService.parseLines(columnNameLabels.size, lines, delimiter.toString, true, prefixSuffixSeparators)
       }
 
-      _ <- saveStringsAndDictionaryWithTypeInference(dsa, columnNames, values, Some(saveBatchSize), Some(fti))
+      _ <- saveStringsAndDictionaryWithTypeInference(dsa, columnNameLabels, values, Some(saveBatchSize), Some(fti))
     } yield
       ()
 

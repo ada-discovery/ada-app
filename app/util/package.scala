@@ -288,4 +288,6 @@ package object util {
 
   def toJsonHtml[T](o: T)(implicit tjs: Writes[T]): Html =
     Html(Json.stringify(Json.toJson(o)))
+
+  def nonAlphanumericToUnderscore(string: String) = string.replaceAll("[^\\p{Alnum}]", "_")
 }

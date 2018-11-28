@@ -167,4 +167,14 @@ object DataSetImportFormattersAndIds {
         case x: EGaitDataSetImport => x.copy(_id = id)
       }
   }
+
+  def copyWithoutTimestamps(entity: DataSetImport) =
+    entity match {
+      case x: CsvDataSetImport => x.copy(timeCreated = new Date(), timeLastExecuted = None)
+      case x: JsonDataSetImport => x.copy(timeCreated = new Date(), timeLastExecuted = None)
+      case x: SynapseDataSetImport => x.copy(timeCreated = new Date(), timeLastExecuted = None)
+      case x: TranSmartDataSetImport => x.copy(timeCreated = new Date(), timeLastExecuted = None)
+      case x: RedCapDataSetImport => x.copy(timeCreated = new Date(), timeLastExecuted = None)
+      case x: EGaitDataSetImport => x.copy(timeCreated = new Date(), timeLastExecuted = None)
+    }
 }

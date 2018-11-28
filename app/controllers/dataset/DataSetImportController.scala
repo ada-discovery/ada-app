@@ -9,7 +9,6 @@ import services.datasetimporter.DataSetImporterCentral
 import scala.concurrent.duration._
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.DeadboltActions
 import controllers._
 import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImportFormat}
 import models._
@@ -35,6 +34,7 @@ import play.api.data.format.Formats._
 import _root_.util.retry
 import controllers.core.AdaCrudControllerImpl
 import models.DataSetFormattersAndIds.JsObjectIdentity
+import models.DataSetImportFormattersAndIds.copyWithoutTimestamps
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.AscSort
 import org.incal.play.Page
@@ -438,8 +438,8 @@ class DataSetImportController @Inject()(
       repo.get(id).flatMap(_.fold(
         Future(NotFound(s"Entity #$id not found"))
       ) { dataSetImport =>
-        // TODO: handle the timestamp and data set id/name
-        val newDataSetImport = DataSetImportIdentity.clear(dataSetImport)
+        val newDataSetImport = copyWithoutTimestamps(DataSetImportIdentity.clear(dataSetImport))
+
         super.saveCall(newDataSetImport).map { newId =>
           scheduleOrCancel(newId, newDataSetImport)
           Redirect(routes.DataSetImportController.get(newId)).flashing("success" -> s"Data Set import '${dataSetImport.dataSetId}' has been copied.")

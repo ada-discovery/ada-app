@@ -90,7 +90,7 @@ private class RedCapDataSetImporter @Inject() (
 
       // create a field-name-type map for a quick lookup
       fieldNameTypeMap = {
-        val map: Map[String, FieldType[_]] = fields.map(field => (field.name, ftf(field.fieldTypeSpec) : FieldType[_])).toSeq.toMap
+        val map: Map[String, FieldType[_]] = fields.map(field => (field.name, ftf(field.fieldTypeSpec): FieldType[_])).toSeq.toMap
         map
       }
 

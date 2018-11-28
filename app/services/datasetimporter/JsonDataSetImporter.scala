@@ -7,6 +7,7 @@ import dataaccess._
 import field.{FieldType, FieldTypeFactory, FieldTypeHelper, FieldTypeInferrerFactory}
 import models.JsonDataSetImport
 import play.api.libs.json._
+import _root_.util.FieldUtil.specToField
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -68,8 +69,8 @@ private class JsonDataSetImporter extends AbstractDataSetImporter[JsonDataSetImp
 
             // save the fields
             _ <- {
-              val fieldNameTypeSpecs = fieldNameTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec) }
-              dataSetService.updateDictionary(importInfo.dataSetId, fieldNameTypeSpecs, false, true)
+              val fields = fieldNameTypes.map { case (fieldName, fieldType) => specToField(fieldName, Some(fieldName), fieldType.spec) }
+              dataSetService.updateDictionaryFields(importInfo.dataSetId, fields, true, true)
             }
 
             // since we possible changed the dictionary (the data structure) we need to update the data set repo

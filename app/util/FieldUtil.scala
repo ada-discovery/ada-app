@@ -280,4 +280,20 @@ object FieldUtil {
       case FilterShowFieldStyle.LabelsAndNamesOnlyIfLabelUndefined => field.labelOrElseName
       case FilterShowFieldStyle.NamesAndLabels => field.labelOrElseName
     }
+
+  def specToField(
+    name: String,
+    label: Option[String],
+    typeSpec: FieldTypeSpec
+  ) =
+    Field(
+      name,
+      label,
+      typeSpec.fieldType,
+      typeSpec.isArray,
+      typeSpec.enumValues.map(_.map { case (a,b) => (a.toString, b)}),
+      typeSpec.displayDecimalPlaces,
+      typeSpec.displayTrueValue,
+      typeSpec.displayFalseValue
+    )
 }

@@ -12,6 +12,8 @@ import play.api.Configuration
 import play.api.libs.json.{JsArray, JsObject, Json}
 import services.{SynapseService, SynapseServiceFactory}
 import dataaccess.JsonUtil
+import util.FieldUtil.specToField
+import util.nonAlphanumericToUnderscore
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -25,7 +27,7 @@ private class SynapseDataSetImporter @Inject() (
   private val synapseEol = "\n"
   private val synapseBulkDownloadAttemptNumber = 4
   private val synapseDefaultBulkDownloadGroupNumber = 5
-  private val keyField = "ROW_ID"
+  private val keyFieldName = "ROW_ID"
   private val maxEnumValuesCount = 150
 
   private val synapseFtf = FieldTypeHelper.fieldTypeFactory(FieldTypeHelper.nullAliases ++ Set("nan"))
@@ -48,15 +50,15 @@ private class SynapseDataSetImporter @Inject() (
     try {
       val synapseService = synapseServiceFactory(synapseUsername, synapsePassword)
 
-      def escapedColumnName(column: ColumnModel) =
-        JsonUtil.escapeKey(column.name.replaceAll("\"", "").trim)
+      def fieldName(column: ColumnModel) =
+        nonAlphanumericToUnderscore(column.name.replaceAll("\"", "").trim)
 
       if (importInfo.downloadColumnFiles)
         for {
-        // get the columns of the "file" and "entity" type (max 1)
+          // get the columns of the "file" and "entity" type (max 1)
           (entityColumnName, fileFieldNames) <- synapseService.getTableColumnModels(importInfo.tableId).map { columnModels =>
-            val fileColumns = columnModels.results.filter(_.columnType == ColumnType.FILEHANDLEID).map(escapedColumnName)
-            val entityColumn = columnModels.results.find(_.columnType == ColumnType.ENTITYID).map(escapedColumnName)
+            val fileColumns = columnModels.results.filter(_.columnType == ColumnType.FILEHANDLEID).map(fieldName)
+            val entityColumn = columnModels.results.find(_.columnType == ColumnType.ENTITYID).map(fieldName)
             (entityColumn, fileColumns)
           }
 
@@ -109,16 +111,13 @@ private class SynapseDataSetImporter @Inject() (
         fields <- dsa.fieldRepo.find()
 
         // create jsons and field types
-        (jsons, fieldNameAndTypes) = {
+        (jsons: Seq[JsObject], newFields) = {
           logger.info(s"Parsing lines and inferring types...")
           extractJsonsAndInferFieldsFromCSV(csv, delimiter, fields, fileFieldNames)
         }
 
         // save, or update the dictionary
-        _ <- {
-          val fieldNameAndTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
-          dataSetService.updateDictionary(importInfo.dataSetId, fieldNameAndTypeSpecs, false, true)
-        }
+        _ <- dataSetService.updateDictionaryFields(importInfo.dataSetId, newFields, true, true)
 
         // since we possible changed the dictionary (the data structure) we need to update the data set repo
         _ <- dsa.updateDataSetRepo
@@ -133,15 +132,17 @@ private class SynapseDataSetImporter @Inject() (
           else
             logger.info(s"Saving JSONs...")
 
-          dataSetService.saveOrUpdateRecords(dataRepo, jsons, Some(keyField), false, transformJsonsFun, batchSize)
+          dataSetService.saveOrUpdateRecords(dataRepo, jsons, Some(keyFieldName), false, transformJsonsFun, batchSize)
         }
 
         // remove the old records
         _ <- {
-          val fieldNameTypeMap = fieldNameAndTypes.toMap
-          val fieldType = fieldNameTypeMap.get(keyField).get
-          val keys = JsonUtil.project(jsons, keyField).map(fieldType.jsonToValue)
-          dataSetService.deleteRecordsExcept(dataRepo, keyField, keys.flatten.toSeq)
+          val keyField = newFields.find(_.name == keyFieldName).getOrElse(
+            throw new AdaException(s"Synapse key field $keyFieldName not found.")
+          )
+          val keyFieldType = synapseFtf(keyField.fieldTypeSpec)
+          val keys = JsonUtil.project(jsons, keyFieldName).map(keyFieldType.jsonToValue)
+          dataSetService.deleteRecordsExcept(dataRepo, keyFieldName, keys.flatten.toSeq)
         }
       } yield {
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
@@ -156,18 +157,18 @@ private class SynapseDataSetImporter @Inject() (
     delimiter: String,
     fields: Traversable[Field],
     fileFieldNames: Traversable[String]
-  ): (Seq[JsObject], Seq[(String, FieldType[_])]) = {
+  ): (Seq[JsObject], Seq[Field]) = {
     // split by lines
     val lines = csv.split(synapseEol).iterator
 
-    // collect the column names
-    val columnNames = dataSetService.getColumnNames(delimiter, lines)
+    // collect the column names and labels
+    val columnNamesAndLabels = dataSetService.getColumnNameLabels(delimiter, lines)
 
     // parse lines
-    val values = dataSetService.parseLines(columnNames, lines, delimiter, true, prefixSuffixSeparators)
+    val values = dataSetService.parseLines(columnNamesAndLabels.size, lines, delimiter, true, prefixSuffixSeparators)
 
     // create jsons and field types
-    createSynapseJsonsWithFieldTypes(columnNames, fileFieldNames.toSet, values.toSeq, fields)
+    createSynapseJsonsWithFields(columnNamesAndLabels, fileFieldNames.toSet, values.toSeq, fields)
   }
 
   protected def updateJsonsFileFields(
@@ -251,12 +252,13 @@ private class SynapseDataSetImporter @Inject() (
       Future(jsons)
   }
 
-  private def createSynapseJsonsWithFieldTypes(
-    fieldNames: Seq[String],
+  private def createSynapseJsonsWithFields(
+    fieldNamesAndLabels: Seq[(String, String)],
     fileFieldNames: Set[String],
     values: Seq[Seq[String]],
     fields: Traversable[Field]
-  ): (Seq[JsObject], Seq[(String, FieldType[_])]) = {
+  ): (Seq[JsObject], Seq[Field]) = {
+
     // get the existing types
     val existingFieldTypeMap: Map[String, FieldType[_]] = fields.map ( field => (field.name, ftf(field.fieldTypeSpec))).toMap
 
@@ -264,7 +266,7 @@ private class SynapseDataSetImporter @Inject() (
     val newFieldTypes = values.transpose.par.map(fti.apply).toList
 
     // merge the old and new field types
-    val fieldNameAndTypesForParsing = fieldNames.zip(newFieldTypes).map { case (fieldName, newFieldType) =>
+    val fieldNameAndTypesForParsing = fieldNamesAndLabels.zip(newFieldTypes).map { case ((fieldName, _), newFieldType) =>
       val fieldType =
         if (fileFieldNames.contains(fieldName))
           newFieldType
@@ -287,7 +289,8 @@ private class SynapseDataSetImporter @Inject() (
     )
 
     // create the final field types... for file fields report JSON array if the type does not exist
-    val finalFieldNameAndTypes = fieldNames.zip(newFieldTypes).map { case (fieldName, newFieldType) =>
+    val finalFields = fieldNamesAndLabels.zip(newFieldTypes).map { case ((fieldName, label), newFieldType) =>
+
       val fieldType: FieldType[_] = existingFieldTypeMap.get(fieldName) match {
         case Some(existingFieldType) => mergeEnumTypes(existingFieldType, newFieldType)
         case None => if (fileFieldNames.contains(fieldName))
@@ -295,10 +298,11 @@ private class SynapseDataSetImporter @Inject() (
         else
           newFieldType
       }
-      (fieldName, fieldType)
+
+      specToField(fieldName, Some(label), fieldType.spec)
     }
 
-    (jsons, finalFieldNameAndTypes)
+    (jsons, finalFields)
   }
 
   private def mergeEnumTypes(oldType: FieldType[_], newType: FieldType[_]): FieldType[_] = {

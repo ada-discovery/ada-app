@@ -33,13 +33,13 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
         None
       )
 
-      // collect the column names
-      val columnNames = dataSetService.getColumnNames(delimiter, lines)
+      // collect the column names and labels
+      val columnNamesAndLabels = dataSetService.getColumnNameLabels(delimiter, lines)
 
       // parse lines
       logger.info(s"Parsing lines...")
       val prefixSuffixSeparators = if (importInfo.matchQuotes) Seq(quotePrefixSuffix) else Nil
-      val values = dataSetService.parseLines(columnNames, lines, delimiter, false, prefixSuffixSeparators)
+      val values = dataSetService.parseLines(columnNamesAndLabels.size, lines, delimiter, false, prefixSuffixSeparators)
 
       for {
         // create/retrieve a dsa
@@ -48,9 +48,9 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
         // save the jsons and dictionary
         _ <-
           if (importInfo.inferFieldTypes)
-            saveJsonsWithTypeInference(dsa, columnNames, values, importInfo)
+            saveJsonsWithTypeInference(dsa, columnNamesAndLabels, values, importInfo)
           else
-            saveJsonsWithoutTypeInference(dsa, columnNames, values, importInfo)
+            saveJsonsWithoutTypeInference(dsa, columnNamesAndLabels, values, importInfo)
       } yield {
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
       }
@@ -61,18 +61,17 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
 
   private def saveJsonsWithoutTypeInference(
     dsa: DataSetAccessor,
-    columnNames: Seq[String],
+    columnNamesAndLabels: Seq[(String, String)],
     values: Iterator[Seq[String]],
     importInfo: TranSmartDataSetImport
   ): Future[Unit] = {
     // create jsons and field types
     logger.info(s"Creating JSONs...")
-    val (jsons, fieldNameAndTypes) = createJsonsWithStringFieldTypes(columnNames, values)
+    val (jsons, fields) = createJsonsWithStringFields(columnNamesAndLabels, values)
 
     for {
       // save, or update the dictionary
       _ <- {
-        val fieldNameTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
         if (importInfo.mappingPath.isDefined) {
           importTranSMARTDictionary(
             importInfo.dataSetId,
@@ -85,10 +84,10 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
               importInfo.charsetName,
               None
             ),
-            fieldNameTypeSpecs
+            fields
           )
         } else {
-          dataSetService.updateDictionary(dsa.fieldRepo, fieldNameTypeSpecs, true, true)
+          dataSetService.updateDictionaryFields(dsa.fieldRepo, fields, true, true)
         }
       }
 
@@ -107,17 +106,13 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
       // save the jsons
       _ <- {
         logger.info(s"Saving JSONs...")
+
         importInfo.saveBatchSize match {
           case Some(saveBatchSize) =>
-            seqFutures(
-              jsons.grouped(saveBatchSize))(
-              dataRepo.save
-            )
+            seqFutures(jsons.grouped(saveBatchSize))(dataRepo.save)
 
           case None =>
-            Future.sequence(
-              jsons.map(dataRepo.save)
-            )
+            Future.sequence(jsons.map(dataRepo.save))
         }
       }
     } yield
@@ -126,7 +121,7 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
 
   private def saveJsonsWithTypeInference(
     dsa: DataSetAccessor,
-    columnNames: Seq[String],
+    columnNamesAndLabels: Seq[(String, String)],
     values: Iterator[Seq[String]],
     importInfo: TranSmartDataSetImport
   ): Future[Unit] = {
@@ -145,13 +140,12 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
         )
       } else
         None
-    val (jsons, fieldNameAndTypes) = createJsonsWithFieldTypes(columnNames, values.toSeq, fti)
+
+    val (jsons, fields) = createJsonsWithFields(columnNamesAndLabels, values.toSeq, fti)
 
     for {
     // save, or update the dictionary
       _ <- {
-        val fieldNameTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
-
         if (importInfo.mappingPath.isDefined) {
           importTranSMARTDictionary(
             importInfo.dataSetId,
@@ -164,10 +158,10 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
               importInfo.charsetName,
               None
             ),
-            fieldNameTypeSpecs
+            fields
           )
         } else {
-          dataSetService.updateDictionary(dsa.fieldRepo, fieldNameTypeSpecs, true, true)
+          dataSetService.updateDictionaryFields(dsa.fieldRepo, fields, true, true)
         }
       }
 
@@ -199,13 +193,14 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
     fieldGroupSize: Int,
     delimiter: String,
     mappingFileLineIterator: => Iterator[String],
-    fieldNameAndTypes: Seq[(String, FieldTypeSpec)]
+    fields: Seq[Field]
   ): Future[Unit] = {
     logger.info(s"TranSMART dictionary inference and import for data set '${dataSetId}' initiated.")
 
-    // read the mapping file to obtain tupples: field name, field label, and category name; and a category name map
-    val indexFieldNameMap: Map[Int, String] = fieldNameAndTypes.map(_._1).zipWithIndex.map(_.swap).toMap
-    val (fieldNameLabelCategoryMap, categories) = createFieldNameAndCategoryNameMaps(mappingFileLineIterator, delimiter, indexFieldNameMap)
+    // read the mapping file to obtain tuples: field name, field label, and category name; and a category name map
+    val indexFieldNameMap: Map[Int, String] = fields.map(_.name).zipWithIndex.map(_.swap).toMap
+
+    val (fieldNameLabelCategoryMap, categories) = createFieldLabelCategoryMap(mappingFileLineIterator, delimiter, indexFieldNameMap)
 
     for {
       // delete all the fields
@@ -227,24 +222,21 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
       // save the fields... use a field label and a category from the mapping file provided, and infer a type
       _ <- {
         val categoryIdMap = categoryIds.toMap
-        val groupedFieldNameAndTypes = fieldNameAndTypes.grouped(fieldGroupSize).toSeq
-        val futures = groupedFieldNameAndTypes.par.map { fieldNameAndTypesGroup =>
-          // Don't care about the result here, that's why we ignore ids and return Unit
-          val idFutures = for ((fieldName, fieldTypeSpec) <- fieldNameAndTypesGroup) yield {
-            val (fieldLabel, category) = fieldNameLabelCategoryMap.getOrElse(fieldName, ("", None))
-            val categoryId = category.map(categoryIdMap.get(_).get)
-            val stringEnums = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to)})
-            fieldRepo.save(Field(fieldName, Some(fieldLabel), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnums, None, None, None, Nil, categoryId))
-          }
-          Future.sequence(idFutures)
+
+        val newFields = fields.map { field =>
+          val (fieldLabel, category) = fieldNameLabelCategoryMap.getOrElse(field.name, ("", None))
+          val categoryId = category.map(categoryIdMap.get(_).get)
+
+          field.copy(label = Some(fieldLabel), categoryId = categoryId)
         }
-        Future.sequence(futures.toList)
+
+        dataSetService.updateDictionaryFields(fieldRepo, newFields, true, true)
       }
     } yield
       messageLogger.info(s"TranSMART dictionary inference and import for data set '${dataSetId}' successfully finished.")
   }
 
-  private def createFieldNameAndCategoryNameMaps(
+  private def createFieldLabelCategoryMap(
     lineIterator: => Iterator[String],
     delimiter: String,
     indexFieldNameMap: Map[Int, String]
