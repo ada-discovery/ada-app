@@ -7,7 +7,7 @@
 @import controllers.dataset.DataSetWebContext._
 
 @(
-    domainName : String,
+    displayName : String,
 	form: Form[DataView],
     showFieldStyle: Option[FilterShowFieldStyle.Value]
 )(
@@ -15,7 +15,8 @@
 )
 
 @layout.create(
-    domainName,
+    displayName,
+    "dataView",
 	form,
     elements(form, Map(), Map(), dataSetRouter.allFields, showFieldStyle),
     dataViewRouter.save,

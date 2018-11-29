@@ -7,8 +7,8 @@
 @import controllers.dataset.DataSetWebContext
 
 @(
-    domainName : String,
-    fieldName : String,
+    displayName: String,
+    fieldName: String,
     form: Form[models.Field],
     categories: Traversable[Category],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -17,20 +17,21 @@
 )
 
 @elements = {
-    @inputText(domainName, "name", form)
-    @inputText(domainName, "label", form)
-    @inputText(domainName, "fieldType", form)
-    @inputText(domainName, "isArray", form)
-    @inputText(domainName, "numValues", form, Seq('_label -> "Enum Values"))
-    @inputText(domainName, "displayDecimalPlaces", form)
-    @inputText(domainName, "displayTrueValue", form)
-    @inputText(domainName, "displayFalseValue", form)
-    @inputText(domainName, "aliases", form)
-    @select(domainName, "categoryId", form, categories.map(cat => (cat._id.get.stringify, cat.name)).toSeq, true)
+    @inputText("field", "name", form)
+    @inputText("field", "label", form)
+    @inputText("field", "fieldType", form)
+    @inputText("field", "isArray", form)
+    @inputText("field", "numValues", form, Seq('_label -> "Enum Values"))
+    @inputText("field", "displayDecimalPlaces", form)
+    @inputText("field", "displayTrueValue", form)
+    @inputText("field", "displayFalseValue", form)
+    @inputText("field", "aliases", form)
+    @select("field", "categoryId", form, categories.map(cat => (cat._id.get.stringify, cat.name)).toSeq, true)
 }
 
 @layout.edit(
-    domainName,
+    displayName,
+    "field",
 	form.errors,
     elements,
     dictionaryRouter.update(fieldName),

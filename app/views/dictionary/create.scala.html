@@ -5,7 +5,7 @@
 @import controllers.dataset.DataSetWebContext._
 
 @(
-    domainName : String,
+    displayName : String,
 	form: Form[Field],
 	categories: Traversable[Category]
 )(
@@ -13,20 +13,21 @@
 )
 
 @elements = {
-    @inputText(domainName, "name", form)
-    @inputText(domainName, "label", form)
-    @inputText(domainName, "fieldType", form)
-    @inputText(domainName, "isArray", form)
-    @inputText(domainName, "numValues", form)
-    @inputText(domainName, "displayDecimalPlaces", form)
-    @inputText(domainName, "displayTrueValue", form)
-    @inputText(domainName, "displayFalseValue", form)
-    @inputText(domainName, "aliases", form)
-    @select(domainName, "categoryId", form, categories.map(cat => (cat._id.get.stringify, cat.name)).toSeq, true)
+    @inputText("field", "name", form)
+    @inputText("field", "label", form)
+    @inputText("field", "fieldType", form)
+    @inputText("field", "isArray", form)
+    @inputText("field", "numValues", form)
+    @inputText("field", "displayDecimalPlaces", form)
+    @inputText("field", "displayTrueValue", form)
+    @inputText("field", "displayFalseValue", form)
+    @inputText("field", "aliases", form)
+    @select("field", "categoryId", form, categories.map(cat => (cat._id.get.stringify, cat.name)).toSeq, true)
 }
 
 @layout.create(
-    domainName,
+    displayName,
+    "field",
 	form,
     elements,
     dictionaryRouter.save,

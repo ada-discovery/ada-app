@@ -5,20 +5,21 @@
 @import controllers.dataset.DataSetWebContext
 
 @(
-    domainName : String,
+    displayName : String,
 	form: Form[Filter]
 )(
     implicit context: DataSetWebContext
 )
 
 @elements = {
-    @inputText(domainName, "name", form)
-    @checkbox(domainName, "isPrivate", form)
-    @inputText(domainName, "conditions", form)
+    @inputText("filter", "name", form)
+    @checkbox("filter", "isPrivate", form)
+    @inputText("filter", "conditions", form)
 }
 
 @layout.create(
-    domainName,
+    displayName,
+    "filter",
 	form,
     elements,
     filterRouter.save,

@@ -3,7 +3,8 @@
 @import org.incal.play.controllers.WebContext
 
 @(
-    domainName: String,
+    displayName: String,
+    messagePrefix: String,
     errors: Seq[FormError],
     elements: Html,
     updateCall: Call,
@@ -17,10 +18,10 @@
     implicit context: WebContext
 )
 
-@main(Messages("edit.title", domainName), sideBar, topContentBar, None, bottomResources, Some(formErrors(domainName, errors))) {
+@main(Messages("edit.title", displayName), sideBar, topContentBar, None, bottomResources, Some(formErrors(messagePrefix, errors))) {
 
     <div class="page-header">
-        <h3>@Messages("edit.title", domainName)</h3>
+        <h3>@Messages("edit.title", displayName)</h3>
     </div>
 
     <div class="row">

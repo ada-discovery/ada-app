@@ -9,8 +9,8 @@
 @import controllers.dataset.DataSetWebContext._
 
 @(
-    domainName: String,
-    id : BSONObjectID,
+    displayName: String,
+    id: BSONObjectID,
     form: Form[Filter],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -28,7 +28,8 @@
 }
 
 @layout.edit(
-    domainName,
+    displayName,
+    "filter",
 	form.errors,
     elements,
     filterRouter.update(id),

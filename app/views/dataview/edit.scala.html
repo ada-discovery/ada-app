@@ -9,7 +9,7 @@
 @import controllers.dataset.DataSetWebContext._
 
 @(
-    domainName: String,
+    displayName: String,
     id : BSONObjectID,
     form: Form[DataView],
     nameFieldMap: Map[String,  Field],
@@ -27,7 +27,8 @@
 }
 
 @layout.edit(
-    domainName,
+    displayName,
+    "dataView",
 	form.errors,
     elements(form, nameFieldMap, idFilterNameMap, dataSetRouter.allFields, showFieldStyle),
     updateCall(id),

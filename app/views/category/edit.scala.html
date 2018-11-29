@@ -9,7 +9,7 @@
 @import controllers.dataset.DataSetWebContext
 
 @(
-    domainName: String,
+    displayName: String,
     id : BSONObjectID,
     form: Form[Category],
     categories: Traversable[Category],
@@ -26,9 +26,9 @@
 }
 
 @elements = {
-    @inputText(domainName, "name", form)
-    @inputText(domainName, "label", form)
-    @select(domainName, "parentId", form, categories.map(cat => (cat._id.get.stringify, cat.name)).toSeq, true)
+    @inputText("category", "name", form)
+    @inputText("category", "label", form)
+    @select("category", "parentId", form, categories.map(cat => (cat._id.get.stringify, cat.name)).toSeq, true)
 
     @dynamicTableJsImport()
     @typeaheadJsImport()
@@ -50,7 +50,8 @@
 }
 
 @layout.edit(
-    domainName,
+    displayName,
+    "category",
 	form.errors,
     elements,
     categoryRouter.update(id),

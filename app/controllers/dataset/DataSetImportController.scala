@@ -1,6 +1,6 @@
 package controllers.dataset
 
-import java.util.Date
+import java.util.{Date, UUID}
 import java.util.concurrent.TimeoutException
 
 import models.DataSetSetting
@@ -14,7 +14,7 @@ import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImpor
 import models._
 import persistence.RepoTypes.{DataSetImportRepo, MessageRepo}
 import play.api.{Configuration, Logger}
-import play.api.data.{Form, Mapping}
+import play.api.data.{Form, FormError, Mapping}
 import play.api.data.Forms.{optional, _}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -30,7 +30,7 @@ import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
 import views.html.{datasetimport => view}
 import views.html.layout
 import util.MessageLogger
-import util.hasNonAlphanumericUnderscore
+import util.{hasNonAlphanumericUnderscore, firstCharToLowerCase}
 import play.api.data.format.Formats._
 import _root_.util.retry
 import controllers.core.AdaCrudControllerImpl
@@ -41,7 +41,7 @@ import org.incal.core.dataaccess.AscSort
 import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters._
-import org.incal.play.util.WebUtil.getRequestParamValue
+import org.incal.play.util.WebUtil.getRequestParamValueOptional
 
 import scala.concurrent.{Await, Future}
 
@@ -61,7 +61,9 @@ class DataSetImportController @Inject()(
   private val logger = Logger
   private val messageLogger = MessageLogger(logger, messageRepo)
 
-  private lazy val importFolder = configuration.getString("datasetimport.import.folder").get
+  private lazy val importFolder = configuration.getString("datasetimport.import.folder").getOrElse(
+    new java.io.File("imports/").getAbsolutePath
+  )
   private lazy val importRetryNum = configuration.getInt("datasetimport.retrynum").getOrElse(3)
 
   // Forms
@@ -77,6 +79,11 @@ class DataSetImportController @Inject()(
   private implicit val filterShowFieldStyleFormatter = EnumFormatter(FilterShowFieldStyle)
   private implicit val storageTypeFormatter = EnumFormatter(StorageType)
   private implicit val widgetGenerationMethodFormatter = EnumFormatter(WidgetGenerationMethod)
+
+  private val dataSetIdMapping = nonEmptyText.verifying(
+    "Data Set Id must not contain any non-alphanumeric characters (except underscore)",
+    dataSetId => !hasNonAlphanumericUnderscore(dataSetId.replaceFirst("\\.",""))
+  )
 
   private val dataSetSettingMapping: Mapping[DataSetSetting] = mapping(
     "id" -> ignored(Option.empty[BSONObjectID]),
@@ -112,7 +119,7 @@ class DataSetImportController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
-      "dataSetId" -> nonEmptyText.verifying("Data Set Id must not contain any non-alphanumeric characters (except underscore)", dataSetId => !hasNonAlphanumericUnderscore(dataSetId)),
+      "dataSetId" -> dataSetIdMapping,
       "dataSetName" -> nonEmptyText,
       "path" -> optional(text),
       "delimiter" -> default(nonEmptyText, ","),
@@ -142,7 +149,7 @@ class DataSetImportController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
-      "dataSetId" -> nonEmptyText.verifying("Data Set Id must not contain any non-alphanumeric characters (except underscore)", dataSetId => !hasNonAlphanumericUnderscore(dataSetId)),
+      "dataSetId" -> dataSetIdMapping,
       "dataSetName" -> nonEmptyText,
       "path" -> optional(text),
       "charsetName" -> optional(text),
@@ -168,7 +175,7 @@ class DataSetImportController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
-      "dataSetId" -> nonEmptyText.verifying("Data Set Id must not contain any non-alphanumeric characters (except underscore)", dataSetId => !hasNonAlphanumericUnderscore(dataSetId)),
+      "dataSetId" -> dataSetIdMapping,
       "dataSetName" -> nonEmptyText,
       "tableId" -> nonEmptyText,
       "downloadColumnFiles" -> boolean,
@@ -191,7 +198,7 @@ class DataSetImportController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
-      "dataSetId" -> nonEmptyText.verifying("Data Set Id must not contain any non-alphanumeric characters (except underscore)", dataSetId => !hasNonAlphanumericUnderscore(dataSetId)),
+      "dataSetId" -> dataSetIdMapping,
       "dataSetName" -> nonEmptyText,
       "dataPath" -> optional(text),
       "mappingPath" -> optional(text),
@@ -218,7 +225,7 @@ class DataSetImportController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
-      "dataSetId" -> nonEmptyText.verifying("Data Set Id must not contain any non-alphanumeric characters (except underscore)", dataSetId => !hasNonAlphanumericUnderscore(dataSetId)),
+      "dataSetId" -> dataSetIdMapping,
       "dataSetName" -> nonEmptyText,
       "url" -> nonEmptyText,
       "token" -> nonEmptyText,
@@ -243,7 +250,7 @@ class DataSetImportController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
-      "dataSetId" -> nonEmptyText.verifying("Data Set Id must not contain any non-alphanumeric characters (except underscore)", dataSetId => !hasNonAlphanumericUnderscore(dataSetId)),
+      "dataSetId" -> dataSetIdMapping,
       "dataSetName" -> nonEmptyText,
       "importRawData" -> boolean,
       "scheduled" -> boolean,
@@ -260,22 +267,25 @@ class DataSetImportController @Inject()(
   )
 
   protected case class DataSetImportCreateEditViews[E <: DataSetImport](
-    name: String,
+    displayName: String,
     val form: Form[E],
     viewElements: (Form[E], Messages) => Html,
     defaultCreateInstance: Option[E] = None)(
     implicit manifest: Manifest[E]
   ) extends CreateEditFormViews[E, BSONObjectID] {
 
+    private val messagePrefix = firstCharToLowerCase(manifest.runtimeClass.getName)
+
     override protected[controllers] def fillForm(item: E) =
       form.fill(item)
 
     override protected def createView = { implicit ctx: WebContext =>
       form: Form[E] =>
-        val filledForm = defaultCreateInstance.map(form.fill).getOrElse(form)
+        val filledForm = if (form.hasErrors) form else defaultCreateInstance.map(form.fill).getOrElse(form)
 
         layout.create(
-          name,
+          displayName,
+          messagePrefix,
           filledForm,
           viewElements(filledForm, ctx.msg),
           controllers.dataset.routes.DataSetImportController.save,
@@ -287,7 +297,8 @@ class DataSetImportController @Inject()(
     override protected def editView = { implicit ctx: WebContext =>
       data: IdForm[BSONObjectID, E] =>
         layout.edit(
-          name,
+          displayName,
+          messagePrefix,
           data.form.errors,
           viewElements(data.form, ctx.msg),
           controllers.dataset.routes.DataSetImportController.update(data.id),
@@ -314,7 +325,8 @@ class DataSetImportController @Inject()(
           delimiter  = "",
           matchQuotes = false,
           inferFieldTypes = true,
-          saveBatchSize = Some(10)
+          saveBatchSize = Some(10),
+          setting = Some(new DataSetSetting("", StorageType.ElasticSearch))
         ))
       ),
 
@@ -445,23 +457,47 @@ class DataSetImportController @Inject()(
       )
   }
 
-  override protected def saveCall(importInfo: DataSetImport)(implicit request: Request[AnyContent]): Future[BSONObjectID] = {
-    val id = BSONObjectID.generate
-    val modifiedImportInfo = handleImportFiles(DataSetImportIdentity.set(importInfo, id))
+  override protected def formFromRequest(
+    implicit request: Request[AnyContent]
+  ): Form[DataSetImport] = {
+    val filledForm = super.formFromRequest(request)
 
-    super.saveCall(modifiedImportInfo).map { id =>
+    // aux function to add param values to a form
+    def addToForm(
+      form: Form[DataSetImport],
+      values: Map[String, String]
+    ): Form[DataSetImport] =
+      form.bind(form.data ++ values)
+
+    if (!filledForm.hasErrors && filledForm.value.isDefined) {
+      val dataSetImport = filledForm.value.get
+
+      // add import file(s) param values and errors
+      val extraValuesOrErrors = handleImportFiles(dataSetImport)
+      val extraValues = extraValuesOrErrors.collect { case (param, Some(value)) => (param, value) }
+      val extraErrors = extraValuesOrErrors.collect { case (param, None) => FormError(param, "error.required", param) }
+
+      extraErrors.foldLeft(addToForm(filledForm, extraValues)){_.withError(_)}
+    } else
+      filledForm
+  }
+
+  override protected def saveCall(
+    importInfo: DataSetImport)(
+    implicit request: Request[AnyContent]
+  ) =
+    super.saveCall(importInfo).map { id =>
       scheduleOrCancel(id, importInfo); id
     }
-  }
 
-  override protected def updateCall(importInfo: DataSetImport)(implicit request: Request[AnyContent]): Future[BSONObjectID] = {
-    val modifiedImportInfo = handleImportFiles(importInfo)
-
+  override protected def updateCall(
+    importInfo: DataSetImport)(
+    implicit request: Request[AnyContent]
+  ) =
     //TODO: remove the old files if any
-    super.updateCall(modifiedImportInfo).map { id =>
-      scheduleOrCancel(id, modifiedImportInfo); id
+    super.updateCall(importInfo).map { id =>
+      scheduleOrCancel(id, importInfo); id
     }
-  }
 
   def idAndNames = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
@@ -493,49 +529,50 @@ class DataSetImportController @Inject()(
     )
   }
 
-  private def handleImportFiles(importInfo: DataSetImport)(implicit request: Request[AnyContent]): DataSetImport = {
-    val id = importInfo._id.get
+  private def handleImportFiles(
+    importInfo: DataSetImport)(
+    implicit request: Request[AnyContent]
+  ): Map[String, Option[String]] = {
+    val tempId = BSONObjectID.generate().stringify
 
     def copyImportFile(name: String, file: File): String = {
-      val path = importFolder + id.stringify + "/" + name
-      copyFile(file, path)
-      path
+      if (new java.io.File(importFolder).exists()) {
+        val folderDelimiter = if (importFolder.endsWith("/")) "" else "/"
+        val path = importFolder + folderDelimiter + tempId + "/" + name
+        copyFile(file, path)
+        path
+      } else
+        throw new AdaException(s"Data set import folder $importFolder does not exist. Create one or override the setting 'datasetimport.import.folder' in custom.conf.")
+    }
+
+    def pathKeyValue(
+      fileParamKey: String,
+      pathParamKey: String)(
+      implicit request: Request[AnyContent]
+    ): (String, Option[String]) = {
+      val path: Option[String] = getFile(fileParamKey, request).map(dataFile =>
+        copyImportFile(dataFile._1, dataFile._2)
+      ) match {
+        case Some(path) => Some(path)
+        case None => getRequestParamValueOptional(pathParamKey)
+      }
+      (pathParamKey, path)
     }
 
     importInfo match {
-      case importInfo: CsvDataSetImport => {
-        val path =
-          getFile("dataFile", request).map(dataFile =>
-            copyImportFile(dataFile._1, dataFile._2)
-          ).getOrElse(
-            getRequestParamValue("path"))
-        importInfo.copy(path = Some(path))
-      }
+      case _: CsvDataSetImport =>
+        Seq(pathKeyValue("dataFile", "path")).toMap
 
-      case importInfo: JsonDataSetImport => {
-        val path =
-          getFile("dataFile", request).map(dataFile =>
-            copyImportFile(dataFile._1, dataFile._2)
-          ).getOrElse(
-            getRequestParamValue("path"))
-        importInfo.copy(path = Some(path))
-      }
+      case _: JsonDataSetImport =>
+        Seq(pathKeyValue("dataFile", "path")).toMap
 
-      case importInfo: TranSmartDataSetImport => {
-        val dataPath =
-          getFile("dataFile", request).map(dataFile =>
-            copyImportFile(dataFile._1, dataFile._2)
-          ).getOrElse(
-            getRequestParamValue("dataPath"))
+      case _: TranSmartDataSetImport =>
+        Seq(
+          pathKeyValue("dataFile", "dataPath"),
+          pathKeyValue("mappingFile", "mappingPath")
+        ).toMap
 
-        val mappingPath = getFile("mappingFile", request).map(mappingFile =>
-          copyImportFile(mappingFile._1, mappingFile._2)
-        ).getOrElse(
-          getRequestParamValue("mappingPath"))
-
-        importInfo.copy(dataPath = Some(dataPath), mappingPath = Some(mappingPath))
-      }
-      case _ => importInfo
+      case _ => Map()
     }
   }
 
@@ -553,8 +590,11 @@ class DataSetImportController @Inject()(
 
   private def getFile(fileParamKey: String, request: Request[AnyContent]): Option[(String, java.io.File)] = {
     val dataFileOption = request.body.asMultipartFormData.flatMap(_.file(fileParamKey))
-    dataFileOption.map { dataFile =>
-      (dataFile.filename, dataFile.ref.file)
+    dataFileOption.flatMap { dataFile =>
+      if (dataFile.filename.nonEmpty)
+        Some((dataFile.filename, dataFile.ref.file))
+      else
+        None
     }
   }
 

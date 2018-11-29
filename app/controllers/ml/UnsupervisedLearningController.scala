@@ -24,6 +24,7 @@ import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters._
 import org.incal.play.security.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
+import util.firstCharToLowerCase
 import views.html.{layout, unsupervisedlearning => view}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -101,11 +102,13 @@ class UnsupervisedLearningController @Inject()(
     )(GaussianMixture.apply)(GaussianMixture.unapply))
 
   protected case class UnsupervisedLearningCreateEditViews[E <: UnsupervisedLearning](
-    name: String,
+    displayName: String,
     val form: Form[E],
     viewElements: (Form[E], Messages) => Html)(
     implicit manifest: Manifest[E]
   ) extends CreateEditFormViews[E, BSONObjectID] {
+
+    private val messagePrefix = firstCharToLowerCase(manifest.runtimeClass.getName)
 
     override protected[controllers] def fillForm(item: E) =
       form.fill(item)
@@ -113,7 +116,8 @@ class UnsupervisedLearningController @Inject()(
     override protected[controllers] def createView = { implicit ctx =>
       form =>
         layout.create(
-          name,
+          displayName,
+          messagePrefix,
           form,
           viewElements(form, ctx.msg),
           controllers.ml.routes.UnsupervisedLearningController.save,
@@ -125,7 +129,8 @@ class UnsupervisedLearningController @Inject()(
     override protected[controllers] def editView = { implicit ctx =>
       data =>
         layout.edit(
-          name,
+          displayName,
+          messagePrefix,
           data.form.errors,
           viewElements(data.form, ctx.msg),
           route.update(data.id),

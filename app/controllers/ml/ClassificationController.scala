@@ -28,6 +28,7 @@ import org.incal.core.dataaccess.AscSort
 import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters._
+import util.firstCharToLowerCase
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -157,11 +158,13 @@ class ClassificationController @Inject()(
     )(LinearSupportVectorMachine.apply)(LinearSupportVectorMachine.unapply))
 
   protected case class ClassificationCreateEditViews[E <: Classification](
-    name: String,
+    displayName: String,
     val form: Form[E],
     viewElements: (Form[E], Messages) => Html)(
     implicit manifest: Manifest[E]
   ) extends CreateEditFormViews[E, BSONObjectID] {
+
+    private val messagePrefix = firstCharToLowerCase(manifest.runtimeClass.getName)
 
     override protected[controllers] def fillForm(item: E) =
       form.fill(item)
@@ -169,7 +172,8 @@ class ClassificationController @Inject()(
     override protected[controllers] def createView = { implicit ctx =>
       form =>
         layout.create(
-          name,
+          displayName,
+          messagePrefix,
           form,
           viewElements(form, ctx.msg),
           controllers.ml.routes.ClassificationController.save,
@@ -181,7 +185,8 @@ class ClassificationController @Inject()(
     override protected[controllers] def editView = { implicit ctx =>
       data =>
         layout.edit(
-          name,
+          displayName,
+          messagePrefix,
           data.form.errors,
           viewElements(data.form, ctx.msg),
           controllers.ml.routes.ClassificationController.update(data.id),

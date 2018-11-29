@@ -12,7 +12,7 @@
 @import models.ml.ClassificationEvalMetric
 
 @(
-    dataSetName: String,
+    displayName: String,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -298,11 +298,11 @@
     @modal("anovaChiSquareFeatureSelectionModal", "ANOVA/Chi-Square Feature Selection", anovaChiSquareModalBody(4), None, Some(anovaChiSquareButtons))
 }
 
-@main(Messages("classification.title", dataSetName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
+@main(Messages("classification.title", displayName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
 
     <div class="page-header">
         <h3>
-            @Messages("classification.title", dataSetName)
+            @Messages("classification.title", displayName)
         </h3>
     </div>
 

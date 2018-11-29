@@ -10,7 +10,7 @@
         <div id="settingDiv" style="display:none">
             <input type="hidden" id="setting_dataSetId" name="setting.dataSetId" value="">
             <hr/>
-            @select("dataSetImport", "setting.storageType", form, util.enumToValueString(StorageType), true)
+            @select("dataSetImport", "setting.storageType", form, util.enumToValueString(StorageType), false)
             <a class="pull-right" href="#advancedSetting" data-toggle="collapse">Show Advanced</a>
 
             <div id="advancedSetting" class="collapse">

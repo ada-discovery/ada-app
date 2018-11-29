@@ -296,4 +296,10 @@ package object util {
 
   def hasNonAlphanumericUnderscore(string: String) =
     nonAlphanumericUnderscorePattern.findFirstIn(string).isDefined
+
+  def firstCharToLowerCase(s: String): String = {
+    val c = s.toCharArray()
+    c.update(0, Character.toLowerCase(c(0)))
+    new String(c)
+  }
 }

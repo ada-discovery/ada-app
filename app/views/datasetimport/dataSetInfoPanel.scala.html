@@ -22,8 +22,8 @@
     $('#dataSetName').on('change keyup paste', updateDataSetId)
 
     function updateDataSetId() {
-        var dataSpaceNamePart = $('#dataSpaceName').val().trim().replace(/ /g, "_").toLowerCase()
-        var dataSetNamePart = $('#dataSetName').val().trim().replace(/ /g, "_").toLowerCase()
+        var dataSpaceNamePart = $('#dataSpaceName').val().trim().replace(/[^a-zA-Z0-9]/g, "_").toLowerCase()
+        var dataSetNamePart = $('#dataSetName').val().trim().replace(/[^a-zA-Z0-9]/g, "_").toLowerCase()
         $('#dataSetId').val(dataSpaceNamePart + "." + dataSetNamePart)
     }
 </script>
