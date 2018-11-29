@@ -50,10 +50,10 @@
         var includeDataView = $('input[name="includeDataView"]:checked').val() == "true"
         if (!includeDataView) {
             // if data view should not be included remove all data view fields from the form by erasing their names before submit
-            $.each( $("input[name^='dataView.']"), function () {
+            $.each( $("input[name^='dataView\\.']"), function () {
                 $(this).attr("name", '');
             });
-            $.each( $("select[name^='dataView.']"), function () {
+            $.each( $("select[name^='dataView\\.']"), function () {
                 $(this).attr("name", '');
             });
         }

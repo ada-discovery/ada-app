@@ -118,7 +118,6 @@ class UserController @Inject() (
   def listUsersForPermissionPrefix(
     permissionPrefix: Option[String]
   ) = AuthAction { implicit request =>
-    println(permissionPrefix)
     for {
       allUsers <- repo.find(sort = Seq(AscSort("ldapDn")))
     } yield {

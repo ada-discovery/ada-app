@@ -10,7 +10,7 @@
         <div id="settingDiv" style="display:none">
             <input type="hidden" id="setting_dataSetId" name="setting.dataSetId" value="">
             <hr/>
-            @select("dataSetImport", "setting.storageType", form, util.enumToValueString(StorageType), false)
+            @select("dataSetImport", "setting.storageType", form, util.enumToValueString(StorageType), true)
             <a class="pull-right" href="#advancedSetting" data-toggle="collapse">Show Advanced</a>
 
             <div id="advancedSetting" class="collapse">
@@ -30,18 +30,15 @@
 
 <script type="text/javascript">
     $(function() {
-        var settingValueFound = false;
-        $.each( $("input[name^='setting.']"), function () {
-            if ($(this).val()) {
-                settingValueFound = true;
-                return false;
-            }
-        });
+        var hasSetting = @(form.data.keys.exists(_.startsWith("setting.")))
 
-        if (settingValueFound) {
-            $('input[name="includeSetting"][value="true"]').attr('checked', 'checked')
-            $('input[name="includeSetting"][value="false"]').attr('checked', '')
+        if (hasSetting) {
+            $('input[name="includeSetting"][value="true"]').prop('checked', true);
+            $('input[name="includeSetting"][value="false"]').prop('checked', false);
             $('#settingDiv').show()
+        } else {
+            $('input[name="includeSetting"][value="false"]').prop('checked', true);
+            $('input[name="includeSetting"][value="true"]').prop('checked', false);
         }
     });
 
@@ -59,7 +56,11 @@
             $('#setting_dataSetId').val($('#dataSetId').val())
         else {
             // if setting should not be included remove all setting fields from the form by erasing their names before submit
-            $.each( $("input[name^='setting.']"), function () {
+            $.each($("input[name^='setting\\.']"), function () {
+                $(this).attr("name", '');
+            });
+
+            $.each($("select[name^='setting\\.']"), function () {
                 $(this).attr("name", '');
             });
         }

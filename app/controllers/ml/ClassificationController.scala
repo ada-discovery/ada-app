@@ -164,7 +164,7 @@ class ClassificationController @Inject()(
     implicit manifest: Manifest[E]
   ) extends CreateEditFormViews[E, BSONObjectID] {
 
-    private val messagePrefix = firstCharToLowerCase(manifest.runtimeClass.getName)
+    private val messagePrefix = firstCharToLowerCase(manifest.runtimeClass.getSimpleName)
 
     override protected[controllers] def fillForm(item: E) =
       form.fill(item)

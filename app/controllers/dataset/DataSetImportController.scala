@@ -270,18 +270,18 @@ class DataSetImportController @Inject()(
     displayName: String,
     val form: Form[E],
     viewElements: (Form[E], Messages) => Html,
-    defaultCreateInstance: Option[E] = None)(
+    defaultCreateInstance: Option[() => E] = None)(
     implicit manifest: Manifest[E]
   ) extends CreateEditFormViews[E, BSONObjectID] {
 
-    private val messagePrefix = firstCharToLowerCase(manifest.runtimeClass.getName)
+    private val messagePrefix = firstCharToLowerCase(manifest.runtimeClass.getSimpleName)
 
     override protected[controllers] def fillForm(item: E) =
       form.fill(item)
 
     override protected def createView = { implicit ctx: WebContext =>
       form: Form[E] =>
-        val filledForm = if (form.hasErrors) form else defaultCreateInstance.map(form.fill).getOrElse(form)
+        val filledForm = if (form.hasErrors) form else defaultCreateInstance.map(x => form.fill(x())).getOrElse(form)
 
         layout.create(
           displayName,
@@ -318,7 +318,7 @@ class DataSetImportController @Inject()(
         "CSV Data Set Import",
         csvForm,
         view.csvTypeElements(_)(_),
-        Some(CsvDataSetImport(
+        Some(() => CsvDataSetImport(
           dataSpaceName = "",
           dataSetId = "",
           dataSetName = "",
@@ -334,12 +334,13 @@ class DataSetImportController @Inject()(
         "JSON Data Set Import",
         jsonForm,
         view.jsonTypeElements(_)(_),
-        Some(JsonDataSetImport(
+        Some(() => JsonDataSetImport(
           dataSpaceName = "",
           dataSetId = "",
           dataSetName = "",
           inferFieldTypes = true,
-          saveBatchSize = Some(10)
+          saveBatchSize = Some(10),
+          setting = Some(new DataSetSetting("", StorageType.ElasticSearch))
         ))
       ),
 
@@ -347,13 +348,14 @@ class DataSetImportController @Inject()(
         "Synapse Data Set Import",
         synapseForm,
         view.synapseTypeElements(_)(_),
-        Some(SynapseDataSetImport(
+        Some(() => SynapseDataSetImport(
           dataSpaceName = "",
           dataSetId = "",
           dataSetName = "",
           tableId = "",
           downloadColumnFiles = false,
-          batchSize = Some(10)
+          batchSize = Some(10),
+          setting = Some(new DataSetSetting("", StorageType.ElasticSearch))
         ))
       ),
 
@@ -361,13 +363,14 @@ class DataSetImportController @Inject()(
         "TranSMART Data Set (and Dictionary) Import",
         tranSmartForm,
         view.tranSmartTypeElements(_)(_),
-        Some(TranSmartDataSetImport(
+        Some(() => TranSmartDataSetImport(
           dataSpaceName = "",
           dataSetId = "",
           dataSetName = "",
           matchQuotes = false,
           inferFieldTypes = true,
-          saveBatchSize = Some(10)
+          saveBatchSize = Some(10),
+          setting = Some(new DataSetSetting("", StorageType.ElasticSearch))
         ))
       ),
 
@@ -375,14 +378,15 @@ class DataSetImportController @Inject()(
         "RedCap Data Set Import",
         redCapForm,
         view.redCapTypeElements(_)(_),
-        Some(RedCapDataSetImport(
+        Some(() => RedCapDataSetImport(
           dataSpaceName = "",
           dataSetId = "",
           dataSetName = "",
           url = "",
           token = "",
           importDictionaryFlag = true,
-          saveBatchSize = Some(10)
+          saveBatchSize = Some(10),
+          setting = Some(new DataSetSetting("", StorageType.ElasticSearch))
         ))
       ),
 
