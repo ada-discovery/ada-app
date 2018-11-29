@@ -128,11 +128,17 @@ dataSetImport.scheduledTime.second.label = Second
 csvDataSetImport.matchQuotes.label = Match Quotes?
 csvDataSetImport.inferenceMaxEnumValuesCount.label = Inference Max Enum Values Count
 csvDataSetImport.inferenceMinAvgValuesPerEnum.label = Inference Min Avg Values Per Enum
+csvDataSetImport.path = Source data / path
+
+tranSmartDataSetImport.dataPath = Source data / path
+tranSmartDataSetImport.mappingPath = Source mapping / path
 
 jsonDataSetImport.inferenceMaxEnumValuesCount.label = Inference Max Enum Values Count
 jsonDataSetImport.inferenceMinAvgValuesPerEnum.label = Inference Min Avg Values Per Enum
+jsonDataSetImport.path = Source data / path
 
 synapseDataSetImport.downloadColumnFiles.label = Download Column Files?
+
 redCapDataSetImport.importDictionaryFlag.label = Import Dictionary?
 
 dataView.useOptimizedRepoChartCalcMethod.label = Optimized Per Widget Repo Calc
