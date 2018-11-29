@@ -19,6 +19,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 package object util {
 
+  private val nonAlphanumericUnderscorePattern = "[^A-Za-z0-9_]".r
+
   def shorten(string : String, length: Int = 25) =
     if (string.length > length) string.substring(0, length - 2) + ".." else string
 
@@ -289,5 +291,9 @@ package object util {
   def toJsonHtml[T](o: T)(implicit tjs: Writes[T]): Html =
     Html(Json.stringify(Json.toJson(o)))
 
-  def nonAlphanumericToUnderscore(string: String) = string.replaceAll("[^\\p{Alnum}]", "_")
+  def nonAlphanumericToUnderscore(string: String) =
+    string.replaceAll("[^\\p{Alnum}]", "_")
+
+  def hasNonAlphanumericUnderscore(string: String) =
+    nonAlphanumericUnderscorePattern.findFirstIn(string).isDefined
 }

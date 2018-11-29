@@ -3,7 +3,7 @@ package services.datasetimporter
 import java.util.Date
 import javax.inject.Inject
 
-import util.seqFutures
+import util.{seqFutures, hasNonAlphanumericUnderscore}
 import dataaccess.RepoTypes.CategoryRepo
 import dataaccess.RepoTypes.FieldRepo
 import dataaccess._
@@ -299,6 +299,11 @@ private class RedCapDataSetImporter @Inject() (
       }.par.flatMap { metadata =>
         val fieldName = metadata.field_name
 
+        // check if a field name is legal
+        if (hasNonAlphanumericUnderscore(fieldName)) {
+          throw new AdaParseException(s"The REDCap field name ${fieldName} is illegal since it contain some non-alphanumeric characters (except underscore).")
+        }
+
         val categoryId = nameCategoryIdMap.get(metadata.form_name)
 
         if (metadata.field_type != RCFieldType.checkbox) {
@@ -334,15 +339,16 @@ private class RedCapDataSetImporter @Inject() (
             case RCFieldType.truefalse => FieldTypeSpec(FieldTypeId.Boolean)
             case RCFieldType.notes => inferredType
             case RCFieldType.file => inferredType
+            case RCFieldType.sql => enumOrDoubleOrString
           }
 
           val stringEnumValues = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to) })
-          val field = Field(metadata.field_name, Some(metadata.field_label), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnumValues, None, None, None, Nil, categoryId)
+          val field = Field(fieldName, Some(metadata.field_label), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnumValues, None, None, None, Nil, categoryId)
           Seq(field)
         } else {
           val choices = getEnumValues(metadata).getOrElse(Nil)
           choices.map { case (suffix, label) =>
-            Field(s"${metadata.field_name}___$suffix", Some(metadata.field_label + " " + label), FieldTypeId.Boolean, categoryId = categoryId)
+            Field(s"${fieldName}___$suffix", Some(metadata.field_label + " " + label), FieldTypeId.Boolean, categoryId = categoryId)
           }
         }
       }.toList

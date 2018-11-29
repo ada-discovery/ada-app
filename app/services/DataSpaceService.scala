@@ -18,6 +18,8 @@ import scala.concurrent.Future
 @ImplementedBy(classOf[DataSpaceServiceImpl])
 trait DataSpaceService {
 
+  def allAsTree: Future[Traversable[DataSpaceMetaInfo]]
+
   def getTreeForCurrentUser(
     request: Request[_]
   ): Future[Traversable[DataSpaceMetaInfo]]
@@ -62,6 +64,8 @@ class DataSpaceServiceImpl @Inject() (
     for {
       dataSpaces <- {
         val isAdmin = user.roles.contains(SecurityRole.admin)
+
+        def allAsTreeAux = allAsTree.map(_.filterNot(_.parentId.isDefined))
 
         if (isAdmin)
           allAsTree
@@ -108,7 +112,7 @@ class DataSpaceServiceImpl @Inject() (
         None
     }.flatten.toSet
 
-  private def allAsTree: Future[Traversable[DataSpaceMetaInfo]] = {
+  override def allAsTree: Future[Traversable[DataSpaceMetaInfo]] = {
     dataSpaceMetaInfoRepo.find().map { dataSpaces =>
       val idDataSpaceMap = dataSpaces.map( dataSpace => (dataSpace._id.get, dataSpace)).toMap
       dataSpaces.foreach { dataSpace =>
@@ -117,7 +121,7 @@ class DataSpaceServiceImpl @Inject() (
           parent.get.children.append(dataSpace)
         }
       }
-      dataSpaces.filterNot(_.parentId.isDefined)
+      dataSpaces
     }
   }
 

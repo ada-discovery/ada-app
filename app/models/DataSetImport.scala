@@ -24,20 +24,20 @@ abstract class DataSetImport {
 case class ScheduledTime(hour: Option[Int], minute: Option[Int], second: Option[Int])
 
 case class CsvDataSetImport(
-  _id: Option[BSONObjectID],
+  _id: Option[BSONObjectID] = None,
   dataSpaceName: String,
   dataSetId: String,
   dataSetName: String,
-  path: Option[String],
+  path: Option[String] = None,
   delimiter: String,
-  eol: Option[String],
-  charsetName: Option[String],
+  eol: Option[String] = None,
+  charsetName: Option[String] = None,
   matchQuotes: Boolean,
   inferFieldTypes: Boolean,
   inferenceMaxEnumValuesCount: Option[Int] = None,
   inferenceMinAvgValuesPerEnum: Option[Double] = None,
   arrayDelimiter: Option[String] = None,
-  booleanIncludeNumbers: Boolean = true,
+  booleanIncludeNumbers: Boolean = false,
   saveBatchSize: Option[Int] = None,
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,
@@ -48,16 +48,16 @@ case class CsvDataSetImport(
 ) extends DataSetImport
 
 case class JsonDataSetImport(
-  _id: Option[BSONObjectID],
+  _id: Option[BSONObjectID] = None,
   dataSpaceName: String,
   dataSetId: String,
   dataSetName: String,
-  path: Option[String],
-  charsetName: Option[String],
+  path: Option[String] = None,
+  charsetName: Option[String] = None,
   inferFieldTypes: Boolean,
   inferenceMaxEnumValuesCount: Option[Int] = None,
   inferenceMinAvgValuesPerEnum: Option[Double] = None,
-  booleanIncludeNumbers: Boolean = true,
+  booleanIncludeNumbers: Boolean = false,
   saveBatchSize: Option[Int] = None,
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,
@@ -68,7 +68,7 @@ case class JsonDataSetImport(
 ) extends DataSetImport
 
 case class SynapseDataSetImport(
-  _id: Option[BSONObjectID],
+  _id: Option[BSONObjectID] = None,
   dataSpaceName: String,
   dataSetId: String,
   dataSetName: String,
@@ -85,13 +85,13 @@ case class SynapseDataSetImport(
 ) extends DataSetImport
 
 case class TranSmartDataSetImport(
-  _id: Option[BSONObjectID],
+  _id: Option[BSONObjectID] = None,
   dataSpaceName: String,
   dataSetId: String,
   dataSetName: String,
-  dataPath: Option[String],
-  mappingPath: Option[String],
-  charsetName: Option[String],
+  dataPath: Option[String] = None,
+  mappingPath: Option[String] = None,
+  charsetName: Option[String] = None,
   matchQuotes: Boolean,
   inferFieldTypes: Boolean,
   inferenceMaxEnumValuesCount: Option[Int] = None,
@@ -106,7 +106,7 @@ case class TranSmartDataSetImport(
 ) extends DataSetImport
 
 case class RedCapDataSetImport(
-  _id: Option[BSONObjectID],
+  _id: Option[BSONObjectID] = None,
   dataSpaceName: String,
   dataSetId: String,
   dataSetName: String,
@@ -125,7 +125,7 @@ case class RedCapDataSetImport(
 ) extends DataSetImport
 
 case class EGaitDataSetImport(
-  _id: Option[BSONObjectID],
+  _id: Option[BSONObjectID] = None,
   dataSpaceName: String,
   dataSetId: String,
   dataSetName: String,

@@ -30,6 +30,7 @@ import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
 import views.html.{datasetimport => view}
 import views.html.layout
 import util.MessageLogger
+import util.hasNonAlphanumericUnderscore
 import play.api.data.format.Formats._
 import _root_.util.retry
 import controllers.core.AdaCrudControllerImpl
@@ -111,10 +112,10 @@ class DataSetImportController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
-      "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
+      "dataSetId" -> nonEmptyText.verifying("Data Set Id must not contain any non-alphanumeric characters (except underscore)", dataSetId => !hasNonAlphanumericUnderscore(dataSetId)),
       "dataSetName" -> nonEmptyText,
       "path" -> optional(text),
-      "delimiter" -> nonEmptyText,
+      "delimiter" -> default(nonEmptyText, ","),
       "eol" -> optional(text),
       "charsetName" -> optional(text),
       "matchQuotes" -> boolean,
@@ -141,7 +142,7 @@ class DataSetImportController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
-      "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
+      "dataSetId" -> nonEmptyText.verifying("Data Set Id must not contain any non-alphanumeric characters (except underscore)", dataSetId => !hasNonAlphanumericUnderscore(dataSetId)),
       "dataSetName" -> nonEmptyText,
       "path" -> optional(text),
       "charsetName" -> optional(text),
@@ -167,7 +168,7 @@ class DataSetImportController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
-      "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
+      "dataSetId" -> nonEmptyText.verifying("Data Set Id must not contain any non-alphanumeric characters (except underscore)", dataSetId => !hasNonAlphanumericUnderscore(dataSetId)),
       "dataSetName" -> nonEmptyText,
       "tableId" -> nonEmptyText,
       "downloadColumnFiles" -> boolean,
@@ -190,7 +191,7 @@ class DataSetImportController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
-      "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
+      "dataSetId" -> nonEmptyText.verifying("Data Set Id must not contain any non-alphanumeric characters (except underscore)", dataSetId => !hasNonAlphanumericUnderscore(dataSetId)),
       "dataSetName" -> nonEmptyText,
       "dataPath" -> optional(text),
       "mappingPath" -> optional(text),
@@ -217,7 +218,7 @@ class DataSetImportController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
-      "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
+      "dataSetId" -> nonEmptyText.verifying("Data Set Id must not contain any non-alphanumeric characters (except underscore)", dataSetId => !hasNonAlphanumericUnderscore(dataSetId)),
       "dataSetName" -> nonEmptyText,
       "url" -> nonEmptyText,
       "token" -> nonEmptyText,
@@ -242,7 +243,7 @@ class DataSetImportController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
-      "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
+      "dataSetId" -> nonEmptyText.verifying("Data Set Id must not contain any non-alphanumeric characters (except underscore)", dataSetId => !hasNonAlphanumericUnderscore(dataSetId)),
       "dataSetName" -> nonEmptyText,
       "importRawData" -> boolean,
       "scheduled" -> boolean,
@@ -261,7 +262,8 @@ class DataSetImportController @Inject()(
   protected case class DataSetImportCreateEditViews[E <: DataSetImport](
     name: String,
     val form: Form[E],
-    viewElements: (Form[E], Messages) => Html)(
+    viewElements: (Form[E], Messages) => Html,
+    defaultCreateInstance: Option[E] = None)(
     implicit manifest: Manifest[E]
   ) extends CreateEditFormViews[E, BSONObjectID] {
 
@@ -270,10 +272,12 @@ class DataSetImportController @Inject()(
 
     override protected def createView = { implicit ctx: WebContext =>
       form: Form[E] =>
+        val filledForm = defaultCreateInstance.map(form.fill).getOrElse(form)
+
         layout.create(
           name,
-          form,
-          viewElements(form, ctx.msg),
+          filledForm,
+          viewElements(filledForm, ctx.msg),
           controllers.dataset.routes.DataSetImportController.save,
           controllers.dataset.routes.DataSetImportController.listAll(),
           'enctype -> "multipart/form-data"
@@ -302,31 +306,72 @@ class DataSetImportController @Inject()(
       DataSetImportCreateEditViews[CsvDataSetImport](
         "CSV Data Set Import",
         csvForm,
-        view.csvTypeElements(_)(_)
+        view.csvTypeElements(_)(_),
+        Some(CsvDataSetImport(
+          dataSpaceName = "",
+          dataSetId = "",
+          dataSetName = "",
+          delimiter  = "",
+          matchQuotes = false,
+          inferFieldTypes = true,
+          saveBatchSize = Some(10)
+        ))
       ),
 
       DataSetImportCreateEditViews[JsonDataSetImport](
         "JSON Data Set Import",
         jsonForm,
-        view.jsonTypeElements(_)(_)
+        view.jsonTypeElements(_)(_),
+        Some(JsonDataSetImport(
+          dataSpaceName = "",
+          dataSetId = "",
+          dataSetName = "",
+          inferFieldTypes = true,
+          saveBatchSize = Some(10)
+        ))
       ),
 
       DataSetImportCreateEditViews[SynapseDataSetImport](
         "Synapse Data Set Import",
         synapseForm,
-        view.synapseTypeElements(_)(_)
+        view.synapseTypeElements(_)(_),
+        Some(SynapseDataSetImport(
+          dataSpaceName = "",
+          dataSetId = "",
+          dataSetName = "",
+          tableId = "",
+          downloadColumnFiles = false,
+          batchSize = Some(10)
+        ))
       ),
 
       DataSetImportCreateEditViews[TranSmartDataSetImport](
         "TranSMART Data Set (and Dictionary) Import",
         tranSmartForm,
-        view.tranSmartTypeElements(_)(_)
+        view.tranSmartTypeElements(_)(_),
+        Some(TranSmartDataSetImport(
+          dataSpaceName = "",
+          dataSetId = "",
+          dataSetName = "",
+          matchQuotes = false,
+          inferFieldTypes = true,
+          saveBatchSize = Some(10)
+        ))
       ),
 
       DataSetImportCreateEditViews[RedCapDataSetImport](
         "RedCap Data Set Import",
         redCapForm,
-        view.redCapTypeElements(_)(_)
+        view.redCapTypeElements(_)(_),
+        Some(RedCapDataSetImport(
+          dataSpaceName = "",
+          dataSetId = "",
+          dataSetName = "",
+          url = "",
+          token = "",
+          importDictionaryFlag = true,
+          saveBatchSize = Some(10)
+        ))
       ),
 
       DataSetImportCreateEditViews[EGaitDataSetImport](

@@ -5,7 +5,8 @@ import javax.inject.Inject
 import dataaccess.FieldRepoFactory
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import play.api.Logger
-import org.incal.core.{FutureRunnable, InputFutureRunnable}
+import org.incal.core.FutureRunnable
+import util.hasNonAlphanumericUnderscore
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -16,7 +17,6 @@ class CheckIfFieldsAlphanumeric @Inject() (
   ) extends FutureRunnable {
 
   private val logger = Logger
-  private val nonAlphanumericUnderscorePattern = "[^A-Za-z0-9_]".r  // [^\\p{Alnum}]".r // + _, u002e
   private val escapedDotString = "u002e"
 
   override def runAsFuture =
@@ -49,7 +49,7 @@ class CheckIfFieldsAlphanumeric @Inject() (
       fields <- fieldRepo.find()
     } yield {
       val fieldNames = fields.map(_.name).filter { name =>
-        nonAlphanumericUnderscorePattern.findFirstIn(name).isDefined || name.contains(escapedDotString)
+        hasNonAlphanumericUnderscore(name) || name.contains(escapedDotString)
       }
       (dataSetId, fieldNames)
     }

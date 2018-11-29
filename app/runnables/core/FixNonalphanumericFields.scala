@@ -13,7 +13,7 @@ import org.incal.core.InputFutureRunnable
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import services.{DataSetService, DataSpaceService}
-import util.nonAlphanumericToUnderscore
+import util.{nonAlphanumericToUnderscore, hasNonAlphanumericUnderscore}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -28,7 +28,6 @@ class FixNonalphanumericFields @Inject() (
   ) extends InputFutureRunnable[FixNonalphanumericFieldsSpec] {
 
   private val logger = Logger
-  private val nonAlphanumericUnderscorePattern = "[^A-Za-z0-9_]".r  // [^\\p{Alnum}]".r // + _, u002e
   private val escapedDotString = "u002e"
 
   private implicit val system = ActorSystem()
@@ -50,7 +49,7 @@ class FixNonalphanumericFields @Inject() (
 
       // create a map old -> new field names
       oldToNewFieldNameMap = {
-        val fieldsToFix = fields.filter(field => nonAlphanumericUnderscorePattern.findFirstIn(field.name).isDefined || field.name.contains(escapedDotString))
+        val fieldsToFix = fields.filter(field => hasNonAlphanumericUnderscore(field.name) || field.name.contains(escapedDotString))
 
         fieldsToFix.map { field =>
           val newFieldName = nonAlphanumericToUnderscore(field.name.replaceAllLiterally(escapedDotString, "_"))
