@@ -46,6 +46,23 @@
     @dataSetFilterJs()
 
     <script type="text/javascript">
+
+        $(function() {
+            $('#inputDiv').on('hidden.bs.collapse', function () {
+                $("#widgetsDiv").removeClass("col-md-8");
+                $("#widgetsDiv").addClass("col-md-12");
+                $("#inputDiv").parent().removeClass("vertical-divider")
+                refreshHighcharts();
+            })
+
+            $('#inputDiv').on('show.bs.collapse', function () {
+                $("#widgetsDiv").removeClass("col-md-12");
+                $("#widgetsDiv").addClass("col-md-8");
+                $("#inputDiv").parent().addClass("vertical-divider")
+                refreshHighcharts();
+            })
+        })
+
         function populateFullTypeahead(fieldPrefix, isFucus) {
             var url = '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)'
             populateFieldTypeaheadFromUrlAux(fieldPrefix, url, isFucus)
@@ -161,8 +178,15 @@
     <hr/>
 
     @if(widgetsDivOnRight) {
+        <div class="row" style="margin-bottom:20px">
+            <div class="col-md-4 col-sm-12">
+                <button type="button" data-toggle="collapse" data-target="#inputDiv" title="Show/Hide">
+                    <span class="glyphicon glyphicon-resize-horizontal"></span>
+                </button>
+            </div>
+        </div>
         <div class="row vertical-divider">
-            <div id="inputDiv" class="col-md-4 col-sm-12">
+            <div id="inputDiv" class="col-md-4 col-sm-12 collapse in">
                 @inputElements
             </div>
 

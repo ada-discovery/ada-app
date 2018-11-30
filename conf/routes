@@ -107,8 +107,9 @@ GET         /dataSets/getIndependenceTest                                       
 POST        /dataSets/testIndependence                                               controllers.dataset.DataSetDispatcher.testIndependence(filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /dataSets/getIndependenceTestForViewFilters                              controllers.dataset.DataSetDispatcher.getIndependenceTestForViewFilters
 POST        /dataSets/testIndependenceForViewFilters                                 controllers.dataset.DataSetDispatcher.testIndependenceForViewFilters(viewId: BSONObjectID)
-GET         /dataSets/getTable                                                       controllers.dataset.DataSetDispatcher.getTableScreen(filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID])
-GET         /dataSets/generateTable                                                  controllers.dataset.DataSetDispatcher.generateTable(page: Int, orderBy: String, fieldNames: Seq[String], filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID])
+GET         /dataSets/table                                                          controllers.dataset.DataSetDispatcher.getTable(filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil))
+POST        /dataSets/generateTable                                                  controllers.dataset.DataSetDispatcher.generateTable(page: Int, orderBy: String, fieldNames: Seq[String], filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID])
+POST        /dataSets/generateTableWithFilter                                        controllers.dataset.DataSetDispatcher.generateTableWithFilter(page: Int, orderBy: String, fieldNames: Seq[String], filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID])
 GET         /dataSets/clusterization                                                 controllers.dataset.DataSetDispatcher.getClusterization
 GET         /dataSets/getSeriesProcessingSpec                                        controllers.dataset.DataSetDispatcher.getSeriesProcessingSpec
 POST        /dataSets/runSeriesProcessing                                            controllers.dataset.DataSetDispatcher.runSeriesProcessing

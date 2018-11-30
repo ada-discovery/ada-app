@@ -16,10 +16,6 @@
 
 @extraActions = {
     <div class="pull-right">
-        <button class="btn btn-success btn-sm" href="#" onclick="generateTable();" data-toggle="tooltip" title="Generate Table">
-            <span class="glyphicon glyphicon-play" aria-hidden="true"></span> Launch
-        </button>
-
         <button class="btn btn-info btn-sm" type="button" data-toggle="modal" data-target="#dataViewSelectionModal" title="Add Table To View">
             <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To View
         </button>
@@ -29,7 +25,7 @@
 @bottomResources = {
 
     @helper.javascriptRouter("dataSetJsRoutes")(
-        dataSetJsRouter.generateTable
+        dataSetJsRouter.generateTableWithFilter
     )
 
     @helper.javascriptRouter("dataViewJsRoutes")(
@@ -45,28 +41,39 @@
             $('#fieldNameDiv #addRowButton').focus();
 
             activateFilter($("#filterDiv"), function(filterOrId) {generateTable()});
+
+            $("#fieldNameDiv").on("rowAdded", generateTable)
+            $("#fieldNameDiv").on("rowsAdded", generateTable)
+            $("#fieldNameDiv").on("rowsRemoved", generateTable)
         });
 
         function generateTable() {
-            var inputFieldNames = getFieldNames()
+            var fieldNames = getFieldNames()
 
             var filterOrId = $("#filterDiv").multiFilter('getIdOrModel')
             var filterOrIdJson = JSON.stringify(filterOrId);
 
-            if (inputFieldNames.length == 0) {
+            if (fieldNames.length == 0) {
                 showError("Table generation cannot be launched. No fields specified.");
+            } else if (fieldNames.length > 50) {
+                showError("Table generation cannot be launched. The maximum number of fields allowed is 50 but " + inputFieldNames.length + " were given.");
             } else {
-                var ajaxHandler = handleResponse("Table generation finished.")
-//                ajaxHandler["data"] = {
-//                    "fieldNames": inputFieldNames
-//                };
-                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.generateTable(0, "", inputFieldNames, filterOrIdJson).ajax({
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.generateTableWithFilter(0, "", fieldNames, filterOrIdJson).ajax({
                     success: function (data) {
                         // filter
                         var filterElement = $("#filterDiv")
                         filterElement.find("#conditionPanel").replaceWith(data.conditionPanel)
                         filterElement.multiFilter("initConditionButtons")
                         filterElement.multiFilter("setModel", data.filterModel)
+
+                        // table
+                        var tableDiv = $("#widgetsDiv .table-div")
+                        if (tableDiv.length == 0) {
+                            $("#widgetsDiv").html("<div class='table-div'></div>")
+                            tableDiv = $("#widgetsDiv .table-div")
+                        }
+                        tableDiv.html(data.table)
+                        showMessage("Table generation finished.")
                     },
                     error: function (data) {
                         $("#widgetsDiv").html("")
@@ -75,7 +82,7 @@
                 })
 
                 hideErrors();
-                showMessage("Table generation for " + inputFieldNames.length + " fields launched.")
+                showMessage("Table generation for " + fieldNames.length + " fields launched.")
             }
         }
 
@@ -87,11 +94,10 @@
 
             if (fieldNames.length == 0) {
                 showError("No fields defined.");
+            } else if (fieldNames.length > 50) {
+                showError("The maximum number of fields allowed is 50 but " + fieldNames.length + " were given.");
             } else {
-                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addTableFields(dataViewId).ajax({
-                    data: {
-                        "fieldNames": fieldNames
-                    },
+                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addTableFields(dataViewId, fieldNames).ajax({
                     success: function() {
                         showMessage("Table for the field(s) '" + fieldNames.join(", ") + "' has been successfully added to the view '" + dataViewName + "'.");
                     },
@@ -109,13 +115,14 @@
             $.ajax({
                 url: '@Html(dataSetRouter.allFieldNamesAndLabels.url)',
                 success: function (data) {
-                    $.each(data, function(index, field) {
-                        var values = {};
-                        values["fieldName"] = field[0];
-                        values["fieldTypeahead"] = field[1] ? field[1] : field[0];
+                    var values = $.map(data, function(field, index) {
+                        var entry = {};
+                        entry["fieldName"] = field[0];
+                        entry["fieldTypeahead"] = field[1] ? field[1] : field[0];
 
-                        $('#fieldNameDiv').dynamicTable('addTableRow', values)
+                        return entry;
                     });
+                    $('#fieldNameDiv').dynamicTable('addTableRows', values)
                 }
             });
         }

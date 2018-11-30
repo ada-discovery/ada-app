@@ -36,11 +36,18 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getWidgets: Action[AnyContent]
 
-  def getTableScreen(
+  def getTable(
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
   def generateTable(
+    page: Int,
+    orderBy: String,
+    fieldNames: Seq[String],
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
+  def generateTableWithFilter(
     page: Int,
     orderBy: String,
     fieldNames: Seq[String],
@@ -172,13 +179,13 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   ): Action[AnyContent]
 
   def exportTranSMARTDataFile(
-    delimiter : String,
+    delimiter: String,
     visitFieldName: Option[String],
     replaceEolWithSpace: Boolean
   ): Action[AnyContent]
 
   def exportTranSMARTMappingFile(
-    delimiter : String,
+    delimiter: String,
     visitFieldName: Option[String],
     replaceEolWithSpace: Boolean
   ): Action[AnyContent]

@@ -7,7 +7,7 @@
 
 @link(page: Int)(title: Html) = {
     @if(isAjaxRefresh) {
-        <a href="#" onclick="loadNewTableContent(this, '@refreshCall(page, None).url'); return false">@title</a>
+        <a href="#" onclick="loadNewTableContent(this, '@refreshCall(page, None).url', null, 'POST'); return false">@title</a>
     } else {
         <a href="@refreshCall(page, None)">@title</a>
     }

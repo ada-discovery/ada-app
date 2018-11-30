@@ -62,9 +62,9 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     totalCount: Int
   ) = dispatchAjax(_.getNewFilterViewElementsAndWidgetsCallback(dataViewId, tableOrder, totalCount))
 
-  override def getTableScreen(
+  override def getTable(
     filterOrId: FilterOrId
-  ) = dispatch(_.getTableScreen(filterOrId))
+  ) = dispatch(_.getTable(filterOrId))
 
   override def generateTable(
     page: Int,
@@ -72,6 +72,13 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     fieldNames: Seq[String],
     filterOrId: FilterOrId
   ) = dispatchAjax(_.generateTable(page, orderBy, fieldNames, filterOrId))
+
+  def generateTableWithFilter(
+    page: Int,
+    orderBy: String,
+    fieldNames: Seq[String],
+    filterOrId: FilterOrId
+  ) = dispatchAjax(_.generateTableWithFilter(page, orderBy, fieldNames, filterOrId))
 
   override def getWidgets = dispatchAjax(_.getWidgets)
 

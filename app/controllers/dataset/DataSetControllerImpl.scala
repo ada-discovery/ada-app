@@ -641,11 +641,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case Accepts.Json() => jsonResponse
         }
       }
-    }.recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the getViewElementsAndWidgetsCallback process")
-        InternalServerError(t.getMessage)
-    }
+    }.recover(handleExceptions("a getViewElementsAndWidgetsCallback"))
   }
 
   override def getNewFilterViewElementsAndWidgetsCallback(
@@ -713,11 +709,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case Accepts.Json() => jsonResponse
         }
       }
-    }.recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the getNewFilterViewElementsAndWidgetsCallback process")
-        InternalServerError(t.getMessage)
-    }
+    }.recover(handleExceptions("a getNewFilterViewElementsAndWidgetsCallback"))
   }
 
   private def getFilterAndWidgetsCallbackAux(
@@ -726,51 +718,44 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filterOrId: FilterOrId,
     widgetProcessingFun: Option[Traversable[Widget] => Traversable[Widget]] = None)(
     implicit request: Request[_]
-  ): Future[Result] = {
-    {
-      for {
-        // resolved filter
-        resolvedFilter <- filterRepo.resolve(filterOrId)
+  ): Future[Result] =
+    for {
+      // resolved filter
+      resolvedFilter <- filterRepo.resolve(filterOrId)
 
-        // criteria
-        criteria <- toCriteria(resolvedFilter.conditions)
+      // criteria
+      criteria <- toCriteria(resolvedFilter.conditions)
 
-        // create a name -> field map of all the referenced fields for a quick lookup
-        nameFieldMap <- createNameFieldMap(Seq(resolvedFilter.conditions), widgetSpecs, Nil)
-      } yield {
-        // create a widgets-future calculation and register with a callback id
-        val jsonWidgetsFuture = getViewWidgetsWithFields(widgetSpecs, criteria, nameFieldMap.values, generationMethod).map { widgetsWithFields =>
-          val widgets = widgetsWithFields.flatMap(_.map(_._1))
-          val fieldNames = widgetsWithFields.flatMap(_.map(_._2))
-          val processedWidgets = widgetProcessingFun.map(_(widgets)).getOrElse(widgets)
-          val jsons = widgetsToJsons(processedWidgets.toSeq, fieldNames.toSeq, nameFieldMap)
-          Seq(jsons)
-        }
-        val widgetsCallbackId = UUID.randomUUID.toString
-        jsonWidgetResponseCache.put(widgetsCallbackId, jsonWidgetsFuture)
-
-        // get a new filter
-        val newFilter = setFilterLabels(resolvedFilter, nameFieldMap)
-        val conditionPanel = views.html.filter.conditionPanel(Some(newFilter))
-        val filterModel = Json.toJson(resolvedFilter.conditions)
-
-        val jsonResponse = Ok(Json.obj(
-          "conditionPanel" -> conditionPanel.toString(),
-          "filterModel" -> filterModel,
-          "widgetsCallbackId" -> widgetsCallbackId
-        ))
-
-        render {
-          case Accepts.Html() => jsonResponse
-          case Accepts.Json() => jsonResponse
-        }
+      // create a name -> field map of all the referenced fields for a quick lookup
+      nameFieldMap <- createNameFieldMap(Seq(resolvedFilter.conditions), widgetSpecs, Nil)
+    } yield {
+      // create a widgets-future calculation and register with a callback id
+      val jsonWidgetsFuture = getViewWidgetsWithFields(widgetSpecs, criteria, nameFieldMap.values, generationMethod).map { widgetsWithFields =>
+        val widgets = widgetsWithFields.flatMap(_.map(_._1))
+        val fieldNames = widgetsWithFields.flatMap(_.map(_._2))
+        val processedWidgets = widgetProcessingFun.map(_(widgets)).getOrElse(widgets)
+        val jsons = widgetsToJsons(processedWidgets.toSeq, fieldNames.toSeq, nameFieldMap)
+        Seq(jsons)
       }
-    }.recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the getFilterAndWidgetsCallbackAux process")
-        InternalServerError(t.getMessage)
+      val widgetsCallbackId = UUID.randomUUID.toString
+      jsonWidgetResponseCache.put(widgetsCallbackId, jsonWidgetsFuture)
+
+      // get a new filter
+      val newFilter = setFilterLabels(resolvedFilter, nameFieldMap)
+      val conditionPanel = views.html.filter.conditionPanel(Some(newFilter))
+      val filterModel = Json.toJson(resolvedFilter.conditions)
+
+      val jsonResponse = Ok(Json.obj(
+        "conditionPanel" -> conditionPanel.toString(),
+        "filterModel" -> filterModel,
+        "widgetsCallbackId" -> widgetsCallbackId
+      ))
+
+      render {
+        case Accepts.Html() => jsonResponse
+        case Accepts.Json() => jsonResponse
+      }
     }
-  }
 
   private def setBoxPlotMinMax(
     widgets: Seq[Traversable[Option[Widget]]]
@@ -1437,7 +1422,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }.recover(handleExceptions("a heatmap"))
   }
 
-  override def getTableScreen(
+  override def getTable(
     filterOrId: FilterOrId
   ) = AuthAction { implicit request => {
     for {
@@ -1452,7 +1437,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           setting.filterShowFieldStyle,
           dataSpaceTree
         ))
-        case Accepts.Json() => BadRequest("The function getTableScreen function doesn't support JSON response.")
+        case Accepts.Json() => BadRequest("The function getTable function doesn't support JSON response.")
       }
 
     }.recover(handleExceptions("a table"))
@@ -1465,33 +1450,81 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filterOrId: FilterOrId
   ) = Action.async { implicit request =>
     val filterFuture = filterRepo.resolve(filterOrId)
-
     val fieldsFuture = getFields(fieldNames)
 
-    for {
-    // use a given filter conditions or load one
-      resolvedFilter <- filterFuture
+    {
+      for {
+        // use a given filter conditions or load one
+        resolvedFilter <- filterFuture
 
-      // get the fields
-      fields <- fieldsFuture
+        // get the fields
+        fields <- fieldsFuture
 
-      // create a name->field map
-      nameFieldMap = fields.map(field => (field.name, field)).toMap
+        // create a name->field map
+        nameFieldMap = fields.map(field => (field.name, field)).toMap
 
-      // resolve criteria
-      criteria <- toCriteria(resolvedFilter.conditions)
+        // resolve criteria
+        criteria <- toCriteria(resolvedFilter.conditions)
 
-      // retrieve all the table items
-      tableItems <- getTableItems(page, orderBy, criteria, nameFieldMap, fieldNames)
+        // retrieve all the table items
+        tableItems <- getTableItems(page, orderBy, criteria, nameFieldMap, fieldNames)
 
-      // get the total count
-      count <- repo.count(criteria)
-    } yield {
-      val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy)
-      val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
+        // get the total count
+        count <- repo.count(criteria)
+      } yield {
+        val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy)
+        val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
 
-      Ok(dataset.view.viewTable(tablePage, Some(resolvedFilter), fieldsInOrder, true)(request, router))
-    }
+        Ok(dataset.view.viewTable(tablePage, Some(resolvedFilter), fieldsInOrder, true)(request, router))
+      }
+    }.recover(handleExceptions("a generateTable"))
+  }
+
+  override def generateTableWithFilter(
+    page: Int,
+    orderBy: String,
+    fieldNames: Seq[String],
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
+    {
+      for {
+        // use a given filter conditions or load one
+        resolvedFilter <- filterRepo.resolve(filterOrId)
+
+        // resolve criteria
+        criteria <- toCriteria(resolvedFilter.conditions)
+
+        // create a name -> field map of all the referenced fields for a quick lookup
+        nameFieldMap <- createNameFieldMap(Seq(resolvedFilter.conditions), Nil, fieldNames)
+
+        // retrieve all the table items
+        tableItems <- getTableItems(page, orderBy, criteria, nameFieldMap, fieldNames)
+
+        // get the total count
+        count <- repo.count(criteria)
+      } yield {
+        // table
+        val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy)
+        val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
+        val table = dataset.view.viewTable(tablePage, Some(resolvedFilter), fieldsInOrder, true)(request, router)
+
+        // filter model / condition panel
+        val newFilter = setFilterLabels(resolvedFilter, nameFieldMap)
+        val conditionPanel = views.html.filter.conditionPanel(Some(newFilter))
+        val filterModel = Json.toJson(resolvedFilter.conditions)
+
+        val jsonResponse = Ok(Json.obj(
+          "conditionPanel" -> conditionPanel.toString(),
+          "filterModel" -> filterModel,
+          "table" -> table.toString()
+        ))
+
+        render {
+          case Accepts.Html() => jsonResponse
+          case Accepts.Json() => jsonResponse
+        }
+      }
+    }.recover(handleExceptions("a generateTableWithFilter"))
   }
 
   override def getCategoriesWithFieldsAsTreeNodes(

@@ -80,6 +80,7 @@ mds.title = MDS of {0}
 tsne.title = t-SNE of {0}
 documentation.title = Documentation: {0}
 heatmap.title = Heatmap of {0}
+table.title = {0} Table
 
 dataSetSetting.keyFieldName.label = Key Field
 dataSetSetting.exportOrderByFieldName.label = Export OrderBy Field
@@ -125,17 +126,21 @@ dataSetImport.scheduledTime.hour.label = Hour
 dataSetImport.scheduledTime.minute.label = Minute
 dataSetImport.scheduledTime.second.label = Second
 
-csvDataSetImport.matchQuotes.label = Match Quotes?
+csvDataSetImport.dataSpaceName.label = Data Space Name
+csvDataSetImport.dataSetId.label = Data Set Id
+csvDataSetImport.dataSetName.label = Data Set Name
+csvDataSetImport.setting.dataSetId.label = Setting Data Set Id
+csvDataSetImport.matchQuotes.label.label = Match Quotes?
 csvDataSetImport.inferenceMaxEnumValuesCount.label = Inference Max Enum Values Count
 csvDataSetImport.inferenceMinAvgValuesPerEnum.label = Inference Min Avg Values Per Enum
-csvDataSetImport.path = Source data / path
+csvDataSetImport.path.label = Source data / path
 
-tranSmartDataSetImport.dataPath = Source data / path
-tranSmartDataSetImport.mappingPath = Source mapping / path
+tranSmartDataSetImport.dataPath.label = Source data / path
+tranSmartDataSetImport.mappingPath.label = Source mapping / path
 
 jsonDataSetImport.inferenceMaxEnumValuesCount.label = Inference Max Enum Values Count
 jsonDataSetImport.inferenceMinAvgValuesPerEnum.label = Inference Min Avg Values Per Enum
-jsonDataSetImport.path = Source data / path
+jsonDataSetImport.path.label = Source data / path
 
 synapseDataSetImport.downloadColumnFiles.label = Download Column Files?
 
