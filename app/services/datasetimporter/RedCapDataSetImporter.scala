@@ -339,7 +339,7 @@ private class RedCapDataSetImporter @Inject() (
             case RCFieldType.truefalse => FieldTypeSpec(FieldTypeId.Boolean)
             case RCFieldType.notes => inferredType
             case RCFieldType.file => inferredType
-            case RCFieldType.sql => enumOrDoubleOrString
+            case RCFieldType.sql => inferredType
           }
 
           val stringEnumValues = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to) })

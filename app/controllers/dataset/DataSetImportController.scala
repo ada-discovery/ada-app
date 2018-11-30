@@ -62,7 +62,7 @@ class DataSetImportController @Inject()(
   private val messageLogger = MessageLogger(logger, messageRepo)
 
   private lazy val importFolder = configuration.getString("datasetimport.import.folder").getOrElse(
-    new java.io.File("imports/").getAbsolutePath
+    new java.io.File("dataImports/").getAbsolutePath
   )
   private lazy val importRetryNum = configuration.getInt("datasetimport.retrynum").getOrElse(3)
 
