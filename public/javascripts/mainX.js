@@ -596,9 +596,7 @@ function loadNewTableContent(element, url, data, callType) {
             var tableDiv = element.closest(".table-div")
             $(tableDiv).html(content);
         },
-        error: function(data) {
-            showErrorResponse(data)
-        }
+        error: showErrorResponse
     });
 }
 

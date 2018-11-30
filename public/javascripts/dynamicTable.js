@@ -53,24 +53,44 @@ $.widget( "custom.dynamicTable", {
         this.addTableRow(this._getAddModalValues())
     },
 
+    addTableRows: function(multiValues) {
+        var that = this;
+        $.each(multiValues, function(index, values) {
+            that._addTableRow(values)
+        })
+
+        this.element.trigger("rowsAdded", multiValues.length);
+    },
+
     addTableRow: function(values) {
+        this._addTableRow(values)
+
+        this.element.trigger("rowAdded");
+    },
+
+    _addTableRow: function(values) {
         this.tableBody.append(this.options.itemToRow(values))
     },
 
     removeRows: function() {
         var that = this;
+        var count = 0
         this.tableBody.find('tr').each(function() {
             var checked = $(this).find("td input.table-selection[type=checkbox]").is(':checked');
             if (checked) {
-                $(this).remove()
+                $(this).remove();
+                count++;
             }
         });
+
+        this.element.trigger("rowsRemoved", count);
     },
 
     replaceTableRow: function(rowIndex, values) {
         var row = this.tableBody.find('tr').eq(rowIndex);
         row.after(this.options.itemToRow(values));
         row.remove();
+        this.element.trigger("rowReplaced", rowIndex);
     },
 
     removeTableModel: function() {
