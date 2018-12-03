@@ -7,9 +7,7 @@ import play.api.libs.json.{JsObject, _}
 
 object JsonUtil {
 
-  def escapeKey(key : String) =
-    key.replaceAll("\\.", "\\u002e") // \u2024// replaceAll("\\", "\\\\").replaceAll("\\$", "\\u0024").
-
+  @Deprecated
   def unescapeKey(key : String) =
     key.replaceAll("u002e", "\\.") // .replaceAll("\\u0024", "\\$").replaceAll("\\\\", "\\")
 

@@ -8,13 +8,13 @@ import models.json.{EnumFormat, SerializableFormat}
 import play.api.libs.json.Json
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
-object HtmlSnippedId extends Enumeration {
-  val Hompage, Contact, Links = Value
+object HtmlSnippetId extends Enumeration {
+  val Homepage, Contact, Links = Value
 }
 
 case class HtmlSnippet(
   _id: Option[BSONObjectID] = None,
-  snippetId: HtmlSnippedId.Value,
+  snippetId: HtmlSnippetId.Value,
   content: String,
   active: Boolean = true,
   createdById: Option[BSONObjectID] = None,
@@ -23,7 +23,7 @@ case class HtmlSnippet(
 
 object HtmlSnippet {
 
-  implicit val htmlSnippedIdEnumFormat = EnumFormat.enumFormat(HtmlSnippedId)
+  implicit val htmlSnippedIdEnumFormat = EnumFormat.enumFormat(HtmlSnippetId)
   val htmlSnippetFormat = Json.format[HtmlSnippet]
   implicit val serializableHtmlSnippetFormat = new SerializableFormat(htmlSnippetFormat.reads, htmlSnippetFormat.writes)
 

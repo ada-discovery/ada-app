@@ -148,7 +148,7 @@ case class BasicStatsWidgetSpec(
   override val fieldNames = Seq(fieldName)
 }
 
-case class TemplateHtmlWidgetSpec(
+case class CustomHtmlWidgetSpec(
   content: String,
   subFilterId: Option[BSONObjectID] = None,
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()

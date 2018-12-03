@@ -211,7 +211,7 @@ object DataSetFormattersAndIds {
       ManifestedFormat(Json.format[CorrelationWidgetSpec]),
       ManifestedFormat(Json.format[IndependenceTestWidgetSpec]),
       ManifestedFormat(Json.format[BasicStatsWidgetSpec]),
-      ManifestedFormat(Json.format[TemplateHtmlWidgetSpec])
+      ManifestedFormat(Json.format[CustomHtmlWidgetSpec])
     )
 
   val widgetSpecClasses: Seq[Class[_ <: WidgetSpec]] = widgetSpecManifestedFormats.map(_.runtimeClass)
