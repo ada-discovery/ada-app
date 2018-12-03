@@ -120,9 +120,7 @@
                     var table = createIndependenceTestTable(data.testResults, true)
                     $("#independenceTestPanelDiv").html(table);
                 },
-                error: function(data){
-                    showErrorResponse(data);
-                }
+                error: showErrorResponse
             });
 
             showMessage("Clusterization using the ML model '" + mlModelName + "' launched.")

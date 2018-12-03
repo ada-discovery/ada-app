@@ -2,8 +2,9 @@ package controllers
 
 import javax.inject.Inject
 
-import models.DataSpaceMetaInfo
+import models.{DataSpaceMetaInfo, HtmlSnippet, HtmlSnippetId}
 import models.security.UserManager
+import org.incal.core.dataaccess.Criterion._
 import play.api.{Configuration, Logger}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import security.AdaAuthConfig
@@ -11,6 +12,7 @@ import services.DataSpaceService
 import org.incal.play.controllers.BaseController
 import org.incal.play.security.AuthAction
 import org.incal.play.security.SecurityUtil._
+import persistence.RepoTypes.HtmlSnippetRepo
 import views.html.layout
 import play.api.cache.Cached
 
@@ -18,6 +20,7 @@ import scala.concurrent.Future
 
 class AppController @Inject() (
     dataSpaceService: DataSpaceService,
+    htmlSnippetRepo: HtmlSnippetRepo,
     val userManager: UserManager,
     cached: Cached
   ) extends BaseController with AdaAuthConfig {
@@ -25,12 +28,21 @@ class AppController @Inject() (
   private val logger = Logger
 
   def index = AuthAction { implicit request =>
-    Future(Ok(layout.home()))
+    getHtmlSnippet(HtmlSnippetId.Homepage).map( html =>
+      Ok(layout.home(html))
+    )
   }
 
   def contact = AuthAction { implicit request =>
-    Future(Ok(layout.contact()))
+    getHtmlSnippet(HtmlSnippetId.Contact).map( html =>
+      Ok(layout.contact(html))
+    )
   }
+
+  private def getHtmlSnippet(
+    id: HtmlSnippetId.Value
+  ): Future[Option[String]] =
+    htmlSnippetRepo.find(Seq("snippetId" #== id)).map(_.filter(_.active).headOption.map(_.content))
 
   // TODO: move elsewhere
   def dataSets = restrictSubjectPresentAnyNoCaching(deadbolt) {

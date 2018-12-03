@@ -50,7 +50,6 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     dataSpaceService: DataSpaceService,
     userRepo: UserRepo,
     val userManager: UserManager
-
   ) extends AdaCrudControllerImpl[DataView, BSONObjectID](dsaf(dataSetId).get.dataViewRepo)
 
     with DataViewController
@@ -215,7 +214,9 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       user <- currentUser(request)
       id <- {
         val dataViewWithUser = user match {
-          case Some(user) => dataView.copy(timeCreated = new Date(), createdById = user._id)
+          case Some(user) =>
+            val filteredDataView = removeCustomWidgetSpecsForNonAdmins(dataView, user)
+            filteredDataView.copy(timeCreated = new Date(), createdById = user._id)
           case None => throw new AdaException("No logged user found")
         }
         repo.save(dataViewWithUser)
@@ -229,15 +230,36 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   ): Future[BSONObjectID] =
     for {
       existingDataViewOption <- repo.get(dataView._id.get)
+
+      user <- currentUser(request)
+
       id <- {
-        val mergedDataView =
-          existingDataViewOption.fold(dataView) { existingDataView =>
-            dataView.copy(createdById = existingDataView.createdById, timeCreated = existingDataView.timeCreated)
-          }
-        repo.update(mergedDataView)
+        user match {
+          case Some(user) =>
+            val mergedDataView = existingDataViewOption.fold(dataView) { existingDataView =>
+              val filteredDataView = removeCustomWidgetSpecsForNonAdmins(dataView, user)
+              filteredDataView.copy(createdById = existingDataView.createdById, timeCreated = existingDataView.timeCreated)
+            }
+            repo.update(mergedDataView)
+
+          case None => throw new AdaException("No logged user found")
+        }
       }
     } yield
       id
+
+  // if non-admin we remove Custom HTML widgets, which are security "exploitable"
+  private def removeCustomWidgetSpecsForNonAdmins(
+    dataView: DataView,
+    user: User
+  ) = {
+    val isAdmin = user.roles.contains(SecurityRole.admin)
+
+    if (!isAdmin)
+      dataView.copy(widgetSpecs = dataView.widgetSpecs.filterNot(_.isInstanceOf[CustomHtmlWidgetSpec]))
+    else
+      dataView
+  }
 
   override def idAndNames = Action.async { implicit request =>
     for {

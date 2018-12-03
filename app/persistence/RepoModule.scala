@@ -91,6 +91,7 @@ class RepoModule extends ScalaModule {
 
   import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, serializableDataSpaceMetaInfoFormat, serializableBSONObjectIDFormat, DataSetSettingIdentity}
   import models.User.{serializableUserFormat, UserIdentity}
+  import models.HtmlSnippet.{serializableHtmlSnippetFormat, HtmlSnippetIdentity}
 
   def configure = {
 
@@ -106,6 +107,10 @@ class RepoModule extends ScalaModule {
 
     bind[DataSpaceMetaInfoRepo].toProvider(
       new CacheAsyncCrudRepoProvider[DataSpaceMetaInfo, BSONObjectID]("dataspace_meta_infos")
+    ).asEagerSingleton
+
+    bind[HtmlSnippetRepo].toProvider(
+      new CacheAsyncCrudRepoProvider[HtmlSnippet, BSONObjectID]("html_snippets")
     ).asEagerSingleton
 
     bind[ElasticClient].toProvider(new ElasticClientProvider).asEagerSingleton

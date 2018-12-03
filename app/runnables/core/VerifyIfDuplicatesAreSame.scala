@@ -25,19 +25,26 @@ class VerifyIfDuplicatesAreSame extends DsaInputFutureRunnable[VerifyIfDuplicate
     val repo = dsa_.dataSetRepo
     val fieldRepo = dsa_.fieldRepo
 
-    val jsonsFuture = repo.find(projection = input.fieldNames ++ Seq(idName))
-    val fieldsFuture  = fieldRepo.find(Seq(FieldIdentity.name #-> input.fieldNames))
+    val jsonsFuture = repo.find(projection = input.keyFieldNames ++ Seq(idName))
+    val keyFieldsFuture  = fieldRepo.find(Seq(FieldIdentity.name #-> input.keyFieldNames))
+    val allFieldsFuture  = fieldRepo.find()
 
     for {
       // get the items
       jsons <- jsonsFuture
 
-      // get the fields
-      fields <- fieldsFuture
+      // get the key fields
+      keyFields <- keyFieldsFuture
+
+      // get all the fields
+      allFields <- allFieldsFuture
+
+      // compare field names
+      compareFieldNames = if (input.compareFieldNamesToExclude.nonEmpty) allFields.map(_.name).filterNot(input.compareFieldNamesToExclude.contains(_)) else Nil
 
       // find unmatched duplicates
       unMatchedDuplicates <- {
-        val fieldNameTypes = fields.map( field => (field.name, ftf(field.fieldTypeSpec))).toSeq
+        val fieldNameTypes = keyFields.map( field => (field.name, ftf(field.fieldTypeSpec))).toSeq
 
         val valuesWithIds = jsons.map { json =>
           val values = fieldNameTypes.map { case (name, fieldType) =>
@@ -49,7 +56,11 @@ class VerifyIfDuplicatesAreSame extends DsaInputFutureRunnable[VerifyIfDuplicate
 
         util.seqFutures(valuesWithIds.groupBy(_._1).filter(_._2.size > 1)) { case (values, items) =>
           val ids = items.map(_._2)
-          repo.find(Seq(idName #-> ids.toSeq)).map { jsons =>
+
+          repo.find(
+            criteria = Seq(idName #-> ids.toSeq),
+            projection = compareFieldNames
+          ).map { jsons =>
             // TODO: ugly... introduce a nested json comparator
             val head = Json.stringify(jsons.head.-(idName))
             val matched = jsons.tail.forall(json => Json.stringify(json.-(idName)).equals(head))
@@ -71,4 +82,8 @@ class VerifyIfDuplicatesAreSame extends DsaInputFutureRunnable[VerifyIfDuplicate
   override def inputType = typeOf[VerifyIfDuplicatesAreSameSpec]
 }
 
-case class VerifyIfDuplicatesAreSameSpec(dataSetId: String, fieldNames: Seq[String])
+case class VerifyIfDuplicatesAreSameSpec(
+  dataSetId: String,
+  keyFieldNames: Seq[String],
+  compareFieldNamesToExclude: Seq[String]
+)

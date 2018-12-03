@@ -106,7 +106,15 @@ class VariantsToSubjectEntries extends InputRunnable[VariantsToSubjectEntriesSpe
         exonicFuncSet.contains(exonicFunc).toString
       )
 
-      (Seq(aliquotId, kitId) ++ variantColumns ++ geneColumns ++ categoryColumns ++ funcColumns ++ exonicFuncColumns).mkString(delimiter)
+      val pdVariantCount = variantInfos.size
+
+      val categories = variantInfos.map(_._2)
+      val categoryCounts = categoriesSorted.map { category =>
+        categories.count(_ == category)
+      }
+
+
+      (Seq(aliquotId, kitId) ++ variantColumns ++ geneColumns ++ categoryColumns ++ funcColumns ++ exonicFuncColumns ++ Seq(pdVariantCount) ++ categoryCounts).mkString(delimiter)
     }
 
     val variantInfos = aliquotVariantEntries.map(_._2._2)
@@ -116,8 +124,9 @@ class VariantsToSubjectEntries extends InputRunnable[VariantsToSubjectEntriesSpe
     val categoryLabels = categoriesSorted.map(_.capitalize + "_Variant")
     val funcLabels = funcsSorted.map(_.capitalize + "_Func_Variant")
     val exonicFuncLabels = exonicFuncsSorted.map(_.capitalize + "_ExonicFunc_Variant")
+    val categoryCountLabels = categoriesSorted.map(_.capitalize + "_Variants_Count")
 
-    val newHeader = newHeaderStart ++ variantNames ++ genesSorted ++ categoryLabels ++ funcLabels ++ exonicFuncLabels
+    val newHeader = newHeaderStart ++ variantNames ++ genesSorted ++ categoryLabels ++ funcLabels ++ exonicFuncLabels ++ Seq("PD_Variants_Count") ++ categoryCountLabels
 
     val content = newHeader.mkString(delimiter) + "\n" + newLines.mkString("\n")
     writeStringAsStream(content, new java.io.File(outputFileName))

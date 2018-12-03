@@ -5,6 +5,7 @@ import javax.inject.Inject
 import dataaccess.JsonUtil
 import persistence.dataset.DataSetAccessorFactory
 import org.incal.core.FutureRunnable
+import util.nonAlphanumericToUnderscore
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -35,13 +36,13 @@ class DeNoPaFieldLabelImport @Inject() (dsaf: DataSetAccessorFactory) extends Fu
       val fileDiff = fileFieldNameSet.diff(fieldNameSet)
       println("The number of fields in the file but not NOT in the dataset : " + fileDiff.size)
       println(">>>")
-      println(fileDiff.map(JsonUtil.unescapeKey(_)).toSeq.sorted.take(50).mkString("\n"))
+      println(fileDiff.map(nonAlphanumericToUnderscore).toSeq.sorted.take(50).mkString("\n"))
       println("<<<")
 
       val fieldDiff = fieldNameSet.diff(fileFieldNameSet)
       println("The number of fields in the dataset but not NOT in the file : " + fieldDiff.size)
       println(">>>")
-      println(fieldDiff.map(JsonUtil.unescapeKey(_)).toSeq.sorted.take(80).mkString("\n"))
+      println(fieldDiff.toSeq.sorted.take(80).mkString("\n"))
       println("<<<")
       println()
     }
@@ -63,7 +64,7 @@ class DeNoPaFieldLabelImport @Inject() (dsaf: DataSetAccessorFactory) extends Fu
 
       val group = value(1)
       val label = value(2)
-      val name = value(4).map(JsonUtil.escapeKey(_))
+      val name = value(4).map(nonAlphanumericToUnderscore)
       (name, label).zipped.headOption
     }
   }

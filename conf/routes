@@ -280,6 +280,24 @@ GET         /documentation/userManagement                                       
 GET         /documentation/dataSetImport                                            controllers.DocumentationController.dataSetImport()
 GET         /documentation/technology                                               controllers.DocumentationController.technology()
 
+# HTML Snippets
+GET         /htmlSnippets                                                           controllers.HtmlSnippetController.find(p: Int ?= 0, s: String ?= "snippetId", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /htmlSnippets/all                                                       controllers.HtmlSnippetController.listAll(s: String ?= "snippetId")
+GET         /htmlSnippets/new                                                       controllers.HtmlSnippetController.create
+POST        /htmlSnippets/save                                                      controllers.HtmlSnippetController.save
+GET         /htmlSnippets/get/:id                                                   controllers.HtmlSnippetController.get(id: BSONObjectID)
+GET         /htmlSnippets/edit/:id                                                  controllers.HtmlSnippetController.edit(id: BSONObjectID)
+POST        /htmlSnippets/:id                                                       controllers.HtmlSnippetController.update(id: BSONObjectID)
+POST        /htmlSnippets/:id/delete                                                controllers.HtmlSnippetController.delete(id: BSONObjectID)
+GET         /htmlSnippets/linksAsHtml                                               controllers.HtmlSnippetController.getHtmlLinks
+
+# Map static resources from the /public folder to the /assets URL path
+GET         /assets/*file                                                           controllers.Assets.versioned(path="/public", file)
+
+# Map the webjar static assets to the /webjars URL
+GET         /webjars/*file                                                          controllers.WebJarAssets.at(file)
+
+
 #Temporary for mpower challenge correlation
 GET         /pdChallenge/correlations                                               controllers.mpower.MPowerChallengeCorrelationController.index
 GET         /pdChallenge/mpowerTeam                                                 controllers.mpower.MPowerChallengeCorrelationController.mPowerTeamNetwork(aggOut: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.mean, aggIn: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.max, withDemographics: Boolean ?= false, corrThreshold: Option[Double] ?= None)
@@ -301,9 +319,3 @@ GET         /pdChallenge/mpowerTSNE                                             
 GET         /pdChallenge/ldopaTremorTSNE                                           controllers.mpower.MPowerChallengeClusteringController.tremorTSNE(k: Int ?= 10, method: Int ?= 1, pcaDims: Option[Int] ?= None, scaled: Boolean ?= true, topRank: Option[Int] ?= None, leaveTopRank: Option[Int] ?= None)
 GET         /pdChallenge/ldopaDyskinesiaTSNE                                       controllers.mpower.MPowerChallengeClusteringController.dyskinesiaTSNE(k: Int ?= 10, method: Int ?= 1, pcaDims: Option[Int] ?= None, scaled: Boolean ?= true, topRank: Option[Int] ?= None, leaveTopRank: Option[Int] ?= None)
 GET         /pdChallenge/ldopaBradykinesiaTSNE                                     controllers.mpower.MPowerChallengeClusteringController.bradykinesiaTSNE(k: Int ?= 10, method: Int ?= 1, pcaDims: Option[Int] ?= None, scaled: Boolean ?= true, topRank: Option[Int] ?= None, leaveTopRank: Option[Int] ?= None)
-
-# Map static resources from the /public folder to the /assets URL path
-GET         /assets/*file                                                           controllers.Assets.versioned(path="/public", file)
-
-# Map the webjar static assets to the /webjars URL
-GET         /webjars/*file                                                          controllers.WebJarAssets.at(file)

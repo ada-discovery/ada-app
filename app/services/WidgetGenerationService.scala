@@ -132,14 +132,9 @@ class WidgetGenerationServiceImpl @Inject() (
           case p: DistributionWidgetSpec => if (isScalar(p.fieldName)) Left(p) else Right(p)
           case p: BoxWidgetSpec => if (isScalar(p.fieldName)) Left(p) else Right(p)
           case p: CumulativeCountWidgetSpec => if (p.numericBinCount.isDefined && isScalar(p.fieldName)) Left(p) else Right(p)
-          case p: TemplateHtmlWidgetSpec => Left(p)
+          case p: CustomHtmlWidgetSpec => Left(p)
           case p: GridDistributionCountWidgetSpec => Left(p)
-          case p: HeatmapAggWidgetSpec => Right(p)
-          case p: ScatterWidgetSpec => Right(p)
-          case p: HeatmapAggWidgetSpec => Right(p)
-          case p: CorrelationWidgetSpec => Right(p)
-          case p: BasicStatsWidgetSpec => Right(p)
-          case p: IndependenceTestWidgetSpec => Right(p)
+          case p: WidgetSpec => Right(p)
         }
       } else
         widgetSpecs.map(Right(_))
@@ -517,7 +512,7 @@ class WidgetGenerationServiceImpl @Inject() (
           GridDistributionCountWidgetGenerator(0, 1, 0, 1)(spec)(nameFieldMap)
         )
 
-      case spec: TemplateHtmlWidgetSpec =>
+      case spec: CustomHtmlWidgetSpec =>
         val widget = HtmlWidget("", spec.content, spec.displayOptions)
         Future(Some(widget))
 
@@ -622,7 +617,7 @@ class WidgetGenerationServiceImpl @Inject() (
 
   private def genStaticWidget(widgetSpec: WidgetSpec) =
     widgetSpec match {
-      case spec: TemplateHtmlWidgetSpec =>
+      case spec: CustomHtmlWidgetSpec =>
         val widget = HtmlWidget("", spec.content, spec.displayOptions)
         Some(widget)
 

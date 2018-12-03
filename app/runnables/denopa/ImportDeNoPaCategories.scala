@@ -1,23 +1,23 @@
 package runnables.denopa
 
 import javax.inject.Inject
-import dataaccess.RepoTypes.FieldRepo
-import dataaccess.CategoryRepo
+
 import models._
 import org.incal.core.dataaccess.Criterion.Infix
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, DeNoPaSetting}
-import DeNoPaBaselineTranSMARTMapping.{subjectsData, clinicalData}
+import DeNoPaBaselineTranSMARTMapping.{clinicalData, subjectsData}
 import DeNoPaBaselineTranSMARTMapping.{fieldCategoryMap => baselineFieldCategoryMap}
 import DeNoPaBaselineTranSMARTMapping.{fieldLabelMap => baselineFieldLabelMap}
 import runnables.denopa.DataSetId._
 import org.incal.play.GuiceRunnableApp
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import dataaccess.CategoryRepo.saveRecursively
-import dataaccess.JsonUtil.escapeKey
-import scala.concurrent.duration._
+import org.incal.core.FutureRunnable
+import util.nonAlphanumericToUnderscore
 
+import scala.concurrent.duration._
 import scala.concurrent.Await.result
 import scala.concurrent.Future
 
@@ -26,13 +26,12 @@ protected abstract class ImportDeNoPaCategories(
     coreFieldCategoryMap: Map[String, Category],
     coreFieldLabelMap: Map[String, String],
     fieldNamePrefixReplacement: Option[(String, String)]
-  ) extends Runnable {
+  ) extends FutureRunnable {
 
   @Inject() protected var dataSetService: DataSetService = _
   @Inject() protected var dsaf: DataSetAccessorFactory = _
-  private val timeout = 120000 millis
 
-  def run = {
+  def runAsFuture = {
     val dsa = dsaf(dataSetId).get
     val categoryRepo = dsa.categoryRepo
     val fieldRepo = dsa.fieldRepo
@@ -63,7 +62,7 @@ protected abstract class ImportDeNoPaCategories(
       coreFieldLabelMap
     )
 
-    val future = for {
+    for {
       // delete all the categories
       _ <- categoryRepo.deleteAll
 
@@ -79,7 +78,7 @@ protected abstract class ImportDeNoPaCategories(
         val categoryIdMap: Map[Category, BSONObjectID] = (categoryIds1 ++ categoryIds2).toMap
 
         refFieldNames.map{ fieldName =>
-          val escapedFieldName = escapeKey(fieldName)
+          val escapedFieldName = nonAlphanumericToUnderscore(fieldName)
 
           fieldRepo.find(Seq("name" #== escapedFieldName)).map {
             _.headOption.map( field =>
@@ -93,8 +92,6 @@ protected abstract class ImportDeNoPaCategories(
       _ <- fieldRepo.update(newFields.flatten)
     } yield
       ()
-
-    result(future, timeout)
   }
 
   private def setCategoryAndLabel(

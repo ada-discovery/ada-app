@@ -3,7 +3,7 @@
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
 
-@()(implicit context: WebContext)
+@(customHtml: Option[String])(implicit context: WebContext)
 
 @main(
     title = "Contact",
@@ -16,7 +16,9 @@
 
     <div class="row-fluid">
         <address>
-            @Html(Messages("contact.html"))
+            @customHtml.map(Html(_)).getOrElse {
+                <p>No contact has been provided yet.</p>
+            }
         </address>
     </div>
 }

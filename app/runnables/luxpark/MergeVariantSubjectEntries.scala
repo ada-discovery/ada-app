@@ -12,7 +12,8 @@ import scala.reflect.runtime.universe.typeOf
 class MergeVariantSubjectEntries extends InputRunnable[MergeVariantSubjectEntriesSpec] {
 
   private val defaultDelimiter = "\t"
-  private val columnNum = 76
+  private val booleanColumnNum = 75
+  private val numericColumnNum = 3
 
   override def run(input: MergeVariantSubjectEntriesSpec) = {
     val delimiter = StringEscapeUtils.unescapeJava(input.delimiter.getOrElse(defaultDelimiter))
@@ -37,10 +38,10 @@ class MergeVariantSubjectEntries extends InputRunnable[MergeVariantSubjectEntrie
     val newLines = extraAliquotIds.toSeq.sorted.map { aliquotId =>
       val kitId = aliquotId.substring(0, 15)
 
-      (Seq(aliquotId, kitId) ++ Seq.fill(columnNum)("false")).mkString(delimiter)
+      (Seq(aliquotId, kitId) ++ Seq.fill(booleanColumnNum)("false") ++ Seq.fill(numericColumnNum)(0) ++ Seq(false)).mkString(delimiter)
     }
 
-    val newHeader = header + delimiter + "Any_Variant"
+    val newHeader = header + delimiter + "Any_PD_Variant"
     val content = (Seq(newHeader) ++ existingLines ++ newLines).mkString("\n")
     writeStringAsStream(content, new java.io.File(outputFileName(input.subjectVariantInputFileName)))
   }

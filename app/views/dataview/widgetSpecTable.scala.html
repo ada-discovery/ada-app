@@ -187,7 +187,7 @@
                             Some("Type: " + x.correlationType)
                         )
 
-                    case x: TemplateHtmlWidgetSpec =>
+                    case x: CustomHtmlWidgetSpec =>
                         Seq(
                             Some("Content: " + Html(util.shorten(x.content, 50)))
                         )
@@ -245,7 +245,7 @@
         var isHeatmapAggType = concreteClass == "@{classOf[HeatmapAggWidgetSpec].getName}"
         var isGridDistributionCountType = concreteClass == "@{classOf[GridDistributionCountWidgetSpec].getName}"
         var isIndependenceTest = concreteClass == "@{classOf[IndependenceTestWidgetSpec].getName}"
-        var isTemplateHtmlType = concreteClass == "@{classOf[TemplateHtmlWidgetSpec].getName}"
+        var isTemplateHtmlType = concreteClass == "@{classOf[CustomHtmlWidgetSpec].getName}"
 
         var xyFieldsDefined = values["xFieldName"] != null && values["xFieldName"].length > 0 && values["yFieldName"] != null && values["yFieldName"].length > 0
 
@@ -845,7 +845,7 @@
             case "@{classOf[IndependenceTestWidgetSpec].getName}" :
                 labelFields = ["fieldNameTypeahead"];
                 break;
-            case "@{classOf[TemplateHtmlWidgetSpec].getName}" :
+            case "@{classOf[CustomHtmlWidgetSpec].getName}" :
                 break;
         }
         return labelFields;

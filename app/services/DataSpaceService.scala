@@ -68,10 +68,10 @@ class DataSpaceServiceImpl @Inject() (
         def allAsTreeAux = allAsTree.map(_.filterNot(_.parentId.isDefined))
 
         if (isAdmin)
-          allAsTree
+          allAsTreeAux
         else {
           val dataSetIds = getUsersDataSetIds(user)
-          allAsTree.map(_.map(filterRecursively(dataSetIds)).flatten)
+          allAsTreeAux.map(_.map(filterRecursively(dataSetIds)).flatten)
         }
       }
     } yield
