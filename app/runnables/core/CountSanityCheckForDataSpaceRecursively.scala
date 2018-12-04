@@ -6,7 +6,7 @@ import org.incal.core.{FutureRunnable, InputFutureRunnable}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import dataaccess.JsonReadonlyRepoExtra._
-import models.DataSpaceMetaInfo
+import models.{AdaException, DataSpaceMetaInfo}
 import reactivemongo.bson.BSONObjectID
 import services.DataSpaceService
 
@@ -14,18 +14,20 @@ import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class CountSanityCheckForDataSpace @Inject() (
+class CountSanityCheckForDataSpaceRecursively @Inject() (
     val dsaf: DataSetAccessorFactory,
     dataSpaceService: DataSpaceService
-  ) extends InputFutureRunnable[CountSanityCheckForDataSpaceSpec] with CountSanityCheckHelper {
+  ) extends InputFutureRunnable[CountSanityCheckForDataSpaceRecursivelySpec] with CountSanityCheckHelper {
 
-  override def runAsFuture(input: CountSanityCheckForDataSpaceSpec) =
+  override def runAsFuture(input: CountSanityCheckForDataSpaceRecursivelySpec) =
     for {
       dataSpaces <- dataSpaceService.allAsTree
 
-      dataSpace = dataSpaces.find(_._id.get.equals(input.dataSpaceId))
+      dataSpace = dataSpaces.map(dataSpaceService.findRecursively(input.dataSpaceId, _)).find(_.isDefined).flatten
 
-      results <- checkDataSpaceRecursively(dataSpace.get)
+      results <- checkDataSpaceRecursively(dataSpace.getOrElse(
+        throw new AdaException(s"Data space ${input.dataSpaceId} not found.")
+      ))
     } yield {
       val filteredCounts = results.filter { case (_, count1, count2) => count1 != count2 }
       logger.info(s"Found ${filteredCounts.size} (out of ${results.size}) data sets with BAD counts:")
@@ -47,7 +49,7 @@ class CountSanityCheckForDataSpace @Inject() (
       results ++ subResults.flatten
   }
 
-  override def inputType = typeOf[CountSanityCheckForDataSpaceSpec]
+  override def inputType = typeOf[CountSanityCheckForDataSpaceRecursivelySpec]
 }
 
 class CountSanityCheckForDataSet @Inject() (
@@ -89,7 +91,7 @@ trait CountSanityCheckHelper {
       (dataSetId, count, ids.size)
   }
 }
-case class CountSanityCheckForDataSpaceSpec(
+case class CountSanityCheckForDataSpaceRecursivelySpec(
   dataSpaceId: BSONObjectID
 )
 

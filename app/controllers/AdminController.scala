@@ -17,6 +17,7 @@ import java.{util => ju}
 import models.security.UserManager
 import org.incal.core.InputRunnable
 
+import scala.reflect.ClassTag
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -43,8 +44,8 @@ class AdminController @Inject() (
   def listRunnables = restrictAdminAnyNoCaching(deadbolt) {
     implicit request => Future {
 
-      def findAux[T](packageName: String, fullMach: Boolean) =
-        findClasses[T](libPrefix, Some(packageName), fullMach, None, libPath)
+      def findAux[T](packageName: String, fullMatch: Boolean)(implicit m: ClassTag[T]) =
+        findClasses[T](libPrefix, Some(packageName), fullMatch, None, libPath)
 
       val foundClasses =
         if (showAllRunnables) {

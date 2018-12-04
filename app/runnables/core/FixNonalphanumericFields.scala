@@ -7,13 +7,13 @@ import akka.stream.ActorMaterializer
 import dataaccess.StreamSpec
 import dataaccess.JsonCrudRepoExtra._
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
-import models._
+import models.{StorageType, _}
 import models.ml.{DerivedDataSetSpec, RenameFieldsSpec}
 import org.incal.core.InputFutureRunnable
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import services.{DataSetService, DataSpaceService}
-import util.{nonAlphanumericToUnderscore, hasNonAlphanumericUnderscore}
+import util.{hasNonAlphanumericUnderscore, nonAlphanumericToUnderscore}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -60,7 +60,7 @@ class FixNonalphanumericFields @Inject() (
       // rename fields and move data to a temporary data set
       _ <- dataSetService.renameFields(
         RenameFieldsSpec(
-          input.dataSetId, oldToNewFieldNameMap, DerivedDataSetSpec(newDataSetId, "Temporary (To Delete)", StorageType.ElasticSearch), streamSpec
+          input.dataSetId, oldToNewFieldNameMap, DerivedDataSetSpec(newDataSetId, "Temporary (To Delete)", input.tempStorageType), streamSpec
         ))
 
       movedDsa = dsaf(newDataSetId).get
@@ -231,5 +231,6 @@ class FixNonalphanumericFields @Inject() (
 
 case class FixNonalphanumericFieldsSpec(
   dataSetId: String,
-  batchSize: Option[Int]
+  batchSize: Option[Int],
+  tempStorageType: StorageType.Value
 )
