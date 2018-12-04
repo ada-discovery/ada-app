@@ -1,4 +1,4 @@
-package runnables
+package runnables.db
 
 import java.{util => ju}
 
@@ -17,10 +17,10 @@ import util.seqFutures
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends FutureRunnable {
+class TestElasticJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends FutureRunnable {
 
-  private val biosampleTestDsa = dsaf("lux_park.ibbl_biosample_tests_2").get
-  private val mPowerFeatureSetDsa = dsaf("mpower_challenge.9638887_2").get
+  private val biosampleTestDsa = dsaf("lux_park.ibbl_biosample_tests").get
+  private val mPowerFeatureSetDsa = dsaf("mpower_challenge.9638887").get
 
   private val biosampleTestDataSetRepo = biosampleTestDsa.dataSetRepo
   private val mPowerFeatureSetRepo = mPowerFeatureSetDsa.dataSetRepo

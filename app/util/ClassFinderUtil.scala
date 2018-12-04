@@ -17,10 +17,11 @@ object ClassFinderUtil {
   def findClasses[T](
     libPrefix: String,
     packageName: Option[String],
+    packageFullMatch: Boolean,
     className: Option[String],
     libFolder: Option[String]
   )(implicit m: ClassTag[T]): Stream[Class[T]] = {
-    val filteredClassInfos = findClassInfos[T](libPrefix, packageName, className, libFolder)
+    val filteredClassInfos = findClassInfos[T](libPrefix, packageName, packageFullMatch, className, libFolder)
     filteredClassInfos.map{ classInfo =>
       Class.forName(classInfo.name).asInstanceOf[Class[T]]
     }
@@ -57,6 +58,7 @@ object ClassFinderUtil {
   private def findClassInfos[T](
     libPrefix: String,
     packageName: Option[String],
+    packageFullMatch: Boolean,
     className: Option[String],
     libFolder: Option[String]
   )(implicit m: ClassTag[T]): Stream[ClassInfo] = {
@@ -64,13 +66,28 @@ object ClassFinderUtil {
 
     val classInfos = streamClassInfos(libPrefix, libFolder)
     classInfos.filter{ classInfo =>
+      val foundClassName = classInfo.name
+
+      // package match
+      val packageMatched = packageName.map { packageName =>
+        val lastDot = foundClassName.lastIndexOf('.')
+        if (lastDot > -1) {
+          val foundPackageName = foundClassName.substring(0, lastDot)
+          if (packageFullMatch)
+            foundPackageName.equals(packageName)
+          else
+            foundPackageName.startsWith(packageName)
+        } else
+          false
+      }.getOrElse(true)
+
       try {
-        packageName.map(classInfo.name.startsWith(_)).getOrElse(true) &&
-          className.map(classInfo.name.endsWith(_)).getOrElse(true) &&
-          classInfo.isConcrete &&
-          !classInfo.isSynthetic &&
-          !classInfo.name.contains("$") &&
-          clazz.isAssignableFrom(Class.forName(classInfo.name))
+        packageMatched &&
+        className.map(foundClassName.endsWith(_)).getOrElse(true) &&
+        classInfo.isConcrete &&
+        !classInfo.isSynthetic &&
+        !classInfo.name.contains("$") &&
+        clazz.isAssignableFrom(Class.forName(foundClassName))
       } catch {
         case _ : ClassNotFoundException => false
         case _ : ExceptionInInitializerError => false

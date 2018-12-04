@@ -1,4 +1,4 @@
-package runnables.ignite
+package runnables.db
 
 import java.util.Date
 import javax.inject.Inject

@@ -1,4 +1,4 @@
-package runnables.ignite
+package runnables.db
 
 import com.google.inject.Inject
 import dataaccess.ignite.CacheAsyncCrudRepoFactory

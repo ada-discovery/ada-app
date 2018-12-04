@@ -13,7 +13,7 @@ class JsonInputConverterFactory(libPath: Option[String]) {
   private val libPrefix = "org.ada"
 
   // find the converter classes in a package services and create instances
-  private val converterClasses = findClasses[JsonInputConverter[_]](libPrefix, Some("services."), None, libPath)
+  private val converterClasses = findClasses[JsonInputConverter[_]](libPrefix, Some("services"), false, None, libPath)
 
   private val converters = converterClasses.map { clazz =>
     construct2[JsonInputConverter[_]](clazz, Nil)

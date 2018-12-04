@@ -1,4 +1,4 @@
-package runnables
+package runnables.db
 
 import java.{util => ju}
 
@@ -6,23 +6,21 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.google.inject.Inject
-import org.incal.core.dataaccess.Criterion.Infix
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import org.incal.core.FutureRunnable
 import org.incal.core.dataaccess.AscSort
 import persistence.dataset.DataSetAccessorFactory
-import play.api.libs.json.{JsObject, Json}
-import reactivemongo.bson.BSONObjectID
+import play.api.libs.json.JsObject
 import reactivemongo.play.json.BSONObjectIDFormat
 import util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class TestElasticJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends FutureRunnable {
+class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends FutureRunnable {
 
-  private val biosampleTestDsa = dsaf("lux_park.ibbl_biosample_tests").get
-  private val mPowerFeatureSetDsa = dsaf("mpower_challenge.9638887").get
+  private val biosampleTestDsa = dsaf("lux_park.ibbl_biosample_tests_2").get
+  private val mPowerFeatureSetDsa = dsaf("mpower_challenge.9638887_2").get
 
   private val biosampleTestDataSetRepo = biosampleTestDsa.dataSetRepo
   private val mPowerFeatureSetRepo = mPowerFeatureSetDsa.dataSetRepo

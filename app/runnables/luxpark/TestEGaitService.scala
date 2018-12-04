@@ -1,15 +1,14 @@
-package runnables
+package runnables.luxpark
 
 import javax.inject.Inject
 
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
-import services.EGaitServiceFactory
+import play.api.Configuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.{Configuration, Play}
+import services.EGaitServiceFactory
 
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 class TestEGaitService @Inject() (
     configuration: Configuration,

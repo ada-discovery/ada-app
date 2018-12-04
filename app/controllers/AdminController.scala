@@ -32,6 +32,7 @@ class AdminController @Inject() (
   // we scan only the jars starting with this prefix to speed up the class search
   private val libPrefix = "org.ada"
   private val libPath = configuration.getString("lib.path")
+  private val showAllRunnables = configuration.getBoolean("admin.runnables.show_all").getOrElse(false)
 
   /**
     * Creates view showing all runnables.
@@ -41,10 +42,26 @@ class AdminController @Inject() (
     */
   def listRunnables = restrictAdminAnyNoCaching(deadbolt) {
     implicit request => Future {
-      val classes1 = findClasses[Runnable](libPrefix, Some("runnables."), None, libPath)
-      val classes2 = findClasses[InputRunnable[_]](libPrefix, Some("runnables."), None, libPath)
 
-      val runnableNames = (classes1 ++ classes2).map(_.getName).sorted
+      def findAux[T](packageName: String, fullMach: Boolean) =
+        findClasses[T](libPrefix, Some(packageName), fullMach, None, libPath)
+
+      val foundClasses =
+        if (showAllRunnables) {
+          val classes1 = findAux[Runnable]("runnables", false)
+          val classes2 = findAux[InputRunnable[_]]("runnables", false)
+
+          classes1 ++ classes2
+        } else {
+          val classes1 = findAux[Runnable]("runnables", true)
+          val classes2 = findAux[InputRunnable[_]]("runnables", true)
+          val classes3 = findAux[Runnable]("runnables.core", true)
+          val classes4 = findAux[InputRunnable[_]]("runnables.core", true)
+
+          classes1 ++ classes2 ++ classes3 ++ classes4
+        }
+
+      val runnableNames = foundClasses.map(_.getName).sorted
       Ok(adminviews.runnables(runnableNames))
     }
   }

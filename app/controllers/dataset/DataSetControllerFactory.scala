@@ -59,7 +59,7 @@ protected class DataSetControllerFactoryImpl @Inject()(
 
   private def findControllerClass[T : ClassTag](dataSetId: String): Option[Class[T]] = {
     val className = controllerClassName(dataSetId)
-    val classes = findClasses[T](libPrefix, Some("controllers."), Some(className), libPath)
+    val classes = findClasses[T](libPrefix, Some("controllers"), false, Some(className), libPath)
     if (classes.nonEmpty)
       Some(classes.head)
     else

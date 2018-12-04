@@ -6,7 +6,6 @@ import javax.inject.Inject
 import org.incal.core.dataaccess.Criterion
 import field.FieldTypeHelper
 import persistence.dataset.DataSetAccessorFactory
-import DataSetId._
 import org.incal.play.GuiceRunnableApp
 import Criterion.Infix
 import dataaccess.RepoTypes.{FieldRepo, JsonCrudRepo}
@@ -71,8 +70,10 @@ class CreateClinicalMPowerTappingDataSet @Inject()(dsaf: DataSetAccessorFactory)
 
   implicit val mPowerTappingDataFormat = Json.format[MPowerTappingData]
 
-  private val timeout = 120000 millis
-  private val luxParkDsa = dsaf(lux_park_clinical).get
+  private val luxParkDataSetId = "lux_park.clinical"
+
+  private val luxParkDsa = dsaf(luxParkDataSetId).get
+
   private val mPowerTappingDsa = dsaf("lux_park.mpower_tapping_activity").get
   private val mPowerTapping2Dsa = dsaf("lux_park.mpower_tapping_activity2").get
 

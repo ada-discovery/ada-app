@@ -13,17 +13,17 @@ class TestDataSetImportRepo @Inject() (repo: DataSetImportRepo) extends FutureRu
 
   override def runAsFuture =
     for {
-      _ <- repo.save(CsvDataSetImport(None, "Lux Park", "lux_park.lala1", "Lala 1", Some("/home/temp/data1.csv"), ",", None, None, true, false))
-      _ <- repo.save(CsvDataSetImport(None, "Lux Park", "lux_park.lala2", "Lala 2", Some("/home/temp/data2.csv"), ";", None, None, true, false))
-      _ <- repo.save(RedCapDataSetImport(None, "Lux Park", "lux_park.lala3", "Lala 3","https:/something.com/rest", "54j39gryu65936f3", false))
+      _ <- repo.save(CsvDataSetImport(None, "My Study", "my_study.lala1", "Lala 1", Some("/home/temp/data1.csv"), ",", None, None, true, false))
+      _ <- repo.save(CsvDataSetImport(None, "My Study", "my_study.lala2", "Lala 2", Some("/home/temp/data2.csv"), ";", None, None, true, false))
+      _ <- repo.save(RedCapDataSetImport(None, "My Study", "my_study.lala3", "Lala 3","https:/something.com/rest", "54j39gryu65936f3", false))
 
       csvSearchResult <- repo.find(
-        criteria = Seq("dataSetId" #== "lux_park.lala1"),
+        criteria = Seq("dataSetId" #== "my_study.lala1"),
         projection = Seq("concreteClass", "dataSpaceName", "dataSetName", "dataSetId", "delimiter", "timeCreated")
       )
 
       redCapSearchResult <- repo.find(
-        criteria = Seq("dataSetId" #== "lux_park.lala3"),
+        criteria = Seq("dataSetId" #== "my_study.lala3"),
         projection = Seq("concreteClass", "dataSpaceName", "dataSetName", "dataSetId", "url", "token", "timeCreated")
       )
 

@@ -1,21 +1,16 @@
-package runnables
+package runnables.mpower
 
-import java.io.{BufferedReader, ByteArrayOutputStream, InputStreamReader}
-import java.util.zip.ZipEntry
 import javax.inject.Inject
 
 import models.synapse._
-import org.apache.commons.io.IOUtils
+import org.incal.play.GuiceRunnableApp
+import play.api.Configuration
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.Json
 import services.SynapseServiceFactory
 
 import scala.concurrent.Await.result
 import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.Configuration
-import play.api.libs.json.Json
-import models.synapse.JsonFormat._
-import org.incal.play.GuiceRunnableApp
-
 import scala.concurrent.duration._
 
 class TestSynapseService @Inject() (

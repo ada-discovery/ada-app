@@ -1,17 +1,15 @@
-package runnables
+package runnables.db
 
 import com.google.inject.Inject
-import org.incal.core.dataaccess.Criterion.Infix
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import org.incal.core.FutureRunnable
 import org.incal.core.dataaccess.AscSort
-import persistence.RepoTypes._
+import org.incal.core.dataaccess.Criterion.Infix
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsObject, Json}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONObjectIDFormat
 
-import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class TestElasticJsonRepo @Inject() (dsaf: DataSetAccessorFactory) extends FutureRunnable {

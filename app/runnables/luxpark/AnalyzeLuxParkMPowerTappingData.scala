@@ -5,7 +5,6 @@ import javax.inject.Inject
 import org.incal.core.dataaccess.Criterion
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
-import DataSetId._
 import org.incal.play.GuiceRunnableApp
 import Criterion.Infix
 import scala.concurrent.duration._
@@ -37,7 +36,9 @@ class AnalyzeLuxParkMPowerTappingData @Inject()(
   )
 
   private val timeout = 120000 millis
-  private val luxParkDsa = dsaf(lux_park_clinical).get
+  private val luxParkDataSetId = "lux_park.clinical"
+
+  private val luxParkDsa = dsaf(luxParkDataSetId).get
   private val mPowerTappingDsa = dsaf("lux_park.mpower_tapping_activity").get
   private val luxParkDataRepo = luxParkDsa.dataSetRepo
   private val mPowerTappingDataRepo = mPowerTappingDsa.dataSetRepo

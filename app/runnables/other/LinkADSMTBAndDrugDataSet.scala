@@ -1,20 +1,18 @@
-package runnables
+package runnables.other
 
 import java.{util => ju}
 import javax.inject.Inject
 
-import org.incal.core.dataaccess.Criterion.Infix
 import field.FieldTypeHelper
 import models._
 import org.incal.core.FutureRunnable
+import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.GuiceRunnableApp
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsNull, JsNumber}
 import services.DataSetService
 
-import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
 
 class LinkADSMTBAndDrugDataSet @Inject()(
     dsaf: DataSetAccessorFactory,

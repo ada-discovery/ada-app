@@ -11,7 +11,6 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
 import play.api.libs.json.{JsNumber, JsObject, Json}
 import reactivemongo.bson.BSONObjectID
-import DataSetId.lux_park_clinical
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 
@@ -25,6 +24,8 @@ class CreateOverallActivityDataSet  @Inject()(
   ) extends FutureRunnable {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()
+
+  private val luxParkDataSetId = "lux_park.clinical"
 
   val dataSetIdWithActivityEnums = Seq(
 //    "lux_park.mpower_my_thoughts",
@@ -131,7 +132,7 @@ class CreateOverallActivityDataSet  @Inject()(
     val MPowerId = Value("dm_mpowerid")
   }
 
-  private val luxParkDsa = dsaf(lux_park_clinical).get
+  private val luxParkDsa = dsaf(luxParkDataSetId).get
 
   private val appVersionFieldType = ftf(appVersionField.fieldTypeSpec)
   private val externalIdFieldType = ftf(externalIdField.fieldTypeSpec)
