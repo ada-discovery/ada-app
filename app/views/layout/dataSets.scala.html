@@ -18,22 +18,26 @@
     <span class="badge badge-success"><b><h5>@text</h5></b></span>
 }
 
-@errorMessagex = {
+@noDataSetsErrorMessage = {
     @restrictOr(roles = List(Array(SecurityRole.admin))) {
-        <h2>No data sets available. Go to and import one.</h2>
+        @messageBox {
+            No data sets available. Go <a href="@controllers.dataset.routes.DataSetImportController.find()">here</a> and import one.
+        }
     } {
-        <h2>No data sets available. Contact your admin to give you a permission.</h2>
+        @messageBox {
+            No data sets available. <a href="@routes.AppController.contact()">Contact your admin</a> to give you a permission.
+        }
     }
 }
 
-@messageBox(message: String) = {
+@messageBox(message: Html) = {
     <div class="alert alert-dismissable alert-danger">
         <button type="button" class="close" data-dismiss="alert">×</button>
         @message
     </div>
 }
 
-@main("Studies/Data Sets", Some(datasetMenu(dataSpaceMetaInfos)), extraMessages = if (dataSetsNum == 0) Some(errorMessagex) else None) {
+@main("Studies/Data Sets", Some(datasetMenu(dataSpaceMetaInfos)), extraMessages = if (dataSetsNum == 0) Some(noDataSetsErrorMessage) else None) {
 
     <div class="page-header">
         <h1>Studies</h1>
