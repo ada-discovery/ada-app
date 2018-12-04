@@ -1266,7 +1266,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def processCorrelationsWidgets(fieldsCount: Int) = { widgets: Traversable[Widget] =>
-    // if we have more than 50 fields for performance purposed we round correlation to 3 decimal places
+    // if we have more than 50 fields for performance purposes we round correlations to 3 decimal places
     if (fieldsCount > 50) {
       widgets.map {widget =>
         if (widgets.isInstanceOf[HeatmapWidget]) {

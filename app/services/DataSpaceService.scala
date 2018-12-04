@@ -11,6 +11,7 @@ import play.api.mvc.Request
 import security.AdaAuthConfig
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.security.SecurityRole
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -37,6 +38,19 @@ trait DataSpaceService {
     dataSpaceInfo: DataSpaceMetaInfo,
     dataSetId: String
   ): Future[Unit]
+
+  def findRecursively(
+    id: BSONObjectID,
+    root: DataSpaceMetaInfo
+  ): Option[DataSpaceMetaInfo]
+
+  def countDataSetsNumRecursively(
+    dataSpace: DataSpaceMetaInfo
+  ): Int
+
+  def countDataSpacesNumRecursively(
+    dataSpace: DataSpaceMetaInfo
+  ): Int
 }
 
 @Singleton
@@ -125,7 +139,21 @@ class DataSpaceServiceImpl @Inject() (
     }
   }
 
-  def filterRecursively(
+  override def countDataSetsNumRecursively(
+    dataSpace: DataSpaceMetaInfo
+  ): Int =
+    dataSpace.children.foldLeft(dataSpace.dataSetMetaInfos.size) {
+      case (count, dataSpace) => count + countDataSetsNumRecursively(dataSpace)
+    }
+
+  override def countDataSpacesNumRecursively(
+    dataSpace: DataSpaceMetaInfo
+  ): Int =
+    dataSpace.children.foldLeft(1) {
+      case (count, dataSpace) => count + countDataSpacesNumRecursively(dataSpace)
+    }
+
+  private def filterRecursively(
     acceptedDataSetIds: Set[String])(
     dataSpace: DataSpaceMetaInfo
   ): Option[DataSpaceMetaInfo] = {
@@ -140,6 +168,15 @@ class DataSpaceServiceImpl @Inject() (
     else
       None
   }
+
+  override def findRecursively(
+    id: BSONObjectID,
+    root: DataSpaceMetaInfo
+  ): Option[DataSpaceMetaInfo] =
+    if (root._id.isDefined && root._id.get.equals(id))
+      Some(root)
+    else
+      root.children.map(findRecursively(id, _)).find(_.isDefined).flatten
 
   override def unregister(
     dataSpaceInfo: DataSpaceMetaInfo,

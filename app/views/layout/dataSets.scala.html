@@ -1,5 +1,7 @@
 @import views.html.dataset.datasetMenu
 @import models.DataSpaceMetaInfo
+@import be.objectify.deadbolt.scala.views.html.{subjectPresent, subjectPresentOr, restrictOr}
+@import org.incal.play.security.SecurityRole
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
 
@@ -16,7 +18,22 @@
     <span class="badge badge-success"><b><h5>@text</h5></b></span>
 }
 
-@main("Studies/Data Sets", Some(datasetMenu(dataSpaceMetaInfos))) {
+@errorMessagex = {
+    @restrictOr(roles = List(Array(SecurityRole.admin))) {
+        <h2>No data sets available. Go to and import one.</h2>
+    } {
+        <h2>No data sets available. Contact your admin to give you a permission.</h2>
+    }
+}
+
+@messageBox(message: String) = {
+    <div class="alert alert-dismissable alert-danger">
+        <button type="button" class="close" data-dismiss="alert">×</button>
+        @message
+    </div>
+}
+
+@main("Studies/Data Sets", Some(datasetMenu(dataSpaceMetaInfos)), extraMessages = if (dataSetsNum == 0) Some(errorMessagex) else None) {
 
     <div class="page-header">
         <h1>Studies</h1>

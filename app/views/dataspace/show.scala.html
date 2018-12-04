@@ -14,6 +14,8 @@
 
 @(
     dataSpaceMetaInfo: DataSpaceMetaInfo,
+    nestedDataSpaceCount: Int,
+    nestedDataSetCount: Int,
     dataSetIdSizeMap: Map[String, Int],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -31,11 +33,15 @@
             (None, "Name", _.name),
             (None, "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
             (None, "# Items", {info: DataSetMetaInfo => dataSetIdSizeMap.get(info.id).map(_.toString).getOrElse("")}),
-            (None, "Hide?", hideCheckbox)
+            (None, "Hidden?", hideCheckbox)
         ),
         None,
         Some({ item : Any => new DataSetRouter(item.asInstanceOf[DataSetMetaInfo].id).getDefaultView})
     )
+}
+
+@badge(text: Int) = {
+    <span class="badge badge-success"><b><h5>@text</h5></b></span>
 }
 
 @dataSpaceTable = {
@@ -44,9 +50,6 @@
         typeColumns[DataSpaceMetaInfo](
             (None, "Name", _.name),
             (None, "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
-            (None, "# Items", {info: DataSpaceMetaInfo =>
-                info.dataSetMetaInfos.map( setInfo => dataSetIdSizeMap.get(setInfo.id).getOrElse(0)).sum.toString
-            }),
             (None, "# Data Sets", {info: DataSpaceMetaInfo => info.dataSetMetaInfos.size.toString})
         ),
         None,
@@ -55,8 +58,22 @@
 }
 
 @elements = {
-    @value("dataSpaceMetaInfo", "Name", dataSpaceMetaInfo.name)
-    @value("dataSpaceMetaInfo", "Time Created", dataSpaceMetaInfo.timeCreated.toString)
+    @labelValue("dataSetsCount", "Nested Data Sets #") {
+        @badge(nestedDataSetCount)
+    }
+    @if(nestedDataSpaceCount > 0) {
+        @labelValue("dataSpacesCount", "Nested Data Spaces #") {
+            @badge(nestedDataSpaceCount)
+        }
+    }
+    @labelValue("timeCreated", "Time Created") {
+        @dataSpaceMetaInfo.timeCreated.format("yyyy-MM-dd HH:mm:ss")
+    }
+
+    <div class="form-group col-sm-12">
+        <hr/>
+    </div>
+
     @labelValue("dataSetMetaInfos", "Data Sets"){@dataSetTable}
     @if(dataSpaceMetaInfo.children.nonEmpty) {
         @labelValue("dataSpaceMetaInfos", "(Sub) Data Spaces") {@dataSpaceTable}
@@ -64,11 +81,12 @@
 }
 
 @layout.show(
-    "Study",
+    dataSpaceMetaInfo.name + " Study",
     elements,
     None,
     Some(dataSpaceMetaInfoRoutes.edit(dataSpaceMetaInfo._id.get)),
     None,
     Some(datasetMenu(dataSpaceMetaInfos)),
-    None
+    None,
+    isFullDisplayName = true
 )

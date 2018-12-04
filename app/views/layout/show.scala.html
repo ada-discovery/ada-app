@@ -2,21 +2,22 @@
 @import org.incal.play.controllers.WebContext
 
 @(
-	domainName: String,
+	displayName: String,
 	elements: Html,
     cancelCall: Option[Call] = None,
     editCall: Option[Call] = None,
 	deleteCall: Option[Call] = None,
 	sideBar: Option[Html] = None,
-	topContentBar: Option[Html] = None
+	topContentBar: Option[Html] = None,
+	isFullDisplayName: Boolean = false
 )(
 	implicit context: WebContext
 )
 
-@main(Messages("show.title", domainName), sideBar, topContentBar) {
+@main(if(isFullDisplayName) displayName else Messages("show.title", displayName), sideBar, topContentBar) {
 
 	<div class="page-header">
-		<h3>@Messages("show.title", domainName)</h3>
+		<h3>@{if(isFullDisplayName) displayName else Messages("show.title", displayName)}</h3>
 	</div>
 
 	<div class="row">

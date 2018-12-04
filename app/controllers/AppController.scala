@@ -10,7 +10,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import security.AdaAuthConfig
 import services.DataSpaceService
 import org.incal.play.controllers.BaseController
-import org.incal.play.security.AuthAction
+import org.incal.play.security.{AuthAction, SecurityRole}
 import org.incal.play.security.SecurityUtil._
 import persistence.RepoTypes.HtmlSnippetRepo
 import views.html.layout
@@ -56,9 +56,11 @@ class AppController @Inject() (
       } yield {
         user.map { user =>
           logger.info("Studies accessed by " + user.ldapDn)
-          val dataSpacesNum = metaInfos.map(countDataSpacesNumRecursively).sum
-          val dataSetsNum = metaInfos.map(countDataSetsNumRecursively).sum
+          val dataSpacesNum = metaInfos.map(dataSpaceService.countDataSpacesNumRecursively).sum
+          val dataSetsNum = metaInfos.map(dataSpaceService.countDataSetsNumRecursively).sum
           val userFirstName = user.ldapDn.split("\\.", -1).head.capitalize
+
+          val isAdmin = user.roles.contains(SecurityRole.admin)
 
           Ok(layout.dataSets(userFirstName, dataSpacesNum, dataSetsNum, metaInfos))
         }.getOrElse(
@@ -66,14 +68,4 @@ class AppController @Inject() (
         )
       }
   }
-
-  private def countDataSetsNumRecursively(dataSpace: DataSpaceMetaInfo): Int =
-    dataSpace.children.foldLeft(dataSpace.dataSetMetaInfos.size) {
-      case (count, dataSpace) => count + countDataSetsNumRecursively(dataSpace)
-    }
-
-  private def countDataSpacesNumRecursively(dataSpace: DataSpaceMetaInfo): Int =
-    dataSpace.children.foldLeft(1) {
-      case (count, dataSpace) => count + countDataSpacesNumRecursively(dataSpace)
-    }
 }

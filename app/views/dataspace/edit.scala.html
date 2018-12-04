@@ -10,6 +10,8 @@
 @(
     id: BSONObjectID,
     form: Form[DataSpaceMetaInfo],
+    nestedDataSpaceCount: Int,
+    nestedDataSetCount: Int,
     dataSetIdSizeMap: Map[String, Int],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -20,7 +22,7 @@
     "Study",
     "dataSpaceMetaInfo",
 	form.errors,
-    elements(form, dataSetIdSizeMap, Some(id)),
+    elements(form, nestedDataSpaceCount, nestedDataSetCount, dataSetIdSizeMap, Some(id)),
     dataSpaceMetaInfoRoutes.update(id),
     dataSpaceMetaInfoRoutes.get(id),
     Some(dataSpaceMetaInfoRoutes.delete(id)),

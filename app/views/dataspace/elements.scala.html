@@ -9,6 +9,8 @@
 
 @(
     form: Form[DataSpaceMetaInfo],
+    nestedDataSpaceCount: Int,
+    nestedDataSetCount: Int,
     dataSetIdSizeMap: Map[String, Int],
     id: Option[BSONObjectID]
 )(implicit msg: play.api.i18n.Messages)
@@ -59,7 +61,7 @@
             (None, "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
             (None, "Sort Order", { item: DataSetMetaInfo => editableInput("dataSetMetaInfos.sortOrder", item.sortOrder) }),
             (None, "# Items", { item: DataSetMetaInfo => dataSetIdSizeMap.get(item.id).get.toString }),
-            (None, "Hide?", editableHideCheckbox),
+            (None, "Hidden?", editableHideCheckbox),
             (None, "Delete?", deleteButton)
         ),
         None,
@@ -84,9 +86,26 @@
     )
 }
 
+@badge(text: Int) = {
+    <span class="badge badge-success"><b><h5>@text</h5></b></span>
+}
+
 @inputText("dataSpaceMetaInfo", "name", form)
+@labelValue("dataSetsCount", "Nested Data Sets #") {
+    @badge(nestedDataSetCount)
+}
+@if(nestedDataSpaceCount > 0) {
+    @labelValue("dataSpacesCount", "Nested Data Spaces #") {
+        @badge(nestedDataSpaceCount)
+    }
+}
 @inputText("dataSpaceMetaInfo", "sortOrder", form)
-@value("dataSetMetaInfos", "Time Created", form.value.get.timeCreated.toString)
+@value("dataSetMetaInfos", "Time Created", form.value.map(_.timeCreated.format("yyyy-MM-dd HH:mm:ss")).getOrElse("N/A"))
+
+<div class="form-group col-sm-12">
+    <hr/>
+</div>
+
 @labelValue("dataSetMetaInfos", "Data Sets"){@dataSetTable}
 
 <script type="text/javascript">

@@ -18,7 +18,7 @@ import play.api.data.Form
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import controllers.dataset.routes.javascript.{DataSpaceMetaInfoController => dataSpaceMetaInfoJsRoutes}
-import dataaccess.DataSetMetaInfoRepoFactory
+import dataaccess.{AdaDataAccessException, DataSetMetaInfoRepoFactory}
 import models.User
 import org.incal.play.controllers.{CrudControllerImpl, HasBasicFormCreateView, HasBasicListView, SubjectPresentRestrictedCrudController}
 import services.DataSpaceService
@@ -55,21 +55,29 @@ class DataSpaceMetaInfoController @Inject() (
 
   // show view
 
-  override protected type ShowViewData = (DataSpaceMetaInfo, Map[String, Int], Traversable[DataSpaceMetaInfo])
+  override protected type ShowViewData = (
+    DataSpaceMetaInfo,
+    Int,
+    Int,
+    Map[String, Int],
+    Traversable[DataSpaceMetaInfo]
+  )
 
   override protected def getFormShowViewData(
     id: BSONObjectID,
     form: Form[DataSpaceMetaInfo]
   ) = { request =>
-    getFormEditViewData(id, form)(request).map { case (_, newForm, dataSetSizes, tree) =>
-      val dataSpace = newForm.value.getOrElse(form.get.copy(dataSetMetaInfos = Nil))
-      dataSpace.children.clear()
-      (dataSpace, dataSetSizes, tree)
+    getFormEditViewData(id, form)(request).map { case (_, newForm, subDataSpaceCount, subDataSetCount, dataSetSizes, tree) =>
+      newForm.value.map( dataSpace =>
+        (dataSpace, subDataSpaceCount, subDataSetCount, dataSetSizes, tree)
+      ).getOrElse(
+        throw new AdaException(s"Cannot access the data space '${id.stringify}'.")
+      )
     }
   }
 
   override protected def showView = { implicit ctx =>
-    (view.show(_, _, _)).tupled
+    (view.show(_, _, _, _, _)).tupled
   }
 
   // edit view and data
@@ -77,6 +85,8 @@ class DataSpaceMetaInfoController @Inject() (
   override protected type EditViewData = (
     BSONObjectID,
     Form[DataSpaceMetaInfo],
+    Int,
+    Int,
     Map[String, Int],
     Traversable[DataSpaceMetaInfo]
   )
@@ -86,34 +96,33 @@ class DataSpaceMetaInfoController @Inject() (
     form: Form[DataSpaceMetaInfo]
   ) = { request =>
     val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
-    val childrenFuture = repo.find(Seq("parentId" #== id))
 
     for {
       // get all the data spaces
       all <- treeFuture
 
-      // get the children of this data space (data sets)
-      children <- childrenFuture
-
-      // filter data sets and spaces available for the currently logged user
-      filteredDataSpace <- {
-        val dataSpace = form.value.get
-        dataSpace.children.appendAll(children)
-        dataSpaceService.getDataSpaceForCurrentUser(dataSpace)(request)
-      }
+      // find the data space in a tree
+      dataSpace = all.map(dataSpaceService.findRecursively(id, _)).find(_.isDefined).flatten
 
       // calc the sizes of the children data sets
-      dataSetSizes <- filteredDataSpace match {
+      dataSetSizes <- dataSpace match {
         case None => Future(Map[String, Int]())
         case Some(dataSpace) => getDataSetSizes(dataSpace)
       }
     } yield {
-      (id, form.copy(value = filteredDataSpace), dataSetSizes, all)
+      val (subDataSpaceCount, subDataSetCount) = dataSpace.map { dataSpaceWithChildren =>
+        val subDataSpaceCount = dataSpaceService.countDataSpacesNumRecursively(dataSpaceWithChildren)
+        val subDataSetCount = dataSpaceService.countDataSetsNumRecursively(dataSpaceWithChildren)
+
+        (subDataSpaceCount - 1, subDataSetCount)
+      }.getOrElse((0, 0))
+
+      (id, form.copy(value = dataSpace), subDataSpaceCount, subDataSetCount, dataSetSizes, all)
     }
   }
 
   override protected[controllers] def editView = { implicit ctx =>
-    (view.edit(_, _, _, _)).tupled
+    (view.edit(_, _, _, _, _, _)).tupled
   }
 
   override def edit(id: BSONObjectID) = restrictAdminAnyNoCaching(deadbolt) (
