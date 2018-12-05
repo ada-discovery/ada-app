@@ -30,7 +30,6 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val getFractalis = routes.getFractalis _ map route
   val getTable = routes.getTable _ map route
   val generateTable = routes.generateTable _ map route
-  val fields = routes.getFields _ map route
   val fieldNamesAndLabels = routes.getFieldNamesAndLabels _ map route
   val allFields = routeFun(_.getFields())
   val allFieldNamesAndLabels = routeFun(_.getFieldNamesAndLabels())

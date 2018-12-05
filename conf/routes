@@ -62,9 +62,10 @@ GET         /users/new                                                          
 POST        /users/save                                                             controllers.UserController.save
 GET         /users/get/:id                                                          controllers.UserController.get(id: BSONObjectID)
 GET         /users/edit/:id                                                         controllers.UserController.edit(id: BSONObjectID)
-POST        /users/:id                                                              controllers.UserController.update(id: BSONObjectID)
+POST        /users/:id/update                                                       controllers.UserController.update(id: BSONObjectID)
 POST        /users/:id/delete                                                       controllers.UserController.delete(id: BSONObjectID)
 GET         /users/listUsersForPermissionPrefix                                     controllers.UserController.listUsersForPermissionPrefix(permissionPrefix: Option[String] ?= None)
+POST        /users/copyPermissions                                                  controllers.UserController.copyPermissions(sourceUserId: BSONObjectID, targetUserId: BSONObjectID)
 
 # Translations
 GET         /translations                                                           controllers.TranslationController.find(p: Int ?= 0, s: String ?= "original", filter: Seq[org.incal.core.FilterCondition] ?= Nil)

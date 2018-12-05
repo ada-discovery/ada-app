@@ -35,7 +35,7 @@ class AdaOnFailureRedirectDeadboltHandler(
           println("Accepted encodings: " + getAcceptedEncodings(request).mkString(","))
 
           val username = subject.identifier
-          Logger.error(s"Unauthorized access by [$username].")
+          Logger.error(s"Unauthorized access by '$username' to '${request.uri}'.")
           val result = redirectToRefererOrElse(routes.AppController.index())(request)
           result.flashing("errors" -> "Access denied! We're sorry, but you are not authorized to perform the requested operation.")
         }

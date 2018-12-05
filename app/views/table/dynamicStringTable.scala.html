@@ -7,7 +7,8 @@
     sortable: Boolean = false,
     addModalInner: Option[Html] = None,
     extraActions: Option[Html] = None,
-    multi: Boolean = false
+    multi: Boolean = false,
+    gridWidth: Int = 4
 )
 
 @defaultModalInner = {
@@ -50,4 +51,4 @@
     }
 }
 
-@dynamicTable(domainName, table, sortable, rowToModelJsFun, itemToRowJsFun, addModalInner.getOrElse(defaultModalInner), extraActions)
+@dynamicTable(domainName, table, sortable, rowToModelJsFun, itemToRowJsFun, addModalInner.getOrElse(defaultModalInner), extraActions, gridWidth = gridWidth)

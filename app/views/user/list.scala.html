@@ -11,16 +11,40 @@
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.Page
 @import org.incal.core.FilterCondition
+@import reactivemongo.bson.BSONObjectID
 
 @(
     page: Page[User],
     conditions: Seq[FilterCondition]
 )(implicit context: WebContext)
 
-@modalBody = {
+@filterByPermissionModalBody = {
     <fieldset>
         <input id="permissionPrefix" name="permissionPrefix" value="">
     </fieldset>
+}
+
+@copyPermissionsModalBody = {
+    <fieldset>
+        <select id="sourceUserId" name="sourceUserId">
+            @page.items.map { user =>
+                <option value="@user._id.get.stringify">@user.ldapDn</option>
+            }
+        </select>
+        <span>
+            To
+        </span>
+        <select id="targetUserId" name="targetUserId">
+            @page.items.map { user =>
+                <option value="@user._id.get.stringify">@user.ldapDn</option>
+            }
+        </select>
+    </fieldset>
+}
+
+@copyPermissionsModalButtons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" class="btn btn-primary" onclick="copyPermissions(); return false;" data-dismiss="modal">OK</button>
 }
 
 @actions = {
@@ -54,9 +78,15 @@
                             Filter by permission
                         </a>
                     </li>
+                    <li>
+                        <a data-toggle="modal" data-target="#copyPermissionsModal" title="Copy User's Permissions">
+                            Copy User's Permissions
+                        </a>
+                    </li>
                 </ul>
             </div>
-            @modal("filterByPermissionPrefixModal", "Filter By Permission Prefix", modalBody, Some(routes.UserController.listUsersForPermissionPrefix(None)))
+            @modal("filterByPermissionPrefixModal", "Filter By Permission Prefix", filterByPermissionModalBody, Some(routes.UserController.listUsersForPermissionPrefix(None)))
+            @modal("copyPermissionsModal", "Copy Permission From/To User", copyPermissionsModalBody, None, Some(copyPermissionsModalButtons))
         </div>
     </div>
 }
@@ -73,10 +103,34 @@
     )
 }
 
+@bottomResources = {
+    @helper.javascriptRouter("userJsRoutes")(
+        controllers.routes.javascript.UserController.copyPermissions
+    )
+
+    <script type="text/javascript">
+        function copyPermissions() {
+            var sourceId = $("#sourceUserId").val()
+            var targetId = $("#targetUserId").val()
+
+            console.log(sourceId)
+            console.log(targetId)
+
+            if (sourceId != targetId) {
+                var r = userJsRoutes.controllers.UserController.copyPermissions(sourceId, targetId);
+                submit('post', r.url, getQueryParams(r.url))
+            } else {
+                showError("Source and target user cannot be the same.")
+            }
+        }
+    </script>
+}
+
 @layout.list(
     "user",
     None,
     page.total,
     Some(actions),
-    Some(table)
+    Some(table),
+    bottomResources = Some(bottomResources)
 )

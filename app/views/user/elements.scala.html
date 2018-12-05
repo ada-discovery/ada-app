@@ -3,6 +3,7 @@
 @import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
 @import models.User
+@import controllers.UserDataSetPermissions
 
 @(
     form: Form[User],
@@ -14,15 +15,20 @@
 
 @dynamicTableJsImport()
 
-@addDataSetPermissionModalBody = {
-    <div class="row">
-        @labelValue("dataSetPermission", "DS Id") {
-            <select id="permission-dataSetId" name="permission-dataSetId" class="form-control">
-            @metaInfos.flatMap(_.dataSetMetaInfos).toSeq.sortBy(_.id).map { dataSet =>
-                <option value="@{dataSet.id}">@{dataSet.id}</option>
-            }
-            </select>
+@dataSetSelection = {
+    @labelValue("dataSetPermission", "DS Id") {
+        <select id="permission-dataSetId" name="permission-dataSetId" class="form-control">
+        @metaInfos.flatMap(_.dataSetMetaInfos).toSeq.sortBy(_.id).map { dataSet =>
+            <option value="@{dataSet.id}">@{dataSet.id}</option>
         }
+        </select>
+    }
+}
+
+@addCustomDataSetPermissionModalBody = {
+    <div class="row">
+
+        @dataSetSelection
 
         @labelValue("dataSetPermission", "Controller") {
             <select id="permission-controller" name="permission-controller" class="form-control" onchange="updateActionItems()">
@@ -47,17 +53,61 @@
     </div>
 }
 
-@addDataSetPermissionModalButtons = {
+@addViewOnlyDataSetPermissionsModalBody = {
+    <div class="row">
+        @dataSetSelection
+    </div>
+}
+
+@addStandardDataSetPermissionsModalBody = {
+    <div class="row">
+        @dataSetSelection
+    </div>
+}
+
+@addCustomDataSetPermissionModalButtons = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="button" class="btn btn-primary" id="addDataSetPermissionSubmitButton" data-dismiss="modal">OK</button>
+    <button type="button" class="btn btn-primary" id="addCustomDataSetPermissionSubmitButton" data-dismiss="modal">OK</button>
+}
+
+@addViewOnlyDataSetPermissionsModalButtons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" class="btn btn-primary" onclick="addViewOnlyPermissions(); return false;" data-dismiss="modal">OK</button>
+}
+
+@addStandardDataSetPermissionsModalButtons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" class="btn btn-primary" onclick="addStandardPermissions(); return false;" data-dismiss="modal">OK</button>
 }
 
 @extraButtons = {
-    <a class="btn btn-info btn-sm" href="#" onclick="$('#addDataSetPermissionModal').modal();return false;" title="Add Data Set Permission">
-        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-        DS
-    </a>
-    @modal("addDataSetPermissionModal", "Add Data Set Permission", addDataSetPermissionModalBody, None, Some(addDataSetPermissionModalButtons))
+    <span class="dropdown">
+        <a class="btn btn-info btn-sm dropdown-toggle" data-toggle="dropdown" href="#" title="Add Data Set Permission(s)">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+            DS
+            <span class="caret"></span>
+        </a>
+        <ul class="dropdown-menu">
+            <li>
+                <a href="#" data-toggle="modal" data-target="#addViewOnlyDataSetPermissionsModal" title="Custom Permission">
+                    View-Only
+                </a>
+            </li>
+            <li>
+                <a href="#" data-toggle="modal" data-target="#addStandardDataSetPermissionsModal" title="Custom Permission">
+                    Standard
+                </a>
+            </li>
+            <li>
+                <a href="#" data-toggle="modal" data-target="#addCustomDataSetPermissionModal" title="Custom Permission">
+                    Custom
+                </a>
+            </li>
+        </ul>
+        @modal("addViewOnlyDataSetPermissionsModal", "Add View-Only Data Set Permissions", addViewOnlyDataSetPermissionsModalBody, None, Some(addViewOnlyDataSetPermissionsModalButtons))
+        @modal("addStandardDataSetPermissionsModal", "Add Standard Data Set Permissions", addStandardDataSetPermissionsModalBody, None, Some(addStandardDataSetPermissionsModalButtons))
+        @modal("addCustomDataSetPermissionModal", "Add Custom Data Set Permission", addCustomDataSetPermissionModalBody, None, Some(addCustomDataSetPermissionModalButtons))
+    </span>
 }
 
 @inputText("user", "name", form)
@@ -66,7 +116,7 @@
     @dynamicStringTable("role", form.value.map(_.roles).getOrElse(Nil))
 }
 @labelValue("user", "Permissions"){
-    @dynamicStringTable("permission", form.value.map(_.permissions.sorted).getOrElse(Nil), false, None, Some(extraButtons), true)
+    @dynamicStringTable("permission", form.value.map(_.permissions.sorted).getOrElse(Nil), false, None, Some(extraButtons), true, 8)
 }
 
 @actionNamesAsString(list: Traversable[String]) = @{
@@ -75,7 +125,7 @@
 
 <script type="text/javascript">
     $(function () {
-        handleModalButtonEnterPressed("addDataSetPermissionModal", "addDataSetPermissionSubmitButton", addDataSetPermission, true)
+        handleModalButtonEnterPressed("addCustomDataSetPermissionModal", "addCustomDataSetPermissionSubmitButton", addCustomDataSetPermission, true)
         $("#permission-controller").val("")
     })
 
@@ -123,10 +173,42 @@
         populateActions(actions)
     }
 
-    function addDataSetPermission() {
-        var dataSetId = $('#permission-dataSetId').val()
-        var controller = $('#permission-controller').val()
-        var action = $('#permission-action').val()
+    function addViewOnlyPermissions() {
+        var permissions = [@{Html(UserDataSetPermissions.viewOnly.map("\"" + _ + "\"").mkString(","))}]
+
+        var dataSetId = $('#addViewOnlyDataSetPermissionsModal #permission-dataSetId').val()
+        var dsPermissionPrefix = "DS:" + dataSetId + "."
+
+        var values = $.map(permissions, function(permission, index) {
+            var entry = {};
+            entry["newItem"] = dsPermissionPrefix + permission;
+
+            return entry;
+        });
+
+        $('#permissionDiv').dynamicTable('addTableRows', values)
+    }
+
+    function addStandardPermissions() {
+        var permissions = [@{Html(UserDataSetPermissions.standard.map("\"" + _ + "\"").mkString(","))}]
+
+        var dataSetId = $('#addStandardDataSetPermissionsModal #permission-dataSetId').val()
+        var dsPermissionPrefix = "DS:" + dataSetId + "."
+
+        var values = $.map(permissions, function(permission, index) {
+            var entry = {};
+            entry["newItem"] = dsPermissionPrefix + permission;
+
+            return entry;
+        });
+
+        $('#permissionDiv').dynamicTable('addTableRows', values)
+    }
+
+    function addCustomDataSetPermission() {
+        var dataSetId = $('#addCustomDataSetPermissionModal #permission-dataSetId').val()
+        var controller = $('#addCustomDataSetPermissionModal #permission-controller').val()
+        var action = $('#addCustomDataSetPermissionModal #permission-action').val()
 
         var dsPermission = "DS:" + dataSetId
         if (controller) {

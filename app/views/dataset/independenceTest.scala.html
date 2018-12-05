@@ -85,7 +85,7 @@
                         filterElement.find("#conditionPanel").replaceWith(data.conditionPanel)
                         filterElement.multiFilter("initConditionButtons")
                         filterElement.multiFilter("setModel", data.filterModel)
-  
+
                         // table with results
                         var table = createIndependenceTestTable(data.results, true)
                         $("#widgetsDiv").html(table);

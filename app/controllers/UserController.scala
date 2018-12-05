@@ -17,6 +17,7 @@ import org.incal.core.util.ReflectionUtil.getMethodNames
 import org.incal.play.Page
 import org.incal.play.controllers.{AdminRestrictedCrudController, CrudControllerImpl, HasBasicListView, HasFormShowEqualEditView}
 import org.incal.play.security.AuthAction
+import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -101,23 +102,39 @@ class UserController @Inject() (
   // actions
 
   override protected def saveCall(
-    item: User)(
+    user: User)(
     implicit request: Request[AnyContent]
   ): Future[BSONObjectID] = {
+
+    // send an email
     val mailer = mailClientProvider.createClient()
     val mail = mailClientProvider.createTemplate(
       "User Created",
-      Seq(item.email),
+      Seq(user.email),
       bodyText = Some("A new user account has been created." + System.lineSeparator() +
         "You can now log into the Ada Reporting System with this mail address.")
     )
     mailer.send(mail)
-    repo.save(item)
+
+    // remove repeated permissions
+    val userToSave = user.copy(permissions = user.permissions.toSet.toSeq.sorted)
+
+    super.saveCall(userToSave)
+  }
+
+  override protected def updateCall(
+    user: User)(
+    implicit request: Request[AnyContent]
+  ): Future[BSONObjectID] = {
+    // remove repeated permissions
+    val userToUpdate = user.copy(permissions = user.permissions.toSet.toSeq.sorted)
+
+    super.updateCall(userToUpdate)
   }
 
   def listUsersForPermissionPrefix(
     permissionPrefix: Option[String]
-  ) = AuthAction { implicit request =>
+  ) = restrictAdminAnyNoCaching(deadbolt) { implicit request =>
     for {
       allUsers <- repo.find(sort = Seq(AscSort("ldapDn")))
     } yield {
@@ -128,6 +145,30 @@ class UserController @Inject() (
       val page = Page(filteredUsers, 0, 0, filteredUsers.size, "ldapDn")
       Ok(view.list(page, Nil))
     }
+  }
+
+  def copyPermissions(
+    sourceUserId: BSONObjectID,
+    targetUserId: BSONObjectID
+  ) = restrictAdminAnyNoCaching(deadbolt) { implicit request =>
+    for {
+      sourceUser <- repo.get(sourceUserId)
+      targetUser <- repo.get(targetUserId)
+
+      userId <- {
+        (sourceUser, targetUser).zipped.headOption.map { case (user1, user2) =>
+          val userWithMergedPermissions = user2.copy(permissions = user2.permissions ++ user1.permissions)
+          repo.update(userWithMergedPermissions).map(Some(_))
+        }.getOrElse(
+          Future(None)
+        )
+      }
+    } yield
+      userId.map { _ =>
+        Redirect(homeCall).flashing("success" -> "Permissions successfully copied.")
+      }.getOrElse(
+        BadRequest(s"User '${sourceUserId.stringify}' or '${targetUserId.stringify}' not found.")
+      )
   }
 }
 
@@ -140,3 +181,29 @@ case class DataSetControllerActionNames(
   classificationRunActions: Traversable[String],
   regressionRunActions: Traversable[String]
 )
+
+object UserDataSetPermissions {
+
+  val viewOnly = Seq(
+    "dataSet.getView",
+    "dataSet.getDefaultView",
+    "dataSet.getWidgets",
+    "dataSet.getViewElementsAndWidgetsCallback",
+    "dataSet.getNewFilterViewElementsAndWidgetsCallback",
+    "dataSet.generateTable",
+    "dataSet.getFieldNamesAndLabels",
+    "dataSet.getFieldTypeWithAllowedValues",
+    "dataSet.getCategoriesWithFieldsAsTreeNodes",
+    "dataSet.getFieldValue",
+    "dataview.idAndNamesAccessible",
+    "filter.idAndNamesAccessible"
+  )
+
+  val standard = Seq(
+    "dataSet",
+    "field.find",
+    "category.idAndNames",
+    "dataview",
+    "filter"
+  )
+}
