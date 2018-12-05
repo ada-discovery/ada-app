@@ -1,10 +1,8 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
-@import views.html.dataset.{datasetMenu, bootstrapSelectImport, datasetSubNavWithJs, inputFieldAndFilterResources}
+@import views.html.dataset.{widgetsScreen, datasetMenu, bootstrapSelectImport, datasetSubNavWithJs, inputFieldAndFilterResources}
 @import views.html.table.dynamicTableJsImport
-@import views.html.dataview.dataViewSelectionModal
 @import views.html.dataset.dynamicFieldTable
-@import views.html.dataset.dataSetFilterWithJs
 @import views.html.elements.fieldTypeahead
 @import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
@@ -21,34 +19,19 @@
     implicit context: DataSetWebContext
 )
 
-@actions = {
-    <div class="row">
-        <div class="col-md-10">
-            @dataSetFilterWithJs(
-                filterSpec,
-                dataSetRouter.getIndependenceTest(filterSpec.conditionsOrId),
-                filterShowFieldStyle
-            )
-        </div>
-        <div class="pull-right">
-            <button class="btn btn-success btn-sm" href="#" onclick="testIndependence();" data-toggle="tooltip" title="Test Independence">
-                <span class="glyphicon glyphicon-play" aria-hidden="true"></span> Launch
-            </button>
+@extraActions = {
+    <div class="pull-right">
+        <button class="btn btn-success btn-sm" href="#" onclick="testIndependence();" data-toggle="tooltip" title="Test Independence">
+            <span class="glyphicon glyphicon-play" aria-hidden="true"></span> Launch
+        </button>
 
-            <button class="btn btn-info btn-sm" type="button" data-toggle="modal" data-target="#dataViewSelectionModal" title="Add Independence Test To View">
-                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To View
-            </button>
-        </div>
+        <button class="btn btn-info btn-sm" type="button" data-toggle="modal" data-target="#dataViewSelectionModal" title="Add Independence Test To View">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To View
+        </button>
     </div>
 }
 
 @bottomResources = {
-    @bootstrapSelectImport()
-
-    @inputFieldAndFilterResources(
-        Seq("filter"),
-        filterShowFieldStyle
-    )
 
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.testIndependence
@@ -60,24 +43,18 @@
 
     <script type="text/javascript">
         $(function () {
-            populateFieldTypeahedFromUrl(
-                $('#targetFieldTypeahead'),
-                $('#targetFieldName'),
-                '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Json)).url)',
-                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
-            )
+            populateCategoricalTypeahead("targetField");
 
-            $("#dataViewSelectionModal #submitButton").on("click", addIndependenceTestToView)
-
-            $('#outputFieldTypeahead, #filterNameTypeahead').keypress(function (e) {
+            $('#inputDiv #targetFieldTypeahead').keypress(function (e) {
                 if (e.which == 13) {
                     testIndependence();
+                    return false;
                 }
             });
 
-            $('#launchButton').on('click', function() {
-                testIndependence();
-            })
+            $("#dataViewSelectionModal #submitButton").on("click", addIndependenceTestToView)
+
+            activateFilter($("#filterDiv"), function(filterOrId) {testIndependence()});
         });
 
         function testIndependence() {
@@ -90,36 +67,40 @@
             var filterOrId = $("#filterDiv").multiFilter('getIdOrModel');
             var filterOrIdJson = JSON.stringify(filterOrId)
 
-            $('#outputDiv').html("");
-
             if (!targetFieldName) {
                 showError("No target field specified.")
             } else if (inputFieldNames.length == 0) {
                 showError("No input fields specified.")
             } else {
-                $("#outputDiv").html("");
+                $("#widgetsDiv").html("");
+                addSpinner($("#widgetsDiv"), "margin-bottom: 20px;")
                 dataSetJsRoutes.controllers.dataset.DataSetDispatcher.testIndependence(filterOrIdJson).ajax({
                     data: {
                         "inputFieldNames": inputFieldNames,
                         "targetFieldName": targetFieldName
                     },
-                    success: function (results) {
-                        showMessage("Independence test finished.")
+                    success: function (data) {
+                        // filter
+                        var filterElement = $("#filterDiv")
+                        filterElement.find("#conditionPanel").replaceWith(data.conditionPanel)
+                        filterElement.multiFilter("initConditionButtons")
+                        filterElement.multiFilter("setModel", data.filterModel)
+  
+                        // table with results
+                        var table = createIndependenceTestTable(data.results, true)
+                        $("#widgetsDiv").html(table);
+                        $('#widgetsDiv').fadeIn('2000');
 
-                        var table = createIndependenceTestTable(results, true)
-
-                        $("#outputDiv").html(table);
-                        $('#outputDiv').fadeIn('2000');
+                        showMessage("Independence test for the field '" + targetFieldLabel + "' finished.")
                     },
                     error: function (data) {
-                        $("#outputDiv").html("")
+                        $("#widgetsDiv").html("")
                         showErrorResponse(data);
                     }
                 });
 
                 hideErrors()
                 showMessage("Independence test for the field '" + targetFieldLabel + "' launched.")
-                addSpinner($("#outputDiv"))
             }
         }
 
@@ -145,16 +126,46 @@
                     success: function() {
                         showMessage("Independence test for the field '" + targetFieldLabel + "' has been successfully added to the view '" + dataViewName + "'.");
                     },
-                    error: function(data){
-                        showErrorResponse(data);
-                    }
+                    error: showErrorResponse
                 });
             }
+        }
+
+        function addAllNumericalFields() {
+            $.ajax({
+                url: '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Integer, FieldTypeId.Double, FieldTypeId.Date)).url)',
+                success: function (data) {
+                    var values = $.map(data, function(field, index) {
+                        var entry = {};
+                        entry["fieldName"] = field[0];
+                        entry["fieldTypeahead"] = field[1] ? field[1] : field[0];
+
+                        return entry;
+                    });
+                    $('#inputFieldNameDiv').dynamicTable('addTableRows', values)
+                }
+            });
+        }
+
+        function addAllFields() {
+            $.ajax({
+                url: '@Html(dataSetRouter.allFieldNamesAndLabels.url)',
+                success: function (data) {
+                    var values = $.map(data, function(field, index) {
+                        var entry = {};
+                        entry["fieldName"] = field[0];
+                        entry["fieldTypeahead"] = field[1] ? field[1] : field[0];
+
+                        return entry;
+                    });
+                    $('#inputFieldNameDiv').dynamicTable('addTableRows', values)
+                }
+            });
         }
     </script>
 }
 
-@extraFieldButtons = {
+@fieldButtons = {
     <a id="addAllFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllFields();" data-toggle="tooltip" title="Add All">
         <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All
     </a>
@@ -164,43 +175,33 @@
     </a>
 }
 
-@main(Messages("independenceTest.title", dataSetName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
-
-    <div class="page-header">
-        <h3>
-            @Messages("independenceTest.title", dataSetName)
-        </h3>
-    </div>
-
-    <div id="actions">
-        @actions
-    </div>
-
-    <hr/>
+@inputElements = {
 
     @dynamicTableJsImport()
 
-    <div class="row">
-        <div class="col-md-5">
-            <div class="row">
-                @labelValue("targetField", "Target") {
-                    @fieldTypeahead(None, "targetField", "Field Name", true)
-                }
+    @fieldTypeaheadDiv(None, Some("col-md-12 col-sm-12"), "targetField", "Target")
 
-                @labelValue("inputFieldNames", "Input") {
-                    @dynamicFieldTable(
-                        "inputFieldName",
-                        Nil,
-                        false,
-                        12,
-                        Some(extraFieldButtons),
-                        Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(Left(Nil))))
-                    )
-                }
-            </div>
-        </div>
-        <div id="outputDiv" class="col-md-7">
-        </div>
-        @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter)
+    <div class="col-md-12 top-padded">
+        @dynamicFieldTable(
+            "inputFieldName",
+            Nil,
+            true,
+            12,
+            Some(fieldButtons),
+            Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
+            "categoryTree2"
+        )
     </div>
 }
+
+@widgetsScreen(
+    Messages("independenceTest.title", dataSetName),
+    filterSpec,
+    filterShowFieldStyle,
+    dataSpaceMetaInfos,
+    inputElements,
+    extraActions,
+    bottomResources,
+    true,
+    widgetsDivOnRight = true
+)

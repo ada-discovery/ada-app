@@ -117,11 +117,11 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
-  def getIndependenceTestForViewFilters: Action[AnyContent]
-
   def testIndependence(
     filterOrId: FilterOrId
   ): Action[AnyContent]
+
+  def getIndependenceTestForViewFilters: Action[AnyContent]
 
   def testIndependenceForViewFilters(
     viewId: BSONObjectID

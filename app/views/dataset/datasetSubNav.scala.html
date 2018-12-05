@@ -38,7 +38,6 @@
             @listItemWithPermission(dataSetRouter.getMatthewsCorrelations(Left(Nil)), "Matthews Correlation", ControllerName.dataSet, "getMatthewsCorrelations", Some(2))
             @listItemWithPermission(dataSetRouter.getHeatmap(Left(Nil)), "Heatmap", ControllerName.dataSet, "getHeatmap", Some(2))
             @listItemWithPermission(dataSetRouter.getIndependenceTest(Left(Nil)), "Independence Test (Chi-Square/ANOVA)", ControllerName.dataSet, "getIndependenceTest", Some(2))
-            @listItemWithPermission(dataSetRouter.getIndependenceTestForViewFilters, "Independence Test (ANOVA) For View Filters", ControllerName.dataSet, "getIndependenceTestForViewFilters")
             @listItemWithPermission(dataSetRouter.getTable(Left(Nil)), "Table / Export", ControllerName.dataSet, "getTable", Some(2))
             <li role="separator" class="divider"></li>
             @listItemWithPermission(classificationRunRouter.plainList, "ML Classification", ControllerName.classificationRun, "find", Some(2))

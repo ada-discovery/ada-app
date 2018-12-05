@@ -1527,6 +1527,171 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }.recover(handleExceptions("a generateTableWithFilter"))
   }
 
+  override def getIndependenceTest(
+    filterOrId: FilterOrId
+  ) = AuthAction { implicit request => {
+    val dataSetNameTreeSettingFuture = getDataSetNameTreeAndSetting
+    val filterFuture = filterRepo.resolve(filterOrId)
+
+    for {
+    // get the data set name, the data space tree, and the setting
+      (dataSetName, dataSpaceTree, setting) <- dataSetNameTreeSettingFuture
+
+      // use a given filter conditions or load one
+      resolvedFilter <- filterFuture
+
+      // create a name -> field map of the filter referenced fields
+      fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
+    } yield {
+      // get a new filter
+      val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
+
+      render {
+        case Accepts.Html() => Ok(dataset.independenceTest(
+          dataSetName,
+          newFilter,
+          setting.filterShowFieldStyle,
+          dataSpaceTree
+        ))
+        case Accepts.Json() => BadRequest("GetIndependenceTest function doesn't support JSON response.")
+      }
+    }
+  }.recover(handleExceptions("an independence test"))
+  }
+
+  override def testIndependence(
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
+    val (inputFieldNames, targetFieldName) = request.body.asFormUrlEncoded.map { inputs =>
+      val x = inputs.get("inputFieldNames[]").getOrElse(Nil)
+      val y = inputs.get("targetFieldName").map(_.head)
+      (x, y)
+    }.getOrElse((Nil, None))
+
+    if (inputFieldNames.isEmpty || targetFieldName.isEmpty)
+      Future(BadRequest("No input provided."))
+    else
+      testIndependenceAux(targetFieldName.get, inputFieldNames, filterOrId)
+  }
+
+  private def testIndependenceAux(
+    targetFieldName: String,
+    inputFieldNames: Seq[String],
+    filterOrId: FilterOrId
+  ): Future[Result] = {
+    val explFieldNamesToLoads =
+      if (inputFieldNames.nonEmpty)
+        (inputFieldNames ++ Seq(targetFieldName)).toSet.toSeq
+      else
+        Nil
+
+    for {
+      // use a given filter conditions or load one
+      resolvedFilter <- filterRepo.resolve(filterOrId)
+
+      // criteria
+      criteria <- toCriteria(resolvedFilter.conditions)
+
+      // add a target-field-undefined criterion if needed
+      finalCriteria = if (independenceTestKeepUndefined) criteria else criteria ++ Seq(NotEqualsNullCriterion(targetFieldName))
+
+      // jsons and fields
+      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, finalCriteria)
+    } yield {
+      val fieldNameLabelMap = fields.map(field => (field.name, field.labelOrElseName)).toMap
+      val nameFieldMap = fields.map(field => (field.name, field)).toMap
+
+      // filter model / condition panel
+      val newFilter = setFilterLabels(resolvedFilter, nameFieldMap)
+      val conditionPanel = views.html.filter.conditionPanel(Some(newFilter))
+      val filterModel = Json.toJson(resolvedFilter.conditions)
+
+      // run independence tests
+      val inputFields = fields.filterNot(_.name.equals(targetFieldName))
+      val outputField = fields.find(_.name.equals(targetFieldName)).get
+      val resultsSorted = statsService.testIndependenceSorted(jsons, inputFields, outputField, independenceTestKeepUndefined)
+
+      // label results and serialize to jsons
+      val labelResults = resultsSorted.flatMap { case (field, result) =>
+        val fieldLabel = fieldNameLabelMap.get(field.name).get
+        result.map((fieldLabel, _))
+      }
+
+      implicit val stringTestTupleFormat = TupleFormat[String, IndependenceTestResult]
+      val jsonResults = Json.toJson(labelResults)
+
+      // prepare a full response (with a filter and stuff)
+      Ok(Json.obj(
+        "conditionPanel" -> conditionPanel.toString(),
+        "filterModel" -> filterModel,
+        "results" -> jsonResults
+      ))
+    }
+  }
+
+  override def getIndependenceTestForViewFilters = AuthAction { implicit request => {
+    for {
+    // get the data set name, the data space tree, and the setting
+      (dataSetName, dataSpaceTree, setting) <- getDataSetNameTreeAndSetting
+    } yield {
+      render {
+        case Accepts.Html() => Ok(dataset.independenceTestViewFilters(
+          dataSetName,
+          setting.filterShowFieldStyle,
+          dataSpaceTree
+        ))
+        case Accepts.Json() => BadRequest("GetIndependenceTestForViewFilters function doesn't support JSON response.")
+      }
+    }
+  }.recover(handleExceptions("an independence test for view filters"))
+  }
+
+  override def testIndependenceForViewFilters(
+    viewId: BSONObjectID
+  ) = Action.async { implicit request =>
+    val inputFieldNames = request.body.asFormUrlEncoded.flatMap(_.get("inputFieldNames[]")).getOrElse(Nil)
+
+    if (inputFieldNames.isEmpty)
+      Future(BadRequest("No input provided."))
+    else
+      testIndependenceForViewFiltersAux(inputFieldNames, viewId)
+  }
+
+  private def testIndependenceForViewFiltersAux(
+    inputFieldNames: Seq[String],
+    viewId: BSONObjectID
+  ): Future[Result] = {
+    def toCriteriaAux(filterOrId: FilterOrId) =
+      for {
+        resolvedFilter <- filterRepo.resolve(filterOrId)
+        criteria <- toCriteria(resolvedFilter.conditions)
+      } yield
+        criteria
+
+    for {
+      view <- dataViewRepo.get(viewId)
+
+      inputFields <- getFields(inputFieldNames)
+
+      filterOrIds = view.map(_.filterOrIds).getOrElse(Nil)
+
+      multiCriteria <- Future.sequence(filterOrIds.map(toCriteriaAux))
+
+      resultsSorted <- statsService.testAnovaForMultiCriteriaSorted(repo, multiCriteria, inputFields.toSeq)
+    } yield {
+      val fieldNameLabelMap = inputFields.map(field => (field.name, field.labelOrElseName)).toMap
+
+      implicit val stringTestTupleFormat = TupleFormat[String, IndependenceTestResult]
+
+      // create jsons
+      val labelResults = resultsSorted.flatMap { case (field, result) =>
+        val fieldLabel = fieldNameLabelMap.get(field.name).get
+        result.map((fieldLabel, _))
+      }
+      Ok(Json.toJson(labelResults))
+    }
+  }
+
   override def getCategoriesWithFieldsAsTreeNodes(
     filterOrId: FilterOrId
   ) = Action.async { implicit request =>
@@ -1785,157 +1950,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case None =>
           BadRequest(s"ML unsupervised learning model with id ${mlModelId.stringify} not found.")
       }
-  }
-
-  override def getIndependenceTest(
-    filterOrId: FilterOrId
-  ) = AuthAction { implicit request => {
-    val dataSetNameTreeSettingFuture = getDataSetNameTreeAndSetting
-    val filterFuture = filterRepo.resolve(filterOrId)
-
-    for {
-      // get the data set name, the data space tree, and the setting
-      (dataSetName, dataSpaceTree, setting) <- dataSetNameTreeSettingFuture
-
-      // use a given filter conditions or load one
-      resolvedFilter <- filterFuture
-
-      // create a name -> field map of the filter referenced fields
-      fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
-    } yield {
-      // get a new filter
-      val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
-
-      render {
-        case Accepts.Html() => Ok(dataset.independenceTest(
-          dataSetName,
-          newFilter,
-          setting.filterShowFieldStyle,
-          dataSpaceTree
-        ))
-        case Accepts.Json() => BadRequest("GetIndependenceTest function doesn't support JSON response.")
-      }
-    }
-    }.recover(handleExceptions("an independence test"))
-  }
-
-  override def testIndependence(
-    filterOrId: FilterOrId
-  ) = Action.async { implicit request =>
-    val (inputFieldNames, targetFieldName) = request.body.asFormUrlEncoded.map { inputs =>
-      val x = inputs.get("inputFieldNames[]").getOrElse(Nil)
-      val y = inputs.get("targetFieldName").map(_.head)
-      (x, y)
-    }.getOrElse((Nil, None))
-
-    if (inputFieldNames.isEmpty || targetFieldName.isEmpty)
-      Future(BadRequest("No input provided."))
-    else
-      testIndependenceAux(targetFieldName.get, inputFieldNames, filterOrId)
-  }
-
-  private def testIndependenceAux(
-    targetFieldName: String,
-    inputFieldNames: Seq[String],
-    filterOrId: FilterOrId
-  ): Future[Result] = {
-    val explFieldNamesToLoads =
-      if (inputFieldNames.nonEmpty)
-        (inputFieldNames ++ Seq(targetFieldName)).toSet.toSeq
-      else
-        Nil
-
-    for {
-      // use a given filter conditions or load one
-      resolvedFilter <- filterRepo.resolve(filterOrId)
-
-      // criteria
-      criteria <- toCriteria(resolvedFilter.conditions)
-
-      // add a target-field-undefined criterion if needed
-      finalCriteria = if (independenceTestKeepUndefined) criteria else criteria ++ Seq(NotEqualsNullCriterion(targetFieldName))
-
-      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, finalCriteria)
-     } yield {
-      val fieldNameLabelMap = fields.map(field => (field.name, field.labelOrElseName)).toMap
-
-      val inputFields = fields.filterNot(_.name.equals(targetFieldName))
-      val outputField = fields.find(_.name.equals(targetFieldName)).get
-
-      val resultsSorted = statsService.testIndependenceSorted(jsons, inputFields, outputField, independenceTestKeepUndefined)
-
-      implicit val stringTestTupleFormat = TupleFormat[String, IndependenceTestResult]
-
-      // create jsons
-      val labelResults = resultsSorted.flatMap { case (field, result) =>
-        val fieldLabel = fieldNameLabelMap.get(field.name).get
-        result.map((fieldLabel, _))
-      }
-      Ok(Json.toJson(labelResults))
-    }
-  }
-
-  override def getIndependenceTestForViewFilters = AuthAction { implicit request => {
-    for {
-      // get the data set name, the data space tree, and the setting
-      (dataSetName, dataSpaceTree, setting) <- getDataSetNameTreeAndSetting
-    } yield {
-      render {
-        case Accepts.Html() => Ok(dataset.independenceTestViewFilters(
-          dataSetName,
-          setting.filterShowFieldStyle,
-          dataSpaceTree
-        ))
-        case Accepts.Json() => BadRequest("GetIndependenceTestForViewFilters function doesn't support JSON response.")
-      }
-    }
-    }.recover(handleExceptions("an independence test for view filters"))
-  }
-
-  override def testIndependenceForViewFilters(
-    viewId: BSONObjectID
-  ) = Action.async { implicit request =>
-    val inputFieldNames = request.body.asFormUrlEncoded.flatMap(_.get("inputFieldNames[]")).getOrElse(Nil)
-
-    if (inputFieldNames.isEmpty)
-      Future(BadRequest("No input provided."))
-    else
-      testIndependenceForViewFiltersAux(inputFieldNames, viewId)
-  }
-
-  private def testIndependenceForViewFiltersAux(
-    inputFieldNames: Seq[String],
-    viewId: BSONObjectID
-  ): Future[Result] = {
-    def toCriteriaAux(filterOrId: FilterOrId) =
-      for {
-        resolvedFilter <- filterRepo.resolve(filterOrId)
-        criteria <- toCriteria(resolvedFilter.conditions)
-      } yield
-        criteria
-
-    for {
-      view <- dataViewRepo.get(viewId)
-
-      inputFields <- getFields(inputFieldNames)
-
-      filterOrIds = view.map(_.filterOrIds).getOrElse(Nil)
-
-      multiCriteria <- Future.sequence(filterOrIds.map(toCriteriaAux))
-
-      resultsSorted <- statsService.testAnovaForMultiCriteriaSorted(repo, multiCriteria, inputFields.toSeq)
-    } yield {
-      val fieldNameLabelMap = inputFields.map(field => (field.name, field.labelOrElseName)).toMap
-
-      implicit val stringTestTupleFormat = TupleFormat[String, IndependenceTestResult]
-
-      // create jsons
-      val labelResults = resultsSorted.flatMap { case (field, result) =>
-        val fieldLabel = fieldNameLabelMap.get(field.name).get
-        result.map((fieldLabel, _))
-      }
-      Ok(Json.toJson(labelResults))
-    }
   }
 
   private def loadCriteria(filterId: Option[BSONObjectID]) =

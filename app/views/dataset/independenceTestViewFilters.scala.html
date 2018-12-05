@@ -22,7 +22,7 @@
 @actions = {
     <div class="row">
         <div class="pull-right">
-            <button class="btn btn-success btn-sm" href="#" onclick="testIndependence();" data-toggle="tooltip" title="Test Independence">
+            <button class="btn btn-success btn-sm" href="#" onclick="testIndependenceForViewFilters();" data-toggle="tooltip" title="Test Independence">
                 <span class="glyphicon glyphicon-play" aria-hidden="true"></span> Launch
             </button>
         </div>
@@ -53,12 +53,12 @@
 
             $('#viewNameTypeahead, #filterNameTypeahead').keypress(function (e) {
                 if (e.which == 13) {
-                    testIndependence();
+                    testIndependenceForViewFilters();
                 }
             });
 
             $('#launchButton').on('click', function() {
-                testIndependence();
+                testIndependenceForViewFilters();
             })
         });
 
@@ -77,7 +77,7 @@
             });
         }
 
-        function testIndependence() {
+        function testIndependenceForViewFilters() {
             var viewId = $("#viewId").val();
             var viewName = $("#viewNameTypeahead").val();
 
