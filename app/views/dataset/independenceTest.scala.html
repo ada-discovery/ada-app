@@ -43,7 +43,8 @@
 
     <script type="text/javascript">
         $(function () {
-            populateCategoricalTypeahead("targetField");
+            populateCategoricalTypeahead("targetField")
+            populateFullTypeahead("field")
 
             $('#inputDiv #targetFieldTypeahead').keypress(function (e) {
                 if (e.which == 13) {
