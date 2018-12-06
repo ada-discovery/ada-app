@@ -202,22 +202,42 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     filterOrId: FilterOrId
   ) = dispatchAjax(_.getCategoriesWithFieldsAsTreeNodes(filterOrId))
 
+
   // export
 
-  override def exportRecordsAsCsv(
+  override def exportViewRecordsAsCsv(
     dataViewId: BSONObjectID,
     delimiter: String,
     replaceEolWithSpace: Boolean,
     eol: Option[String],
     filter: Seq[FilterCondition],
-    tableColumnsOnly: Boolean
-  ) = dispatch(_.exportRecordsAsCsv(dataViewId, delimiter, replaceEolWithSpace, eol, filter, tableColumnsOnly))
+    tableColumnsOnly: Boolean,
+    useDisplayValues: Boolean
+  ) = dispatch(_.exportViewRecordsAsCsv(dataViewId, delimiter, replaceEolWithSpace, eol, filter, tableColumnsOnly, useDisplayValues))
 
-  override def exportRecordsAsJson(
+  override def exportTableRecordsAsCsv(
+    tableColumnNames: Seq[String],
+    delimiter: String,
+    replaceEolWithSpace: Boolean,
+    eol: Option[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean,
+    useDisplayValues: Boolean
+  ) = dispatch(_.exportTableRecordsAsCsv(tableColumnNames, delimiter, replaceEolWithSpace, eol, filter, tableColumnsOnly, useDisplayValues))
+
+  override def exportViewRecordsAsJson(
     dataViewId: BSONObjectID,
     filter: Seq[FilterCondition],
-    tableColumnsOnly: Boolean
-  ) = dispatch(_.exportRecordsAsJson(dataViewId, filter, tableColumnsOnly))
+    tableColumnsOnly: Boolean,
+    useDisplayValues: Boolean
+  ) = dispatch(_.exportViewRecordsAsJson(dataViewId, filter, tableColumnsOnly, useDisplayValues))
+
+  override def exportTableRecordsAsJson(
+    tableColumnNames: Seq[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean,
+    useDisplayValues: Boolean
+  ) = dispatch(_.exportTableRecordsAsJson(tableColumnNames, filter, tableColumnsOnly, useDisplayValues))
 
   override def exportTranSMARTDataFile(
     delimiter: String,

@@ -7,27 +7,32 @@
     exportJsonCall: (Seq[FilterCondition], Boolean) => Call,
     conditions: Seq[FilterCondition]
 )(
-    extraListItems: Html = Html(""))(
-    extraModals: Html = Html("")
+    extraListItems: Html = Html(""),
+    extraModals: Html = Html(""),
+    extraCsvElements: Html = Html(""),
+    extraJsonElements: Option[Html] = None
 )
 
 @csvBody(defaultDelimiter: String) = {
     <fieldset>
-        @labelValue("delimiter", "Delimiter") {
+        @labelValue("delimiter", "Delimiter", labelGridWidth = 3) {
             <input id="delimiter" name="delimiter" value="@defaultDelimiter">
         }
-        @labelValue("replaceEolWithSpace", "Remove \'\\r\'&\'\\n\'?", false, Some("Replace \'\\r\' and \'\\n\' with white space")) {
+        @labelValue("replaceEolWithSpace", "Remove \'\\r\'&\'\\n\'?", false, Some("Replace \'\\r\' and \'\\n\' with white space"), labelGridWidth = 3) {
             <input type="checkbox" class="replaceEolWithSpaceCheckbox" checked="checked">
             <input type="hidden" id="replaceEolWithSpace" name="replaceEolWithSpace" value="true">
         }
-        @labelValue("eol", "EOL", false, Some("If not specified standard '\\n' character will be used")) {
+        @labelValue("eol", "EOL", false, Some("If not specified standard '\\n' character will be used"), labelGridWidth = 3) {
             <input id="eol" namen="eol" value="">
         }
+        @extraCsvElements
     </fieldset>
 }
 
 @exportJsonModalBody = {
-    <p>Do you want to proceed?</p>
+    @extraJsonElements.getOrElse {
+        <p>Do you want to proceed?</p>
+    }
 }
 
 @exportAllModalBody = {

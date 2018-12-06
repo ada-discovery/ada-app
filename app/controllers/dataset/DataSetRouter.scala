@@ -1,6 +1,7 @@
 package controllers.dataset
 
 import org.incal.play.controllers.{GenericJsRouter, GenericRouter}
+import reactivemongo.bson.BSONObjectID
 
 import scalaz.Scalaz._
 
@@ -34,8 +35,17 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val allFields = routeFun(_.getFields())
   val allFieldNamesAndLabels = routeFun(_.getFieldNamesAndLabels())
   val getFieldValue = routes.getFieldValue _ map route
-  val exportCsv = routes.exportRecordsAsCsv _ map route
-  val exportJson  = routes.exportRecordsAsJson _ map route
+
+  // scalaz package does work here (too many params probably) hence we need to name all params explicitly and forward
+  val exportViewAsCsv = (dataViewId:BSONObjectID, delimiter:String, replaceEolWithSpace:Boolean, eol:Option[String], filter:Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean, useDisplayValues: Boolean) =>
+    route(routes.exportViewRecordsAsCsv(dataViewId, delimiter, replaceEolWithSpace, eol, filter, tableColumnsOnly,  useDisplayValues))
+  // scalaz package does work here (too many params probably) hence we need to name all params explicitly and forward
+  val exportTableAsCsv  = (tableColumnNames: Seq[String], delimiter:String, replaceEolWithSpace:Boolean, eol:Option[String], filter:Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean, useDisplayValues: Boolean) =>
+    route(routes.exportTableRecordsAsCsv(tableColumnNames, delimiter, replaceEolWithSpace, eol, filter, tableColumnsOnly,  useDisplayValues))
+
+  val exportViewAsJson  = routes.exportViewRecordsAsJson _ map route
+  val exportTableAsJson  = routes.exportTableRecordsAsJson _ map route
+
   val exportTranSMARTData = routeFun(_.exportTranSMARTDataFile())
   val exportTranSMARTMapping = routeFun(_.exportTranSMARTMappingFile())
   val getCategoriesWithFieldsAsTreeNodes = routes.getCategoriesWithFieldsAsTreeNodes _ map route

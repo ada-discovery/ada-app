@@ -1,5 +1,5 @@
 @import models.Field
-@import views.html.dataset.{widgetsScreen, dynamicFieldTable}
+@import views.html.dataset.{widgetsScreen, dynamicFieldTable, dataSetExportDropdown}
 @import views.html.table.dynamicTableJsImport
 @import models.DataSpaceMetaInfo
 @import controllers.dataset.DataSetWebContext._
@@ -16,9 +16,20 @@
 
 @extraActions = {
     <div class="pull-right">
-        <button class="btn btn-info btn-sm" type="button" data-toggle="modal" data-target="#dataViewSelectionModal" title="Add Table To View">
-            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To View
-        </button>
+        <ul class="list-inline">
+            <li>
+                <button class="btn btn-info btn-sm" type="button" data-toggle="modal" data-target="#dataViewSelectionModal" title="Add Table To View">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To View
+                </button>
+            </li>
+            <li>
+                @dataSetExportDropdown(
+                    dataSetName,
+                    dataSetRouter.exportTableAsCsv(Nil, _, true, None, _, _, true),
+                    dataSetRouter.exportTableAsJson(Nil, _, _, true),
+                    filterShowFieldStyle
+                )
+            </li>
     </div>
 }
 
@@ -45,7 +56,31 @@
             $("#fieldNameDiv").on("rowAdded", generateTable)
             $("#fieldNameDiv").on("rowsAdded", generateTable)
             $("#fieldNameDiv").on("rowsRemoved", generateTable)
+
+            // add filter
+            var filterElement = $("#filterDiv")
+            addFilterModelBeforeModalSubmit("exportFilteredCsvModal", filterElement, "filter");
+            addFilterModelBeforeModalSubmit("exportFilteredTableCsvModal", filterElement, "filter");
+            addFilterModelBeforeModalSubmit("exportFilteredJsonModal", filterElement, "filter");
+            addFilterModelBeforeModalSubmit("exportFilteredTableJsonModal", filterElement, "filter");
+
+            // add table columns
+            addTableColumnsBeforeModalSubmit("exportFilteredTableCsvModal")
+            addTableColumnsBeforeModalSubmit("exportFilteredTableJsonModal")
         });
+
+        function addTableColumnsBeforeModalSubmit(modalId) {
+            $('#' + modalId + ' form').submit(function(event) {
+                event.preventDefault();
+
+                var params = {}
+                params["tableColumnNames"] = getFieldNames()
+                addParams($(this), params)
+
+                // submit
+                this.submit();
+            });
+        }
 
         function generateTable() {
             var fieldNames = getFieldNames()

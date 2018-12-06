@@ -1,7 +1,7 @@
 @import views.html.layout
 @import views.html.dataset.{fixedTableRow, datasetMenu, datasetSubNav, datasetSubNavJs, bootstrapSelectImport, datasetJsImport}
 @import views.html.chart.highcharts.{highchartsJsImport, highchartsJsImportForBulkExport}
-@import views.html.dataset.view.{dataSetExportDropdown, viewTables, viewCountFilters}
+@import views.html.dataset.view.{viewExportDropdown, viewTables, viewCountFilters}
 @import views.html.dataset.filter.dataSetFilterJs
 @import views.html.filter.{filter, filterJs, filterJsImport, jsTreeImport}
 @import reactivemongo.bson.BSONObjectID
@@ -36,7 +36,7 @@
         <div class="pull-right">
             <ul class="list-inline">
                 <li>
-                    @dataSetExportDropdown(dataViewId, dataSetName, filterShowFieldStyle)
+                    @viewExportDropdown(dataViewId, dataSetName, filterShowFieldStyle)
                 </li>
                 <li>
                     <div class="dropdown">

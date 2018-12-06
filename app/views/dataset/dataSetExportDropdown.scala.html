@@ -4,11 +4,14 @@
 @import controllers.dataset.DataSetWebContext._
 @import reactivemongo.bson.BSONObjectID
 @import models.FilterShowFieldStyle
+@import org.incal.core.FilterCondition
 
 @(
-    dataViewId: BSONObjectID,
     dataSetName: String,
-    showFieldStyle: Option[FilterShowFieldStyle.Value]
+    exportCsvCall: (String, Seq[FilterCondition], Boolean) => Call,
+    exportJsonCall: (Seq[FilterCondition], Boolean) => Call,
+    showFieldStyle: Option[FilterShowFieldStyle.Value],
+    extraDropdownItems: Html = Html("")
 )(
     implicit context: DataSetWebContext
 )
@@ -28,11 +31,14 @@
     </fieldset>
 }
 
-@exportDropdown(
-    dataSetRouter.exportCsv(dataViewId, _, true, None, _, _),
-    dataSetRouter.exportJson(dataViewId, _, _),
-    Nil
-) {
+@displayChoiceElement = {
+    @labelValue("useDisplayValues", "Use Display Values", labelGridWidth = 3) {
+        <input type="checkbox" class="useDisplayValuesCheckbox">
+        <input type="hidden" id="useDisplayValues" name="useDisplayValues" value="false">
+    }
+}
+
+@tranSMARTDropdownItems = {
     <li role="separator" class="divider"></li>
     <li>
         <a href="#" data-toggle="modal" data-target="#exportTranSMARTDataModal">
@@ -44,26 +50,23 @@
             Export TranSMART Mapping
         </a>
     </li>
-    <li role="separator" class="divider"></li>
-    <li>
-        <a href="#" onclick="exportCharts('image/png');">
-            Export Charts as PNG
-        </a>
-    </li>
-    <li>
-        <a href="#" onclick="exportCharts('image/svg+xml');">
-            Export Charts as SVG
-        </a>
-    </li>
-    <li>
-        <a href="#" onclick="exportCharts('application/pdf');">
-            Export Charts as PDF
-        </a>
-    </li>
-} {
+    @extraDropdownItems
+}
+
+@tranSMARTModals = {
     @exportModal("exportTranSMARTDataModal", "CSV TranSMART Data Export", dataSetRouter.exportTranSMARTData, transmartModalBody("\\t"))
     @exportModal("exportTranSMARTMappingModal", "CSV TranSMART Mapping Export", dataSetRouter.exportTranSMARTMapping, transmartModalBody("\\t"))
 }
+
+@exportDropdown(
+    exportCsvCall,
+    exportJsonCall,
+    Nil)(
+    tranSMARTDropdownItems,
+    tranSMARTModals,
+    displayChoiceElement,
+    Some(displayChoiceElement)
+)
 
 <script type="text/javascript">
 
@@ -73,17 +76,12 @@
                 activateTranSMARTFieldTypeaheads();
             }
         })
+
+        $('.useDisplayValuesCheckbox').change( function(e) {
+            var checked = $(this).is(":checked");
+            $(this).parent().find('#useDisplayValues').val(checked)
+        });
     })
-
-    var chartsExportFileName = '@{dataSetName.replaceAllLiterally(".","_").replaceAllLiterally(" ", "_").toLowerCase + "-charts"}'
-
-    function exportCharts(type) {
-        var chartIds = $.map($(".chart-holder"), function (chart, i) {
-            return chart.id;
-        })
-
-        Highcharts.exportCharts(chartIds, {type: type, filename: chartsExportFileName});
-    }
 
     function activateTranSMARTFieldTypeaheads() {
         var showOption = @showFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
@@ -98,5 +96,15 @@
             },
             error: showErrorResponse
          });
+    }
+
+    var chartsExportFileName = '@{dataSetName.replaceAllLiterally(".","_").replaceAllLiterally(" ", "_").toLowerCase + "-charts"}'
+
+    function exportCharts(type) {
+        var chartIds = $.map($(".chart-holder"), function (chart, i) {
+            return chart.id;
+        })
+
+        Highcharts.exportCharts(chartIds, {type: type, filename: chartsExportFileName});
     }
 </script>

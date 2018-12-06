@@ -163,19 +163,38 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getFieldTypeWithAllowedValues(fieldName: String): Action[AnyContent]
 
-  def exportRecordsAsCsv(
+  def exportViewRecordsAsCsv(
     dataViewId: BSONObjectID,
     delimiter: String,
     replaceEolWithSpace: Boolean,
     eol: Option[String],
     filter: Seq[FilterCondition],
-    tableColumnsOnly: Boolean
+    tableColumnsOnly: Boolean,
+    useDisplayValues: Boolean
   ): Action[AnyContent]
 
-  def exportRecordsAsJson(
+  def exportTableRecordsAsCsv(
+    tableColumnNames: Seq[String],
+    delimiter: String,
+    replaceEolWithSpace: Boolean,
+    eol: Option[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean,
+    useDisplayValues: Boolean
+  ): Action[AnyContent]
+
+  def exportViewRecordsAsJson(
     dataViewId: BSONObjectID,
     filter: Seq[FilterCondition],
-    tableColumnsOnly: Boolean
+    tableColumnsOnly: Boolean,
+    useDisplayValues: Boolean
+  ): Action[AnyContent]
+
+  def exportTableRecordsAsJson(
+    tableColumnNames: Seq[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean,
+    useDisplayValues: Boolean
   ): Action[AnyContent]
 
   def exportTranSMARTDataFile(

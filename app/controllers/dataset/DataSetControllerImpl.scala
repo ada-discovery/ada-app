@@ -253,45 +253,84 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param delimiter Delimiter for csv output file.
     * @return View for download.
     */
-  override def exportRecordsAsCsv(
+  override def exportViewRecordsAsCsv(
     dataViewId: BSONObjectID,
     delimiter: String,
     replaceEolWithSpace: Boolean,
     eol: Option[String],
     filter: Seq[FilterCondition],
-    tableColumnsOnly: Boolean
-  ) = {
+    tableColumnsOnly: Boolean,
+    useDisplayValues: Boolean
+  ) = Action.async { implicit request =>
+    for {
+      tableFieldNames <- if (tableColumnsOnly) dataViewTableColumnNames(dataViewId) else Future(Nil)
+
+      result <- exportTableRecordsAsCsvAux(
+        tableFieldNames, delimiter, replaceEolWithSpace, eol, filter, useDisplayValues
+      )
+    } yield
+      result
+  }
+
+  override def exportTableRecordsAsCsv(
+    tableColumnNames: Seq[String],
+    delimiter: String,
+    replaceEolWithSpace: Boolean,
+    eol: Option[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean,
+    useDisplayValues: Boolean
+  ) = Action.async { implicit request =>
+    val exportFieldNames = if (tableColumnsOnly) tableColumnNames else Nil
+
+    exportTableRecordsAsCsvAux(
+      exportFieldNames, delimiter, replaceEolWithSpace, eol, filter, useDisplayValues
+    )
+  }
+
+  private def exportTableRecordsAsCsvAux(
+    tableFieldNames: Seq[String],
+    delimiter: String,
+    replaceEolWithSpace: Boolean,
+    eol: Option[String],
+    filter: Seq[FilterCondition],
+    useDisplayValues: Boolean = false)(
+    implicit request: Request[AnyContent]
+  ): Future[Result] = {
     val eolToUse = eol match {
       case Some(eol) => if (eol.trim.nonEmpty) eol.trim else csvEOL
       case None => csvEOL
     }
 
-    // TODO: don't use results but stay in future
-    val tableFieldNames = result(dataViewTableColumnNames(dataViewId))
+    val replacements = if (replaceEolWithSpace) csvCharReplacements else Nil
 
-    // TODO: introduce a flag for field type conversion (raw vs labels)
-    val nameFieldTypeMap: Map[String, FieldType[_]] =
-      if (tableFieldNames.nonEmpty && tableColumnsOnly) {
-        val fields = result(getFields(tableFieldNames))
-        fields.map(field => (field.name, ftf(field.fieldTypeSpec))).toMap
-      } else
-        Map[String, FieldType[_]]()
+    for {
+      // get the setting
+      setting <- dsa.setting
 
-    val projection =
-      if (tableColumnsOnly) tableFieldNames else Nil
+      // load the requested fields or all
+      fields <- if (tableFieldNames.nonEmpty) getFields(tableFieldNames) else fieldRepo.find()
 
-    val headerFieldNames = if (tableColumnsOnly) tableFieldNames else result(fieldRepo.find(projection = Seq("name", "fieldType")).map(_.map(_.name).toSeq.sorted))
+      // get the result by calling exportToCsv core function
+      result <- {
+        // sort field names if use ALL otherwise use the original order
+        val headerFieldNames = if (tableFieldNames.nonEmpty) fields.map(_.name) else fields.map(_.name).toSeq.sorted
 
-    exportToCsv(
-      csvFileName,
-      delimiter,
-      eolToUse,
-      if (replaceEolWithSpace) csvCharReplacements else Nil)(
-      headerFieldNames,
-      result(dsa.setting).exportOrderByFieldName,
-      filter,
-      nameFieldTypeMap
-    )
+        val nameFieldTypeMap: Map[String, FieldType[_]] = if (useDisplayValues) fields.map(field => (field.name, ftf(field.fieldTypeSpec))).toMap else Map[String, FieldType[_]]()
+
+        exportToCsv(
+          csvFileName,
+          delimiter,
+          eolToUse,
+          replacements)(
+          headerFieldNames,
+          setting.exportOrderByFieldName,
+          filter,
+          nameFieldTypeMap
+        )(request)
+      }
+    } yield
+      result
   }
 
   /**
@@ -299,28 +338,66 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     *
     * @return View for download.
     */
-  override def exportRecordsAsJson(
+  override def exportViewRecordsAsJson(
     dataViewId: BSONObjectID,
     filter: Seq[FilterCondition],
-    tableColumnsOnly: Boolean
-  ) = {
-    val fieldNames = result(dataViewTableColumnNames(dataViewId))
+    tableColumnsOnly: Boolean,
+    useDisplayValues: Boolean
+  ) = Action.async { implicit request =>
+    for {
+      tableFieldNames <- if (tableColumnsOnly) dataViewTableColumnNames(dataViewId) else Future(Nil)
 
-    // TODO: introduce a flag for field type conversion (raw vs labels)
-    val nameFieldTypeMap: Map[String, FieldType[_]] =
-      if (fieldNames.nonEmpty && tableColumnsOnly) {
-        val fields = result(getFields(fieldNames))
-        fields.map(field => (field.name, ftf(field.fieldTypeSpec))).toMap
-      } else
-        Map[String, FieldType[_]]()
+      result <- exportTableRecordsAsJsonAux(
+        tableFieldNames, filter, useDisplayValues
+      )
+    } yield
+      result
+  }
 
-    exportToJson(
-      jsonFileName)(
-      result(dsa.setting).exportOrderByFieldName,
-      filter,
-      if (tableColumnsOnly) fieldNames else Nil,
-      nameFieldTypeMap
+  override def exportTableRecordsAsJson(
+    tableColumnNames: Seq[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean,
+    useDisplayValues: Boolean
+  ) = Action.async { implicit request =>
+    val exportFieldNames = if (tableColumnsOnly) tableColumnNames else Nil
+
+    exportTableRecordsAsJsonAux(
+      exportFieldNames, filter, useDisplayValues
     )
+  }
+
+  private def exportTableRecordsAsJsonAux(
+    tableFieldNames: Seq[String],
+    filter: Seq[FilterCondition],
+    useDisplayValues: Boolean)(
+    implicit request: Request[AnyContent]
+  ): Future[Result] = {
+    for {
+      // get the setting
+      setting <- dsa.setting
+
+      // load the requested fields or all
+      fields <- if (tableFieldNames.nonEmpty) getFields(tableFieldNames) else fieldRepo.find()
+
+      // get the result by calling exportToCsv core function
+      result <- {
+        // sort field names if use ALL otherwise use the original order
+        val headerFieldNames = if (tableFieldNames.nonEmpty) fields.map(_.name) else fields.map(_.name).toSeq.sorted
+
+        // name -> field type map
+        val nameFieldTypeMap: Map[String, FieldType[_]] = if (useDisplayValues) fields.map(field => (field.name, ftf(field.fieldTypeSpec))).toMap else Map[String, FieldType[_]]()
+
+        exportToJson(
+          jsonFileName)(
+          setting.exportOrderByFieldName,
+          filter,
+          headerFieldNames,
+          nameFieldTypeMap
+        ).apply(request)
+      }
+    } yield
+      result
   }
 
   private def dataViewTableColumnNames(
@@ -471,7 +548,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             jsonWidgetResponseCache.put(callbackId, jsonsFuture)
 
             val response = Ok(
-              dataset.showView(
+              dataset.view.showView(
                 dataSetName,
                 dataViewId,
                 dataView.map(_.name).getOrElse("N/A"),
@@ -936,7 +1013,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filter.copy(conditions = newConditions)
   }
 
-  private def getFilterFieldNameMap(filter: Filter): Future[Map[String, Field]] =
+  private def getFilterFieldNameMap(
+    filter: Filter)
+  : Future[Map[String, Field]] =
     getFields(filter.conditions.map(_.fieldName)).map {
       _.map(field => (field.name, field)).toMap
     }
