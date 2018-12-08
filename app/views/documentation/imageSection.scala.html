@@ -10,7 +10,7 @@
 )
 
 @imageAux(picPath: String) = {
-    <img class="img-responsive" src="@routes.Assets.versioned(picPath)"/>
+    <img class="img-responsive" src="@routes.CustomDirAssets.versioned(picPath)"/>
 }
 
 @section(id, caption, picOffset, withLine)(content)(picPath.map(imageAux).getOrElse(Html("")))

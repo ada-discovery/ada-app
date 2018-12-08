@@ -22,14 +22,14 @@
         <title>@title</title>
         <!-- Latest compiled and minified CSS -->
         <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(context.webJarAssets.locate("bootswatch-united", "bootstrap.min.css"))">
-        <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/main.min.css")">
+        <link rel="stylesheet" type="text/css" media="screen" href="@routes.CustomDirAssets.versioned("stylesheets/main.min.css")">
 
         @* Optional theme *@
 		@* <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(WebJarAssets.locate("bootstrap", "bootstrap-theme.min.css"))"> *@
         
-        <link rel="shortcut icon" type="image/png" href="@routes.Assets.versioned("images/favicon.png")">
+        <link rel="shortcut icon" type="image/png" href="@routes.CustomDirAssets.versioned("images/favicon.png")">
         <script src="@routes.WebJarAssets.at(context.webJarAssets.locate("jquery.min.js"))"></script>
-        <script type="text/javascript" src="@routes.Assets.versioned("javascripts/main.min.js")"></script>
+        <script type="text/javascript" src="@routes.CustomDirAssets.versioned("javascripts/main.min.js")"></script>
 
         @if(topResources.isDefined) {
             @topResources.get
