@@ -295,7 +295,7 @@ POST        /htmlSnippets/:id/delete                                            
 GET         /htmlSnippets/linksAsHtml                                               controllers.HtmlSnippetController.getHtmlLinks
 
 # Map static resources from the /public folder to the /assets URL path
-GET         /assets/*file                                                           controllers.Assets.versioned(path="/public", file)
+GET         /assets/*file                                                           controllers.CustomDirAssets.versioned(path="/public", file)
 
 # Map the webjar static assets to the /webjars URL
 GET         /webjars/*file                                                          controllers.WebJarAssets.at(file)
