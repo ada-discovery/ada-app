@@ -82,7 +82,9 @@ libraryDependencies ++= Seq(
 //  "org.scalanlp" %% "breeze-viz" % "0.13.2",    // breeze visualization
   "com.banda.network" % "banda-network-business" % "0.5.6.1",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
-).map(_.exclude("org.slf4j", "slf4j-log4j12" ))
+).map(_.exclude("org.slf4j", "slf4j-log4j12"))
+
+libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
 
 dependencyOverrides ++= Set(
   "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.7.6"
