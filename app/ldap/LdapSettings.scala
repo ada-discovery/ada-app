@@ -8,7 +8,7 @@ import play.api.Configuration
 class LdapSettings @Inject()(configuration: Configuration) extends Enumeration{
   // general settings
   // dit denotes the branch of the directory tree which is to be used
-  // groups defines which user groups are to be used for authentification
+  // groups defines which user groups are to be used for authentication
   val dit: String = configuration.getString("ldap.dit").getOrElse("cn=accounts,dc=ada")
   val groups: Seq[String] = configuration.getStringSeq("ldap.groups").getOrElse(Seq())
   val addDebugUsers: Boolean = configuration.getBoolean("ldap.debugusers").getOrElse(false)
