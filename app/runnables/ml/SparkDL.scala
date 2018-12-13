@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.apache.spark.ml.linalg.Vectors
 import org.incal.play.GuiceRunnableApp
 import services.SparkApp
-import services.ml.transformers.{SeqShift, SeqShiftWithConsecutiveOrder, SlidingWindow, SlidingWindowWithConsecutiveOrder}
+import org.incal.spark_ml.transformers.{SeqShift, SeqShiftWithConsecutiveOrder, SlidingWindow, SlidingWindowWithConsecutiveOrder}
 
 class SparkDL @Inject() (sparkApp: SparkApp) extends Runnable {
 

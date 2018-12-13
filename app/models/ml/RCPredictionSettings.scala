@@ -10,6 +10,7 @@ import util.FieldUtil
 import java.{util => ju}
 
 import com.banda.network.domain.{ActivationFunctionType, ReservoirLearningSetting}
+import org.incal.core.VectorScalerType
 
 case class RCPredictionSettings(
   reservoirNodeNums: Seq[Int],
@@ -21,7 +22,7 @@ case class RCPredictionSettings(
   reservoirCircularInEdges: Option[Seq[Int]],
   reservoirFunctionType: ActivationFunctionType,
   reservoirFunctionParams: Option[Seq[Double]],
-  seriesPreprocessingType: Option[VectorTransformType.Value],
+  seriesPreprocessingType: Option[VectorScalerType.Value],
   inputSeriesFieldPaths: Seq[String],
   outputSeriesFieldPaths: Seq[String],
   washoutPeriod: Int,
@@ -40,7 +41,7 @@ class ExtendedReservoirLearningSetting extends ReservoirLearningSetting {
 
   private[this] var _predictAhead: Int = _
 
-  private[this] var _seriesPreprocessingType: Option[_root_.models.ml.VectorTransformType.Value] = None
+  private[this] var _seriesPreprocessingType: Option[VectorScalerType.Value] = None
 
   def predictAhead: Int = _predictAhead
 
@@ -48,7 +49,7 @@ class ExtendedReservoirLearningSetting extends ReservoirLearningSetting {
 
   def seriesPreprocessingType = _seriesPreprocessingType
 
-  def seriesPreprocessingType_=(value: Option[VectorTransformType.Value]) =_seriesPreprocessingType = value
+  def seriesPreprocessingType_=(value: Option[VectorScalerType.Value]) =_seriesPreprocessingType = value
 }
 
 case class RCPredictionInputOutputSpec(
@@ -71,7 +72,7 @@ case class RCPredictionSetting(
   inputReservoirConnectivity: Double,
   reservoirSpectralRadius: Double,
   inScale: Double,
-  seriesPreprocessingType: Option[VectorTransformType.Value],
+  seriesPreprocessingType: Option[VectorScalerType.Value],
   washoutPeriod: Int,
   predictAhead: Int
 )
@@ -87,7 +88,7 @@ case class RCPredictionSettingAndResults(
 
 object RCPredictionSettingAndResults {
   implicit val rcPredictionInputOutputSpecFormat = Json.format[RCPredictionInputOutputSpec]
-  implicit val vectorTransformTypeFormat = OrdinalSortedEnumFormat.enumFormat(VectorTransformType)
+  implicit val vectorTransformTypeFormat = OrdinalSortedEnumFormat.enumFormat(VectorScalerType)
   implicit val activationFunctionTypeFormat = JavaOrdinalEnumFormat[ActivationFunctionType]
   implicit val rcPredictionSettingFormat = Json.format[RCPredictionSetting]
   implicit val rcPredictionSettingAndResultsFormat = new FlattenFormat(Json.format[RCPredictionSettingAndResults], "-")
@@ -95,7 +96,7 @@ object RCPredictionSettingAndResults {
 
 object XXX extends App {
 
-  val setting = RCPredictionSetting(20, Some(20), None, ActivationFunctionType.Tanh, None, 0.1, 0.5, 10, Some(VectorTransformType.MinMaxPlusMinusOneScaler), 10, 1)
+  val setting = RCPredictionSetting(20, Some(20), None, ActivationFunctionType.Tanh, None, 0.1, 0.5, 10, Some(VectorScalerType.MinMaxPlusMinusOneScaler), 10, 1)
 
   val ioSpec = RCPredictionInputOutputSpec(Seq("lla", "lll"), Seq("a", "bb"), Some(3), None, Some(100), "dataset1", "dataset2", "datasetname")
 

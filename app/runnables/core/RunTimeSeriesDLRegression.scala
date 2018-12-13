@@ -4,11 +4,12 @@ import javax.inject.Inject
 
 import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import com.banda.network.domain.ReservoirSetting
-import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric, VectorTransformType}
+import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric}
 import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
+import org.incal.core.VectorScalerType
 import services.ml.{MachineLearningService, MachineLearningUtil}
 import util.writeStringAsStream
 
@@ -72,7 +73,7 @@ case class RunTimeSeriesDLRegressionSpec(
   mlModelId: BSONObjectID,
   predictAhead: Int,
   windowSize: Int,
-  featuresNormalizationType: Option[VectorTransformType.Value],
+  featuresNormalizationType: Option[VectorScalerType.Value],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
   replicationItemId: Option[BSONObjectID],

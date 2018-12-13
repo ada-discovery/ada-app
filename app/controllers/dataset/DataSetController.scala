@@ -1,12 +1,11 @@
 package controllers.dataset
 
 import models.Filter.FilterOrId
-import models.ml.VectorTransformType
 import models.{AggType, FieldTypeId}
 import org.incal.play.PageOrder
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
-import org.incal.core.FilterCondition
+import org.incal.core.{FilterCondition, VectorScalerType}
 import org.incal.play.controllers.ReadonlyController
 import org.incal.play.security.AuthAction
 
@@ -137,7 +136,7 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     filterId: Option[BSONObjectID],
-    featuresNormalizationType: Option[VectorTransformType.Value],
+    featuresNormalizationType: Option[VectorScalerType.Value],
     pcaDims: Option[Int]
   ): Action[AnyContent]
 

@@ -22,7 +22,7 @@ import reactivemongo.bson.BSONObjectID
 import services.DataSpaceService
 import org.incal.play.security.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
 import views.html.{layout, classification => view}
-import models.ml.classification.ValueOrSeq.ValueOrSeq
+import org.incal.spark_ml.models.ValueOrSeq.ValueOrSeq
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.AscSort
 import org.incal.play.Page

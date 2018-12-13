@@ -41,7 +41,7 @@ class MPowerPredictAcceleration @Inject() (
   private val inputDim = 3
   private val outputDim = 1
   private val inScale = 1
-  private val preprocessingType = None // Some(VectorTransformType.StandardScaler)
+  private val preprocessingType = None // Some(VectorScalerType.StandardScaler)
   private val _predictAhead = 1
   private val washoutPeriod = 500
   private val weightAdaptationIterationNum = 100

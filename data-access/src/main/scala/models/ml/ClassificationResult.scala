@@ -9,6 +9,7 @@ import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json._
+import org.incal.core.VectorScalerType
 
 case class ClassificationResult(
   _id: Option[BSONObjectID],
@@ -49,7 +50,7 @@ case class ClassificationSetting(
   outputFieldName: String,
   inputFieldNames: Seq[String],
   filterId: Option[BSONObjectID],
-  featuresNormalizationType: Option[VectorTransformType.Value],
+  featuresNormalizationType: Option[VectorScalerType.Value],
   featuresSelectionNum: Option[Int],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
@@ -70,19 +71,19 @@ case class ClassificationSetting(
 object ClassificationResult {
 
   implicit val classificationResultFormat: Format[ClassificationResult] = {
-    implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
+    implicit val VectorScalerTypeFormat = EnumFormat.enumFormat(VectorScalerType)
     implicit val classificationEvalMetricFormat = EnumFormat.enumFormat(ClassificationEvalMetric)
-    createClassificationResultFormat(vectorTransformTypeFormat, classificationEvalMetricFormat)
+    createClassificationResultFormat(VectorScalerTypeFormat, classificationEvalMetricFormat)
   }
 
   implicit val classificationSettingFormat: Format[ClassificationSetting] = {
-    implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
+    implicit val VectorScalerTypeFormat = EnumFormat.enumFormat(VectorScalerType)
     implicit val classificationEvalMetricFormat = EnumFormat.enumFormat(ClassificationEvalMetric)
-    createClassificationSettingFormat(vectorTransformTypeFormat, classificationEvalMetricFormat)
+    createClassificationSettingFormat(VectorScalerTypeFormat, classificationEvalMetricFormat)
   }
 
   def createClassificationSettingFormat(
-    implicit vectorTransformTypeFormat: Format[VectorTransformType.Value],
+    implicit VectorScalerTypeFormat: Format[VectorScalerType.Value],
     classificationEvalMetricFormat: Format[ClassificationEvalMetric.Value]
   ) = {
     implicit val tupleFormat = TupleFormat[String, Double]
@@ -90,10 +91,10 @@ object ClassificationResult {
   }
 
   def createClassificationResultFormat(
-    implicit vectorTransformTypeFormat: Format[VectorTransformType.Value],
+    implicit VectorScalerTypeFormat: Format[VectorScalerType.Value],
     classificationEvalMetricFormat: Format[ClassificationEvalMetric.Value]
   ) = {
-    implicit val classificationSettingFormat = createClassificationSettingFormat(vectorTransformTypeFormat, classificationEvalMetricFormat)
+    implicit val classificationSettingFormat = createClassificationSettingFormat(VectorScalerTypeFormat, classificationEvalMetricFormat)
     implicit val classificationMetricStatsValuesFormat = Json.format[MetricStatsValues]
     implicit val classificationMetricStatsFormat = Json.format[ClassificationMetricStats]
     implicit val doubleTupleFormat = TupleFormat[Double, Double]

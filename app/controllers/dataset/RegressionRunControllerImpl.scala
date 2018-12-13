@@ -32,7 +32,7 @@ import controllers.core.{ExportableAction, WidgetRepoController}
 import models.json.OrdinalEnumFormat
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.FilterCondition.toCriterion
-import org.incal.core.FilterCondition
+import org.incal.core.{FilterCondition, VectorScalerType}
 import org.incal.core.dataaccess.Criterion
 import org.incal.play.Page
 import org.incal.play.controllers.{ReadonlyControllerImpl, WebContext}
@@ -448,7 +448,7 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
           val vectorTransformTypeFieldSpec = fields.find(_._1.equals("setting-featuresNormalizationType")).get._2
 
           val regressionEvalMetricMap = regressionEvalMetricFieldSpec.enumValues.get.map { case (int, string) => (RegressionEvalMetric.withName(string), int)}
-          val vectorTransformTypeMap = vectorTransformTypeFieldSpec.enumValues.get.map { case (int, string) => (VectorTransformType.withName(string), int)}
+          val vectorTransformTypeMap = vectorTransformTypeFieldSpec.enumValues.get.map { case (int, string) => (VectorScalerType.withName(string), int)}
 
           val regressionEvalMetricFormat = OrdinalEnumFormat.enumFormat(regressionEvalMetricMap)
           val vectorTransformTypeFormat = OrdinalEnumFormat.enumFormat(vectorTransformTypeMap)

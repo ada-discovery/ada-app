@@ -58,6 +58,7 @@ import org.incal.play.controllers._
 import org.incal.play.formatters._
 import org.incal.play.security.AuthAction
 import org.incal.play.security.SecurityRole
+import org.incal.core.VectorScalerType
 
 import scala.math.Ordering.Implicits._
 import scala.concurrent.{Future, TimeoutException}
@@ -1938,7 +1939,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     filterId: Option[BSONObjectID],
-    featuresNormalizationType: Option[VectorTransformType.Value],
+    featuresNormalizationType: Option[VectorScalerType.Value],
     pcaDims: Option[Int]
   ) = AuthAction { implicit request =>
     val explFieldNamesToLoads =

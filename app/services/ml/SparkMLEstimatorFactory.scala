@@ -8,7 +8,9 @@ import org.apache.spark.ml.classification.{LogisticRegression => LogisticRegress
 import org.apache.spark.ml.regression.{DecisionTreeRegressor, GBTRegressor, RandomForestRegressor, GeneralizedLinearRegression => GeneralizedLinearRegressor, LinearRegression => LinearRegressor}
 import org.apache.spark.ml.clustering.{BisectingKMeans, GaussianMixture, KMeans, LDA}
 import org.apache.spark.ml.param._
-import models.ml.classification.ValueOrSeq._
+
+import org.incal.spark_ml.models.ValueOrSeq._
+import org.incal.spark_ml.{ParamGrid, ParamSourceBinder}
 
 object SparkMLEstimatorFactory {
 

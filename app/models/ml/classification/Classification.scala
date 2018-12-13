@@ -5,9 +5,9 @@ import java.util.Date
 import dataaccess.BSONObjectIdentity
 import models.json._
 import models.ml.TreeCore
+import org.incal.spark_ml.models.ValueOrSeq.ValueOrSeq
 import play.api.libs.json.{Format, Json}
 import reactivemongo.bson.BSONObjectID
-import ValueOrSeq._
 import reactivemongo.play.json.BSONFormats._
 
 abstract class Classification {
@@ -21,15 +21,6 @@ object LogisticModelFamily extends Enumeration {
   val Auto = Value("auto")
   val Binomial = Value("binomial")
   val Multinomial = Value("multinomial")
-}
-
-object ValueOrSeq {
-  type ValueOrSeq[T] = Either[Option[T], Seq[T]]
-
-  def toValue[T](valueOrSeq: ValueOrSeq[T]): Option[T] = valueOrSeq match {
-    case Left(value) => value
-    case Right(values) => None
-  }
 }
 
 case class LogisticRegression(

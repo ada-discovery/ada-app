@@ -1407,7 +1407,7 @@ class DataSetServiceImpl @Inject()(
 
       for {
         newSeries <- if (series.nonEmpty)
-          RCPredictionStaticHelper.transformSeries(sparkApp.session)(series.map(Seq(_)), spec.transformType)
+          RCPredictionStaticHelper.scaleSeries(sparkApp.session)(series.map(Seq(_)), spec.transformType)
         else
           Future(series.map(Seq(_)))
       } yield {

@@ -7,13 +7,12 @@ import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.FilterCondition.toCriterion
 import models.{AdaException, Filter}
-import models.ml.{ClassificationEvalMetric, ClassificationSetting, VectorTransformType}
-import org.incal.core.FilterCondition
+import models.ml.{ClassificationEvalMetric, ClassificationSetting}
+import org.incal.core.{FilterCondition, InputFutureRunnable, VectorScalerType}
 import persistence.RepoTypes.ClassificationRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
-import org.incal.core.InputFutureRunnable
 import services.DataSetService
 import services.ml.{MachineLearningService, MachineLearningUtil}
 import services.stats.StatsService
@@ -177,7 +176,7 @@ case class ClassifyRCResultsSpec(
   mlModelId: BSONObjectID,
   outputFieldName: String,
   filterName: Option[String],
-  featuresNormalizationType: Option[VectorTransformType.Value],
+  featuresNormalizationType: Option[VectorScalerType.Value],
   featuresSelectionNum: Option[Int],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],

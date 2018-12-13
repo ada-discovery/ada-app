@@ -12,7 +12,6 @@ import com.banda.network.business._
 import com.banda.network.business.learning.{ErrorMeasures, ReservoirTrainerFactory}
 import com.banda.network.domain._
 import com.google.inject.{ImplementedBy, Singleton}
-import org.incal.core.dataaccess.Criterion.Infix
 import dataaccess.JsonReadonlyRepoExtra._
 import models._
 import models.ml.RCPredictionSettingAndResults.rcPredictionSettingAndResultsFormat
@@ -20,14 +19,15 @@ import models.ml._
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.incal.core.{ConditionType, FilterCondition}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import util.FieldUtil.caseClassToFlatFieldTypes
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import services.ml.transformers.VectorColumnScalerNormalizer
 import services.{DataSetService, SparkApp}
+import org.incal.core.dataaccess.Criterion.Infix
+import org.incal.core.{ConditionType, FilterCondition, VectorScalerType}
+import org.incal.spark_ml.transformers.VectorColumnScalerNormalizer
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -54,12 +54,12 @@ trait RCPredictionService {
 
   def transformSeriesJava(
     series: Seq[Seq[jl.Double]],
-    transformType: VectorTransformType.Value
+    transformType: VectorScalerType.Value
   ): Future[Seq[Seq[jl.Double]]]
 
   def transformSeries(
     series: Seq[Seq[Double]],
-    transformType: VectorTransformType.Value
+    transformType: VectorScalerType.Value
   ): Future[Seq[Seq[Double]]]
 }
 
@@ -326,7 +326,7 @@ class RCPredictionServiceImpl @Inject()(
   private def extractAndTransformIOSeries(
     json: JsObject,
     ioSpec: RCPredictionInputOutputSpec,
-    seriesPreprocessingType: Option[VectorTransformType.Value]
+    seriesPreprocessingType: Option[VectorScalerType.Value]
   ): Future[Option[(Seq[Seq[jl.Double]], Seq[jl.Double])]] =
     extractIOSeries(json, ioSpec).map { case (inputSeries, outputSeries) =>
       // check the overlap between input and output paths to see if the output transformation can be skipped
@@ -340,7 +340,7 @@ class RCPredictionServiceImpl @Inject()(
             for {
               // transform input
               input <-
-                RCPredictionStaticHelper.transformSeriesJava(sparkApp.session)(inputSeries, transformType)
+                RCPredictionStaticHelper.scaleSeriesJava(sparkApp.session)(inputSeries, transformType)
 
               // transform output
               output <-
@@ -348,7 +348,7 @@ class RCPredictionServiceImpl @Inject()(
                   val output = input.map(seq => outputInputIndexes.map(seq(_)))
                   Future(output)
                 } else
-                  RCPredictionStaticHelper.transformSeriesJava(sparkApp.session)(outputSeries.map(Seq(_)), transformType)
+                  RCPredictionStaticHelper.scaleSeriesJava(sparkApp.session)(outputSeries.map(Seq(_)), transformType)
             } yield {
               (input, output.map(_.head))
             }
@@ -598,15 +598,15 @@ class RCPredictionServiceImpl @Inject()(
 
   override def transformSeriesJava(
     series: Seq[Seq[jl.Double]],
-    transformType: VectorTransformType.Value
+    transformType: VectorScalerType.Value
   ): Future[Seq[Seq[jl.Double]]] =
-    RCPredictionStaticHelper.transformSeriesJava(sparkApp.session)(series, transformType)
+    RCPredictionStaticHelper.scaleSeriesJava(sparkApp.session)(series, transformType)
 
   override def transformSeries(
     series: Seq[Seq[Double]],
-    transformType: VectorTransformType.Value
+    transformType: VectorScalerType.Value
   ): Future[Seq[Seq[Double]]] =
-    RCPredictionStaticHelper.transformSeries(sparkApp.session)(series, transformType)
+    RCPredictionStaticHelper.scaleSeries(sparkApp.session)(series, transformType)
 }
 
 object RCPredictionStaticHelper extends Serializable {
@@ -664,23 +664,23 @@ object RCPredictionStaticHelper extends Serializable {
     call(ioStream)
   }
 
-  def transformSeriesJava(
+  def scaleSeriesJava(
     session: SparkSession)(
     series: Seq[Seq[jl.Double]],
-    transformType: VectorTransformType.Value
+    transformType: VectorScalerType.Value
   ): Future[Seq[Seq[jl.Double]]] = {
     val javaSeries: Seq[Seq[Double]] = series.map(_.map(_.toDouble))
 
     for {
-      outputSeries <- transformSeries(session)(javaSeries, transformType)
+      outputSeries <- scaleSeries(session)(javaSeries, transformType)
     } yield
       outputSeries.map(_.map(jl.Double.valueOf(_)))
   }
 
-  def transformSeries(
+  def scaleSeries(
     session: SparkSession)(
     inputSeries: Seq[Seq[Double]],
-    transformType: VectorTransformType.Value
+    transformType: VectorScalerType.Value
   ): Future[Seq[Seq[Double]]] = {
     val rows = inputSeries.zipWithIndex.map { case (oneSeries, index) =>
       (index, Vectors.dense(oneSeries.toArray))

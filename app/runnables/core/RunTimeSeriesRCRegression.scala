@@ -3,18 +3,18 @@ package runnables.core
 import java.{lang => jl}
 import javax.inject.Inject
 
-import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import com.banda.math.domain.rand.RandomDistribution
 import com.banda.network.domain.ActivationFunctionType
-import models.ml.classification.ValueOrSeq.ValueOrSeq
-import models.ml.timeseries.ReservoirSpec
-import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric, VectorTransformType}
+import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric}
 import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
-import org.incal.core.InputFutureRunnable
 import services.ml.{MachineLearningService, MachineLearningUtil}
 import util.writeStringAsStream
+import org.incal.core.VectorScalerType
+import org.incal.core.InputFutureRunnable
+import org.incal.spark_ml.models.ValueOrSeq.ValueOrSeq
+import org.incal.spark_ml.models.ReservoirSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
@@ -103,7 +103,7 @@ case class RunTimeSeriesRCRegressionSpec(
   crossValidationEvalMetric: Option[RegressionEvalMetric.Value],
 
   // pre-processing and other stuff
-  featuresNormalizationType: Option[VectorTransformType.Value],
+  featuresNormalizationType: Option[VectorScalerType.Value],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
   replicationItemId: Option[BSONObjectID],

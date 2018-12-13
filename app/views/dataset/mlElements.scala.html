@@ -2,7 +2,7 @@
 @import views.html.elements.{fieldTypeahead, typeahead}
 @import views.html.table.dynamicTableJsImport
 @import views.html.dataset.dynamicFieldTable
-@import models.ml.VectorTransformType
+@import org.incal.core.VectorScalerType
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 
@@ -57,7 +57,7 @@
                 }
                 <hr/>
                 @labelValueAux("featuresNormalizationType", "Feature Normalization") {
-                    @selectEnum("featuresNormalizationType", VectorTransformType, true, Some("input-lg"))
+                    @selectEnum("featuresNormalizationType", VectorScalerType, true, Some("input-lg"))
                 }
                 @if(includeFeatureSelectionNum) {
                     @labelValueAux("featuresSelectionNum", "Feature Selection  Num") {

@@ -3,7 +3,8 @@ package runnables.core
 import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import models.ml.RegressionEvalMetric
 import play.api.Logger
-import services.ml.{MachineLearningUtil, RegressionResultsHolder}
+import services.ml.MachineLearningUtil
+import services.ml.results.RegressionResultsHolder
 import util.writeStringAsStream
 
 trait TimeSeriesResultsHelper {

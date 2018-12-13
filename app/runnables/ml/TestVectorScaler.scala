@@ -3,16 +3,14 @@ package runnables.ml
 import java.{lang => jl}
 import javax.inject.Inject
 
-import models.ml.VectorTransformType
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.sql.DataFrame
+import org.incal.core.VectorScalerType
 import org.incal.play.GuiceRunnableApp
+import org.incal.spark_ml.transformers._
 import services.SparkApp
-import services.ml.transformers.{VectorColumnScalerNormalizer, Normalizer, VectorNorm}
 
-class TestVectorTransformer @Inject()(
-  sparkApp: SparkApp
-  ) extends Runnable {
+class TestVectorScaler @Inject()(sparkApp: SparkApp) extends Runnable {
 
   private val session = sparkApp.session
 
@@ -40,15 +38,15 @@ class TestVectorTransformer @Inject()(
   }
 
   private def runAux(fitDf: DataFrame, testDf: DataFrame, inRow: Boolean) = {
-    def transformVectors(transformType: VectorTransformType.Value) =
+    def scaleVectors(transformType: VectorScalerType.Value) =
       VectorColumnScalerNormalizer(transformType).fit(fitDf).transform(testDf)
 
-    val l1NormalizedDf = transformVectors(VectorTransformType.L1Normalizer)
-    val l2NormalizedDf = transformVectors(VectorTransformType.L2Normalizer)
-    val standardScaledDf = transformVectors(VectorTransformType.StandardScaler)
-    val minMaxZeroOneScaledDf = transformVectors(VectorTransformType.MinMaxZeroOneScaler)
-    val minMaxPlusMinusOneScaledDf = transformVectors(VectorTransformType.MinMaxPlusMinusOneScaler)
-    val maxAbsScaledDf = transformVectors(VectorTransformType.MaxAbsScaler)
+    val l1NormalizedDf = scaleVectors(VectorScalerType.L1Normalizer)
+    val l2NormalizedDf = scaleVectors(VectorScalerType.L2Normalizer)
+    val standardScaledDf = scaleVectors(VectorScalerType.StandardScaler)
+    val minMaxZeroOneScaledDf = scaleVectors(VectorScalerType.MinMaxZeroOneScaler)
+    val minMaxPlusMinusOneScaledDf = scaleVectors(VectorScalerType.MinMaxPlusMinusOneScaler)
+    val maxAbsScaledDf = scaleVectors(VectorScalerType.MaxAbsScaler)
 
     println("Original Fit")
     fitDf.show(20, false)
@@ -76,4 +74,4 @@ class TestVectorTransformer @Inject()(
   }
 }
 
-object TestVectorTransformer extends GuiceRunnableApp[TestVectorTransformer]
+object TestVectorScaler extends GuiceRunnableApp[TestVectorScaler]

@@ -1,6 +1,6 @@
 package models.ml
 
-import models.ml.classification.ValueOrSeq._
+import org.incal.spark_ml.models.ValueOrSeq.ValueOrSeq
 
 case class TreeCore(
   maxDepth: ValueOrSeq[Int] = Left(None),

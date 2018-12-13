@@ -19,12 +19,12 @@ import reactivemongo.play.json.BSONFormats._
 import org.incal.play.security.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
 import views.html.{layout, regression => view}
 import controllers.ml.routes.{RegressionController => regressionRoutes}
-import models.ml.classification.ValueOrSeq.ValueOrSeq
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.AscSort
 import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters._
+import org.incal.spark_ml.models.ValueOrSeq.ValueOrSeq
 import play.api.libs.json.{JsArray, Json}
 import services.DataSpaceService
 import util.firstCharToLowerCase

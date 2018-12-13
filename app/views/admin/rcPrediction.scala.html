@@ -4,10 +4,10 @@
 @import views.html.elements._
 @import views.html.layout
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
+@import org.incal.core.VectorScalerType
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
 @import models.ml.RCPredictionSettings
-@import models.ml.VectorTransformType
 
 @import com.banda.network.domain.ActivationFunctionType
 @(
@@ -71,7 +71,7 @@
                     @inputTextAux("resultDataSetId", Some("mpower_challenge.walking_activity_training_rc_weights"))
                     @inputTextAux("resultDataSetName", Some("Walking Activity Training (RC) Weights"))
                     @inputTextAux("resultDataSetIndex", Some(1))
-                    @selectEnumAux("seriesPreprocessingType", VectorTransformType)
+                    @selectEnumAux("seriesPreprocessingType", VectorScalerType)
                     @inputTextAux("batchSize", Some(20))
                     @inputTextAux("preserveWeightFieldNames", Some("recordId, medTimepoint, healthCode"))
                 </fieldset>

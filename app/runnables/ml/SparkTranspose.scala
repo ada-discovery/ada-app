@@ -3,8 +3,9 @@ package runnables.ml
 import javax.inject.Inject
 
 import org.apache.spark.ml.linalg.Vectors
+import services.SparkApp
 import org.incal.play.GuiceRunnableApp
-import services.{SparkApp, SparkUtil}
+import org.incal.spark_ml.SparkUtil
 
 class SparkTranspose @Inject() (sparkApp: SparkApp) extends Runnable {
 

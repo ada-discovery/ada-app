@@ -7,6 +7,7 @@ import com.banda.math.business.rand.RandomDistributionProviderFactory
 import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.ActivationFunctionType
 import models.ml._
+import org.incal.core.VectorScalerType
 import persistence.RepoTypes.MessageRepo
 import persistence.dataset.DataSetAccessorFactory
 import play.api.{Configuration, Logger}
@@ -15,7 +16,6 @@ import play.api.data.Forms.{mapping, _}
 import org.incal.play.controllers._
 import org.incal.play.formatters._
 import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
-
 import services.DataSpaceService
 import services.ml.RCPredictionService
 import util.MessageLogger
@@ -35,7 +35,7 @@ class RCPredictionController @Inject()(
   private implicit val stringSeqFormatter = SeqFormatter.apply
   private implicit val intSeqFormatter = SeqFormatter.applyInt
   private implicit val doubleSeqFormatter = SeqFormatter.applyDouble
-  private implicit val vectorTransformTypeFormatter = EnumFormatter(VectorTransformType)
+  private implicit val vectorScalerTypeFormatter = EnumFormatter(VectorScalerType)
   private implicit val activationFunctionTypeFormatter = JavaEnumFormatter[ActivationFunctionType]
 
   private val rcPredictionSettingsForm = Form(
@@ -49,7 +49,7 @@ class RCPredictionController @Inject()(
       "reservoirCircularInEdges" -> optional(of[Seq[Int]]),
       "reservoirFunctionType" -> of[ActivationFunctionType],
       "reservoirFunctionParams" -> optional(of[Seq[Double]]),
-      "seriesPreprocessingType" -> optional(of[VectorTransformType.Value]),
+      "seriesPreprocessingType" -> optional(of[VectorScalerType.Value]),
       "inputSeriesFieldPaths" -> of[Seq[String]],
       "outputSeriesFieldPaths" -> of[Seq[String]],
       "washoutPeriod" -> number(min = 0),
@@ -77,7 +77,7 @@ class RCPredictionController @Inject()(
     inScale: Double,
     washoutPeriod: Int,
     _predictAhead: Int,
-    _seriesPreprocessingType: Option[VectorTransformType.Value],
+    _seriesPreprocessingType: Option[VectorScalerType.Value],
     weightRd: RandomDistribution[jl.Double]
   ) = new ExtendedReservoirLearningSetting {
     setWeightAdaptationIterationNum(2)

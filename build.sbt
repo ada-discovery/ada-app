@@ -41,12 +41,12 @@ routesImport ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.ada" % "ada-dataaccess_2.11" % "0.7.0",
+  "org.ada" % "ada-dataaccess_2.11" % "0.7.1",
   "org.reactivemongo" %% "play2-reactivemongo" % "0.12.6-play25" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11") exclude("com.typesafe.play", "play-iteratees_2.11") exclude("com.typesafe.play", "play-server_2.11") exclude("com.typesafe.play", "play-netty-server_2.11"), // "0.11.14-play24", // "0.12.6-play24", // "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
   "org.reactivemongo" %% "reactivemongo-akkastream" % "0.12.6",
   "com.evojam" %% "play-elastic4s" % "0.3.1" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11"),
   "com.sksamuel.elastic4s" %% "elastic4s-streams" % "2.3.0",
-  "org.in-cal" %% "incal-play" % "0.0.22",
+  "org.in-cal" %% "incal-play" % "0.0.23",
   "com.typesafe.play" % "play-java-ws_2.11" % "2.5.6",
   "jp.t2v" %% "play2-auth" % "0.14.1",
   "org.webjars" % "bootstrap" % "3.3.7",
@@ -68,9 +68,7 @@ libraryDependencies ++= Seq(
 //  "org.apache.spark" %% "spark-core" % "2.3.1", // exclude("io.netty", "netty-all"),  // uses netty 4.1.17.Final incompatible with Play's netty 4.0.39.Final (which was upgraded to 4.0.56.Final)
 //  "org.apache.spark" %% "spark-sql" % "2.3.1",
 //  "org.apache.spark" %% "spark-mllib" % "2.3.1",
-  "org.apache.spark" % "spark-core_2.11" % "2.2.0" exclude("com.fasterxml.jackson.core", "jackson-databind"), // exclude("asm", "asm")
-  "org.apache.spark" % "spark-sql_2.11" % "2.2.0" exclude("com.fasterxml.jackson.core", "jackson-databind"), // exclude("asm", "asm") exclude("com.fasterxml.jackson.module", "jackson-module-scala_2.11")
-  "org.apache.spark" % "spark-mllib_2.11" % "2.2.0" exclude("com.fasterxml.jackson.core", "jackson-databind"),
+  "org.in-cal" %% "incal-spark_ml" % "0.0.2"  exclude("com.fasterxml.jackson.core", "jackson-databind"),
   //  "io.netty" % "netty-all" % "4.0.56.Final",
   "commons-net" % "commons-net" % "3.5",   // for ftp access
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
@@ -80,7 +78,6 @@ libraryDependencies ++= Seq(
   "org.scalanlp" %% "breeze" % "0.13.2",        // linear algebra and stuff
   "org.scalanlp" %% "breeze-natives" % "0.13.2",  // linear algebra and stuff (native)
 //  "org.scalanlp" %% "breeze-viz" % "0.13.2",    // breeze visualization
-  "com.banda.network" % "banda-network-business" % "0.5.6.1",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 ).map(_.exclude("org.slf4j", "slf4j-log4j12"))
 

@@ -7,15 +7,16 @@ import com.banda.math.domain.rand.RandomDistribution
 import com.banda.network.domain.ActivationFunctionType
 import field.FieldTypeHelper
 import models.DataSetFormattersAndIds.FieldIdentity
-import models.ml.classification.ValueOrSeq.ValueOrSeq
-import models.ml.timeseries.ReservoirSpec
-import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric, VectorTransformType}
+import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric}
 import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.DataSetAccessorFactory
+import services.ml.MachineLearningService
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
-import services.ml.MachineLearningService
+import org.incal.core.VectorScalerType
 import org.incal.core.dataaccess.Criterion.Infix
+import org.incal.spark_ml.models.ValueOrSeq.ValueOrSeq
+import org.incal.spark_ml.models.ReservoirSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
@@ -123,7 +124,7 @@ case class RunRowTimeSeriesRCRegressionSpec(
   crossValidationEvalMetric: Option[RegressionEvalMetric.Value],
 
   // pre-processing and other stuff
-  featuresNormalizationType: Option[VectorTransformType.Value],
+  featuresNormalizationType: Option[VectorScalerType.Value],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
   replicationItemId: Option[BSONObjectID],

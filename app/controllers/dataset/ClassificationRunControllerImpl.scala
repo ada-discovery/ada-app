@@ -32,7 +32,7 @@ import field.FieldTypeHelper
 import models.json.{EnumFormat, OrdinalEnumFormat}
 import models.ml.classification.Classification.ClassificationIdentity
 import services.stats.StatsService
-import org.incal.core.FilterCondition
+import org.incal.core.{FilterCondition, VectorScalerType}
 import org.incal.core.dataaccess.Criterion
 import org.incal.play.Page
 import org.incal.core.dataaccess.Criterion._
@@ -532,7 +532,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
           val subsamplingRatiosFieldSpec = fields.find(_._1.equals("setting-samplingRatios")).get._2
 
           val classificationEvalMetricMap = classificationEvalMetricFieldSpec.enumValues.get.map { case (int, string) => (ClassificationEvalMetric.withName(string), int)}
-          val vectorTransformTypeMap = vectorTransformTypeFieldSpec.enumValues.get.map { case (int, string) => (VectorTransformType.withName(string), int)}
+          val vectorTransformTypeMap = vectorTransformTypeFieldSpec.enumValues.get.map { case (int, string) => (VectorScalerType.withName(string), int)}
 
           val classificationEvalMetricFormat = OrdinalEnumFormat.enumFormat(classificationEvalMetricMap)
           val vectorTransformTypeFormat = OrdinalEnumFormat.enumFormat(vectorTransformTypeMap)

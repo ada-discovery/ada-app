@@ -4,14 +4,14 @@ import javax.inject.Inject
 
 import field.FieldTypeHelper
 import models.DataSetFormattersAndIds.FieldIdentity
-import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric, VectorTransformType}
+import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric}
 import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import reactivemongo.bson.BSONObjectID
-import org.incal.core.InputFutureRunnable
 import services.ml.{MachineLearningService, MachineLearningUtil}
+import org.incal.core.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion.Infix
-
+import org.incal.core.VectorScalerType
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.Future
@@ -91,7 +91,7 @@ case class RunRowTimeSeriesDLRegressionSpec(
   mlModelId: BSONObjectID,
   predictAhead: Int,
   windowSize: Int,
-  featuresNormalizationType: Option[VectorTransformType.Value],
+  featuresNormalizationType: Option[VectorScalerType.Value],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
   repetitions: Option[Int],

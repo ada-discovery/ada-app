@@ -4,12 +4,11 @@ import javax.inject.Inject
 
 import org.incal.play.controllers.SecureControllerDispatcher
 import models.Filter.FilterOrId
-import models.ml.VectorTransformType
 import models.{AggType, FieldTypeId}
 import reactivemongo.bson.BSONObjectID
 import org.incal.play.security.{AuthAction, SecurityRole}
 import models.security.DataSetPermission
-import org.incal.core.FilterCondition
+import org.incal.core.{FilterCondition, VectorScalerType}
 import org.incal.play.PageOrder
 import play.api.mvc.{Action, AnyContent}
 
@@ -165,7 +164,7 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     filterId: Option[BSONObjectID],
-    featuresNormalizationType: Option[VectorTransformType.Value],
+    featuresNormalizationType: Option[VectorScalerType.Value],
     pcaDims: Option[Int]
   ) = dispatchAjax(_.cluster(mlModelId, inputFieldNames, filterId, featuresNormalizationType, pcaDims))
 

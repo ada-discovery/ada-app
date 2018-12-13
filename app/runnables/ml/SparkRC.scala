@@ -5,11 +5,12 @@ import java.{lang => jl}
 
 import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.{ActivationFunctionType, ReservoirSetting}
-import models.ml.timeseries.ReservoirSpec
 import org.apache.spark.ml.linalg.Vectors
-import org.incal.play.GuiceRunnableApp
 import services.SparkApp
-import services.ml.transformers.RCStatesWindowFactory
+
+import org.incal.play.GuiceRunnableApp
+import org.incal.spark_ml.models.ReservoirSpec
+import org.incal.spark_ml.transformers.RCStatesWindowFactory
 
 class SparkRC @Inject() (
   sparkApp: SparkApp,

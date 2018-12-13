@@ -8,7 +8,7 @@ import models.ml.TreeCore
 import play.api.libs.json.{Format, Json}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import models.ml.classification.ValueOrSeq._
+import org.incal.spark_ml.models.ValueOrSeq._
 
 abstract class Regression {
   val _id: Option[BSONObjectID]

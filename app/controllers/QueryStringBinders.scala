@@ -9,7 +9,7 @@ import models.ml._
 import models.DataSetFormattersAndIds.enumTypeFormat
 import models.ml.ClassificationResult._
 import models.ml.RegressionResult._
-import org.incal.core.FilterCondition
+import org.incal.core.{FilterCondition, VectorScalerType}
 import org.incal.play.PageOrder
 import play.api.libs.json.{Format, Json}
 import play.api.mvc.QueryStringBindable
@@ -54,7 +54,7 @@ object QueryStringBinders {
   implicit val ClassificationSettingBinder = new JsonQueryStringBinder[ClassificationSetting]
   implicit val RegressionSettingBinder = new JsonQueryStringBinder[RegressionSetting]
 
-  implicit val vectorTransformTypeQueryStringBinder = new EnumStringBindable(VectorTransformType)
+  implicit val vectorScalerTypeQueryStringBinder = new EnumStringBindable(VectorScalerType)
   implicit val classificationEvalMetricQueryStringBinder = new EnumStringBindable(ClassificationEvalMetric)
   implicit val regressionEvalMetricQueryStringBinder = new EnumStringBindable(RegressionEvalMetric)
   implicit val aggFunctionQueryStringBinder = new EnumStringBindable(AggFunction)

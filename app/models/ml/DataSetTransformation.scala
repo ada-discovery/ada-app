@@ -3,6 +3,7 @@ package models.ml
 import dataaccess.StreamSpec
 import models.StorageType
 import models.json.EnumFormat
+import org.incal.core.VectorScalerType
 import play.api.libs.json.Json
 
 trait DataSetTransformation {
@@ -53,7 +54,7 @@ case class DataSetSeriesTransformationSpec(
 
 case class SeriesTransformationSpec(
   fieldPath: String,
-  transformType: VectorTransformType.Value
+  transformType: VectorScalerType.Value
 ) {
   override def toString =
     fieldPath + "_" + transformType.toString
@@ -123,6 +124,6 @@ object DataSetTransformation {
   implicit val coreFormat = Json.format[DerivedDataSetSpec]
   implicit val seriesProcessingTypeFormat = EnumFormat.enumFormat(SeriesProcessingType)
   implicit val seriesProcessingSpecFormat = Json.format[SeriesProcessingSpec]
-  implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
+  implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorScalerType)
   implicit val seriesTransformationSpecFormat = Json.format[SeriesTransformationSpec]
 }

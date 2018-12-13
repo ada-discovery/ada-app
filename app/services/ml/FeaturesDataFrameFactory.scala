@@ -11,7 +11,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import play.api.libs.json.{JsArray, JsObject, JsString, Json}
-import services.ml.transformers.FixedOrderStringIndexer
+import org.incal.spark_ml.transformers.FixedOrderStringIndexer
 
 import scala.util.Random
 

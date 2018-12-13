@@ -8,6 +8,7 @@ import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json._
+import org.incal.core.VectorScalerType
 
 case class RegressionResult(
   _id: Option[BSONObjectID],
@@ -30,7 +31,7 @@ case class RegressionSetting(
   outputFieldName: String,
   inputFieldNames: Seq[String],
   filterId: Option[BSONObjectID],
-  featuresNormalizationType: Option[VectorTransformType.Value],
+  featuresNormalizationType: Option[VectorScalerType.Value],
 //  featuresSelectionNum: Option[Int],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
@@ -50,19 +51,19 @@ case class RegressionSetting(
 object RegressionResult {
 
   implicit val regressionResultFormat: Format[RegressionResult] = {
-    implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
+    implicit val VectorScalerTypeFormat = EnumFormat.enumFormat(VectorScalerType)
     implicit val regressionEvalMetricFormat = EnumFormat.enumFormat(RegressionEvalMetric)
-    createRegressionResultFormat(vectorTransformTypeFormat, regressionEvalMetricFormat)
+    createRegressionResultFormat(VectorScalerTypeFormat, regressionEvalMetricFormat)
   }
 
   implicit val regressionSettingFormat: Format[RegressionSetting] = {
-    implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
+    implicit val VectorScalerTypeFormat = EnumFormat.enumFormat(VectorScalerType)
     implicit val regressionEvalMetricFormat = EnumFormat.enumFormat(RegressionEvalMetric)
-    createRegressionSettingFormat(vectorTransformTypeFormat, regressionEvalMetricFormat)
+    createRegressionSettingFormat(VectorScalerTypeFormat, regressionEvalMetricFormat)
   }
 
   def createRegressionSettingFormat(
-    implicit vectorTransformTypeFormat: Format[VectorTransformType.Value],
+    implicit VectorScalerTypeFormat: Format[VectorScalerType.Value],
     regressionEvalMetricFormat: Format[RegressionEvalMetric.Value]
   ) = {
     implicit val tupleFormat = TupleFormat[String, Double]
@@ -70,10 +71,10 @@ object RegressionResult {
   }
 
   def createRegressionResultFormat(
-    implicit vectorTransformTypeFormat: Format[VectorTransformType.Value],
+    implicit VectorScalerTypeFormat: Format[VectorScalerType.Value],
     regressionEvalMetricFormat: Format[RegressionEvalMetric.Value]
   ) = {
-    implicit val regressionSettingFormat = createRegressionSettingFormat(vectorTransformTypeFormat, regressionEvalMetricFormat)
+    implicit val regressionSettingFormat = createRegressionSettingFormat(VectorScalerTypeFormat, regressionEvalMetricFormat)
     implicit val regressionMetricStatsValuesFormat = Json.format[MetricStatsValues]
     implicit val regressionMetricStatsFormat = Json.format[RegressionMetricStats]
     new FlattenFormat(Json.format[RegressionResult], "-", Set("_id", "filterId", "replicationFilterId", "mlModelId"))
