@@ -3,11 +3,11 @@ package persistence
 import models._
 import models.workspace.Workspace
 import reactivemongo.bson.BSONObjectID
-import models.ml.classification.Classification
 import models.HtmlSnippet
-import models.ml.regression.Regression
 import models.ml.unsupervised.UnsupervisedLearning
 import org.incal.core.dataaccess.{AsyncCrudRepo, AsyncStreamRepo}
+import org.incal.spark_ml.models.classification.Classification
+import org.incal.spark_ml.models.regression.Regression
 
 /**
  * Common repo type shortcuts

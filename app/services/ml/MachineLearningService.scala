@@ -24,6 +24,8 @@ import services.stats.StatsService
 import org.incal.spark_ml.transformers._
 import org.incal.spark_ml.models.ReservoirSpec
 import org.incal.core.VectorScalerType
+import org.incal.spark_ml.models.classification.Classification
+import org.incal.spark_ml.models.regression.Regression
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global

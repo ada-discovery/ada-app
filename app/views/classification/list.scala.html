@@ -5,14 +5,7 @@
 @import controllers.ml.routes.{ClassificationController => classificationRoutes}
 @import util.{formatTimeElement, toHumanReadableCamel, typeColumns}
 @import models.{DataSpaceMetaInfo, Field}
-@import models.ml.classification.Classification
-@import models.ml.classification.LogisticRegression
-@import models.ml.classification.MultiLayerPerceptron
-@import models.ml.classification.DecisionTree
-@import models.ml.classification.RandomForest
-@import models.ml.classification.GradientBoostTree
-@import models.ml.classification.NaiveBayes
-@import models.ml.classification.LinearSupportVectorMachine
+@import org.incal.spark_ml.models.classification._
 @import models.Filter
 @import org.incal.play.controllers.WebContext._
 @import org.incal.play.controllers.WebContext

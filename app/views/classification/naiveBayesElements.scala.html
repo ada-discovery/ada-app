@@ -1,7 +1,7 @@
 @import views.html.elements.{inputText, select}
 @import play.api.i18n.Messages
-@import models.ml.classification.NaiveBayes
-@import models.ml.classification.BayesModelType
+@import org.incal.spark_ml.models.classification.NaiveBayes
+@import org.incal.spark_ml.models.classification.BayesModelType
 
 @(form: Form[NaiveBayes])(implicit msg: Messages)
 

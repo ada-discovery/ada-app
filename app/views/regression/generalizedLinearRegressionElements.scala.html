@@ -1,9 +1,9 @@
 @import views.html.elements.{inputText, select, checkbox}
 @import play.api.i18n.Messages
-@import models.ml.regression.GeneralizedLinearRegression
-@import models.ml.regression.GeneralizedLinearRegressionLinkType
-@import models.ml.regression.GeneralizedLinearRegressionFamily
-@import models.ml.regression.GeneralizedLinearRegressionSolver
+@import org.incal.spark_ml.models.regression.GeneralizedLinearRegression
+@import org.incal.spark_ml.models.regression.GeneralizedLinearRegressionLinkType
+@import org.incal.spark_ml.models.regression.GeneralizedLinearRegressionFamily
+@import org.incal.spark_ml.models.regression.GeneralizedLinearRegressionSolver
 
 @(form: Form[GeneralizedLinearRegression])(implicit msg: Messages)
 

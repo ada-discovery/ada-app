@@ -5,26 +5,27 @@ import javax.inject.Provider
 import com.google.inject.{Inject, Key, TypeLiteral}
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import com.sksamuel.elastic4s.ElasticClient
-import dataaccess.RepoTypes.CategoryRepo
 import dataaccess.elastic.{ElasticClientProvider, ElasticFormatAsyncCrudRepo, ElasticJsonCrudRepo}
 import dataaccess.ignite.{CacheAsyncCrudRepoFactory, CacheAsyncCrudRepoProvider, JsonBinaryCacheAsyncCrudRepoFactory}
-import dataaccess.mongo.dataset.{CategoryMongoAsyncCrudRepo, ClassificationResultMongoAsyncCrudRepo, RegressionResultMongoAsyncCrudRepo, FieldMongoAsyncCrudRepo}
+import dataaccess.mongo.dataset.{CategoryMongoAsyncCrudRepo, ClassificationResultMongoAsyncCrudRepo, FieldMongoAsyncCrudRepo, RegressionResultMongoAsyncCrudRepo}
 import dataaccess._
 import dataaccess.mongo._
 import models.DataSetFormattersAndIds._
 import models._
+import models.ml.regression.Regression._
+import models.ml.classification.Classification._
 import net.codingwell.scalaguice.ScalaModule
 import dataaccess.RepoTypes._
 import persistence.RepoTypes._
 import com.google.inject.name.Names
-import models.ml.classification.Classification
-import models.ml.regression.Regression
 import models.ml.unsupervised.UnsupervisedLearning
 import models.ml.unsupervised.UnsupervisedLearning.unsupervisedLearningFormat
 import persistence.dataset._
 import reactivemongo.bson.BSONObjectID
 import persistence.RepoDef.Repo
 import models.workspace.Workspace
+import org.incal.spark_ml.models.classification.Classification
+import org.incal.spark_ml.models.regression.Regression
 
 private object RepoDef extends Enumeration {
   abstract class AbstractRepo[T: Manifest] extends super.Val {

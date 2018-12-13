@@ -1,7 +1,7 @@
 @import views.html.elements.{inputText, select}
 @import play.api.i18n.Messages
-@import models.ml.classification.DecisionTree
-@import models.ml.classification.DecisionTreeImpurity
+@import org.incal.spark_ml.models.classification.DecisionTree
+@import org.incal.spark_ml.models.classification.DecisionTreeImpurity
 
 @(form: Form[DecisionTree])(implicit msg: Messages)
 

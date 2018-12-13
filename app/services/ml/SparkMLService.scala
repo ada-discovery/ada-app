@@ -18,6 +18,8 @@ import models.AdaException
 import models.ml.classification.Classification
 import models.ml.regression.Regression
 import models.ml.{ClassificationEvalMetric, _}
+import org.incal.spark_ml.models.classification.Classification
+import org.incal.spark_ml.models.regression.Regression
 import services.ml.CrossValidatorFactory.CrossValidatorCreator
 import services.ml.MachineLearningUtil._
 import services.ml.results._

@@ -1,8 +1,8 @@
 @import views.html.elements.{inputText, select}
 @import play.api.i18n.Messages
-@import models.ml.classification.RandomForest
-@import models.ml.classification.DecisionTreeImpurity
-@import models.ml.classification.RandomForestFeatureSubsetStrategy
+@import org.incal.spark_ml.models.classification.RandomForest
+@import org.incal.spark_ml.models.classification.DecisionTreeImpurity
+@import org.incal.spark_ml.models.classification.RandomForestFeatureSubsetStrategy
 
 @(form: Form[RandomForest])(implicit msg: Messages)
 

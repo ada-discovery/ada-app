@@ -2,10 +2,10 @@ package runnables.ml
 
 import javax.inject.Inject
 
-import models.ml.TreeCore
-import models.ml.regression._
 import persistence.dataset.DataSetAccessorFactory
 import org.incal.play.GuiceRunnableApp
+import org.incal.spark_ml.models.TreeCore
+import org.incal.spark_ml.models.regression._
 import services.DataSetService
 import services.ml.MachineLearningService
 

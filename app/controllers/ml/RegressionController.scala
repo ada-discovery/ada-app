@@ -4,33 +4,32 @@ import java.util.Date
 import javax.inject.Inject
 
 import controllers.core.AdaCrudControllerImpl
-import models._
-import models.ml.TreeCore
-import models.ml.regression._
 import persistence.RepoTypes._
 import play.api.data.Forms.{mapping, optional, _}
 import play.api.data.format.Formats._
 import play.api.data.{Form, Mapping}
 import play.api.i18n.Messages
-import play.api.mvc.{Action, AnyContent, Request, Result}
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import org.incal.play.security.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
 import views.html.{layout, regression => view}
 import controllers.ml.routes.{RegressionController => regressionRoutes}
+import models.DataSpaceMetaInfo
+import models.ml.regression.Regression._
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.AscSort
 import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters._
+import org.incal.spark_ml.models.TreeCore
 import org.incal.spark_ml.models.ValueOrSeq.ValueOrSeq
+import org.incal.spark_ml.models.regression._
 import play.api.libs.json.{JsArray, Json}
 import services.DataSpaceService
 import util.firstCharToLowerCase
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class RegressionController @Inject()(
     repo: RegressionRepo,

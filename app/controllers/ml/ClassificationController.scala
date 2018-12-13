@@ -6,9 +6,8 @@ import javax.inject.Inject
 import controllers._
 import controllers.core.AdaCrudControllerImpl
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
-import models._
-import models.ml.TreeCore
-import models.ml.classification._
+import models.DataSpaceMetaInfo
+import models.ml.classification.Classification._
 import persistence.RepoTypes._
 import play.api.data.Forms.{mapping, optional, _}
 import play.api.data.format.Formats._
@@ -28,6 +27,8 @@ import org.incal.core.dataaccess.AscSort
 import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters._
+import org.incal.spark_ml.models.TreeCore
+import org.incal.spark_ml.models.classification._
 import util.firstCharToLowerCase
 
 import scala.concurrent.ExecutionContext.Implicits.global
