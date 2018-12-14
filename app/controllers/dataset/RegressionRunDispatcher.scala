@@ -4,10 +4,10 @@ import javax.inject.Inject
 
 import org.incal.play.controllers.SecureControllerDispatcher
 import org.incal.core.FilterCondition
-import models.ml.RegressionSetting
 import org.incal.play.security.SecurityRole
 import reactivemongo.bson.BSONObjectID
 import models.security.DataSetPermission
+import org.incal.spark_ml.models.results.RegressionSetting
 
 class RegressionRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf: RegressionRunControllerFactory)
   extends SecureControllerDispatcher[RegressionRunController]("dataSet") with RegressionRunController {

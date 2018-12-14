@@ -25,9 +25,9 @@ import org.incal.play.formatters._
 import org.incal.spark_ml.models.TreeCore
 import org.incal.spark_ml.models.ValueOrSeq.ValueOrSeq
 import org.incal.spark_ml.models.regression._
+import org.incal.core.util.firstCharToLowerCase
 import play.api.libs.json.{JsArray, Json}
 import services.DataSpaceService
-import util.firstCharToLowerCase
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

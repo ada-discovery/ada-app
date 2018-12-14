@@ -3,10 +3,9 @@ package runnables.luxpark
 import models.{AdaException, AdaParseException}
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputRunnable
+import org.incal.core.util.{GroupMapList, writeStringAsStream}
 
 import scala.io.Source
-import util.{GroupMapList, writeStringAsStream}
-
 import scala.reflect.runtime.universe.typeOf
 
 class VariantsToSubjectEntries extends InputRunnable[VariantsToSubjectEntriesSpec] {

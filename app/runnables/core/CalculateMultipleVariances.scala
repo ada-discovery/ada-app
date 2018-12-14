@@ -1,18 +1,17 @@
 package runnables.core
 
-import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
-import org.incal.core.dataaccess.Criterion._
 import models.DataSetFormattersAndIds.FieldIdentity
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.writeStringAsStream
+import org.incal.core.dataaccess.Criterion._
 import services.stats.{CalculatorExecutors, StatsService}
 import services.stats.CalculatorHelper._
-import util.writeStringAsStream
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global

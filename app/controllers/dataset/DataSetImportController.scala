@@ -30,14 +30,13 @@ import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
 import views.html.{datasetimport => view}
 import views.html.layout
 import util.MessageLogger
-import util.{hasNonAlphanumericUnderscore, firstCharToLowerCase}
 import play.api.data.format.Formats._
-import _root_.util.retry
 import controllers.core.AdaCrudControllerImpl
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.DataSetImportFormattersAndIds.copyWithoutTimestamps
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.AscSort
+import org.incal.core.util.{hasNonAlphanumericUnderscore, firstCharToLowerCase, retry}
 import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters._
@@ -438,7 +437,7 @@ class DataSetImportController @Inject()(
           implicit val msg = messagesApi.preferred(request)
           val errorMessage = s"Data set '${importInfo.dataSetName}' import failed"
 
-          retry(s"Data set '${importInfo.dataSetName}' import failed: ", logger, importRetryNum)(
+          retry(s"Data set '${importInfo.dataSetName}' import failed: ", logger.warn(_), importRetryNum)(
             dataSetImporterCentral(importInfo)
           ).map { _ =>
             val execTimeSec = (new Date().getTime - start.getTime) / 1000

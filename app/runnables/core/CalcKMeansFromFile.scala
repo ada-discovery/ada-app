@@ -17,7 +17,7 @@ import services.ml.MachineLearningService
 import collection.JavaConverters._
 import scala.reflect.runtime.universe.typeOf
 import scala.util.Random
-import util.writeStringAsStream
+import org.incal.core.util.{writeStringAsStream, listFiles}
 
 class CalcKMeansFromFile @Inject()(
     val sparkApp: SparkApp,
@@ -53,7 +53,7 @@ class CalcKMeansFromFolder @Inject()(
     val modelPrefix = if (input.useBisecting) "bisKMeans" else "kMeans"
     val iterPart = input.maxIterations.map(iter => "_iter_" + iter).getOrElse("")
 
-    val inputFileNames = util.getListOfFiles(input.inputFolderName).map(_.getName).filter(_.endsWith(input.extension))
+    val inputFileNames = listFiles(input.inputFolderName).map(_.getName).filter(_.endsWith(input.extension))
 
     inputFileNames.map { inputFileName =>
       logger.info(s"Executing k-means with k=${input.k} for the file '$inputFileName'.")

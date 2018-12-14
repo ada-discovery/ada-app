@@ -2,16 +2,15 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import _root_.util.getListOfFiles
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json._
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.listFiles
 import services.DataSetService
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.nio.file.Files.copy
 import java.nio.file.Paths.get
 import scala.reflect.runtime.universe.typeOf
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class RenameSubmissionFiles @Inject()(
@@ -40,7 +39,7 @@ class RenameSubmissionFiles @Inject()(
         }
       }.toMap
 
-      getListOfFiles(spec.inputFolderName).map { submissionFile =>
+      listFiles(spec.inputFolderName).map { submissionFile =>
         submissionFileNameIdMap.get(submissionFile.getName) match {
           case Some(submissionId) => {
             println(s"Copying ${submissionFile.getName} to a new location.")

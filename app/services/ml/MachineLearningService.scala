@@ -4,11 +4,9 @@ import javax.inject.{Inject, Singleton}
 
 import com.google.inject.ImplementedBy
 import models.DataSetFormattersAndIds.JsObjectIdentity
+import models.ml.IOJsonTimeSeriesSpec
 import models.{AdaException, Field, FieldTypeId, FieldTypeSpec}
-import models.ml.classification.Classification
-import models.ml.regression.Regression
 import models.ml.unsupervised.UnsupervisedLearning
-import models.ml.{ClassificationEvalMetric, _}
 import org.apache.spark.ml.feature._
 import org.apache.spark.ml._
 import org.apache.spark.sql.types.{Metadata, MetadataBuilder, StructType, _}
@@ -22,14 +20,15 @@ import services.SparkApp
 import play.api.{Configuration, Logger}
 import services.stats.StatsService
 import org.incal.spark_ml.transformers._
-import org.incal.spark_ml.models.ReservoirSpec
-import org.incal.core.VectorScalerType
-import org.incal.spark_ml.models.classification.Classification
-import org.incal.spark_ml.models.regression.Regression
+import org.incal.spark_ml.models.{LearningSetting, ReservoirSpec}
+import org.incal.spark_ml.models.VectorScalerType
+import org.incal.spark_ml.{SparKMLServiceSetting, SparkMLService}
+import org.incal.spark_ml.models.classification.{Classification, ClassificationEvalMetric}
+import org.incal.spark_ml.models.regression.{Regression, RegressionEvalMetric}
+import org.incal.spark_ml.models.results.{ClassificationResultsHolder, RegressionResultsHolder}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
-import services.ml.results._
 
 @ImplementedBy(classOf[MachineLearningServiceImpl])
 trait MachineLearningService {
@@ -423,7 +422,7 @@ private class MachineLearningServiceImpl @Inject() (
     featuresNormalizationType: Option[VectorScalerType.Value],
     pcaDim: Option[Int]
   ): (DataFrame, Traversable[(String, Int)]) = {
-    val trainer = SparkMLEstimatorFactory[M](mlModel)
+    val trainer = SparkUnsupervisedEstimatorFactory[M](mlModel)
 
     // normalize
     val normalize = featuresNormalizationType.map(VectorColumnScalerNormalizer.applyInPlace(_, "features"))

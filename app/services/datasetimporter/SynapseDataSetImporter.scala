@@ -13,7 +13,7 @@ import play.api.libs.json.{JsArray, JsObject, Json}
 import services.{SynapseService, SynapseServiceFactory}
 import dataaccess.JsonUtil
 import util.FieldUtil.specToField
-import util.nonAlphanumericToUnderscore
+import org.incal.core.util.nonAlphanumericToUnderscore
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

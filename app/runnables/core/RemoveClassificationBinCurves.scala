@@ -2,10 +2,9 @@ package runnables.core
 
 import javax.inject.Inject
 
-import dataaccess.ClassificationResultRepoFactory
 import play.api.Logger
 import org.incal.core.InputFutureRunnable
-import models._
+import persistence.dataset.ClassificationResultRepoFactory
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global

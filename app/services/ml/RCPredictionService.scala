@@ -4,7 +4,6 @@ import java.util.Collections
 import java.{lang => jl, util => ju}
 import javax.inject.Inject
 
-import _root_.util.{retry, seqFutures}
 import com.banda.math.business.MathUtil
 import com.banda.math.business.learning.{IOStream, IOStreamFactory}
 import com.banda.math.domain.rand._
@@ -26,8 +25,10 @@ import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, SparkApp}
 import org.incal.core.dataaccess.Criterion.Infix
-import org.incal.core.{ConditionType, FilterCondition, VectorScalerType}
+import org.incal.core.{ConditionType, FilterCondition}
+import org.incal.core.util.{seqFutures, retry}
 import org.incal.spark_ml.transformers.VectorColumnScalerNormalizer
+import org.incal.spark_ml.models.VectorScalerType
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -183,7 +184,7 @@ class RCPredictionServiceImpl @Inject()(
 
           case (ids, groupIndex) =>
             for {
-              jsons <- retry("Retrieving of JSONs (in a batch) failed:", logger, 5)(getJsons(ids))
+              jsons <- retry("Retrieving of JSONs (in a batch) failed:", logger.warn(_), 5)(getJsons(ids))
 
               // create a sequence of job data/contexts
               indexedJobData <- {

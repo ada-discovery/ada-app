@@ -1,11 +1,11 @@
 package runnables.core
 
 import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
-import models.ml.RegressionEvalMetric
+import org.incal.spark_ml.MachineLearningUtil
+import org.incal.spark_ml.models.regression.RegressionEvalMetric
+import org.incal.spark_ml.models.results.RegressionResultsHolder
+import org.incal.core.util.writeStringAsStream
 import play.api.Logger
-import services.ml.MachineLearningUtil
-import services.ml.results.RegressionResultsHolder
-import util.writeStringAsStream
 
 trait TimeSeriesResultsHelper {
 

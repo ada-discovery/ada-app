@@ -9,6 +9,7 @@ import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.seqFutures
 import services.stats.StatsService
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -47,7 +48,7 @@ class CreateWeightOutlierDiagnosisFilter @Inject()(
       )
 
     for {
-      _ <- util.seqFutures(dataSetIds) { dataSetId =>
+      _ <- seqFutures(dataSetIds) { dataSetId =>
         val dsa = dsaf(dataSetId).get
         Future.sequence(
           conditionCriterionNames.map { case (name, condition, criterion) =>

@@ -7,16 +7,16 @@ import com.banda.math.domain.rand.RandomDistribution
 import com.banda.network.domain.ActivationFunctionType
 import field.FieldTypeHelper
 import models.DataSetFormattersAndIds.FieldIdentity
-import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric}
 import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.DataSetAccessorFactory
 import services.ml.MachineLearningService
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
-import org.incal.core.VectorScalerType
+import org.incal.spark_ml.models.VectorScalerType
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.spark_ml.models.ValueOrSeq.ValueOrSeq
-import org.incal.spark_ml.models.ReservoirSpec
+import org.incal.spark_ml.models.regression.RegressionEvalMetric
+import org.incal.spark_ml.models.{LearningSetting, ReservoirSpec}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf

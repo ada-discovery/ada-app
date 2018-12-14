@@ -3,7 +3,6 @@ package services.datasetimporter
 import java.util.Date
 import javax.inject.Inject
 
-import util.{seqFutures, hasNonAlphanumericUnderscore}
 import dataaccess.RepoTypes.CategoryRepo
 import dataaccess.RepoTypes.FieldRepo
 import dataaccess._
@@ -14,6 +13,7 @@ import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import services.{RedCapService, RedCapServiceFactory}
 import org.incal.core.dataaccess.Criterion.Infix
+import org.incal.core.util.{seqFutures, hasNonAlphanumericUnderscore}
 import field.FieldType
 
 import scala.concurrent.ExecutionContext.Implicits.global

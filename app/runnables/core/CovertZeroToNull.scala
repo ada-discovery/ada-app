@@ -2,7 +2,7 @@ package runnables.core
 
 import java.{util => ju}
 
-import util.seqFutures
+import org.incal.core.util.seqFutures
 import field.FieldTypeHelper
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.{AdaException, FieldTypeId}

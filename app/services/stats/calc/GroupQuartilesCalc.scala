@@ -3,7 +3,7 @@ package services.stats.calc
 import akka.stream.scaladsl.Flow
 import services.stats.{Calculator, CalculatorTypePack}
 import util.AkkaStreamUtil.{groupFlow, seqFlow}
-import util.GroupMapList
+import org.incal.core.util.GroupMapList
 
 trait GroupQuartilesCalcTypePack[G, T] extends CalculatorTypePack {
   type IN = (Option[G], Option[T])

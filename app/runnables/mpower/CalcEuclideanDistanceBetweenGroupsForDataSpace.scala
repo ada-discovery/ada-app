@@ -14,9 +14,9 @@ import services.stats.StatsService
 import _root_.util.FieldUtil.JsonFieldOps
 import org.incal.core.dataaccess.NotEqualsNullCriterion
 import org.incal.core.dataaccess.Criterion.Infix
+import org.incal.core.util.{seqFutures, writeStringAsStream}
 import play.api.libs.json.JsObject
 import services.stats.calc.MatrixCalcHelper
-import util.writeStringAsStream
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -44,7 +44,7 @@ class CalcEuclideanDistanceBetweenGroupsForDataSpace @Inject()(
 
       dataSetIds = dataSpace.map(_.dataSetMetaInfos.map(_.id)).getOrElse(Nil)
 
-      outputs <- util.seqFutures(dataSetIds)(
+      outputs <- seqFutures(dataSetIds)(
         calcDistance(input.xFieldName, input.yFieldName, input.groupFieldName, unescapedDelimiter)
       )
     } yield {
@@ -114,7 +114,7 @@ class CalcEuclideanDistanceBetweenGroupsForDataSpace @Inject()(
         groupJson.toValue(groupFieldName, groupFieldType).get
       }.toSet.toSeq
 
-      groupDists <- util.seqFutures((0 until groups.size)) { groupIndex1 =>
+      groupDists <- seqFutures((0 until groups.size)) { groupIndex1 =>
 
         for {
           group1Jsons <- dsa.dataSetRepo.find(
@@ -124,7 +124,7 @@ class CalcEuclideanDistanceBetweenGroupsForDataSpace @Inject()(
 
           group1Points = points(group1Jsons)
 
-          betweenGroupDists <- util.seqFutures((0 until groupIndex1)) { groupIndex2 =>
+          betweenGroupDists <- seqFutures((0 until groupIndex1)) { groupIndex2 =>
 
             for {
               group2Jsons <- dsa.dataSetRepo.find(

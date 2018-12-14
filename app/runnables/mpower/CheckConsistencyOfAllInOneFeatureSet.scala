@@ -9,6 +9,8 @@ import services.DataSetService
 import dataaccess.RepoTypes.JsonCrudRepo
 import dataaccess.JsonReadonlyRepoExtra._
 import org.incal.core.dataaccess.Criterion._
+import org.incal.core.util.seqFutures
+
 import models.AdaException
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import dataaccess.ignite.BinaryJsonUtil.getValueFromJson
@@ -17,7 +19,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.reflect.runtime.universe.typeOf
 import scala.util.Random
-import _root_.util.seqFutures
 import play.api.Logger
 
 class CheckConsistencyOfAllInOneFeatureSet @Inject()(

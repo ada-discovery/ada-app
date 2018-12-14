@@ -6,6 +6,7 @@ import models.AdaException
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -32,7 +33,7 @@ class FindDuplicateRCResults @Inject()(
       dataSetIds = jsons.map { json => (json \ dataSetFieldName).as[String] }.toSeq.sorted
 
       // collect all the record ids
-      idDuplicates <- util.seqFutures(dataSetIds.grouped(groupSize)) { ids =>
+      idDuplicates <- seqFutures(dataSetIds.grouped(groupSize)) { ids =>
         Future.sequence(ids.map { id =>
           findDuplicateRecordIds(id).map((id, _))
         })

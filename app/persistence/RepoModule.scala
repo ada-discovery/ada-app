@@ -7,7 +7,6 @@ import com.google.inject.assistedinject.FactoryModuleBuilder
 import com.sksamuel.elastic4s.ElasticClient
 import dataaccess.elastic.{ElasticClientProvider, ElasticFormatAsyncCrudRepo, ElasticJsonCrudRepo}
 import dataaccess.ignite.{CacheAsyncCrudRepoFactory, CacheAsyncCrudRepoProvider, JsonBinaryCacheAsyncCrudRepoFactory}
-import dataaccess.mongo.dataset.{CategoryMongoAsyncCrudRepo, ClassificationResultMongoAsyncCrudRepo, FieldMongoAsyncCrudRepo, RegressionResultMongoAsyncCrudRepo}
 import dataaccess._
 import dataaccess.mongo._
 import models.DataSetFormattersAndIds._

@@ -7,7 +7,7 @@ import com.jujutsu.tsne.barneshut.BHTSne
 import com.jujutsu.tsne.barneshut.ParallelBHTsne
 import com.jujutsu.utils.MatrixUtils
 import com.jujutsu.utils.TSneUtils
-import util.writeStringAsStream
+import org.incal.core.util.writeStringAsStream
 
 object LejonTSNEExample extends App {
 

@@ -20,11 +20,11 @@ import services.DataSpaceService
 import controllers.ml.routes.{UnsupervisedLearningController => route}
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.AscSort
+import org.incal.core.util.firstCharToLowerCase
 import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters._
 import org.incal.play.security.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
-import util.firstCharToLowerCase
 import views.html.{layout, unsupervisedlearning => view}
 
 import scala.concurrent.ExecutionContext.Implicits.global

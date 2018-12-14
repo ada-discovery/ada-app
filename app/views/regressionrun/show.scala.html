@@ -2,11 +2,10 @@
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
-@import models.ml.RegressionResult
-@import models.ml.RegressionResult._
+@import org.incal.spark_ml.models.results.RegressionResult
+@import models.ml.regression.RegressionResult.regressionResultFormat
 @import play.api.libs.json.Json
 @import play.api.libs.json.JsObject
-@import reactivemongo.bson.BSONObjectID
 
 @(
     title: String,

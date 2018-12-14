@@ -2,7 +2,7 @@ package services.stats.calc
 
 import akka.stream.scaladsl.Flow
 import services.stats.{Calculator, CalculatorTypePack}
-import util.GroupMapList
+import org.incal.core.util.GroupMapList
 import util.AkkaStreamUtil._
 
 trait GroupNumericDistributionCountsCalcTypePack[G] extends CalculatorTypePack {

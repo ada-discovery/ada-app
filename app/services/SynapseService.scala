@@ -1,10 +1,8 @@
 package services
 
 import java.io._
-import java.util.zip.{ZipEntry, ZipFile, ZipInputStream}
 import javax.inject.Inject
 
-import com.google.inject.Singleton
 import com.google.inject.assistedinject.Assisted
 import models.synapse._
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
@@ -17,8 +15,7 @@ import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import models.synapse.JsonFormat._
 import org.incal.core.util.ZipFileIterator
-import dataaccess.JsonUtil
-import _root_.util.retry
+import org.incal.core.util.retry
 import akka.util.ByteString
 
 trait SynapseServiceFactory {
@@ -394,7 +391,7 @@ protected[services] class SynapseServiceWSImpl @Inject() (
       }
 
       attemptNum match {
-        case Some(attemptNum) => retry("Synapse bulk download failed:", logger, attemptNum)(downloadAux)
+        case Some(attemptNum) => retry("Synapse bulk download failed:", logger.warn(_), attemptNum)(downloadAux)
         case None => downloadAux
       }
     }

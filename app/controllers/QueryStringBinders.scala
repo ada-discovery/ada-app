@@ -7,10 +7,14 @@ import controllers.FilterConditionExtraFormats.eitherFilterOrIdFormat
 import models.{AggType, CorrelationType, FieldTypeId, Filter}
 import models.ml._
 import models.DataSetFormattersAndIds.enumTypeFormat
-import models.ml.ClassificationResult._
-import models.ml.RegressionResult._
-import org.incal.core.{FilterCondition, VectorScalerType}
+import models.ml.classification.ClassificationResult._
+import models.ml.regression.RegressionResult._
+import org.incal.core.FilterCondition
 import org.incal.play.PageOrder
+import org.incal.spark_ml.models.classification.ClassificationEvalMetric
+import org.incal.spark_ml.models.regression.RegressionEvalMetric
+import org.incal.spark_ml.models.results.{ClassificationSetting, RegressionSetting}
+import org.incal.spark_ml.models.VectorScalerType
 import play.api.libs.json.{Format, Json}
 import play.api.mvc.QueryStringBindable
 

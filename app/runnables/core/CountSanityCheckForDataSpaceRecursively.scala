@@ -2,7 +2,8 @@ package runnables.core
 
 import javax.inject.Inject
 
-import org.incal.core.{FutureRunnable, InputFutureRunnable}
+import org.incal.core.InputFutureRunnable
+import org.incal.core.util.seqFutures
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import dataaccess.JsonReadonlyRepoExtra._
@@ -43,8 +44,8 @@ class CountSanityCheckForDataSpaceRecursively @Inject() (
     val dataSetIds = dataSpace.dataSetMetaInfos.map(_.id)
 
     for {
-      results <- util.seqFutures(dataSetIds)(checkDataSet)
-      subResults <- util.seqFutures(dataSpace.children)(checkDataSpaceRecursively)
+      results <- seqFutures(dataSetIds)(checkDataSet)
+      subResults <- seqFutures(dataSpace.children)(checkDataSpaceRecursively)
     } yield
       results ++ subResults.flatten
   }

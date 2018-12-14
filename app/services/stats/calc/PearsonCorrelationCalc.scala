@@ -2,7 +2,7 @@ package services.stats.calc
 
 import akka.stream.scaladsl.{Flow, Sink}
 import services.stats.{Calculator, CalculatorTypePack}
-import _root_.util.GrouppedVariousSize
+import org.incal.core.util.GrouppedVariousSize
 import play.api.Logger
 
 import scala.collection.mutable

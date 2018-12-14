@@ -3,7 +3,7 @@ package runnables.singlecell
 import models.AdaException
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputRunnable
-import util.writeStringAsStream
+import org.incal.core.util.{writeStringAsStream, listFiles}
 
 import scala.io.Source
 import scala.reflect.runtime.universe.typeOf
@@ -21,7 +21,7 @@ class AddVarianceToResultsFromFolder extends InputRunnable[AddVarianceToResultsF
     val geneVarianceMap = loadGeneVariances(input.geneVarianceFileName, input.varianceDelimiter)
 
     // gene position file name -> variance sum calculation
-    val cellPositionFileNames = util.getListOfFiles(input.cellPositionFolderName).map(_.getName).filter(_.endsWith(input.extension))
+    val cellPositionFileNames = listFiles(input.cellPositionFolderName).map(_.getName).filter(_.endsWith(input.extension))
     val cellPositionFileNameVarianceSumMap = cellPositionFileNames.map { cellPositionFileName =>
       val genesAsString = Source.fromFile(input.cellPositionFolderName + "/" + cellPositionFileName).getLines().next()
 

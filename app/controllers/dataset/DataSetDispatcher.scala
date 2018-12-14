@@ -8,9 +8,9 @@ import models.{AggType, FieldTypeId}
 import reactivemongo.bson.BSONObjectID
 import org.incal.play.security.{AuthAction, SecurityRole}
 import models.security.DataSetPermission
-import org.incal.core.{FilterCondition, VectorScalerType}
+import org.incal.core.FilterCondition
+import org.incal.spark_ml.models.VectorScalerType
 import org.incal.play.PageOrder
-import play.api.mvc.{Action, AnyContent}
 
 class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends SecureControllerDispatcher[DataSetController]("dataSet") with DataSetController {
 

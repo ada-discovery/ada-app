@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.incal.play.controllers.SecureControllerDispatcher
 import org.incal.core.FilterCondition
-import models.ml.ClassificationSetting
+import org.incal.spark_ml.models.results.ClassificationSetting
 import reactivemongo.bson.BSONObjectID
 import org.incal.play.security.SecurityRole
 import models.security.DataSetPermission

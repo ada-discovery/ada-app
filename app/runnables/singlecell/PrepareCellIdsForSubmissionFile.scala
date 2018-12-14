@@ -4,9 +4,9 @@ import javax.inject.Inject
 
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.{listFiles, writeStringAsStream}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.Json
-import util.{getListOfFiles, writeStringAsStream}
 
 import scala.concurrent.Future
 import scala.io.Source
@@ -49,7 +49,7 @@ class PrepareCellIdsForSubmissionFolder @Inject() (
     for {
       cellIds <- dsa.dataSetRepo.find().map(_.map(_.as[CellId]))
     } yield {
-      val inputFileNames = util.getListOfFiles(input.inputFolderName).map(_.getName).filter(_.endsWith(input.extension))
+      val inputFileNames = listFiles(input.inputFolderName).map(_.getName).filter(_.endsWith(input.extension))
 
       inputFileNames.map { inputFileName =>
         val exportFileBaseName = inputFileName.substring(0, inputFileName.size - (input.extension.size + 1))

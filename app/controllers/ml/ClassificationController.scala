@@ -5,7 +5,6 @@ import javax.inject.Inject
 
 import controllers._
 import controllers.core.AdaCrudControllerImpl
-import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.DataSpaceMetaInfo
 import models.ml.classification.Classification._
 import persistence.RepoTypes._
@@ -14,7 +13,6 @@ import play.api.data.format.Formats._
 import play.api.data.{Form, Mapping}
 import play.api.i18n.Messages
 import play.api.libs.json.{JsArray, Json}
-import play.api.mvc.{Action, AnyContent, Request, Result}
 import play.twirl.api.Html
 import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
@@ -24,12 +22,12 @@ import views.html.{layout, classification => view}
 import org.incal.spark_ml.models.ValueOrSeq.ValueOrSeq
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.AscSort
+import org.incal.core.util.firstCharToLowerCase
 import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters._
 import org.incal.spark_ml.models.TreeCore
 import org.incal.spark_ml.models.classification._
-import util.firstCharToLowerCase
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

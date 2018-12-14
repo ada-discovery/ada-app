@@ -6,6 +6,7 @@ import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.seqFutures
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -28,7 +29,7 @@ class ImportMPowerIndividualFeatureScoreForDataSpace @Inject()(
       dataSetIdNames = dataSpace.map(_.dataSetMetaInfos.map(info => (info.id, info.name))).getOrElse(Nil)
 
       // import individual feature scores one by one
-      _ <- util.seqFutures(dataSetIdNames) { case (dataSetId, dataSetName) =>
+      _ <- seqFutures(dataSetIdNames) { case (dataSetId, dataSetName) =>
         logger.info(s"Import individual feature scores for the data set $dataSetId.")
         importScores.runAsFuture(ImportMPowerIndividualFeatureScoresSpec(
           dataSetId,

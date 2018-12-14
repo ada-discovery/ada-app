@@ -2,15 +2,15 @@ package runnables.core
 
 import java.{util => ju}
 
-import _root_.util.seqFutures
 import dataaccess.RepoTypes.FieldRepo
 import models.DataSetFormattersAndIds.FieldIdentity
 import models.{Field, FieldTypeId}
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import org.incal.core.dataaccess.Criterion._
+import org.incal.core.util.seqFutures
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+
 
 object CalcUtil {
 

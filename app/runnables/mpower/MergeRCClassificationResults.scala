@@ -2,15 +2,16 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import dataaccess.{ClassificationResultRepoFactory, FilterRepoFactory}
-import models.ml.ClassificationResult
-import models.ml.ClassificationResult.classificationResultFormat
+import dataaccess.FilterRepoFactory
+import models.ml.classification.ClassificationResult.classificationResultFormat
 import models.{AdaException, StorageType}
 import persistence.RepoTypes.ClassificationRepo
-import persistence.dataset.DataSetAccessorFactory
+import persistence.dataset.{ClassificationResultRepoFactory, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.json.{JsObject, Json}
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.seqFutures
+import org.incal.spark_ml.models.results.ClassificationResult
 import services.DataSetService
 import util.FieldUtil.caseClassToFlatFieldTypes
 
@@ -52,7 +53,7 @@ class MergeRCClassificationResults @Inject() (
       dataSetIds = jsons.map { json => (json \ dataSetFieldName).as[String] }.toSeq.sorted
 
       // collect all the results
-      allResults <- util.seqFutures(dataSetIds.grouped(groupSize)) { ids =>
+      allResults <- seqFutures(dataSetIds.grouped(groupSize)) { ids =>
         Future.sequence(ids.map { id =>
           classificationResults(id)
         })

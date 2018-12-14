@@ -30,7 +30,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import services.stats.StatsService
 import util.FieldUtil
 import dataaccess.JsonUtil.unescapeKey
-import models.ml.ClassificationResult
+import models.ml.classification.ClassificationResult
 import util.FieldUtil.caseClassToFlatFieldTypes
 import views.html.{dataview, dictionary => view}
 import util.toHumanReadableCamel

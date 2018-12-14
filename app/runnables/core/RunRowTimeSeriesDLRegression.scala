@@ -4,14 +4,16 @@ import javax.inject.Inject
 
 import field.FieldTypeHelper
 import models.DataSetFormattersAndIds.FieldIdentity
-import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric}
 import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import reactivemongo.bson.BSONObjectID
-import services.ml.{MachineLearningService, MachineLearningUtil}
+import services.ml.MachineLearningService
 import org.incal.core.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion.Infix
-import org.incal.core.VectorScalerType
+import org.incal.spark_ml.models.VectorScalerType
+import org.incal.spark_ml.models.LearningSetting
+import org.incal.spark_ml.models.regression.RegressionEvalMetric
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.Future

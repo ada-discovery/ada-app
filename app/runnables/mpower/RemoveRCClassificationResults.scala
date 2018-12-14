@@ -2,11 +2,11 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import dataaccess.ClassificationResultRepoFactory
 import models.AdaException
-import persistence.dataset.DataSetAccessorFactory
+import persistence.dataset.{ClassificationResultRepoFactory, DataSetAccessorFactory}
 import play.api.Logger
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -32,7 +32,7 @@ class RemoveRCClassificationResults @Inject()(
       dataSetIds = jsons.map { json => (json \ dataSetFieldName).as[String] }.toSeq.sorted
 
       // remove all the classification results
-      _ <- util.seqFutures(dataSetIds.grouped(input.groupSize)) { ids =>
+      _ <- seqFutures(dataSetIds.grouped(input.groupSize)) { ids =>
         Future.sequence(ids.map { id =>
           logger.info(s"Removing classification results in $id...")
           classificationResultRepoFactory(id).deleteAll

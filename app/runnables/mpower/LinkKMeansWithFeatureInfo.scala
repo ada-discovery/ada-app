@@ -3,10 +3,10 @@ package runnables.mpower
 import javax.inject.Inject
 
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.seqFutures
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class LinkKMeansWithFeatureInfo @Inject()(
     linkFeatureFile: LinkFeatureFileWithFeatureInfo
@@ -22,7 +22,7 @@ class LinkKMeansWithFeatureInfo @Inject()(
   override def runAsFuture(input: LinkKMeansWithFeatureInfoSpec) = {
     val inputFileNames = fileNames(input.fileNamePrefix) ++ fileNames(input.fileNamePrefix + "-scaled")
 
-    util.seqFutures(inputFileNames) { fileName =>
+    seqFutures(inputFileNames) { fileName =>
       val dataSetId = fileName.toLowerCase.substring(0, fileName.size - 4).replaceAllLiterally(".", "_")
       val dataSetName = dataSetId.capitalize.replaceAllLiterally("_", " ").replaceAllLiterally("-", " ")
 

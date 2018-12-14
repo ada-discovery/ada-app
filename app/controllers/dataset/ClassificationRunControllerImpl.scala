@@ -9,8 +9,7 @@ import models.{DistributionWidgetSpec, _}
 import models.Filter.{FilterIdentity, FilterOrId}
 import models.DataSetFormattersAndIds._
 import dataaccess.FilterRepoExtra._
-import models.ml.{ClassificationSetting, _}
-import models.ml.ClassificationResult.classificationResultFormat
+import models.ml.classification.ClassificationResult.classificationResultFormat
 import models.Widget.{WidgetWrites, scatterWidgetFormat}
 import persistence.RepoTypes.ClassificationRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -32,13 +31,17 @@ import field.FieldTypeHelper
 import models.json.{EnumFormat, OrdinalEnumFormat}
 import models.ml.classification.Classification.ClassificationIdentity
 import services.stats.StatsService
-import org.incal.core.{FilterCondition, VectorScalerType}
+import org.incal.core.FilterCondition
+import org.incal.spark_ml.models.VectorScalerType
 import org.incal.core.dataaccess.Criterion
 import org.incal.play.Page
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.FilterCondition.toCriterion
 import org.incal.play.controllers._
 import org.incal.play.security.AuthAction
+import org.incal.spark_ml.MachineLearningUtil
+import org.incal.spark_ml.models.classification.ClassificationEvalMetric
+import org.incal.spark_ml.models.results.{BinaryClassificationCurves, ClassificationResult, ClassificationSetting, MetricStatsValues}
 
 import scala.reflect.runtime.universe.TypeTag
 import views.html.{classificationrun => view}
@@ -537,7 +540,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
           val classificationEvalMetricFormat = OrdinalEnumFormat.enumFormat(classificationEvalMetricMap)
           val vectorTransformTypeFormat = OrdinalEnumFormat.enumFormat(vectorTransformTypeMap)
 
-          implicit val classificationResultFormat = ClassificationResult.createClassificationResultFormat(vectorTransformTypeFormat, classificationEvalMetricFormat)
+          implicit val classificationResultFormat = models.ml.classification.ClassificationResult.createClassificationResultFormat(vectorTransformTypeFormat, classificationEvalMetricFormat)
 
           val resultJson = Json.toJson(result)(classificationResultFormat).as[JsObject]
 

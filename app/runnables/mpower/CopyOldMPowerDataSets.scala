@@ -4,8 +4,8 @@ import javax.inject.Inject
 
 import persistence.dataset.DataSetAccessorFactory
 import org.incal.core.FutureRunnable
+import org.incal.core.util.seqFutures
 import services.DataSetService
-import util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

@@ -10,6 +10,7 @@ import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -38,7 +39,7 @@ class RemoveDuplicateRCResults @Inject()(
       dataSetIds = jsons.map { json => (json \ dataSetFieldName).as[String] }.toSeq.sorted
 
       // collect all the record ids
-      idDuplicates <- util.seqFutures(dataSetIds.grouped(groupSize)) { ids =>
+      idDuplicates <- seqFutures(dataSetIds.grouped(groupSize)) { ids =>
         Future.sequence(ids.map { id =>
           logger.info(s"Finding duplicates in $id...")
           val dsa = dsaf(id).getOrElse(

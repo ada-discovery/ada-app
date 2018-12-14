@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.sql.DataFrame
-import org.incal.core.VectorScalerType
+import org.incal.spark_ml.models.VectorScalerType
 import org.incal.play.GuiceRunnableApp
 import org.incal.spark_ml.transformers._
 import services.SparkApp

@@ -1,11 +1,12 @@
-package dataaccess.mongo.dataset
+package persistence.dataset
 
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
 import dataaccess.RepoTypes.DictionaryRootRepo
-import models.ml.ClassificationResult
-import models.ml.ClassificationResult._
+import dataaccess.mongo.dataset.DictionarySubordinateMongoAsyncCrudRepo
+import org.incal.spark_ml.models.results.ClassificationResult
+import models.ml.classification.ClassificationResult._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 

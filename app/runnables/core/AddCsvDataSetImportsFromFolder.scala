@@ -2,10 +2,10 @@ package runnables.core
 
 import javax.inject.Inject
 
-import _root_.util.getListOfFiles
 import models.{CsvDataSetImport, DataSetSetting, StorageType}
 import persistence.RepoTypes.DataSetImportRepo
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.listFiles
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
@@ -15,7 +15,7 @@ class AddCsvDataSetImportsFromFolder @Inject()(
   ) extends InputFutureRunnable[AddCsvDataSetImportsFromFolderSpec] {
 
   override def runAsFuture(spec: AddCsvDataSetImportsFromFolderSpec) = {
-    val csvImports = getListOfFiles(spec.folderPath).map { importFile =>
+    val csvImports = listFiles(spec.folderPath).map { importFile =>
       val importFileName = importFile.getName
       val importFileNameWoExt = importFileName.replaceAll("\\.[^.]*$", "")
 

@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputFutureRunnable
 import persistence.dataset.DataSetAccessorFactory
-import util.writeStringAsStream
+import org.incal.core.util.writeStringAsStream
 
 import scala.concurrent.Future
 import scala.io.Source

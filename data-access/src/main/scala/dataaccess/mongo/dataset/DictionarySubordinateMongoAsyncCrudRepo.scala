@@ -13,7 +13,7 @@ import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 
-protected[dataaccess] class DictionarySubordinateMongoAsyncCrudRepo[E: Format, ID: Format](
+class DictionarySubordinateMongoAsyncCrudRepo[E: Format, ID: Format](
     listName: String,
     dataSetId: String,
     dictionaryRepo: DictionaryRootRepo)(
@@ -21,7 +21,7 @@ protected[dataaccess] class DictionarySubordinateMongoAsyncCrudRepo[E: Format, I
   ) extends SubordinateObjectMongoAsyncCrudRepo[E, ID, Dictionary, BSONObjectID](listName, dictionaryRepo) {
 
   override protected def getDefaultRoot =
-    Dictionary(None, dataSetId, Nil, Nil, Nil, Nil, Nil)
+    Dictionary(None, dataSetId, Nil, Nil, Nil, Nil)
 
   override protected def getRootObject =
     dictionaryRepo.find(Seq("dataSetId" #== dataSetId)).map(_.headOption)

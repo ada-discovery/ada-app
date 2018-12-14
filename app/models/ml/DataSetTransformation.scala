@@ -3,7 +3,7 @@ package models.ml
 import dataaccess.StreamSpec
 import models.StorageType
 import models.json.EnumFormat
-import org.incal.core.VectorScalerType
+import org.incal.spark_ml.models.VectorScalerType
 import play.api.libs.json.Json
 
 trait DataSetTransformation {

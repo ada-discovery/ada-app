@@ -5,16 +5,16 @@ import javax.inject.Inject
 
 import com.banda.math.domain.rand.RandomDistribution
 import com.banda.network.domain.ActivationFunctionType
-import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric}
+import models.ml.IOJsonTimeSeriesSpec
 import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
-import services.ml.{MachineLearningService, MachineLearningUtil}
-import util.writeStringAsStream
-import org.incal.core.VectorScalerType
+import services.ml.MachineLearningService
+import org.incal.spark_ml.models.VectorScalerType
 import org.incal.core.InputFutureRunnable
 import org.incal.spark_ml.models.ValueOrSeq.ValueOrSeq
-import org.incal.spark_ml.models.ReservoirSpec
+import org.incal.spark_ml.models.{LearningSetting, ReservoirSpec}
+import org.incal.spark_ml.models.regression.RegressionEvalMetric
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf

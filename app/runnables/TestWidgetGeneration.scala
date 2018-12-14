@@ -6,7 +6,7 @@ import models.{DataView, Field, WidgetGenerationMethod}
 import org.incal.core.FutureRunnable
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import services.WidgetGenerationService
-import util.seqFutures
+import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

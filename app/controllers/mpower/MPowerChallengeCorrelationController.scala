@@ -2,9 +2,9 @@ package controllers.mpower
 
 import javax.inject.Inject
 
-import _root_.util.{GroupMapList, seqFutures}
 import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
 import org.incal.core.dataaccess.Criterion._
+import org.incal.core.util.{GroupMapList, seqFutures}
 import org.incal.play.controllers._
 import models.AdaException
 import models.DataSetFormattersAndIds.FieldIdentity

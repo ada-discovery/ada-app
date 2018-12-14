@@ -1,52 +1,13 @@
-package models.ml
-
-import java.{util => ju}
+package models.ml.regression
 
 import dataaccess.BSONObjectIdentity
 import models.json.{EnumFormat, FlattenFormat, TupleFormat}
-import play.api.libs.json.Json
+import org.incal.spark_ml.models.VectorScalerType
+import org.incal.spark_ml.models.regression.RegressionEvalMetric
+import org.incal.spark_ml.models.results.{MetricStatsValues, RegressionMetricStats, RegressionResult, RegressionSetting}
+import play.api.libs.json.{Json, _}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import play.api.libs.json._
-import org.incal.core.VectorScalerType
-
-case class RegressionResult(
-  _id: Option[BSONObjectID],
-  setting: RegressionSetting,
-  trainingStats: RegressionMetricStats,
-  testStats: RegressionMetricStats,
-  replicationStats: Option[RegressionMetricStats] = None,
-  timeCreated: ju.Date = new ju.Date()
-)
-
-case class RegressionMetricStats(
-  mse: MetricStatsValues,
-  rmse: MetricStatsValues,
-  r2: MetricStatsValues,
-  mae: MetricStatsValues
-)
-
-case class RegressionSetting(
-  mlModelId: BSONObjectID,
-  outputFieldName: String,
-  inputFieldNames: Seq[String],
-  filterId: Option[BSONObjectID],
-  featuresNormalizationType: Option[VectorScalerType.Value],
-//  featuresSelectionNum: Option[Int],
-  pcaDims: Option[Int],
-  trainingTestingSplit: Option[Double],
-  replicationFilterId: Option[BSONObjectID],
-//  samplingRatios: Seq[(String, Double)],
-  repetitions: Option[Int],
-  crossValidationFolds: Option[Int],
-  crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
-) {
-  def fieldNamesToLoads =
-    if (inputFieldNames.nonEmpty) (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq else Nil
-
-  def learningSetting =
-    LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
-}
 
 object RegressionResult {
 

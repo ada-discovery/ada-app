@@ -6,11 +6,11 @@ import models.{AdaException, Field, FieldTypeId, StorageType}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json._
 import services.DataSetService
-import _root_.util.{GroupMapList, seqFutures}
 import controllers.mpower._
 import models.DataSetFormattersAndIds.FieldIdentity
 import org.incal.core.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion._
+import org.incal.core.util.{seqFutures, GroupMapList}
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global

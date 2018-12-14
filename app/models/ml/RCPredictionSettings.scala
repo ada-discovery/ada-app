@@ -10,7 +10,7 @@ import util.FieldUtil
 import java.{util => ju}
 
 import com.banda.network.domain.{ActivationFunctionType, ReservoirLearningSetting}
-import org.incal.core.VectorScalerType
+import org.incal.spark_ml.models.VectorScalerType
 
 case class RCPredictionSettings(
   reservoirNodeNums: Seq[Int],

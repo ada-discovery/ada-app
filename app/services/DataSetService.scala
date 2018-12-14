@@ -8,8 +8,9 @@ import dataaccess.RepoTypes.{FieldRepo, JsonCrudRepo, JsonReadonlyRepo}
 import dataaccess.JsonReadonlyRepoExtra._
 import dataaccess.JsonCrudRepoExtra._
 import dataaccess.{JsonUtil, StreamSpec}
-import _root_.util.{GroupMapList, MessageLogger, nonAlphanumericToUnderscore}
+import _root_.util.MessageLogger
 import _root_.util.FieldUtil.{fieldTypeOrdering, isNumeric}
+import _root_.util.FieldUtil.{InfixFieldOps, JsonFieldOps}
 import com.google.inject.ImplementedBy
 import models._
 import persistence.RepoTypes._
@@ -19,19 +20,18 @@ import play.api.libs.json.{JsObject, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.{AscSort, Criterion}
+import org.incal.core.util.{GroupMapList, crossProduct, nonAlphanumericToUnderscore, retry, seqFutures}
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{Await, Future}
 import play.api.Configuration
 import dataaccess.JsonUtil._
-import _root_.util.{crossProduct, retry, seqFutures}
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.scaladsl.{Sink, Source, StreamConverters}
 import field.{FieldType, FieldTypeHelper, FieldTypeInferrer}
 import models.ml._
-import org.incal.core.dataaccess.{AscSort, Criterion}
-import _root_.util.FieldUtil.{InfixFieldOps, JsonFieldOps}
 
 import scala.collection.Set
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
@@ -307,7 +307,7 @@ class DataSetServiceImpl @Inject()(
 //            )
 //          }
 //        ).map(_ => ())
-        retry(s"Data saving failed:", logger, 3)(
+        retry(s"Data saving failed:", logger.warn(_), 3)(
           dataRepo.save(transformedJsons).map { _ =>
             logProgress(startIndex + transformedJsons.size, reportLineSize, size)
             // TODO: flush??

@@ -2,7 +2,7 @@ package services.stats.calc
 
 import akka.stream.scaladsl.Flow
 import services.stats.{Calculator, NoOptionsCalculatorTypePack}
-import util.GroupMapList
+import org.incal.core.util.GroupMapList
 import services.stats.CalculatorHelper._
 import util.AkkaStreamUtil.seqFlow
 

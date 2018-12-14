@@ -1,7 +1,7 @@
 package runnables.mpower
 
 import org.incal.core.InputRunnable
-import util.getListOfFiles
+import org.incal.core.util.listFiles
 
 import scala.io.Source
 import java.nio.file.{Paths, Files}
@@ -11,7 +11,7 @@ import scala.reflect.runtime.universe.typeOf
 class MergeHeaders extends InputRunnable[MergeHeadersSpec] {
 
   override def run(input: MergeHeadersSpec) = {
-    val newHeaders = getListOfFiles(input.folderPath).sortBy(_.getName).zipWithIndex.map {
+    val newHeaders = listFiles(input.folderPath).sortBy(_.getName).zipWithIndex.map {
       case (headerFile, index) =>
         val headerName = headerFile.getName.split('.').head
         val header = Source.fromFile(headerFile).getLines().next().replaceAll("\"", "")

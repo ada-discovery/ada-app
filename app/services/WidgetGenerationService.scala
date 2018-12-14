@@ -10,6 +10,7 @@ import com.google.inject.ImplementedBy
 import dataaccess.RepoTypes.JsonReadonlyRepo
 import models._
 import org.incal.core.dataaccess.Criterion
+import org.incal.core.util.GroupMapList
 import play.api.{Configuration, Logger}
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
@@ -18,7 +19,6 @@ import services.widgetgen._
 import services.stats.CalculatorHelper._
 import util.AkkaStreamUtil
 import util.FieldUtil._
-import util.GroupMapList
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

@@ -1,11 +1,12 @@
-package dataaccess.mongo.dataset
+package persistence.dataset
 
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
 import dataaccess.RepoTypes.DictionaryRootRepo
-import models.ml.RegressionResult
-import models.ml.RegressionResult._
+import dataaccess.mongo.dataset.DictionarySubordinateMongoAsyncCrudRepo
+import org.incal.spark_ml.models.results.RegressionResult
+import models.ml.regression.RegressionResult._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 

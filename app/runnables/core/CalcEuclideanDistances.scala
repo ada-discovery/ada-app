@@ -15,7 +15,7 @@ import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
 import services.stats.StatsService
-import util.seqFutures
+import org.incal.core.util.seqFutures
 import runnables.core.CalcUtil._
 
 import scala.concurrent.ExecutionContext.Implicits.global

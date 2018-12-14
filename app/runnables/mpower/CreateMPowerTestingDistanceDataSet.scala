@@ -3,7 +3,6 @@ package runnables.mpower
 import java.{util => ju}
 import javax.inject.Inject
 
-import _root_.util.seqFutures
 import dataaccess.JsonUtil
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models._
@@ -15,6 +14,7 @@ import services.DataSetService
 import dataaccess.JsonReadonlyRepoExtra._
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
+import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

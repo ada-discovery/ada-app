@@ -1,6 +1,5 @@
 package runnables.core
 
-import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
 import dataaccess.JsonUtil.jsonsToCsv
@@ -10,7 +9,7 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
-import util.writeStringAsStream
+import org.incal.core.util.{seqFutures, writeStringAsStream}
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -31,7 +30,7 @@ class ExportDataSetsForSpaceAsCsvs @Inject() (
 
       dataSetIds = dataSpace.map(_.dataSetMetaInfos.map(_.id)).getOrElse(Nil)
 
-      _ <- util.seqFutures(dataSetIds)(
+      _ <- seqFutures(dataSetIds)(
         exportDataSet(input.delimiter, input.exportFolder)
       )
     } yield

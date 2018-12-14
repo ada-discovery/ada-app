@@ -7,16 +7,20 @@ import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.FilterCondition.toCriterion
 import models.{AdaException, Filter}
-import models.ml.{ClassificationEvalMetric, ClassificationSetting}
-import org.incal.core.{FilterCondition, InputFutureRunnable, VectorScalerType}
+import org.incal.core.{FilterCondition, InputFutureRunnable}
+import org.incal.core.util.seqFutures
+import org.incal.spark_ml.MachineLearningUtil
+import org.incal.spark_ml.models.classification.ClassificationEvalMetric
+import org.incal.spark_ml.models.results.ClassificationSetting
+import org.incal.spark_ml.models.VectorScalerType
 import persistence.RepoTypes.ClassificationRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import services.DataSetService
-import services.ml.{MachineLearningService, MachineLearningUtil}
+import services.ml.MachineLearningService
 import services.stats.StatsService
-import util.{FieldUtil, seqFutures}
+import util.FieldUtil
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

@@ -8,7 +8,7 @@ import models.AdaException
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
-import util.seqFutures
+import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

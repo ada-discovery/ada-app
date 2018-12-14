@@ -10,10 +10,10 @@ import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.{StorageType, _}
 import models.ml.{DerivedDataSetSpec, RenameFieldsSpec}
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.{hasNonAlphanumericUnderscore, nonAlphanumericToUnderscore}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import services.{DataSetService, DataSpaceService}
-import util.{hasNonAlphanumericUnderscore, nonAlphanumericToUnderscore}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

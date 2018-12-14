@@ -8,7 +8,7 @@ import dataaccess.RepoTypes.{CategoryRepo, FieldRepo}
 import models._
 import persistence.dataset.DataSetAccessor
 import reactivemongo.bson.BSONObjectID
-import util._
+import org.incal.core.util.seqFutures
 import collection.mutable.{Map => MMap}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global

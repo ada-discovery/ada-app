@@ -2,7 +2,7 @@ package services.stats.calc
 
 import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 import util.AkkaStreamUtil._
-import util.GroupMapList
+import org.incal.core.util.GroupMapList
 
 trait GroupUniqueDistributionCountsCalcTypePack[G, T] extends NoOptionsCalculatorTypePack {
   type IN = (Option[G], Option[T])

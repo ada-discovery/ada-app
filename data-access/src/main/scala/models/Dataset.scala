@@ -8,7 +8,6 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import dataaccess._
 import models.json.{EnumFormat, ManifestedFormat, SerializableFormat, SubTypeFormat}
-import models.ml.ClassificationResult
 import org.incal.core.Identity
 
 import scala.collection.mutable.Buffer
@@ -71,8 +70,8 @@ case class Dictionary(
   fields: Seq[Field],
   categories: Seq[Category],
   filters: Seq[Filter],
-  dataviews: Seq[DataView],
-  classificationResults: Seq[ClassificationResult]
+  dataviews: Seq[DataView]
+//  classificationResults: Seq[ClassificationResult]
 //  parents : Seq[Dictionary],
 )
 

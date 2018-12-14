@@ -4,6 +4,7 @@ import dataaccess.RepoTypes.{FieldRepo, JsonCrudRepo}
 import field.{FieldType, FieldTypeHelper}
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.{AdaException, Field, FieldTypeId}
+import org.incal.core.util.seqFutures
 import play.api.libs.json.{JsNull, JsString, JsValue, Json}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
@@ -54,7 +55,7 @@ class ReplaceString extends DsaInputFutureRunnable[ReplaceStringSpec] {
       }
 
       // replace the values and update the records
-      _ <- util.seqFutures(idReplacedStringValues.toSeq.grouped(spec.batchSize)) { group =>
+      _ <- seqFutures(idReplacedStringValues.toSeq.grouped(spec.batchSize)) { group =>
         for {
           newJsons <- Future.sequence(
             group.map { case (id, replacedStringValue) =>

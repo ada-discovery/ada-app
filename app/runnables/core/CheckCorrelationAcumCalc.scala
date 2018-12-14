@@ -3,7 +3,7 @@ package runnables.core
 import java.{util => ju}
 
 import services.stats.calc.{PersonIterativeAccumGlobal, PersonIterativeAccumGlobalArray}
-import util.GrouppedVariousSize
+import org.incal.core.util.GrouppedVariousSize
 
 import scala.collection.mutable
 import scala.collection.parallel.mutable.ParArray

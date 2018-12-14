@@ -1,6 +1,6 @@
-package dataaccess
+package persistence.dataset
 
-import dataaccess.RepoTypes.ClassificationResultRepo
+import persistence.RepoTypes.ClassificationResultRepo
 
 trait ClassificationResultRepoFactory {
   def apply(dataSetId: String): ClassificationResultRepo

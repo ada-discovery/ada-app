@@ -1,8 +1,6 @@
 package runnables.mpower
 
-import java.nio.charset.StandardCharsets
-
-import util.writeStringAsStream
+import org.incal.core.util.{writeStringAsStream, listFiles}
 
 import scala.io.Source
 
@@ -15,7 +13,7 @@ object MergeClusteringCsvs extends App {
   private val folderName = "/home/peter/Research/LCSB/mPower/mPower Challenge/Clustering_pValues/"
 //  private val fileName = "mpower_kmeans_tsne_auroc_vs_clazz.csv"
 
-  val csvFiles = util.getListOfFiles(folderName).filter(_.getName.endsWith("csv"))
+  val csvFiles = listFiles(folderName).filter(_.getName.endsWith("csv"))
 
   csvFiles.foreach { file =>
     if (file.getName.contains("tsne_"))

@@ -12,7 +12,7 @@ import org.incal.core.dataaccess.AscSort
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
 import reactivemongo.play.json.BSONObjectIDFormat
-import util.seqFutures
+import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

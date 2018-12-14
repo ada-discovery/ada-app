@@ -3,7 +3,7 @@ package services.stats.calc
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 import util.AkkaStreamUtil._
-import util.GroupMapList3
+import org.incal.core.util.GroupMapList3
 
 trait GroupTupleCalcTypePack[G, A, B] extends NoOptionsCalculatorTypePack {
   type IN = (Option[G], Option[A], Option[B])

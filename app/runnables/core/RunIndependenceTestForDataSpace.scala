@@ -1,19 +1,16 @@
 package runnables.core
 
-import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
-import dataaccess.JsonUtil.jsonsToCsv
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
-import models.DataSetFormattersAndIds.FieldIdentity
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.{seqFutures, writeStringAsStream}
 import services.stats.StatsService
 import services.stats.calc.{ChiSquareResult, OneWayAnovaResult}
-import util.writeStringAsStream
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -40,7 +37,7 @@ class RunIndependenceTestForDataSpace @Inject()(
 
       dataSetIds = dataSpace.map(_.dataSetMetaInfos.map(_.id)).getOrElse(Nil)
 
-      outputs <- util.seqFutures(dataSetIds)(
+      outputs <- seqFutures(dataSetIds)(
         runIndependenceTest(input.inputFieldName, input.targetFieldName, unescapedDelimiter)
       )
     } yield {

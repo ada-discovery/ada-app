@@ -15,7 +15,7 @@ import org.incal.play.GuiceRunnableApp
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import dataaccess.CategoryRepo.saveRecursively
 import org.incal.core.FutureRunnable
-import util.nonAlphanumericToUnderscore
+import org.incal.core.util.nonAlphanumericToUnderscore
 
 import scala.concurrent.duration._
 import scala.concurrent.Await.result

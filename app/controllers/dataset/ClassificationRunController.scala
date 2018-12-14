@@ -1,8 +1,8 @@
 package controllers.dataset
 
 import org.incal.core.FilterCondition
-import models.ml.ClassificationSetting
 import org.incal.play.controllers.ReadonlyController
+import org.incal.spark_ml.models.results.ClassificationSetting
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 

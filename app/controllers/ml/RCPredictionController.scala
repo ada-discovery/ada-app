@@ -7,7 +7,7 @@ import com.banda.math.business.rand.RandomDistributionProviderFactory
 import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.ActivationFunctionType
 import models.ml._
-import org.incal.core.VectorScalerType
+import org.incal.spark_ml.models.VectorScalerType
 import persistence.RepoTypes.MessageRepo
 import persistence.dataset.DataSetAccessorFactory
 import play.api.{Configuration, Logger}
@@ -16,6 +16,7 @@ import play.api.data.Forms.{mapping, _}
 import org.incal.play.controllers._
 import org.incal.play.formatters._
 import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
+import org.incal.core.util.seqFutures
 import services.DataSpaceService
 import services.ml.RCPredictionService
 import util.MessageLogger
@@ -126,7 +127,7 @@ class RCPredictionController @Inject()(
         },
         settings =>
           for {
-            _ <- util.seqFutures(toRCSettings(settings))(
+            _ <- seqFutures(toRCSettings(settings))(
               (mPowerWalkingRCPredictionService.predictAndStoreResults(_,_,_,_)).tupled
             )
           } yield {

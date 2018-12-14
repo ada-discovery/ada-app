@@ -1,8 +1,8 @@
 package runnables.singlecell
 
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.{InputFutureRunnable, InputRunnable}
-import util.writeStringAsStream
+import org.incal.core.InputRunnable
+import org.incal.core.util.{writeStringAsStream, listFiles}
 
 import scala.io.Source
 import scala.reflect.runtime.universe.typeOf
@@ -17,7 +17,7 @@ class MergeResultsFromFolder extends InputRunnable[MergeResultsFromFolderSpec] {
   ): Unit = {
     val delimiter = StringEscapeUtils.unescapeJava(input.delimiter.getOrElse(defaultDelimiter))
 
-    val inputFileNames = util.getListOfFiles(input.inputFolderName).map(_.getName).filter(_.endsWith(input.extension))
+    val inputFileNames = listFiles(input.inputFolderName).map(_.getName).filter(_.endsWith(input.extension))
 
     val results = inputFileNames.flatMap { inputFileName =>
       val lines = Source.fromFile(input.inputFolderName + "/" + inputFileName).getLines()

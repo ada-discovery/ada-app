@@ -10,8 +10,8 @@ import play.api.Logger
 
 import collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}
 import org.incal.core.dataaccess.Criterion._
-import util.writeStringAsStream
-import util.GroupMapList
+import org.incal.core.util.{writeStringAsStream, listFiles}
+import org.incal.core.util.GroupMapList
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -62,7 +62,7 @@ class SelectGenesAsCentroidClosestFromFolder @Inject()(
       // get all the referenced gene names
       targetGenes <- cellPositionGeneDsa.dataSetRepo.find(projection = Seq("Gene")).map(_.map(json => (json \ "Gene").as[String]).toSet)
     } yield {
-      val inputFileNames = util.getListOfFiles(input.inputFolderName).map(_.getName).filter(_.endsWith(input.extension))
+      val inputFileNames = listFiles(input.inputFolderName).map(_.getName).filter(_.endsWith(input.extension))
 
       inputFileNames.map { inputFileName =>
         val exportFileBaseName = inputFileName.substring(0, inputFileName.size - (input.extension.size + 1))

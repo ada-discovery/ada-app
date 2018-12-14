@@ -11,6 +11,7 @@ import reactivemongo.bson.BSONObjectID
 import scala.concurrent.Future
 import scala.concurrent.Await.result
 import dataaccess.RepoTypes._
+import persistence.RepoTypes.{ClassificationResultRepo, RegressionResultRepo}
 
 trait DataSetAccessor {
   def dataSetId: String

@@ -7,11 +7,11 @@ import javax.inject.Inject
 import security.AdaAuthConfig
 
 import scala.collection.mutable.{Map => MMap}
-import _root_.util.{FieldUtil, GroupMapList}
 import dataaccess.JsonUtil._
 import _root_.util.WebExportUtil._
-import _root_.util.{seqFutures, shorten}
-import _root_.util.FieldUtil.InfixFieldOps
+import _root_.util.shorten
+import _root_.util.FieldUtil.{InfixFieldOps, valueConverters}
+import org.incal.core.util.{GroupMapList, seqFutures}
 import dataaccess._
 import dataaccess.FilterRepoExtra._
 import models.{MultiChartDisplayOptions, _}
@@ -58,7 +58,7 @@ import org.incal.play.controllers._
 import org.incal.play.formatters._
 import org.incal.play.security.AuthAction
 import org.incal.play.security.SecurityRole
-import org.incal.core.VectorScalerType
+import org.incal.spark_ml.models.VectorScalerType
 
 import scala.math.Ordering.Implicits._
 import scala.concurrent.{Future, TimeoutException}
@@ -246,7 +246,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override protected def filterValueConverters(
     fieldNames: Traversable[String]
   ): Future[Map[String, String => Option[Any]]] =
-    FieldUtil.valueConverters(fieldRepo, fieldNames)
+    valueConverters(fieldRepo, fieldNames)
 
   /**
     * Generate content of csv export file and create download.

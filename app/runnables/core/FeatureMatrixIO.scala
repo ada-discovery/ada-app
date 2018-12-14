@@ -9,7 +9,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{FileIO, Framing, Sink, Source}
 import util.AkkaStreamUtil.headAndTail
 import akka.util.ByteString
-import util.writeByteArrayStream
+import org.incal.core.util.writeByteArrayStream
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

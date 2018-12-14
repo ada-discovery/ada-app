@@ -4,7 +4,7 @@ import akka.stream.scaladsl.Flow
 import services.stats.{Calculator, CalculatorTypePack}
 
 import scala.collection.mutable
-import util.{GroupMapList, crossProduct}
+import org.incal.core.util.{GroupMapList, crossProduct}
 
 trait AllDefinedSeqBinCalcTypePack[ACCUM, AGG] extends CalculatorTypePack {
   type IN = Seq[Double]

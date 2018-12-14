@@ -6,6 +6,8 @@ import com.google.inject.Inject
 import models.{AdaException, Field, FieldTypeId}
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.{writeStringAsStream, listFiles, seqFutures}
+
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 
@@ -13,7 +15,6 @@ import collection.mutable.ArrayBuffer
 import services.stats.CalculatorExecutors
 import org.incal.core.dataaccess.Criterion._
 import play.api.libs.json.Json
-import util.writeStringAsStream
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -134,11 +135,11 @@ class CalcMCCBasedPositionsFromFolder @Inject()(
     finalMethod: Boolean,
     finalMethodPositionSelectionNum: Int
   ): Future[Traversable[(Int, Double, String)]] = {
-    val inputFileNames = util.getListOfFiles(inputFolderName).map(_.getName).filter(_.endsWith(extension))
+    val inputFileNames = listFiles(inputFolderName).map(_.getName).filter(_.endsWith(extension))
     val delimiter = StringEscapeUtils.unescapeJava(delimiterOption.getOrElse(defaultDelimiter))
 
 
-    util.seqFutures(inputFileNames) { inputFileName =>
+    seqFutures(inputFileNames) { inputFileName =>
       val selectedGenes = Source.fromFile(inputFolderName + "/" + inputFileName).mkString.split(delimiter, -1).toSeq
       val exportFileName = inputFileName.substring(0, inputFileName.size - (extension.size + 1)) + "_cell_positions.csv"
       val fullExportFileName = exportFolderName + "/" + exportFileName

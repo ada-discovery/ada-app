@@ -8,6 +8,7 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.seqFutures
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -24,7 +25,7 @@ class SetClazzFieldToEnum @Inject()(
     for {
       dataSpace <- dataSpaceMetaInfoRepo.get(BSONObjectID.parse(input.dataSpaceId).get).map(_.get)
 
-      _ <- util.seqFutures(dataSpace.dataSetMetaInfos) { dataSetMetaInfo =>
+      _ <- seqFutures(dataSpace.dataSetMetaInfos) { dataSetMetaInfo =>
         val dataSetId = dataSetMetaInfo.id
         val dsa = dsaf(dataSetId).get
 

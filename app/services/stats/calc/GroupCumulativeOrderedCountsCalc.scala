@@ -3,7 +3,7 @@ package services.stats.calc
 import akka.stream.scaladsl.Flow
 import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 import util.AkkaStreamUtil.{countFlow, seqFlow}
-import util.GroupMapList
+import org.incal.core.util.GroupMapList
 
 trait GroupCumulativeOrderedCountsCalcTypePack[G, T] extends NoOptionsCalculatorTypePack {
   type IN = (Option[G], Option[T])

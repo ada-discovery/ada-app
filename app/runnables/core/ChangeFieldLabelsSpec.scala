@@ -6,7 +6,7 @@ import models.DataSetFormattersAndIds.FieldIdentity
 import org.incal.core.InputFutureRunnable
 import persistence.dataset.DataSetAccessorFactory
 import org.incal.core.dataaccess.Criterion.Infix
-import util.seqFutures
+import org.incal.core.util.seqFutures
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global

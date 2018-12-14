@@ -6,8 +6,8 @@ import models.{Field, FieldTypeId, StorageType}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json._
 import services.DataSetService
-import _root_.util.seqFutures
 import org.incal.core.InputFutureRunnable
+import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

@@ -4,6 +4,7 @@ import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import play.api.Logger
 import runnables.DsaInputFutureRunnable
 import org.incal.core.dataaccess.Criterion._
+import org.incal.core.util.seqFutures
 import field.FieldTypeHelper
 import play.api.libs.json.Json
 import reactivemongo.play.json.BSONFormats._
@@ -54,7 +55,7 @@ class VerifyIfDuplicatesAreSame extends DsaInputFutureRunnable[VerifyIfDuplicate
           (values, id)
         }
 
-        util.seqFutures(valuesWithIds.groupBy(_._1).filter(_._2.size > 1)) { case (values, items) =>
+        seqFutures(valuesWithIds.groupBy(_._1).filter(_._2.size > 1)) { case (values, items) =>
           val ids = items.map(_._2)
 
           repo.find(

@@ -2,15 +2,15 @@ package runnables.core
 
 import javax.inject.Inject
 
-import dataaccess.{ClassificationResultRepoFactory, FilterRepoFactory}
-import models.ml.ClassificationResult
-import models.ml.ClassificationResult.classificationResultFormat
+import dataaccess.FilterRepoFactory
 import models.{AdaException, StorageType}
 import persistence.RepoTypes.ClassificationRepo
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import persistence.dataset.{ClassificationResultRepoFactory, DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.json.{JsObject, Json}
 import org.incal.core.InputFutureRunnable
+import org.incal.spark_ml.models.results.ClassificationResult
+import models.ml.classification.ClassificationResult._
 import services.DataSetService
 import util.FieldUtil.caseClassToFlatFieldTypes
 

@@ -16,7 +16,7 @@ import org.incal.play.GuiceRunnableApp
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
 import services.ml.{RCPredictionResults, RCPredictionService}
-import util.writeStringAsStream
+import org.incal.core.util.writeStringAsStream
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

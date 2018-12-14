@@ -7,9 +7,9 @@ import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.{AdaException, DataSpaceMetaInfo}
 import play.api.Logger
 import org.incal.core.{FutureRunnable, InputFutureRunnable}
+import org.incal.core.util.{seqFutures, hasNonAlphanumericUnderscore}
 import reactivemongo.bson.BSONObjectID
 import services.DataSpaceService
-import util.hasNonAlphanumericUnderscore
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -24,10 +24,10 @@ class CheckIfFieldsAlphanumericForAll @Inject() (
     for {
       dataSpaces <- dataSpaceMetaInfoRepo.find()
 
-      results <- util.seqFutures(dataSpaces) { dataSpace =>
+      results <- seqFutures(dataSpaces) { dataSpace =>
         val dataSetIds = dataSpace.dataSetMetaInfos.map(_.id)
 
-        util.seqFutures(dataSetIds)(checkDataSet)
+        seqFutures(dataSetIds)(checkDataSet)
       }
     } yield {
       val filteredResults = results.flatten.filter(_._2.nonEmpty)
@@ -71,8 +71,8 @@ class CheckIfFieldsAlphanumericForDataSpaceRecursively @Inject() (
     val dataSetIds = dataSpace.dataSetMetaInfos.map(_.id)
 
     for {
-      results <- util.seqFutures(dataSetIds)(checkDataSet)
-      subResults <- util.seqFutures(dataSpace.children)(checkDataSpaceRecursively)
+      results <- seqFutures(dataSetIds)(checkDataSet)
+      subResults <- seqFutures(dataSpace.children)(checkDataSpaceRecursively)
     } yield
       results ++ subResults.flatten
   }

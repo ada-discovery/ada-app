@@ -10,8 +10,7 @@ import models.{DistributionWidgetSpec, _}
 import models.Filter.{FilterIdentity, FilterOrId}
 import models.DataSetFormattersAndIds._
 import dataaccess.FilterRepoExtra._
-import models.ml.{RegressionSetting, _}
-import models.ml.RegressionResult.{regressionResultFormat, regressionSettingFormat}
+import models.ml.regression.RegressionResult.{regressionResultFormat, regressionSettingFormat}
 import models.Widget.WidgetWrites
 import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -32,11 +31,15 @@ import controllers.core.{ExportableAction, WidgetRepoController}
 import models.json.OrdinalEnumFormat
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.FilterCondition.toCriterion
-import org.incal.core.{FilterCondition, VectorScalerType}
+import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion
 import org.incal.play.Page
 import org.incal.play.controllers.{ReadonlyControllerImpl, WebContext}
 import org.incal.play.security.AuthAction
+import org.incal.spark_ml.MachineLearningUtil
+import org.incal.spark_ml.models.regression.RegressionEvalMetric
+import org.incal.spark_ml.models.results.{MetricStatsValues, RegressionResult, RegressionSetting}
+import org.incal.spark_ml.models.VectorScalerType
 
 import scala.reflect.runtime.universe.TypeTag
 import views.html.{regressionrun => view}
@@ -453,7 +456,7 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
           val regressionEvalMetricFormat = OrdinalEnumFormat.enumFormat(regressionEvalMetricMap)
           val vectorTransformTypeFormat = OrdinalEnumFormat.enumFormat(vectorTransformTypeMap)
 
-          implicit val regressionResultFormat = RegressionResult.createRegressionResultFormat(vectorTransformTypeFormat, regressionEvalMetricFormat)
+          implicit val regressionResultFormat = models.ml.regression.RegressionResult.createRegressionResultFormat(vectorTransformTypeFormat, regressionEvalMetricFormat)
 
           val resultJson = Json.toJson(result)(regressionResultFormat).as[JsObject]
           val extraResultJson = Json.toJson(extraResult).as[JsObject]
