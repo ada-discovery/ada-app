@@ -1,7 +1,6 @@
 package controllers.dataset
 
 import java.util.{Date, UUID}
-import java.util.concurrent.TimeoutException
 
 import models.DataSetSetting
 import services.datasetimporter.DataSetImporterCentral
@@ -24,6 +23,7 @@ import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import java.io.{File, FileInputStream, FileOutputStream}
+import java.nio.file.{Files, Paths}
 
 import services.{DataSetImportScheduler, DataSetService, DataSpaceService}
 import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
@@ -36,7 +36,7 @@ import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.DataSetImportFormattersAndIds.copyWithoutTimestamps
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.AscSort
-import org.incal.core.util.{hasNonAlphanumericUnderscore, firstCharToLowerCase, retry}
+import org.incal.core.util.{firstCharToLowerCase, hasNonAlphanumericUnderscore, retry}
 import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters._
@@ -60,9 +60,14 @@ class DataSetImportController @Inject()(
   private val logger = Logger
   private val messageLogger = MessageLogger(logger, messageRepo)
 
-  private lazy val importFolder = configuration.getString("datasetimport.import.folder").getOrElse(
-    new java.io.File("dataImports/").getAbsolutePath
-  )
+  private lazy val importFolder = configuration.getString("datasetimport.import.folder").getOrElse {
+    val folder = new java.io.File("dataImports/").getAbsolutePath
+    val path = Paths.get(folder)
+    // create if doesn't exist
+    if (!Files.exists(path)) Files.createDirectory(path)
+    folder
+  }
+
   private lazy val importRetryNum = configuration.getInt("datasetimport.retrynum").getOrElse(3)
 
   // Forms
