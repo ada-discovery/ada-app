@@ -27,9 +27,8 @@ GET         /loginAdmin                                                         
 # login/logout for REST interface
 GET         /logoutRest                                                             controllers.AuthController.logoutREST
 
-# ldap debugging
-GET         /ldaplist                                                               controllers.LdapController.ldapList
-GET         /ldap/settings                                                          controllers.LdapController.settings
+# LDAP for debugging
+GET         /ldap/settings                                                          controllers.LdapUserController.settings
 GET         /ldap/users/all                                                         controllers.LdapUserController.listAll
 GET         /ldap/:id/get                                                           controllers.LdapUserController.get(id: String)
 
@@ -193,7 +192,6 @@ POST        /dataSets/dataviews/saveFilter/:dataViewId                          
 # DataSetSetting
 GET         /dataSets/setting                                                        controllers.dataset.DataSetSettingController.find(p: Int ?= 0, s: String ?= "dataSetId", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /dataSets/setting/all                                                    controllers.dataset.DataSetSettingController.listAll(s: String ?= "dataSetId")
-GET         /dataSets/setting/new                                                    controllers.dataset.DataSetSettingController.create
 POST        /dataSets/setting/save                                                   controllers.dataset.DataSetSettingController.save
 GET         /dataSets/setting/:id/get                                                controllers.dataset.DataSetSettingController.get(id: BSONObjectID)
 GET         /dataSets/setting/:id                                                    controllers.dataset.DataSetSettingController.edit(id: BSONObjectID)

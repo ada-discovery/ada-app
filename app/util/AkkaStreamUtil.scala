@@ -9,9 +9,11 @@ import akka.stream.scaladsl.{Broadcast, FileIO, Flow, Framing, GraphDSL, Sink, S
 import akka.util.ByteString
 
 import scala.collection.mutable
-import scala.collection.mutable.{Buffer, ListBuffer}
+import scala.collection.mutable.Buffer
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object AkkaStreamUtil {
 
@@ -141,6 +143,24 @@ object AkkaStreamUtil {
     val tail = splitFlow.flatMapConcat(_._2)
 
     (head, tail)
+  }
+
+  def fileHeaderAndContentSource(
+    fileName: String,
+    eol: String = "\n",
+    allowTruncation: Boolean = true)(
+    implicit materializer: Materializer
+  ): Future[(String, Source[String, _])] = {
+    val inputSource = FileIO
+      .fromPath(Paths.get(fileName))
+      .via(Framing.delimiter(ByteString(eol), 1000000, allowTruncation)
+      .map(_.utf8String))
+
+    val (headerSource, contentSource) = headAndTail(inputSource)
+
+    headerSource.runWith(Sink.head).map ( header =>
+      (header, contentSource)
+    )
   }
 }
 

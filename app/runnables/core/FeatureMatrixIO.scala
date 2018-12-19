@@ -7,8 +7,7 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{FileIO, Framing, Sink, Source}
-import util.AkkaStreamUtil.headAndTail
-import akka.util.ByteString
+import util.AkkaStreamUtil.fileHeaderAndContentSource
 import org.incal.core.util.writeByteArrayStream
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -94,7 +93,7 @@ object FeatureMatrixIO {
     delimiter: String = ","
   ): Future[(Source[Array[Double], _], Seq[String])] =
     for {
-      (header, contentSource) <- createHeaderAndContentFileSource(fileName)
+      (header, contentSource) <- fileHeaderAndContentSource(fileName)
     } yield {
       val skipFirstColumns = skipFirstColumnsOption.getOrElse(0)
       val fieldNames = header.split(delimiter, -1).toSeq.drop(skipFirstColumns).map(_.trim)
@@ -121,7 +120,7 @@ object FeatureMatrixIO {
     delimiter: String = ","
   ): Future[(Source[(String, Array[Double]), _], Seq[String])] =
     for {
-      (header, contentSource) <- createHeaderAndContentFileSource(fileName)
+      (header, contentSource) <- fileHeaderAndContentSource(fileName)
     } yield {
       val fieldNames = header.split(delimiter, -1).map(_.trim)
 
@@ -131,19 +130,4 @@ object FeatureMatrixIO {
       }
       (source, fieldNames)
     }
-
-  private def createHeaderAndContentFileSource(
-    fileName: String
-  ): Future[(String, Source[String, _])] = {
-    val inputSource = FileIO
-      .fromPath(Paths.get(fileName))
-      .via(Framing.delimiter(ByteString("\n"), 1000000)
-      .map(_.utf8String))
-
-    val (headerSource, contentSource) = headAndTail(inputSource)
-
-    headerSource.runWith(Sink.head).map ( header =>
-      (header, contentSource)
-    )
-  }
 }

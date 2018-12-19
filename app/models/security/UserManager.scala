@@ -4,7 +4,7 @@ import javax.inject.{Singleton, Inject}
 
 import models.User
 import com.google.inject.ImplementedBy
-import ldap.{LdapSettings, LdapUserService, LdapConnector}
+import ldap.{LdapSettings, LdapService}
 import dataaccess.RepoTypes.UserRepo
 import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion.Infix
@@ -56,8 +56,7 @@ trait UserManager {
 @Singleton
 private class UserManagerImpl @Inject()(
     userRepo: UserRepo,
-    ldapUserService: LdapUserService,
-    connector: LdapConnector,
+    ldapService: LdapService,
     ldapSettings: LdapSettings
   ) extends UserManager {
 
@@ -78,7 +77,7 @@ private class UserManagerImpl @Inject()(
     * TODO change to pass arbitrary user repo
     */
   override def synchronizeRepos: Future[Unit] = {
-    val futures = ldapUserService.getAll.map { ldapUser: LdapUser =>
+    val futures = ldapService.listUsers.map { ldapUser: LdapUser =>
       for {
         found <- userRepo.find(Seq("ldapDn" #== ldapUser.uid)).map(_.headOption)
         _ <- found match {
@@ -105,7 +104,7 @@ private class UserManagerImpl @Inject()(
 
       // retrieve all LDAP users and remove those who are not matched
       _ <- {
-        val ldapUserUids = ldapUserService.getAll.map(_.uid).toSet
+        val ldapUserUids = ldapService.listUsers.map(_.uid).toSet
         val nonMatchingLocalUsers = localUsers.filterNot(user => ldapUserUids.contains(user.ldapDn))
         val nonMatchingIds = nonMatchingLocalUsers.map(_._id.get)
 
@@ -122,11 +121,11 @@ private class UserManagerImpl @Inject()(
     * @return None, if password is wrong or not associated mail was found.
     */
   override def authenticate(id: String, password: String): Future[Boolean] = {
-    val dn = "uid=" + id + ",cn=users," + ldapSettings.dit
+    val dn = "uid=" + id + "," + ldapSettings.dit
 
     Future {
 //      val exists = ldapUserService.getAll.find(_.uid == id).nonEmpty
-      connector.canBind(dn, password)
+      ldapService.canBind(dn, password)
     }
   }
 
