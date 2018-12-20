@@ -1,4 +1,4 @@
-$.widget( "custom.multiFilter", {
+$.widget("custom.multiFilter", {
     // default options
     options: {
         jsonConditions: null,
@@ -71,7 +71,7 @@ $.widget( "custom.multiFilter", {
             that.showChoicesPanelElement.collapse('hide');
         });
 
-        this._initConditionButtonsPopup();
+        this._initConditionPanelButtons();
         this._initModalButtons();
     },
 
@@ -83,7 +83,9 @@ $.widget( "custom.multiFilter", {
         return this.element.find("#filterNameButton");
     },
 
-    _initConditionButtonsPopup: function() {
+    _initConditionPanelButtons: function() {
+        var that = this;
+
         $(".condition-full").hover(null, function() {
             var buttons = $(this).find(".condition-buttons").first();
             buttons.fadeOut(500);
@@ -93,17 +95,6 @@ $.widget( "custom.multiFilter", {
             var buttons = $(this).parent().children(".condition-buttons").first();
             buttons.fadeIn(500);
         });
-    },
-
-    _initModalButtons: function() {
-        var that = this;
-        this.saveFilterModalElement.find("#submitButton").click(function() { that._saveFilter() });
-        this.loadFilterModalElement.find("#submitButton").click(function() { that._loadFilterFromModal() });
-        this.addEditConditionModalElement.find("#submitButton").click(function() { that._addEditConditionFinished() });
-
-        this.showAddConditioButtonElement.click(function() { that._showAddConditionModal() });
-        this.rollbackFilterButtonElement.click(function() { that._rollbackModelAndSubmit() });
-        this.loadFilterButtonElement.click(function() { that._loadFilterSelectionAndShowModal() });
 
         this._conditionPanelElement().find("#filterNameButton").click(function() { that._showConditionPanel() });
 
@@ -114,12 +105,24 @@ $.widget( "custom.multiFilter", {
             });
         });
 
-        var deleteButtons = this._conditionPanelElement().find(".deleteConditionButton")
+        var deleteButtons = this._conditionPanelElement().find(".deleteConditionButton");
         $.each(deleteButtons, function(index, deleteButton) {
             $(deleteButton).click(function() {
                 that._deleteCondition(index)
             });
         });
+    },
+
+    _initModalButtons: function() {
+        var that = this;
+
+        this.saveFilterModalElement.find("#submitButton").click(function() { that._saveFilter() });
+        this.loadFilterModalElement.find("#submitButton").click(function() { that._loadFilterFromModal() });
+        this.addEditConditionModalElement.find("#submitButton").click(function() { that._addEditConditionFinished() });
+
+        this.showAddConditioButtonElement.click(function() { that._showAddConditionModal() });
+        this.rollbackFilterButtonElement.click(function() { that._rollbackModelAndSubmit() });
+        this.loadFilterButtonElement.click(function() { that._loadFilterSelectionAndShowModal() });
     },
 
     _showAddConditionModal: function() {
@@ -212,7 +215,7 @@ $.widget( "custom.multiFilter", {
 
     replaceModelAndPanel: function(newModel, newPanel) {
         this._conditionPanelElement().replaceWith(newPanel);
-        this._initConditionButtonsPopup();
+        this._initConditionPanelButtons();
         this.jsonConditions = newModel;
     },
 
