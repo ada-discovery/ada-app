@@ -2,9 +2,10 @@
 @import play.api.i18n.Messages
 @import be.objectify.deadbolt.scala.views.html.{subjectPresent, subjectPresentOr, restrict, pattern}
 @import org.incal.play.security.SecurityRole
-@import be.objectify.deadbolt.scala.AuthenticatedRequest
+@import org.incal.play.controllers.WebContext
+@import org.incal.play.controllers.WebContext._
 
-@()(implicit request: AuthenticatedRequest[_],  msg: Messages)
+@()(implicit webContext: WebContext)
 
 @listItem(call: Call, text: String, matchPrefixDepth: Option[Int] = None) = {
     @listItemCustom(call, matchPrefixDepth) {
@@ -14,7 +15,7 @@
 
 @listItemCustom(call: Call, matchPrefixDepth: Option[Int] = None)(element: Html) = {
 
-    <li @if(matchesPath(call.url, request.path, matchPrefixDepth)) { class="active"} >
+    <li @if(matchesPath(call.url, toRequest.path, matchPrefixDepth)) { class="active"} >
         @element
     </li>
 }

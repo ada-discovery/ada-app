@@ -1,5 +1,7 @@
 package controllers
 
+import javax.inject.Inject
+
 import com.google.inject.AbstractModule
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import controllers.dataset._
@@ -7,6 +9,7 @@ import controllers.dataset._
 class ControllerModule extends AbstractModule {
 
   override def configure() {
+
     install(new FactoryModuleBuilder()
       .implement(classOf[DataSetController], classOf[DataSetControllerImpl])
       .build(classOf[GenericDataSetControllerFactory]))

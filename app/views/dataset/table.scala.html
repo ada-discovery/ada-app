@@ -51,14 +51,14 @@
 
             $('#fieldNameDiv #addRowButton').focus();
 
-            activateFilter($("#filterDiv"), function(filterOrId) {generateTable()});
+            activateAllFilters(function(filterOrId) {generateTable()});
 
             $("#fieldNameDiv").on("rowAdded", generateTable)
             $("#fieldNameDiv").on("rowsAdded", generateTable)
             $("#fieldNameDiv").on("rowsRemoved", generateTable)
 
             // add filter
-            var filterElement = $("#filterDiv")
+            var filterElement = $(".filter-div")
             addFilterModelBeforeModalSubmit("exportFilteredCsvModal", filterElement, "filter");
             addFilterModelBeforeModalSubmit("exportFilteredTableCsvModal", filterElement, "filter");
             addFilterModelBeforeModalSubmit("exportFilteredJsonModal", filterElement, "filter");
@@ -85,7 +85,7 @@
         function generateTable() {
             var fieldNames = getFieldNames()
 
-            var filterOrId = $("#filterDiv").multiFilter('getIdOrModel')
+            var filterOrId = $(".filter-div").multiFilter('getIdOrModel')
             var filterOrIdJson = JSON.stringify(filterOrId);
 
             if (fieldNames.length == 0) {
@@ -96,10 +96,8 @@
                 dataSetJsRoutes.controllers.dataset.DataSetDispatcher.generateTableWithFilter(0, "", fieldNames, filterOrIdJson).ajax({
                     success: function (data) {
                         // filter
-                        var filterElement = $("#filterDiv")
-                        filterElement.find("#conditionPanel").replaceWith(data.conditionPanel)
-                        filterElement.multiFilter("initConditionButtons")
-                        filterElement.multiFilter("setModel", data.filterModel)
+                        var filterElement = $(".filter-div");
+                        filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
 
                         // table
                         var tableDiv = $("#widgetsDiv .table-div")

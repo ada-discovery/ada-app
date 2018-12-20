@@ -1,6 +1,6 @@
-@import models.Widget
 @import models.Field
 @import reactivemongo.play.json.BSONFormats._
+@import views.html.layout.main
 @import views.html.dataset.widgetsScreen
 @import views.html.dataset.filter.{dataSetFilter, dataSetFilterJs}
 @import views.html.elements.fieldTypeaheadDiv
@@ -8,6 +8,7 @@
 @import play.api.i18n.Messages
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import models.DataSpaceMetaInfo
+@import controllers.FilterConditionExtraFormats.coreFilterConditionFormat
 @import util.toJsonHtml
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
@@ -86,6 +87,15 @@
 
             activateAllFilters(function(filterOrId) {calcDistribution()})
         });
+
+        function addNewColumn() {
+            // filter
+            var filterTd = $("<td style='padding-left: 10px; vertical-align:top'>")
+//            filterTd.html(data.countFilter)
+            $("#filtersTr").append(filterTd)
+            var filterElement = filterTd.find(".filter-div")
+            activateFilter(filterElement, function(filterOrId) {calcDistribution()})
+        }
 
         function calcDistribution() {
             var fieldName = $("#inputDiv #fieldName").val();

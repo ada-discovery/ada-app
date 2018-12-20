@@ -68,7 +68,7 @@
 
             $("#dataViewSelectionModal #submitButton").on("click", addScatterToView)
 
-            activateFilter($("#filterDiv"), function(filterOrId) {calcScatter()});
+            activateAllFilters(function(filterOrId) {calcScatter()});
         });
 
         function calcScatter() {
@@ -83,7 +83,7 @@
             if (!groupOrValueFieldName)
                 groupOrValueFieldName = null
 
-            var filterOrId = $("#filterDiv").multiFilter('getIdOrModel')
+            var filterOrId = $(".filter-div").multiFilter('getIdOrModel')
             var filterOrIdJson = JSON.stringify(filterOrId);
 
             if (!xFieldName || !yFieldName) {

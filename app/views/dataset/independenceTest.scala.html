@@ -55,7 +55,7 @@
 
             $("#dataViewSelectionModal #submitButton").on("click", addIndependenceTestToView)
 
-            activateFilter($("#filterDiv"), function(filterOrId) {testIndependence()});
+            activateAllFilters(function(filterOrId) {testIndependence()});
         });
 
         function testIndependence() {
@@ -65,7 +65,7 @@
             $('#inputFieldNameDiv').dynamicTable('updateModelFromTable');
             var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
 
-            var filterOrId = $("#filterDiv").multiFilter('getIdOrModel');
+            var filterOrId = $(".filter-div").multiFilter('getIdOrModel');
             var filterOrIdJson = JSON.stringify(filterOrId)
 
             if (!targetFieldName) {
@@ -82,10 +82,8 @@
                     },
                     success: function (data) {
                         // filter
-                        var filterElement = $("#filterDiv")
-                        filterElement.find("#conditionPanel").replaceWith(data.conditionPanel)
-                        filterElement.multiFilter("initConditionButtons")
-                        filterElement.multiFilter("setModel", data.filterModel)
+                        var filterElement = $(".filter-div");
+                        filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
 
                         // table with results
                         var table = createIndependenceTestTable(data.results, true)

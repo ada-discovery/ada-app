@@ -3,11 +3,11 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
-@import views.html.dataset.{datasetSubNavWithJs, dataSetFilterWithJs, datasetJsImport, bootstrapSelectImport}
+@import views.html.dataset.datasetSubNavWithJs
 @import views.html.dataset.filter.{dataSetFilter, dataSetFilterJs}
 @import views.html.dataview.dataViewSelectionModal
+@import views.html.dataset.fixedTableRow
 @import views.html.elements.fieldTypeahead
-@import views.html.filter.{filter, filterWithJs}
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import models.DataSpaceMetaInfo
 @import controllers.FilterConditionExtraFormats.coreFilterConditionFormat
@@ -32,7 +32,11 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @dataSetFilter(Some(filterSpec), filterShowFieldStyle, Some("filterDiv"))
+            @fixedTableRow("filtersTr") {
+                <td style='padding-left: 10px; vertical-align:top'>
+                    @dataSetFilter(Some(filterSpec), filterShowFieldStyle)
+                </td>
+            }
         </div>
 
         @extraActions
@@ -127,6 +131,13 @@
             });
         }
 
+        function activateAllFilters(submitAjaxFun) {
+            var filters = $(".filter-div")
+            $.each(filters, function (index, filterElement) {
+                activateFilter(filterElement, submitAjaxFun)
+            })
+        }
+
         function activateFilter(filterElement, submitAjaxFun) {
             var jsonConditions = JSON.parse('@toJsonHtml(filterSpec.conditions)');
             var filterId = '@filterSpec._id.map(_.stringify).getOrElse("")';
@@ -143,10 +154,8 @@
             return {
                 success: function (data) {
                     // filter
-                    var filterElement = $("#filterDiv")
-                    filterElement.find("#conditionPanel").replaceWith(data.conditionPanel)
-                    filterElement.multiFilter("initConditionButtons")
-                    filterElement.multiFilter("setModel", data.filterModel)
+                    var filterElement = $(".filter-div");
+                    filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
 
                     // widgets
                     var widgetsDiv = $("#widgetsDiv")

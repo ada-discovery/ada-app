@@ -60,7 +60,7 @@
 
             $("#dataViewSelectionModal #submitButton").on("click", addCumulativeCountToView)
 
-            activateFilter($("#filterDiv"), function(filterOrId) {calcCumulativeCount()});
+            activateAllFilters(function(filterOrId) {calcCumulativeCount()});
         });
 
         function calcCumulativeCount() {
@@ -72,7 +72,7 @@
             if (!groupFieldName)
                 groupFieldName = null
 
-            var filterOrId = $("#filterDiv").multiFilter('getIdOrModel')
+            var filterOrId = $(".filter-div").multiFilter('getIdOrModel')
             var filterOrIdJson = JSON.stringify(filterOrId);
 
             if (!fieldName) {

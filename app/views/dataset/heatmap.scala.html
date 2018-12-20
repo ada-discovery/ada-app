@@ -76,7 +76,7 @@
 
             $("#dataViewSelectionModal #submitButton").on("click", addHeatmapToView)
 
-            activateFilter($("#filterDiv"), function(filterOrId) {calcHeatmap()});
+            activateAllFilters(function(filterOrId) {calcHeatmap()});
         });
 
         function calcHeatmap() {
@@ -95,7 +95,7 @@
             if (!aggType)
                 aggType = null
 
-            var filterOrId = $("#filterDiv").multiFilter('getIdOrModel')
+            var filterOrId = $(".filter-div").multiFilter('getIdOrModel')
             var filterOrIdJson = JSON.stringify(filterOrId);
 
             if (!xFieldName || !yFieldName) {

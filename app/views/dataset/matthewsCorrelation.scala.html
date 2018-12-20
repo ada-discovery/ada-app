@@ -46,13 +46,13 @@
 
             $('#fieldNameDiv #addRowButton').focus();
 
-            activateFilter($("#filterDiv"), function(filterOrId) {calcCorrelations()});
+            activateAllFilters(function(filterOrId) {calcCorrelations()});
         });
 
         function calcCorrelations() {
             var inputFieldNames = getFieldNames()
 
-            var filterOrId = $("#filterDiv").multiFilter('getIdOrModel')
+            var filterOrId = $(".filter-div").multiFilter('getIdOrModel')
             var filterOrIdJson = JSON.stringify(filterOrId);
 
             if (inputFieldNames.length == 0) {

@@ -1,7 +1,6 @@
 @import models.FilterShowFieldStyle
 @import models.{Field, Filter}
-@import views.html.filter.{jsTreeImport, categoricalTree, conditionPanel}
-@import org.incal.core.ConditionType
+@import views.html.filter.{conditionPanel, conditionModal}
 
 @(
     filter: Option[Filter],
@@ -15,23 +14,13 @@
     implicit request: Request[_], webJarAssets: WebJarAssets
 )
 
-@showChoice(value: FilterShowFieldStyle.Value, text: String) = {
-    <li>
-        <label class="radio-inline"><input type="radio" name="showChoice" value="@value.id" @if(showFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels) == value) {checked="checked"}>
-            <h5 style="padding-left: 10px">
-            @text
-            </h5>
-        </label>
-    </li>
-}
-
 @saveFilterModalBody = {
-    <input id="saveFilterName" name="saveFilterName" value="" placeholder="Filter Name">
+    <input id="saveFilterName" name="saveFilterName" value="" placeholder="Filter Name" onkeypress="submitModalOnEnter(event, this);">
 }
 
 @saveFilterModelButtons = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="button" id="submitButton" onclick="$('#@filterElementId').multiFilter('saveFilter');" data-dismiss="modal" class="btn btn-primary">OK</button>
+    <button type="button" id="submitButton" data-dismiss="modal" class="btn btn-primary">OK</button>
 }
 
 @loadFilterModalBody = {
@@ -41,100 +30,16 @@
 
 @loadFilterModelButtons = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="button" id="submitButton" onclick="$('#@filterElementId').multiFilter('loadFilterFromModal');" data-dismiss="modal" class="btn btn-primary">OK</button>
-}
-
-@categoryTreeNodeSelectedJsFun = {
-    function(node) {
-        if (node.type.startsWith("field-")) {
-            var text = node.text
-            var nonNullCount = node.data.nonNullCount
-            if (nonNullCount) {
-                var lastIndex = text.lastIndexOf(" (" + nonNullCount + ")")
-                text = text.substring(0, lastIndex)
-            }
-            console.log("Category tree node selected" + text)
-            $('#@filterElementId').multiFilter('setFieldTypeaheadAndName', node.id, text);
-        }
-    }
-}
-
-@conditionModal = {
-    <div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title">Add/Edit Condition</h4>
-                </div>
-                <form onsubmit="return false;">
-                    <div class="modal-body">
-                        <input id="conditionIndex" type="hidden" value=""/>
-                        @if(categoriesOrCall.isDefined) {
-                            <div id="categoryFilterDiv" class="row collapse">
-                                @categoricalTree(categoricalTreeId, categoriesOrCall.get, Some(categoryTreeNodeSelectedJsFun))
-                                <hr/>
-                            </div>
-                        }
-                        <div class="row">
-                            <div class="col-md-4">
-                                <input id="fieldNameTypeahead" class="typeahead" type="text" placeholder="Field Name or Label">
-                                <input id="fieldName" type="hidden" value="">
-                            </div>
-                            <div class="col-md-6">
-                                <select id="conditionType" class="float-left">
-                                @ConditionType.values.map{ conditionType =>
-                                    <option value="@conditionType">@conditionType</option>
-                                }
-                                </select>
-                                <input id="value" class="float-left conditionValue" placeholder="Condition"/>
-                            </div>
-                            <div clas="col-md-2">
-                                <a id="showChoicesButton" class="btn btn-sm btn-default" data-toggle="collapse" data-target="#showChoicesPanel" data-toggle="tooltip" title="Field Name/Label Display Options">
-                                    <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
-                                </a>
-                                @if(categoriesOrCall.isDefined) {
-                                    <a id="showCategoryTreeButton" class="btn btn-sm btn-default" data-toggle="collapse" data-target="#categoryFilterDiv" data-toggle="tooltip" title="Show Category Tree">
-                                        <span class="glyphicon glyphicon-leaf" aria-hidden="true"></span>
-                                    </a>
-                                }
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-12" style="margin-left:10px">
-                                <span id="fieldInfo" class="help-block"></span>
-                            </div>
-                        </div>
-                        <div id="showChoicesPanel" class="row collapse">
-                            <hr/>
-                            <div class="well">
-                                What do you want to show?
-                                <ul class="list-unstyled">
-                                    @showChoice(FilterShowFieldStyle.NamesOnly, "Field names only")
-                                    @showChoice(FilterShowFieldStyle.LabelsOnly, "Field labels only")
-                                    @showChoice(FilterShowFieldStyle.LabelsAndNamesOnlyIfLabelUndefined, "Field labels, and names only if label undefined")
-                                    @showChoice(FilterShowFieldStyle.NamesAndLabels, "Both, field names and labels")
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-primary" data-dismiss="modal" onclick="$('#@filterElementId').multiFilter('addEditConditionFinished')">Confirm</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+    <button type="button" id="submitButton" data-dismiss="modal" class="btn btn-primary">OK</button>
 }
 
 <div id="@filterElementId" class="filter-div">
-    @conditionModal
+    @conditionModal(filterElementId, categoriesOrCall, categoricalTreeId, showFieldStyle)
 
     @conditionPanel(filter)
 
     <span class="filter-part">
-        <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementId').multiFilter('showAddConditionModal')" data-toggle="tooltip" title="Add Filter Condition">
+        <button id="showAddConditioButton" type="button" class="btn btn-sm btn-default" data-toggle="tooltip" title="Add Filter Condition">
             <span class="glyphicon glyphicon-plus"></span>
         </button>
 
@@ -146,14 +51,14 @@
         }
 
         @if(enableListFilters) {
-            <button id="loadFilterButton" type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementId').multiFilter('loadFilterSelectionAndShowModal')" title="Load Filter">
+            <button id="loadFilterButton" type="button" class="btn btn-sm btn-default" title="Load Filter">
                 <span class="glyphicon glyphicon-book"></span>
             </button>
 
             @modal(s"loadFilterModal$filterElementId", "Load Filter", loadFilterModalBody, None, Some(loadFilterModelButtons))
         }
 
-        <button id="rollbackFilterButton" type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementId').multiFilter('rollbackModelAndSubmit')" title="Rollback Filter" style="display:None">
+        <button id="rollbackFilterButton" type="button" class="btn btn-sm btn-default" title="Rollback Filter" style="display:None">
             <span class="glyphicon glyphicon-arrow-left"></span>
         </button>
 
