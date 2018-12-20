@@ -7,6 +7,7 @@
 @import org.incal.play.util.WebUtil.matchesPath
 @import controllers.dataset.ControllerName
 @import controllers.dataset.DataSetWebContext
+@import controllers.dataset.DataSetWebContext._
 
 @()(implicit context: DataSetWebContext)
 
@@ -17,7 +18,7 @@
 }
 
 @listItem(call: Call, text: String, matchPrefixDepth : Option[Int] = None) = {
-    <li @if(matchesPath(call.url, toRequest.uri, matchPrefixDepth)) { class="active"}>
+    <li @if(matchesPath(call.url, toRequest.uri, matchPrefixDepth, configuration.getString("play.http.context"))) { class="active"}>
         <a href="@call">@text</a>
     </li>
 }

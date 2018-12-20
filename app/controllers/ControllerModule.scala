@@ -1,7 +1,5 @@
 package controllers
 
-import javax.inject.Inject
-
 import com.google.inject.AbstractModule
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import controllers.dataset._

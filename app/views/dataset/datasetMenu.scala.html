@@ -23,7 +23,7 @@
 
 @innerSpaceItem(spaceMetaInfo: DataSpaceMetaInfo) = {
     @defining(dataSpaceMetaInfoRoutes.get(spaceMetaInfo._id.get)) { call =>
-        <li @if(matchesPath(call.url, toRequest.uri, Some(3))) { class="dataspace inner-node active" } else {class="dataspace inner-node"} >
+        <li @if(matchesPath(call.url, toRequest.uri, Some(3), toConfiguration.getString("play.http.context"))) { class="dataspace inner-node active" } else {class="dataspace inner-node"} >
             <a href="@call">
                 <div class="nowrap inner-node-label">
                     <span class="btn-dataspace-expand">
@@ -38,7 +38,7 @@
 
 @topSpaceItem(spaceMetaInfo: DataSpaceMetaInfo) = {
     @defining(dataSpaceMetaInfoRoutes.get(spaceMetaInfo._id.get)) { call =>
-        <li @if(matchesPath(call.url, toRequest.uri, Some(3))) { class="dataspace top-node active" } else {class="dataspace top-node"}>
+        <li @if(matchesPath(call.url, toRequest.uri, Some(3), toConfiguration.getString("play.http.context"))) { class="dataspace top-node active" } else {class="dataspace top-node"}>
             <button type="button" class="btn btn-sm btn-default btn-dataspace-expand btn-dataspace-expand-top" data-toggle="collapse" data-target="#dataSets-@spaceMetaInfo._id.get.stringify">
                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
             </button>

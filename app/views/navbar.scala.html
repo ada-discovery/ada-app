@@ -15,7 +15,7 @@
 
 @listItemCustom(call: Call, matchPrefixDepth: Option[Int] = None)(element: Html) = {
 
-    <li @if(matchesPath(call.url, toRequest.path, matchPrefixDepth)) { class="active"} >
+    <li @if(matchesPath(call.url, toRequest.path, matchPrefixDepth, toConfiguration.getString("play.http.context"))) { class="active"} >
         @element
     </li>
 }

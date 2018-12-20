@@ -10,12 +10,8 @@ import play.api.{Configuration, Environment}
 class AdaDeadboltModule extends DeadboltModule {
 
   override def bindings(environment: Environment, configuration: Configuration) =
-
     super.bindings(environment, configuration) ++ Seq(
-      {
-        configuration.getString("play.http.context").foreach(router.RoutesPrefix.setPrefix)
-        bind[TemplateFailureListener].to[AdaTemplateFailureListener]
-      },
+      bind[TemplateFailureListener].to[AdaTemplateFailureListener],
       bind[HandlerCache].to[CustomHandlerCacheImpl],
       bind[DeadboltExecutionContextProvider].to[AdaDeadboltExecutionContextProvider]
     )
