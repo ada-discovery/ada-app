@@ -36,8 +36,7 @@
                 Filter(conditions),
                 dictionaryRouter.plainList,
                 Left(fieldNameLabels.map { case (name, label) => Field(name, label)}),
-                None,
-                Some(FilterShowFieldStyle.LabelsOnly)
+                showFieldStyle = Some(FilterShowFieldStyle.LabelsOnly)
             )
         </div>
         <div class="pull-right">
