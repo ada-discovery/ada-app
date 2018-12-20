@@ -43,6 +43,7 @@ $.widget( "custom.multiFilter", {
 
         this.loadFilterButtonElement = this.element.find("#loadFilterButton");
         this.saveFilterButtonElement = this.element.find("#saveFilterButton");
+        this.showAddConditioButtonElement = this.element.find("#showAddConditioButton");
         this.rollbackFilterButtonElement = this.element.find("#rollbackFilterButton");
 
         if (this.fieldNameAndLabels) {
@@ -65,23 +66,13 @@ $.widget( "custom.multiFilter", {
             that.loadFilterTypeaheadElement.focus();
         })
 
-        this.saveFilterNameElement.keypress(function (e) {
-            if (e.which == 13) {
-                that.saveFilterModalElement.modal('hide');
-                that.saveFilter();
-                return false;
-            }
-        });
-
         this.element.find('input[name="showChoice"]').change(function() {
             that._repopulateFieldNameChoices();
             that.showChoicesPanelElement.collapse('hide');
         });
 
-        this.initConditionButtons();
-        //this.showChoicesButtonElement.click(function() {
-        //    that._repopulateFieldNameChoices();
-        //});
+        this._initConditionButtonsPopup();
+        this._initModalButtons();
     },
 
     _conditionPanelElement: function() {
@@ -92,19 +83,46 @@ $.widget( "custom.multiFilter", {
         return this.element.find("#filterNameButton");
     },
 
-    initConditionButtons: function() {
+    _initConditionButtonsPopup: function() {
         $(".condition-full").hover(null, function() {
             var buttons = $(this).find(".condition-buttons").first();
-            buttons.fadeOut( 400 );
+            buttons.fadeOut(500);
         });
 
         $(".condition").click(function() {
             var buttons = $(this).parent().children(".condition-buttons").first();
-            buttons.fadeIn( 400 );
+            buttons.fadeIn(500);
         });
     },
 
-    showAddConditionModal: function() {
+    _initModalButtons: function() {
+        var that = this;
+        this.saveFilterModalElement.find("#submitButton").click(function() { that._saveFilter() });
+        this.loadFilterModalElement.find("#submitButton").click(function() { that._loadFilterFromModal() });
+        this.addEditConditionModalElement.find("#submitButton").click(function() { that._addEditConditionFinished() });
+
+        this.showAddConditioButtonElement.click(function() { that._showAddConditionModal() });
+        this.rollbackFilterButtonElement.click(function() { that._rollbackModelAndSubmit() });
+        this.loadFilterButtonElement.click(function() { that._loadFilterSelectionAndShowModal() });
+
+        this._conditionPanelElement().find("#filterNameButton").click(function() { that._showConditionPanel() });
+
+        var editButtons = this._conditionPanelElement().find(".editConditionButton");
+        $.each(editButtons, function(index, editButton) {
+            $(editButton).click(function(event) {
+                that._showEditConditionModal(index)
+            });
+        });
+
+        var deleteButtons = this._conditionPanelElement().find(".deleteConditionButton")
+        $.each(deleteButtons, function(index, deleteButton) {
+            $(deleteButton).click(function() {
+                that._deleteCondition(index)
+            });
+        });
+    },
+
+    _showAddConditionModal: function() {
         var that = this;
         this._initFilterIfNeeded(function() {
             that.addEditConditionModalElement.find("#conditionIndex").first().val("");
@@ -116,7 +134,7 @@ $.widget( "custom.multiFilter", {
         });
     },
 
-    showEditConditionModal: function (index) {
+    _showEditConditionModal: function (index) {
         var that = this;
         this._initFilterIfNeeded(function() {
             that.addEditConditionModalElement.find("#conditionIndex").first().val(index);
@@ -133,7 +151,7 @@ $.widget( "custom.multiFilter", {
         });
     },
 
-    addEditConditionFinished: function () {
+    _addEditConditionFinished: function () {
         var index =  this.addEditConditionModalElement.find("#conditionIndex").val();
         if (index)
             this._editAndSubmitConditionFromModal(index)
@@ -177,7 +195,7 @@ $.widget( "custom.multiFilter", {
         this._submitFilter();
     },
 
-    deleteCondition: function (index) {
+    _deleteCondition: function (index) {
         this._addModelToHistoryAndClearFilterId();
 
         this.jsonConditions.splice(index, 1);
@@ -192,11 +210,13 @@ $.widget( "custom.multiFilter", {
         return (this.filterId) ? {'$oid': this.filterId} : this.jsonConditions;
     },
 
-    setModel: function(jsonConditions) {
-        this.jsonConditions = jsonConditions;
+    replaceModelAndPanel: function(newModel, newPanel) {
+        this._conditionPanelElement().replaceWith(newPanel);
+        this._initConditionButtonsPopup();
+        this.jsonConditions = newModel;
     },
 
-    rollbackModelAndSubmit: function () {
+    _rollbackModelAndSubmit: function () {
         if (this.modelHistory.length > 0) {
             this.jsonConditions = this.modelHistory.pop();
             this.filterId = null;
@@ -315,7 +335,7 @@ $.widget( "custom.multiFilter", {
         this._conditionPanelElement().append(li)
     },
 
-    saveFilter: function () {
+    _saveFilter: function () {
         var name = this.saveFilterNameElement.val();
         var fullFilter = {_id: null, name: name, isPrivate: false, timeCreated: 0, conditions: this.jsonConditions};
 
@@ -323,7 +343,7 @@ $.widget( "custom.multiFilter", {
             this.options.saveFilterAjaxFun(fullFilter)
     },
 
-    loadFilterFromModal: function () {
+    _loadFilterFromModal: function () {
         this._addModelToHistory();
 
         this.filterId = this.filterIdModalElement.val();
@@ -332,12 +352,12 @@ $.widget( "custom.multiFilter", {
         this._submitFilterOrId([], this.filterId);
     },
 
-    showConditionPanel: function () {
+    _showConditionPanel: function () {
         this._conditionPanelElement().find(".filter-part").show();
         this._filterNameButtonElement().hide();
     },
 
-    loadFilterSelectionAndShowModal: function () {
+    _loadFilterSelectionAndShowModal: function () {
         // always reload new (saved) filters before opening modal
         var that = this;
         this._loadFilterSelection(function() {

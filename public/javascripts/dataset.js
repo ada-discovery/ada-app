@@ -63,9 +63,7 @@ function refreshViewOnFilterUpdate(viewId, filterOrId, filterElement, widgetGrid
     dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getViewElementsAndWidgetsCallback(viewId, "", filterOrId, oldCountDiff).ajax( {
         success: function(data) {
             // filter
-            filterElement.find("#conditionPanel").replaceWith(data.conditionPanel)
-            filterElement.multiFilter("initConditionButtons")
-            filterElement.multiFilter("setModel", data.filterModel)
+            filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
 
             // display count
             var countDisplayElement = filterElement.closest(".row").parent().find(".count-div")

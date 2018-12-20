@@ -600,30 +600,6 @@ function loadNewTableContent(element, url, data, callType) {
     });
 }
 
-function showConditionPanel(element) {
-    var filterDiv = element.closest(".filter-div");
-    if (filterDiv)
-        $(filterDiv).multiFilter('showConditionPanel')
-    else
-        console.log("filter-div not found.")
-}
-
-function showEditConditionModal(element, index) {
-    var filterDiv = element.closest(".filter-div");
-    if (filterDiv)
-        $(filterDiv).multiFilter('showEditConditionModal', index)
-    else
-        console.log("filter-div not found.")
-}
-
-function deleteCondition(element, index) {
-    var filterDiv = element.closest(".filter-div");
-    if (filterDiv)
-        $(filterDiv).multiFilter('deleteCondition', index)
-    else
-        console.log("filter-div not found.")
-}
-
 function activateRowClickable() {
     $(function() {
         $(".clickable-row").dblclick(function () {
