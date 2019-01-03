@@ -2,6 +2,8 @@ package services.stats
 
 import services.stats.calc._
 import services.stats.CalculatorExecutor._
+import services.stats.calc.MultiCountDistinctCalc.MultiCountDistinctCalcTypePack
+import services.stats.calc.UniqueDistributionCountsCalc.UniqueDistributionCountsCalcTypePack
 
 import scala.reflect.runtime.universe._
 
@@ -99,6 +101,23 @@ trait CalculatorExecutors {
 
   def multiBasicStatsSeqExec =
     withSeq(MultiBasicStatsCalc)
+
+  // Count distinct
+
+  def countDistinctExec[T](
+    implicit inputTypeTag: TypeTag[CountDistinctCalcTypePack[T]#IN]
+  ) =
+    withSingle(CountDistinctCalc[T])
+
+  def countDistinctSeqExec[T](
+    implicit inputTypeTag: TypeTag[CountDistinctCalcTypePack[T]#IN]
+  ) =
+    withSeq(CountDistinctCalc[T])
+
+  def multiCountDistinctSeqExec[T](
+    implicit inputTypeTag: TypeTag[MultiCountDistinctCalcTypePack[T]#IN]
+  ) =
+    withSeq(MultiCountDistinctCalc[T])
 
   // Standardization
 

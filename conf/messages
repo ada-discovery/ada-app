@@ -28,6 +28,7 @@ tsne.title = t-SNE of {0}
 documentation.title = Documentation: {0}
 heatmap.title = Heatmap of {0}
 table.title = {0} Table
+comparison.title = Comparison of {0}
 
 dataSetSetting.keyFieldName.label = Key Field
 dataSetSetting.exportOrderByFieldName.label = Export OrderBy Field

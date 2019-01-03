@@ -27,6 +27,8 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     oldCountDiff: Option[Int]
   ): Action[AnyContent]
 
+  def getNewFilter: Action[AnyContent]
+
   def getNewFilterViewElementsAndWidgetsCallback(
     dataViewId: BSONObjectID,
     tableOrder: String,
@@ -112,18 +114,21 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
+  def getComparison(
+    filterOrIds: Seq[FilterOrId]
+  ): Action[AnyContent]
+
+  def calcComparison(
+    fieldName: String,
+    filterOrIds: Seq[FilterOrId]
+  ): Action[AnyContent]
+
   def getIndependenceTest(
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
   def testIndependence(
     filterOrId: FilterOrId
-  ): Action[AnyContent]
-
-  def getIndependenceTestForViewFilters: Action[AnyContent]
-
-  def testIndependenceForViewFilters(
-    viewId: BSONObjectID
   ): Action[AnyContent]
 
   def getFractalis(

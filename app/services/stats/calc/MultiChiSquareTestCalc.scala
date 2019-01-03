@@ -31,7 +31,7 @@ private[stats] class MultiChiSquareTestCalc[G, T] extends Calculator[MultiChiSqu
     // create tuples for each value
     val tupleSeqFlow = Flow[IN].map { case (group, values) => values.map((group, _))}
 
-    // apply core flow for a single chi-square test in parallel by splitting the flow
+    // apply the core flow, i.e., a single chi-square test in parallel by splitting the flow
     val seqChiSquareFlow = (size: Int) => unzipNFlowsAndApply(size)(coreCalc.flow_)
 
     // since we need to know the number of features (seq size) we take the first element out, apply the flow and concat

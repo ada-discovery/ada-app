@@ -14,15 +14,15 @@ trait ChiSquareTestCalcTypePack[T1, T2] extends NoOptionsCalculatorTypePack{
 
 private[stats] class ChiSquareTestCalc[T1, T2] extends Calculator[ChiSquareTestCalcTypePack[T1, T2]] with ChiSquareHelper[T1, T2] {
 
+  private val countDistinctCalc = CountDistinctCalc[IN]
+
   override def fun(o: Unit) = { values: Traversable[IN] =>
-    val countsMap = values.groupBy(identity).map {
-      case (group, values) => (group, values.size)
-    }
+    val countsMap = countDistinctCalc.fun()(values).toMap
     calcChiSquareSafe(countsMap)
   }
 
   override def flow(o: Unit) =
-    countFlow[IN]().via(seqFlow)
+    countDistinctCalc.flow()
 
   override def postFlow(o: Unit) = { values =>
     calcChiSquareSafe(values.toMap)

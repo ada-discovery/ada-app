@@ -15,7 +15,7 @@
 
 @(
     dataSetName: String,
-    filterSpec: models.Filter,
+    filters: Seq[models.Filter],
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     field: Option[Field],
     groupField: Option[Field],
@@ -24,181 +24,97 @@
     implicit context: DataSetWebContext
 )
 
-@extraActions = {
-    <div class="pull-right dropdown">
-        <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To
-            <span class="caret"></span>
-        </button>
-        <ul class="dropdown-menu">
-            <li>
-                <a href="#" onclick="addDistribution();return false" data-toggle="tooltip" title="Add Distribution To View">
-                    To Distributions
-                </a>
-            </li>
-            <li>
-                <a href="#" onclick="addBoxPlot();return false" data-toggle="tooltip" title="Add Box Plots To View">
-                    To Box Plots
-                </a>
-            </li>
-            <li>
-                <a href="#" onclick="addBasicStats();return false" data-toggle="tooltip" title="Add Basic Stats To View">
-                    To Basic Stats
-                </a>
-            </li>
-        </ul>
-    </div>
-}
-
 @bottomResources = {
 
     @helper.javascriptRouter("dataSetJsRoutes")(
-        dataSetJsRouter.calcDistribution,
-        dataSetJsRouter.getWidgets
-    )
-
-    @helper.javascriptRouter("dataViewJsRoutes")(
-        dataViewJsRouter.addDistribution,
-        dataViewJsRouter.addBoxPlot,
-        dataViewJsRouter.addBasicStats
+        dataSetJsRouter.calcComparison,
+        dataSetJsRouter.getWidgets,
+        dataSetJsRouter.getNewFilter
     )
 
     <script type="text/javascript">
         $(function () {
             populateFullTypeahead("field", true);
-            populateCategoricalTypeahead("groupField")
 
             $('#inputDiv #fieldTypeahead').keypress(function (e) {
                 if (e.which == 13) {
-                    calcDistribution();
+                    calcComparison();
                     return false;
                 }
             });
 
-            $('#inputDiv #groupFieldTypeahead').keypress(function (e) {
-                if (e.which == 13) {
-                    var groupFieldTypeahedVal = $('#inputDiv #groupFieldTypeahead').val();
-                    if (!groupFieldTypeahedVal)
-                        $('#inputDiv #groupFieldName').val("")
-                    calcDistribution();
-                    return false;
-                }
-            });
-
-            activateAllFilters(function(filterOrId) {calcDistribution()})
+            activateAllFilters(function(filterOrId) {calcComparison()})
         });
 
-        function addNewColumn() {
-            // filter
-            var filterTd = $("<td style='padding-left: 10px; vertical-align:top'>")
-//            filterTd.html(data.countFilter)
-            $("#filtersTr").append(filterTd)
-            var filterElement = filterTd.find(".filter-div")
-            activateFilter(filterElement, function(filterOrId) {calcDistribution()})
+        function addNewFilter() {
+            if($("#filtersTr>td").length < 6) {
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getNewFilter().ajax({
+                    success: function (data) {
+                        // filter
+                        var filterTd = $("<td style='padding-left: 10px; vertical-align:top'>")
+                        filterTd.html(data)
+                        $("#filtersTr").append(filterTd)
+                        var filterElement = filterTd.find(".filter-div")
+                        activateFilter(filterElement, function (filterOrId) {
+                            calcComparison()
+                        }, [], '')
+
+                        calcComparison();
+                    },
+                    error: showErrorResponse
+                });
+            } else {
+                hideMessages();
+                showError("Cannot add a new filter (max. number allowed is 6).")
+            }
         }
 
-        function calcDistribution() {
+        function removeFilterRight() {
+            if($("#filtersTr>td").length > 2) {
+                $("#filtersTr td:last-child").remove();
+                calcComparison();
+            } else {
+                hideMessages();
+                showError("Cannot remove a filter (min. number allowed is 2).")
+            }
+        }
+
+        function calcComparison() {
             var fieldName = $("#inputDiv #fieldName").val();
             var fieldLabel = $("#inputDiv #fieldTypeahead").val();
 
-            var groupFieldName = $("#inputDiv #groupFieldName").val();
-            var groupFieldLabel = $("#inputDiv #groupFieldTypeahead").val();
-            if (!groupFieldName)
-                groupFieldName = null
+            var filterElements = $("#filtersTr").find(".filter-div").toArray();
 
-            var filterOrId = $(".filter-div").multiFilter('getIdOrModel')
-            var filterOrIdJson = JSON.stringify(filterOrId);
+            var filterOrIds = filterElements.map(function(filterElement, index) {
+                return $(filterElement).multiFilter('getIdOrModel');
+            });
+
+            var filterOrIdsJson = JSON.stringify(filterOrIds)
 
             if (!fieldName) {
-                showError("Distribution calculation cannot be launched. No field specified.");
+                showError("Comparison generation cannot be launched. No field specified.");
             } else {
-                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcDistribution(fieldName, groupFieldName, filterOrIdJson).ajax(
-                    handleResponse("Distribution calculation finished.")
-                )
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcComparison(fieldName, filterOrIdsJson).ajax({
+                    success: function (data) {
+                        // filters
+                        var filters = $(".filter-div")
+                        $.each(filters, function (index, filterElement) {
+                            $(filterElement).multiFilter("replaceModelAndPanel", data.filterModels[index], data.conditionPanels[index]);
+                        })
 
-                hideErrors()
-                showMessage("Distribution calculation for the field '" + fieldLabel + "' launched.")
-            }
-        }
-
-
-        function addDistribution() {
-            $("#dataViewSelectionModal #submitButton").one("click", addDistributionToView);
-            $("#dataViewSelectionModal").modal('show');
-        }
-
-        function addBoxPlot() {
-            $("#dataViewSelectionModal #submitButton").one("click", addBoxPlotToView);
-            $("#dataViewSelectionModal").modal('show');
-        }
-
-        function addBasicStats() {
-            $("#dataViewSelectionModal #submitButton").one("click", addBasicStatsToView);
-            $("#dataViewSelectionModal").modal('show');
-        }
-
-        function addDistributionToView(e) {
-            var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
-            var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
-
-            var fieldName = $('#inputDiv #fieldName').val()
-            var fieldLabel = $("#inputDiv #fieldTypeahead").val();
-
-            var groupFieldName = $('#inputDiv #groupFieldName').val()
-            if (groupFieldName == "")
-                groupFieldName = null
-
-            if (fieldName) {
-                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addDistribution(dataViewId, fieldName, groupFieldName).ajax( {
-                    success: function() {
-                        showMessage("Distribution for the field '" + fieldLabel + "' have been successfully added to the view '" + dataViewName + "'.");
+                        // widgets
+                        var widgetsDiv = $("#widgetsDiv")
+                        var successMessage = "Comparison generation for the field '" + fieldLabel + "' finished."
+                        updateWidgetsFromCallback(data.widgetsCallbackId, widgetsDiv, null, 12, false, successMessage)
                     },
-                    error: function(data){
+                    error: function (data) {
+                        $("#widgetsDiv").html("")
                         showErrorResponse(data);
                     }
                 });
-            }
-        }
 
-        function addBoxPlotToView(e) {
-            var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
-            var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
-
-            var fieldName = $('#inputDiv #fieldName').val()
-            var fieldLabel = $("#inputDiv #fieldTypeahead").val();
-
-            var groupFieldName = $('#inputDiv #groupFieldName').val()
-            if (groupFieldName == "")
-                groupFieldName = null
-
-            if (fieldName) {
-                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addBoxPlot(dataViewId, fieldName, groupFieldName).ajax( {
-                    success: function() {
-                        showMessage("Box plot for the field '" + fieldLabel + "' have been successfully added to the view '" + dataViewName + "'.");
-                    },
-                    error: function(data){
-                        showErrorResponse(data);
-                    }
-                });
-            }
-        }
-
-        function addBasicStatsToView(e) {
-            var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
-            var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
-
-            var fieldName = $("#inputDiv #fieldName").val()
-            var fieldLabel = $("#inputDiv #fieldTypeahead").val();
-
-            if (fieldName) {
-                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addBasicStats(dataViewId, [fieldName]).ajax( {
-                    success: function() {
-                        showMessage("Basic stats for the field '" + fieldLabel + "' have been successfully added to the view '" + dataViewName + "'.");
-                    },
-                    error: function(data){
-                        showErrorResponse(data);
-                    }
-                });
+                hideErrors();
+                showMessage("Comparison generation for the field '" + fieldLabel + "' launched.")
             }
         }
     </script>
@@ -206,15 +122,23 @@
 
 @inputElements = {
     @fieldTypeaheadDiv(field, Some("col-md-3 col-sm-6"), "field", "Field")
-    @fieldTypeaheadDiv(groupField, Some("col-md-offset-1 col-md-5 col-sm-12"), "groupField", "Group Field")
+
+    <div class="pull-right">
+        <a class="btn btn-success btn-sm" href="#" onclick="addNewFilter();return false" data-toggle="tooltip" title="Add a New Filter">
+            <span class="glyphicon glyphicon-plus"></span>
+        </a>
+        <a class="btn btn-success btn-sm" href="#" onclick="removeFilterRight();return false" data-toggle="tooltip" title="Remove the Rightmost Filter">
+            <span class="glyphicon glyphicon-minus"></span>
+        </a>
+    </div>
 }
 
 @widgetsScreen(
-    Messages("distribution.title", dataSetName),
-    filterSpec,
+    Messages("comparison.title", dataSetName),
+    filters,
     filterShowFieldStyle,
     dataSpaceMetaInfos,
     inputElements,
-    extraActions,
+    None,
     bottomResources
 )

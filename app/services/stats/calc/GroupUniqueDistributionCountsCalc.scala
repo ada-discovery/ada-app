@@ -12,12 +12,10 @@ trait GroupUniqueDistributionCountsCalcTypePack[G, T] extends NoOptionsCalculato
 
 private class GroupUniqueDistributionCountsCalc[G,T] extends Calculator[GroupUniqueDistributionCountsCalcTypePack[G, T]] {
 
-  private val normalCalc = new UniqueDistributionCountsCalc[T]
+  private val normalCalc = UniqueDistributionCountsCalc[T]
 
   override def fun(options: Unit) =
-    _.toGroupMap.map { case (group, values) =>
-      (group, normalCalc.fun()(values))
-    }
+    _.toGroupMap.map { case (group, values) => (group, normalCalc.fun()(values)) }
 
   override def flow(options: Unit) =
     countFlow[IN]().via(seqFlow)

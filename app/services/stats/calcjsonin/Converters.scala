@@ -24,6 +24,7 @@ class BooleanArrayConverter extends ArrayConverter[Boolean]
 class AnyTupleConverter extends TupleConverter[Any, Any]
 class AnyArrayTupleConverter extends ArrayTupleConverter[Any, Any]
 class AnyTuple3Converter extends Tuple3Converter[Any, Any, Any]
+class AnySeqConverter extends SeqConverter[Any]
 
 ////////////////////////////////////
 // Calculator Specific Converters //
@@ -79,6 +80,14 @@ class ArrayBasicStatsConverter extends ArrayDoubleConverter {
 
 class MultiBasicStatsConverter extends SeqDoubleConverter {
   override def specificUseClass = Some(MultiBasicStatsCalc.getClass)
+}
+
+class CountDistinctConverter extends ScalarDoubleConverter {
+  override def specificUseClass = Some(classOf[CountDistinctCalc[Any]])
+}
+
+class ArrayCountDistinctConverter extends ArrayDoubleConverter {
+  override def specificUseClass = Some(classOf[CountDistinctCalc[Any]])
 }
 
 class PearsonCorrelationConverter extends SeqDoubleConverter {
@@ -193,6 +202,14 @@ private[calcjsonin] abstract class ArrayConverter[T: TypeTag] extends JsonInputC
   }
 
   override def inputType = typeOf[Array[Option[T]]]
+}
+
+private[calcjsonin] abstract class SeqConverter[T: TypeTag] extends JsonInputConverter[Seq[Option[T]]] {
+
+  override def apply(fields: Seq[Field]) =
+    jsonToValues(fields)
+
+  override def inputType = typeOf[Seq[Option[T]]]
 }
 
 private[calcjsonin] abstract class ArrayDoubleConverter extends JsonInputConverter[Array[Option[Double]]] {

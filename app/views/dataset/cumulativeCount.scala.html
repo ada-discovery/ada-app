@@ -119,11 +119,11 @@
 
 @widgetsScreen(
     Messages("cumulativeCount.title", dataSetName),
-    filterSpec,
+    Seq(filterSpec),
     filterShowFieldStyle,
     dataSpaceMetaInfos,
     inputElements,
-    extraActions,
+    Some(extraActions),
     bottomResources,
     true
 )

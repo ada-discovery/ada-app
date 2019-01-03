@@ -11,6 +11,7 @@ import models.security.DataSetPermission
 import org.incal.core.FilterCondition
 import org.incal.spark_ml.models.VectorScalerType
 import org.incal.play.PageOrder
+import play.api.mvc.{Action, AnyContent}
 
 class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends SecureControllerDispatcher[DataSetController]("dataSet") with DataSetController {
 
@@ -60,6 +61,8 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     tableOrder: String,
     totalCount: Int
   ) = dispatchAjax(_.getNewFilterViewElementsAndWidgetsCallback(dataViewId, tableOrder, totalCount))
+
+  override def getNewFilter  = dispatchAjax(_.getNewFilter)
 
   override def getTable(
     filterOrId: FilterOrId
@@ -140,6 +143,15 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     filterOrId: FilterOrId
   ) = dispatchAjax(_.calcHeatmap(xFieldName, yFieldName, valueFieldName, aggType, filterOrId))
 
+  override def getComparison(
+    filterOrIds: Seq[FilterOrId]
+  ) = dispatch(_.getComparison(filterOrIds))
+
+  override def calcComparison(
+    fieldName: String,
+    filterOrIds: Seq[FilterOrId]
+  ) = dispatchAjax(_.calcComparison(fieldName, filterOrIds))
+
   override def getIndependenceTest(
     filterOrId: FilterOrId
   ) = dispatch(_.getIndependenceTest(filterOrId))
@@ -147,12 +159,6 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   override def testIndependence(
     filterOrId: FilterOrId
   ) = dispatchAjax(_.testIndependence(filterOrId))
-
-  override def getIndependenceTestForViewFilters = dispatch(_.getIndependenceTestForViewFilters)
-
-  override def testIndependenceForViewFilters(
-    viewId: BSONObjectID
-  ) = dispatchAjax(_.testIndependenceForViewFilters(viewId))
 
   override def getFractalis(
     fieldNameOption: Option[String]

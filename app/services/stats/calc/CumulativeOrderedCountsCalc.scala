@@ -1,6 +1,7 @@
 package services.stats.calc
 
 import akka.stream.scaladsl.Flow
+import services.stats.calc.UniqueDistributionCountsCalc.UniqueDistributionCountsCalcTypePack
 import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 import util.AkkaStreamUtil.{countFlow, seqFlow}
 

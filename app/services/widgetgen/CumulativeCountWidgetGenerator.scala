@@ -3,6 +3,7 @@ package services.widgetgen
 import org.incal.core.dataaccess.Criterion
 import field.{FieldType, FieldTypeHelper}
 import models._
+import services.stats.calc.UniqueDistributionCountsCalc.UniqueDistributionCountsCalcTypePack
 import services.stats.calc.{GroupCumulativeOrderedCountsCalcTypePack, _}
 import util.{fieldLabel, shorten}
 

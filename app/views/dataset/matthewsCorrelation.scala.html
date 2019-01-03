@@ -137,11 +137,11 @@
 
 @widgetsScreen(
     Messages("matthewsCorrelation.title", dataSetName),
-    filterSpec,
+    Seq(filterSpec),
     filterShowFieldStyle,
     dataSpaceMetaInfos,
     inputElements,
-    extraActions,
+    Some(extraActions),
     bottomResources,
     true,
     widgetsDivOnRight = true

@@ -30,6 +30,7 @@ import scala.concurrent.Future
 import scala.collection.JavaConversions._
 import services.stats.CalculatorHelper._
 import services.stats.calc.SeqBinCountCalc.SeqBinCountCalcTypePack
+import services.stats.calc.UniqueDistributionCountsCalc.UniqueDistributionCountsCalcTypePack
 
 @ImplementedBy(classOf[StatsServiceImpl])
 trait StatsService extends CalculatorExecutors {
@@ -217,7 +218,13 @@ trait StatsService extends CalculatorExecutors {
     dataRepo: JsonReadonlyRepo,
     multiCriteria: Seq[Seq[Criterion[Any]]],
     inputFields: Seq[Field]
-  ): Future[Seq[(Field, Option[IndependenceTestResult])]]
+  ): Future[Seq[(Field, Option[OneWayAnovaResult])]]
+
+  def testChiSquareForMultiCriteriaSorted(
+    dataRepo: JsonReadonlyRepo,
+    multiCriteria: Seq[Seq[Criterion[Any]]],
+    inputFields: Seq[Field]
+  ): Future[Seq[(Field, Option[ChiSquareResult])]]
 
   def selectFeaturesAsAnovaChiSquare(
     data: Traversable[JsObject],
@@ -229,7 +236,7 @@ trait StatsService extends CalculatorExecutors {
 }
 
 @Singleton
-class StatsServiceImpl extends StatsService with OneWayAnovaHelper {
+class StatsServiceImpl extends StatsService with OneWayAnovaHelper with ChiSquareHelper[Int, Option[Any]] {
 
   private implicit val ftf = FieldTypeHelper.fieldTypeFactory()
   private val defaultNumericBinCount = 20
@@ -1185,7 +1192,7 @@ class StatsServiceImpl extends StatsService with OneWayAnovaHelper {
     dataRepo: JsonReadonlyRepo,
     multiCriteria: Seq[Seq[Criterion[Any]]],
     inputFields: Seq[Field]
-  ): Future[Seq[(Field, Option[IndependenceTestResult])]] = {
+  ): Future[Seq[(Field, Option[OneWayAnovaResult])]] = {
     val numericInputFields = inputFields.filter(_.isNumeric)
 
     // aux function to pull the required data (for given criteria) and cal basic stats for each field
@@ -1210,12 +1217,52 @@ class StatsServiceImpl extends StatsService with OneWayAnovaHelper {
     }
   }
 
-  private def sortIndependenceTestResults(
-    results: Seq[Option[IndependenceTestResult]],
+  private val multiCountDistinctExec = multiCountDistinctSeqExec[Option[Any]]
+
+  override def testChiSquareForMultiCriteriaSorted(
+    dataRepo: JsonReadonlyRepo,
+    multiCriteria: Seq[Seq[Criterion[Any]]],
     inputFields: Seq[Field]
-  ): Seq[(Field, Option[IndependenceTestResult])] = {
+  ): Future[Seq[(Field, Option[ChiSquareResult])]] = {
+
+    // aux function to pull the required data (for given criteria) and cal basic stats for each field
+    def calcCountsAux(
+      criteria: Seq[Criterion[Any]]
+    ): Future[Seq[Traversable[(Option[Any], Int)]]] =
+      dataRepo.find(criteria = criteria, projection = inputFields.map(_.name)).map(
+        multiCountDistinctExec.execJson_(inputFields)
+      )
+
+    for {
+      multiCounts <- Future.sequence(multiCriteria.map(calcCountsAux))
+    } yield {
+      // aux function to calculate Chi-Square at a given position/field
+      def calcAt(index: Int) = {
+        val groupCounts = multiCounts.map(_(index))
+
+        val counts = groupCounts.zipWithIndex.flatMap { case (valueCounts, groupIndex) =>
+          valueCounts.map { case (value, count) =>
+            (groupIndex, value) -> count
+          }
+        }.toMap
+
+        calcChiSquareSafe(counts)
+      }
+
+      val elementsCount = if (multiCounts.nonEmpty) multiCounts.head.size else 0
+
+      val results = (0 until elementsCount).par.map(calcAt).toList
+
+      sortIndependenceTestResults(results, inputFields)
+    }
+  }
+
+  private def sortIndependenceTestResults[T <: IndependenceTestResult](
+    results: Seq[Option[T]],
+    inputFields: Seq[Field]
+  ): Seq[(Field, Option[T])] = {
     // Sort and combine the results
-    def pValueAndStat(result: Option[IndependenceTestResult]): (Double, Double) =
+    def pValueAndStat(result: Option[T]): (Double, Double) =
       result.map {
         _ match {
           case ChiSquareResult(pValue, statistics, _) => (pValue, statistics)

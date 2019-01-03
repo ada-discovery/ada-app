@@ -3,6 +3,7 @@ package services.stats.calcjsonin
 import services.stats.calc._
 import org.incal.core.util.ReflectionUtil.construct2
 import models.AdaException
+import services.stats.calc.UniqueDistributionCountsCalc.UniqueDistributionCountsCalcTypePack
 import util.ClassFinderUtil.findClasses
 
 import scala.reflect.runtime.universe._

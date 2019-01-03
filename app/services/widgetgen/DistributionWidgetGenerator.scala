@@ -3,6 +3,7 @@ package services.widgetgen
 import org.incal.core.dataaccess.Criterion
 import field.{FieldType, FieldTypeHelper}
 import models._
+import services.stats.calc.UniqueDistributionCountsCalc.UniqueDistributionCountsCalcTypePack
 import services.stats.calc._
 import util.{fieldLabel, shorten}
 import util.FieldUtil._
@@ -256,9 +257,29 @@ trait DistributionWidgetGeneratorHelper {
     field: Field,
     groupField: Option[Field]
   ) = (countSeries:  Traversable[(String, Traversable[Count[Any]])]) => {
+    val nonZeroCountSeriesSorted = sortCountSeries(spec.numericBinCount)(countSeries)
+
     val displayOptions = spec.displayOptions
     val title = displayOptions.title.getOrElse(createTitle(field, groupField))
+    val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Pie)))
 
+    // create a categorical widget
+    CategoricalCountWidget(
+      title,
+      field.name,
+      field.labelOrElseName,
+      false,
+      true,
+      spec.relativeValues,
+      false,
+      nonZeroCountSeriesSorted,
+      initializedDisplayOptions
+    )
+  }
+
+  protected def sortCountSeries(
+    binCount: Option[Int]
+  ) = (countSeries:  Traversable[(String, Traversable[Count[Any]])]) => {
     // enforce the same categories in all the series
     val labelGroupedCounts = countSeries.flatMap(_._2).groupBy(_.value)
     val nonZeroLabelSumCounts = labelGroupedCounts.map { case (label, counts) =>
@@ -267,7 +288,7 @@ trait DistributionWidgetGeneratorHelper {
 
     val sortedLabels: Seq[String] = nonZeroLabelSumCounts.toSeq.sortBy(_._2).map(_._1.toString)
 
-    val topSortedLabels  = spec.numericBinCount match {
+    val topSortedLabels  = binCount match {
       case Some(maxCategoricalBinCount) => sortedLabels.takeRight(maxCategoricalBinCount)
       case None => sortedLabels
     }
@@ -285,22 +306,7 @@ trait DistributionWidgetGeneratorHelper {
       (seriesName, newCounts)
     }
 
-    val nonZeroCountSeriesSorted = countSeriesSorted.filter(_._2.exists(_.count > 0)).toSeq
-
-    val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Pie)))
-
-    // create a categorical widget
-    CategoricalCountWidget(
-      title,
-      field.name,
-      field.labelOrElseName,
-      false,
-      true,
-      spec.relativeValues,
-      false,
-      nonZeroCountSeriesSorted,
-      initializedDisplayOptions
-    )
+    countSeriesSorted.filter(_._2.exists(_.count > 0)).toSeq
   }
 
   private def createNumericWidgetAux(

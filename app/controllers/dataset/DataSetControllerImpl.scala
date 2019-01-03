@@ -41,7 +41,7 @@ import services.ml.MachineLearningService
 import views.html.dataset
 import models.ml.DataSetTransformation._
 import models.security.UserManager
-import services.stats.calc.{ChiSquareResult, IndependenceTestResult, OneWayAnovaResult}
+import services.stats.calc.{ChiSquareResult, IndependenceTestResult, OneWayAnovaResult, Quartiles}
 import services.stats.StatsService
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import field.{FieldType, FieldTypeHelper}
@@ -59,6 +59,7 @@ import org.incal.play.formatters._
 import org.incal.play.security.AuthAction
 import org.incal.play.security.SecurityRole
 import org.incal.spark_ml.models.VectorScalerType
+import services.widgetgen.DistributionWidgetGeneratorHelper
 
 import scala.math.Ordering.Implicits._
 import scala.concurrent.{Future, TimeoutException}
@@ -84,7 +85,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     with DataSetController
     with ExportableAction[JsObject]
-    with AdaAuthConfig {
+    with AdaAuthConfig
+    with DistributionWidgetGeneratorHelper {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
 
@@ -135,6 +137,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private val cumulativeCountGenMethod = WidgetGenerationMethod.FullData
   private val scatterGenMethod = WidgetGenerationMethod.FullData
   private val correlationsGenMethod = WidgetGenerationMethod.StreamedAll
+  private val comparisonGenMethod = WidgetGenerationMethod.RepoAndFullData
   private val independenceTestKeepUndefined = false
 
   private lazy val fractalisServerUrl = configuration.getString("fractalis.server.url")
@@ -727,7 +730,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     tableOrder: String,
     totalCount: Int
   ) = AuthAction { implicit request =>
-    val start = new ju.Date()
     val tablePage = 0
 
     val dataSetNameFuture = dsa.dataSetName
@@ -773,7 +775,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         val table = dataset.view.viewTable(newPage, None, viewResponse.tableFields, true)(request, router)
         val countFilter = dataset.view.viewCountFilter(None, viewResponse.count, setting.filterShowFieldStyle, false)
-        val filterModel = Json.toJson(viewResponse.filter.conditions)
 
         val jsonResponse = Ok(Json.obj(
           "table" -> table.toString(),
@@ -788,6 +789,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       }
     }.recover(handleExceptions("a getNewFilterViewElementsAndWidgetsCallback"))
+  }
+
+  override def getNewFilter = AuthAction { implicit request =>
+    {
+      dsa.setting.map { setting =>
+        val filter = dataset.filter.dataSetFilter(None, setting.filterShowFieldStyle)
+        Ok(filter.toString())
+      }
+    }.recover(handleExceptions("a getNewFilter"))
   }
 
   private def getFilterAndWidgetsCallbackAux(
@@ -1027,7 +1037,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     if (fieldNames.isEmpty)
       Future(Nil)
     else
-      fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
+      fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSet.toSeq))
 
   private def getValues[T](
     field: Field,
@@ -1523,6 +1533,262 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }.recover(handleExceptions("a table"))
   }
 
+  override def getComparison(
+    filterOrIds: Seq[FilterOrId]
+  ) = AuthAction { implicit request => {
+    for {
+      // get the data set name, the data space tree, and the setting
+      (dataSetName, dataSpaceTree, setting) <- getDataSetNameTreeAndSetting
+
+      // load all the filters if needed
+      resolvedFilters <- Future.sequence(filterOrIds.map(filterRepo.resolve))
+
+      // create a name -> field map of the filter referenced fields and set the filter's fields' labels
+      newFilters <- Future.sequence(resolvedFilters.map(resolvedFilter =>
+        getFilterFieldNameMap(resolvedFilter).map(
+          setFilterLabels(resolvedFilter, _)
+        )
+      ))
+    } yield {
+      val paddedFilters = if (newFilters.size < 2) Seq.fill(2 - newFilters.size)(new Filter()) else newFilters
+
+      render {
+        case Accepts.Html() => Ok(dataset.comparison(
+          dataSetName,
+          paddedFilters,
+          setting.filterShowFieldStyle,
+          None,
+          None,
+          dataSpaceTree
+        ))
+        case Accepts.Json() => BadRequest("The function getComparison doesn't support JSON response.")
+      }
+    }
+
+  }.recover(handleExceptions("a comparison"))
+  }
+
+  override def calcComparison(
+    fieldName: String,
+    filterOrIds: Seq[FilterOrId]
+  ) = AuthAction { implicit request =>
+    {
+      for {
+        // load all the filters if needed
+        resolvedFilters <- Future.sequence(filterOrIds.map(filterRepo.resolve))
+
+        newFilters <- Future.sequence(resolvedFilters.map(resolvedFilter =>
+          createNameFieldMap(Seq(resolvedFilter.conditions), Nil, Nil).map( nameFieldMap =>
+            setFilterLabels(resolvedFilter, nameFieldMap)
+          )
+        ))
+
+        // the (main) field
+        field <- fieldRepo.get(fieldName)
+      } yield
+        field match {
+          case Some(field) =>
+            val jsonWidgetsFuture = if (field.isNumeric) numericComparisonWidgetsAsJson(resolvedFilters, field) else categoricalComparisonWidgetsAsJson(resolvedFilters, field)
+
+            val widgetsCallbackId = UUID.randomUUID.toString
+            jsonWidgetResponseCache.put(widgetsCallbackId, jsonWidgetsFuture)
+
+            // get new filters
+            val conditionPanels = newFilters.map(newFilter => views.html.filter.conditionPanel(Some(newFilter)).toString)
+            val filterModels = newFilters.map(newFilter => Json.toJson(newFilter.conditions))
+
+            val jsonResponse = Ok(Json.obj(
+              "conditionPanels" -> conditionPanels,
+              "filterModels" -> filterModels,
+              "widgetsCallbackId" -> widgetsCallbackId
+            ))
+
+            render {
+              case Accepts.Html() => jsonResponse
+              case Accepts.Json() => jsonResponse
+            }
+
+          case None =>
+            BadRequest(s"Field $fieldName not found.")
+        }
+    }.recover(handleExceptions("a comparison"))
+  }
+
+  private def numericComparisonWidgetsAsJson(
+    filters: Seq[Filter],
+    field: Field
+  ): Future[Seq[JsArray]] = {
+    val distributionSpec = DistributionWidgetSpec(
+      fieldName = field.name,
+      groupFieldName = None,
+      displayOptions = MultiChartDisplayOptions(
+        gridWidth = Some(6),
+        height = Some(500),
+        chartType = Some(ChartType.Spline)
+      )
+    )
+
+    val boxPlotSpec = BoxWidgetSpec(
+      fieldName = field.name,
+      displayOptions = BasicDisplayOptions(
+        gridWidth = Some(6),
+        height = Some(500)
+      )
+    )
+
+    val basicStatsSpec = BasicStatsWidgetSpec(
+      fieldName = field.name,
+      displayOptions = BasicDisplayOptions(
+        gridWidth = Some(2),
+        height = Some(500)
+      )
+    )
+
+    val widgetSpecs = Seq(distributionSpec, boxPlotSpec, basicStatsSpec)
+
+    // aux function to generate widgets for a given filter
+    def widgetsAux(filter: Filter, criteria: Seq[Criterion[Any]]): Future[Seq[Option[Widget]]] =
+      for {
+        nameFieldMap <- createNameFieldMap(Seq(filter.conditions), widgetSpecs, Nil)
+        widgets <- getViewWidgetsWithFields(widgetSpecs, criteria, nameFieldMap.values, comparisonGenMethod)
+      } yield
+        widgets.map(_.map(_._1)).toSeq
+
+    for {
+      multiCriteria <- Future.sequence(filters.map(filter => toCriteria(filter.conditions)))
+
+      allWidgets <- Future.sequence(filters.zip(multiCriteria).map((widgetsAux(_, _)).tupled))
+
+      anovaResult <- statsService.testAnovaForMultiCriteriaSorted(repo, multiCriteria, Seq(field)).map(_.head._2)
+    } yield {
+      // aux function to extract widgets at given seq index
+      def filterNameWidgets[W <: Widget](index: Int): Seq[(String, W)] =
+        allWidgets.zip(filters).zipWithIndex.flatMap { case ((widgets, filter), filterIndex) =>
+          widgets(index).map { widget =>
+            val filterName = filter.name.getOrElse("Filter " + (filterIndex + 1))
+            (filterName, widget.asInstanceOf[W])
+          }
+        }
+
+      // (merged) distribution widget
+      val distributionWidgets = filterNameWidgets[NumericalCountWidget[_]](0)
+      val mergedDistributionData = distributionWidgets.map { case (filterName, widget) => (filterName, widget.data.head._2) }
+      val distributionWidget = distributionWidgets.head._2.copy(data = mergedDistributionData)
+
+      // (merged) box plot widget
+      val boxWidgets = filterNameWidgets[BoxWidget[Any]](1)
+      val mergedBoxPlotData = boxWidgets.map { case (filterName, widget) => (filterName, widget.data.head._2) }
+
+      def format(x: Double) = if (x < 0.00001) f"$x%3.2e" else f"$x%1.5f"
+
+      val pValue = anovaResult.map(result => format(result.pValue)).getOrElse("N/A")
+      val FValue = anovaResult.map(result => format(result.FValue)).getOrElse("N/A")
+
+      val boxTitle = s"<h4>ANOVA: p-Value = <b>${pValue}</b>, F-Value = <b>${FValue}</b></h4>"
+
+      def setData[T: Ordering](
+        boxWidget: BoxWidget[T],
+        newData: Seq[(String, Quartiles[T])]
+      ): BoxWidget[T] = boxWidget.copy(data = newData, title = boxTitle)
+
+      implicit val ordering = boxWidgets.head._2.ordering
+      val boxWidget = setData(boxWidgets.head._2, mergedBoxPlotData)
+
+      // basic stats widgets
+      val filterNameBasicWidgets = filterNameWidgets[BasicStatsWidget](2)
+      val basicStatsWidgets = filterNameBasicWidgets.zipWithIndex.map { case ((filterName, widget), index) =>
+        if (filterNameBasicWidgets.size == 2 && index == 0) {
+          val newDisplayOptions = widget.displayOptions.asInstanceOf[BasicDisplayOptions].copy(gridOffset = Some(1))
+          widget.copy(title = filterName, displayOptions = newDisplayOptions)
+        } else
+          widget.copy(title = filterName)
+      }
+
+      // relative distributionWidget
+      val relativeDistributionWidget = distributionWidget.copy(useRelativeValues = true)
+
+      // ANOVA widget
+
+//      val anovaWidget = HtmlWidget(
+//        title = "ANOVA",
+//        content =
+//          s"""
+//             <h4>ANOVA: p-Value = <b>${anovaResult.map(_.pValue).getOrElse("N/A")}</b>, F-Value = <b>${anovaResult.map(_.FValue).getOrElse("N/A")}</b></h4>
+//          """.stripMargin,
+//        displayOptions = BasicDisplayOptions(
+//          gridOffset = Some(1),
+//          gridWidth = Some(5),
+//          height = Some(100)
+//        )
+//      )
+
+      val widgets = Seq(distributionWidget, boxWidget, relativeDistributionWidget) ++ basicStatsWidgets
+      val jsons = widgetsToJsons(widgets, Seq.fill(widgets.size)(Seq(field.name)), Map(field.name -> field))
+      Seq(jsons)
+    }
+  }
+
+  private def categoricalComparisonWidgetsAsJson(
+    filters: Seq[Filter],
+    field: Field
+  ): Future[Seq[JsArray]] = {
+    val distributionSpec = DistributionWidgetSpec(
+      fieldName = field.name,
+      groupFieldName = None,
+      displayOptions = MultiChartDisplayOptions(
+        gridWidth = Some(6),
+        height = Some(500),
+        chartType = Some(ChartType.Column)
+      )
+    )
+
+    val widgetSpecs = Seq(distributionSpec)
+    val genMethod = if (field.isString) WidgetGenerationMethod.FullData else comparisonGenMethod
+
+    // aux function to generate widgets for a given filter
+    def widgetsAux(filter: Filter, criteria: Seq[Criterion[Any]]): Future[Seq[Option[Widget]]] =
+      for {
+        nameFieldMap <- createNameFieldMap(Seq(filter.conditions), widgetSpecs, Nil)
+        widgets <- getViewWidgetsWithFields(widgetSpecs, criteria, nameFieldMap.values, genMethod)
+      } yield
+        widgets.map(_.map(_._1)).toSeq
+
+    for {
+      multiCriteria <- Future.sequence(filters.map(filter => toCriteria(filter.conditions)))
+
+      allWidgets <- Future.sequence(filters.zip(multiCriteria).map((widgetsAux(_, _)).tupled))
+
+      chiSquareResult <- statsService.testChiSquareForMultiCriteriaSorted(repo, multiCriteria, Seq(field)).map(_.head._2)
+    } yield {
+      // distribution widget
+      val distributionWidgets = allWidgets.zip(filters).zipWithIndex.map { case ((widgets, filter), filterIndex) =>
+        widgets(0).map { widget =>
+          val filterName = filter.name.getOrElse("Filter " + (filterIndex + 1))
+          (filterName, widget.asInstanceOf[CategoricalCountWidget])
+        }
+      }.flatten
+
+      val mergedDistributionData = distributionWidgets.map { case (filterName, widget) => (filterName, widget.data.head._2) }
+      val nonZeroCountSeriesSorted = sortCountSeries(None)(mergedDistributionData)
+      val distributionWidget = distributionWidgets.head._2.copy(data = nonZeroCountSeriesSorted)
+
+      def format(x: Double) = if (x < 0.00001) f"$x%3.2e" else f"$x%1.5f"
+
+      // chi-square
+      val pValue = chiSquareResult.map(result => format(result.pValue)).getOrElse("N/A")
+      val stats = chiSquareResult.map(result => format(result.statistics)).getOrElse("N/A")
+
+      val textualTitle = s"Chi-Square: p-Value = <b>${pValue}</b>, stats = <b>${stats}</b>"
+
+      // textual distribution widget
+      val textualDistributionWidget = distributionWidget.copy(displayOptions = distributionWidget.displayOptions.copy(isTextualForm = true), title = textualTitle)
+
+      val widgets = Seq(distributionWidget, textualDistributionWidget)
+      val jsons = widgetsToJsons(widgets, Seq.fill(widgets.size)(Seq(field.name)), Map(field.name -> field))
+      Seq(jsons)
+    }
+  }
+
   override def generateTable(
     page: Int,
     orderBy: String,
@@ -1706,69 +1972,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         "filterModel" -> filterModel,
         "results" -> jsonResults
       ))
-    }
-  }
-
-  override def getIndependenceTestForViewFilters = AuthAction { implicit request => {
-    for {
-    // get the data set name, the data space tree, and the setting
-      (dataSetName, dataSpaceTree, setting) <- getDataSetNameTreeAndSetting
-    } yield {
-      render {
-        case Accepts.Html() => Ok(dataset.independenceTestViewFilters(
-          dataSetName,
-          setting.filterShowFieldStyle,
-          dataSpaceTree
-        ))
-        case Accepts.Json() => BadRequest("GetIndependenceTestForViewFilters function doesn't support JSON response.")
-      }
-    }
-  }.recover(handleExceptions("an independence test for view filters"))
-  }
-
-  override def testIndependenceForViewFilters(
-    viewId: BSONObjectID
-  ) = Action.async { implicit request =>
-    val inputFieldNames = request.body.asFormUrlEncoded.flatMap(_.get("inputFieldNames[]")).getOrElse(Nil)
-
-    if (inputFieldNames.isEmpty)
-      Future(BadRequest("No input provided."))
-    else
-      testIndependenceForViewFiltersAux(inputFieldNames, viewId)
-  }
-
-  private def testIndependenceForViewFiltersAux(
-    inputFieldNames: Seq[String],
-    viewId: BSONObjectID
-  ): Future[Result] = {
-    def toCriteriaAux(filterOrId: FilterOrId) =
-      for {
-        resolvedFilter <- filterRepo.resolve(filterOrId)
-        criteria <- toCriteria(resolvedFilter.conditions)
-      } yield
-        criteria
-
-    for {
-      view <- dataViewRepo.get(viewId)
-
-      inputFields <- getFields(inputFieldNames)
-
-      filterOrIds = view.map(_.filterOrIds).getOrElse(Nil)
-
-      multiCriteria <- Future.sequence(filterOrIds.map(toCriteriaAux))
-
-      resultsSorted <- statsService.testAnovaForMultiCriteriaSorted(repo, multiCriteria, inputFields.toSeq)
-    } yield {
-      val fieldNameLabelMap = inputFields.map(field => (field.name, field.labelOrElseName)).toMap
-
-      implicit val stringTestTupleFormat = TupleFormat[String, IndependenceTestResult]
-
-      // create jsons
-      val labelResults = resultsSorted.flatMap { case (field, result) =>
-        val fieldLabel = fieldNameLabelMap.get(field.name).get
-        result.map((fieldLabel, _))
-      }
-      Ok(Json.toJson(labelResults))
     }
   }
 

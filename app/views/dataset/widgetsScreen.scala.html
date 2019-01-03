@@ -17,11 +17,11 @@
 
 @(
     title: String,
-    filterSpec: models.Filter,
+    filters: Seq[models.Filter],
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
     inputElements: Html,
-    extraActions: Html,
+    extraActions: Option[Html],
     extraBottomResources: Html,
     highchartsUseBoost: Boolean = false,
     widgetsDivOnRight: Boolean = false
@@ -31,15 +31,17 @@
 
 @actions = {
     <div class="row">
-        <div class="col-md-10">
+        <div class="@if(extraActions.isDefined) { col-md-10 } else { col-md-12 }">
             @fixedTableRow("filtersTr") {
-                <td style='padding-left: 10px; vertical-align:top'>
-                    @dataSetFilter(Some(filterSpec), filterShowFieldStyle)
-                </td>
+                @filters.map { filterSpec =>
+                    <td style='padding-left: 10px; vertical-align:top'>
+                        @dataSetFilter(Some(filterSpec), filterShowFieldStyle)
+                    </td>
+                }
             }
         </div>
 
-        @extraActions
+        @extraActions.getOrElse("")
     </div>
 }
 
@@ -125,23 +127,21 @@
                         }
                     })
                 },
-                error: function(data){
-                    showErrorResponse(data)
-                }
+                error: showErrorResponse
             });
         }
 
         function activateAllFilters(submitAjaxFun) {
             var filters = $(".filter-div")
+            var jsonConditions = [@filters.map { filterSpec => JSON.parse('@toJsonHtml(filterSpec.conditions)'), }];
+            var filterIds = [@filters.map { filterSpec => '@filterSpec._id.map(_.stringify).getOrElse("")', }];
+
             $.each(filters, function (index, filterElement) {
-                activateFilter(filterElement, submitAjaxFun)
+                activateFilter(filterElement, submitAjaxFun, jsonConditions[index], filterIds[index])
             })
         }
 
-        function activateFilter(filterElement, submitAjaxFun) {
-            var jsonConditions = JSON.parse('@toJsonHtml(filterSpec.conditions)');
-            var filterId = '@filterSpec._id.map(_.stringify).getOrElse("")';
-
+        function activateFilter(filterElement, submitAjaxFun, jsonConditions, filterId) {
             activateDataSetFilterAux(
                 filterElement,
                 jsonConditions,
@@ -189,7 +189,7 @@
     @if(widgetsDivOnRight) {
         <div class="row" style="margin-bottom:20px">
             <div class="col-md-4 col-sm-12">
-                <button type="button" data-toggle="collapse" data-target="#inputDiv" title="Show/Hide">
+                <button type="button" class="btn btn-default btn-circle" data-toggle="collapse" data-target="#inputDiv" title="Show/Hide">
                     <span class="glyphicon glyphicon-resize-horizontal"></span>
                 </button>
             </div>
