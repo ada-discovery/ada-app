@@ -29,6 +29,8 @@
 
 @bottomResources = {
 
+    <script src="@routes.CustomDirAssets.versioned("javascripts/ada-charts.min.js")"></script>
+
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.calcPearsonCorrelations,
         dataSetJsRouter.getWidgets
@@ -39,6 +41,86 @@
     )
 
     <script type="text/javascript">
+            var values = [];
+            var rows = [];
+            var cols = [];
+
+            const adaCharts = new AdaCharts.default()
+            const container = document.querySelector('#widgetsDiv');
+            const heatmap = new adaCharts.availableCharts[0](container)
+
+//            console.log(adaCharts.availableCharts.length)
+//            console.log(adaCharts.availableCharts[0])
+
+            console.log(adaCharts)
+            console.log(heatmap)
+
+            /**
+             * Ignore the code below. It's just some hacks to generate some random data for demo
+             */
+            function shuffle(a) {
+                for (var i = a.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [a[i], a[j]] = [a[j], a[i]];
+                }
+                return a;
+            }
+
+            function generateRandomMatrix(minValue, maxValue) {
+                const height = Math.floor(Math.random() * (50 - 20 + 1) + 20);
+                const width = Math.floor(Math.random() * (50 - 20 + 1) + 20);
+
+                values = [];
+                rows = [];
+                cols = [];
+
+                for (var i = 0; i < height; i += 1) {
+                    rows.push("row - " + i);
+                    for (var j = 0; j < width; j += 1) {
+                        if (Math.random() > 0.9) {
+                            values.push(undefined);
+                        } else {
+                            values.push(Math.random() * (maxValue - minValue + 1) + minValue);
+                        }
+                        if (i === 0) {
+                            cols.push("col - " + j);
+                        }
+                    }
+                }
+
+                if (Math.random() > 0.7) shuffle(rows);
+                if (Math.random() > 0.7) shuffle(cols);
+            }
+
+            /**
+             * API "documentation" below this point
+             */
+
+            function toPNG() {
+                heatmap.toPNG();
+            }
+
+            function update() {
+                generateRandomMatrix(-1, 1, true);
+
+//                const container = $("#heatmap-container");
+ //               var heatmap = AdaCharts.chart({ chartType: 'heatmap', container: container })
+
+                console.log(values)
+                console.log(rows)
+                console.log(cols)
+                heatmap.update({ values: values, rows: rows, cols: cols, valueRange: [-1, 1], sequential: true });
+            }
+
+            function highlight() {
+                const randomRow = rows[Math.floor(Math.random() * rows.length)];
+                const randomCol = cols[Math.floor(Math.random() * cols.length)];
+                heatmap.highlight({ row: randomRow, col: randomCol });
+            }
+
+//            document.addEventListener('DOMContentLoaded', update, false);
+
+
         $(function () {
             populateNumericalTypeahead("field")
 
@@ -112,6 +194,22 @@
             });
         }
     </script>
+
+    <style>
+        body {
+            display: flex;
+            flex-direction: row;
+        }
+
+        #heatmap-controls {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #widgetsDiv {
+            width: 50vw;
+        }
+    </style>
 }
 
 @fieldButtons = {
@@ -124,6 +222,7 @@
 
     @dynamicTableJsImport()
 
+    <div class="row">
     @dynamicFieldTable(
         "fieldName",
         Nil,
@@ -133,6 +232,18 @@
         Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
         "categoryTree2"
     )
+    </div>
+
+    <div class="row">
+
+    <div id="heatmap-controls">
+        <span>API examples:</span>
+        <button onclick="update()">update()</button>
+        <button onclick="toPNG()">toPNG()</button>
+        <button onclick="highlight()">highlight()</button>
+    </div>
+
+    </div>
 }
 
 @widgetsScreen(

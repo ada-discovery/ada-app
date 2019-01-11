@@ -84,7 +84,7 @@ private class UserManagerImpl @Inject()(
           case Some(usr) =>
             userRepo.update(usr.copy(ldapDn = ldapUser.uid, email = ldapUser.email))
           case None =>
-            userRepo.save(User(None, ldapUser.uid, ldapUser.email, Seq(SecurityRole.basic), Seq()))
+            userRepo.save(User(None, ldapUser.uid, ldapUser.email, Seq(), Seq()))
         }
       } yield
         ()

@@ -1679,12 +1679,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val boxWidgets = filterNameWidgets[BoxWidget[Any]](1)
       val mergedBoxPlotData = boxWidgets.map { case (filterName, widget) => (filterName, widget.data.head._2) }
 
-      def format(x: Double) = if (x < 0.00001) f"$x%3.2e" else f"$x%1.5f"
+      val pValue = anovaResult.map(result => formatDouble(result.pValue)).getOrElse("N/A")
+      val isSignificant = anovaResult.map(result => result.pValue < 0.001).getOrElse(false)
+      val FValue = anovaResult.map(result => formatDouble(result.FValue)).getOrElse("N/A")
 
-      val pValue = anovaResult.map(result => format(result.pValue)).getOrElse("N/A")
-      val FValue = anovaResult.map(result => format(result.FValue)).getOrElse("N/A")
-
-      val boxTitle = s"<h4>ANOVA: p-Value = <b>${pValue}</b>, F-Value = <b>${FValue}</b></h4>"
+      val boxTitle = s"<h4>ANOVA: p-Value = ${if(isSignificant) s"<b>$pValue</b>" else s"<i>$pValue</i>"}, F-Value = ${FValue}</h4>"
 
       def setData[T: Ordering](
         boxWidget: BoxWidget[T],
@@ -1772,13 +1771,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val nonZeroCountSeriesSorted = sortCountSeries(None)(mergedDistributionData)
       val distributionWidget = distributionWidgets.head._2.copy(data = nonZeroCountSeriesSorted)
 
-      def format(x: Double) = if (x < 0.00001) f"$x%3.2e" else f"$x%1.5f"
-
       // chi-square
-      val pValue = chiSquareResult.map(result => format(result.pValue)).getOrElse("N/A")
-      val stats = chiSquareResult.map(result => format(result.statistics)).getOrElse("N/A")
+      val pValue = chiSquareResult.map(result => formatDouble(result.pValue)).getOrElse("N/A")
+      val isSignificant = chiSquareResult.map(result => result.pValue < 0.001).getOrElse(false)
+      val stats = chiSquareResult.map(result => formatDouble(result.statistics)).getOrElse("N/A")
 
-      val textualTitle = s"Chi-Square: p-Value = <b>${pValue}</b>, stats = <b>${stats}</b>"
+      val textualTitle = s"Chi-Square: p-Value = ${if(isSignificant) s"<b>$pValue</b>" else s"<i>$pValue</i>"}, stats = ${stats}"
 
       // textual distribution widget
       val textualDistributionWidget = distributionWidget.copy(displayOptions = distributionWidget.displayOptions.copy(isTextualForm = true), title = textualTitle)
@@ -1787,6 +1785,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val jsons = widgetsToJsons(widgets, Seq.fill(widgets.size)(Seq(field.name)), Map(field.name -> field))
       Seq(jsons)
     }
+  }
+
+  private def formatDouble(x: Double) = x match {
+    case 0 => "0"
+    case 1 => "1"
+    case x if x < 0.00001 => f"$x%3.2E"
+    case _ => f"$x%1.5f"
   }
 
   override def generateTable(
