@@ -42,7 +42,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
 
   private val indexNameMaxSize = 40
   private val indexMaxFieldsNum = 31
-  private val logger = Logger
+  protected val logger = Logger
   private implicit val system = ActorSystem()
   protected val materializer = ActorMaterializer()
 
@@ -443,9 +443,10 @@ class MongoAsyncStreamRepo[E: Format, ID: Format](
   import reactivemongo.akkastream.cursorProducer
 
   private def akkaCursor: Future[AkkaStreamCursor[E]] = {
-    // ObjectIDs are linear with time, we only want events created after now.
-    val since = BSONObjectID.generate
-    val criteria = Json.obj("_id" -> Json.obj("$gt" -> since))
+//    val since = BSONObjectID.generate
+//    val criteria = Json.obj("_id" -> Json.obj("$gt" -> since))
+//    Json.obj("$natural" -> 1)
+    var criteria = Json.obj("timeCreated" -> Json.obj("$gt" -> new java.util.Date().getTime))
     for {
       coll <- cappedCollection
     } yield
@@ -453,23 +454,21 @@ class MongoAsyncStreamRepo[E: Format, ID: Format](
   }
 
   private lazy val cappedCollection: Future[JSONCollection] = {
-    val coll = collection
-    coll.stats().flatMap {
+    collection.stats().flatMap {
       case stats if !stats.capped =>
         // The collection is not capped, so we convert it
-        coll.convertToCapped(102400, Some(1000))
-      case _ => Future.successful(true)
+        collection.convertToCapped(102400, Some(1000))
+      case _ => Future(collection)
     }.recover {
       // The collection mustn't exist, create it
       case _ =>
-        coll.createCapped(102400, Some(1000))
-    }.map { _ =>
-      coll.indexesManager.ensure(Index(
-        key = Seq("_id" -> IndexType.Ascending),
+        collection.createCapped(102400, Some(1000))
+    }.flatMap( _ =>
+      collection.indexesManager.ensure(Index(
+        key = Seq("timeCreated" -> IndexType.Ascending),
         unique = true
-      ))
-      coll
-    }
+      )).map(_ => collection)
+    )
   }
 }
 
