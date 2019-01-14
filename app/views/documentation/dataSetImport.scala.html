@@ -1,7 +1,6 @@
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
-@import views.html.documentation.core
-@import views.html.documentation.section
+@import views.html.documentation.{core, section, imageSection, sectionNavigation}
 
 @()(implicit context: WebContext)
 
@@ -9,21 +8,22 @@
 
     @section(None, None, 0, false) {
         <p>
-            To create, edit, delete, schedule, or execute a data set import, go to <i>Admin->Data Set Imports</i>. Ada provides three file-based data import adapters:
-            <ul>
-                <li>CSV</li>
-                <li>JSON</li>
-                <li><a href="http://transmartfoundation.org">tranSMART</a></li>
-            </ul>
+            To create, edit, delete, schedule, or execute a data set import, go to <i>Admin->Data Set Imports</i>. Ada currently provides six data import adapters,
+            three file-based: CSV, JSON, and tranSMART; and three RESTful-based: REDCap, Synapse, and eGAIT.
         </p>
 
         <p>
-            and three RESTful-based:
-            <ul>
-                <li><a href="http://www.project-redcap.org">REDCap</a></li>
-                <li><a href="https://www.synapse.org">Synapse</a></li>
-                <li><a href="http://www.egait.de">eGAIT</a></li>
-            </ul>
+            To create a new data set import, select a desired type in a drop down <img src="@routes.CustomDirAssets.versioned("images/documentation/new_dropdown_button.png")"/> located on the right side.
+        </p>
+
+        <p>
+            If there is a data set import similar to the one you want to create, click <img src="@routes.CustomDirAssets.versioned("images/documentation/copy_button.png")"/> located on the right side
+            and select the source import you want to copy in an autocomplete textbox. Then edit it accordingly.
+        </p>
+
+        <p>
+            To execute a data set import click <img src="@routes.CustomDirAssets.versioned("images/documentation/run_data_set_import_button.png")"/> at the associated row in a table. Note that you do not need to wait for the import to fully proceed and you can continue working at different sections of Ada
+            since depending on the data set size a data set import might take several seconds to minutes to finish.
         </p>
     } {
         <div class="row">
@@ -37,5 +37,90 @@
                 </div>
             </div>
         </div>
+    }
+
+    <hr/>
+
+    @sectionNavigation(Some("Import Types"))(
+        ("section_csv", "CSV"),
+        ("section_json", "JSON"),
+        ("section_transmart", "tranSMART"),
+        ("section_redcap", "REDCap"),
+        ("section_synapse", "Synapse"),
+        ("section_egait", "eGAIT")
+    )
+
+    @imageSection(Some("section_csv"), Some("CSV"), Some("images/carousel/stats-small.png")) {
+        <p>
+            Ada allows users to conveniently explore and filter data, and calculate various statistics with embedded interactive visualizations,
+            for instance, categorical and numerical distributions, scatters, correlations, and box plots.
+        </p>
+
+        <p>
+            Moreover, one of Ada's main functionalities is to produce dynamic and personalized <it>views</it>
+            containing filters, statistical widgets, and tables, which can be saved and shared among the users.
+            This makes Ada an ideal tool for a collaborative reporting.
+        </p>
+    }
+
+    @imageSection(Some("section_json"), Some("JSON"), Some("images/carousel/stats-small.png")) {
+        <p>
+            Ada allows users to conveniently explore and filter data, and calculate various statistics with embedded interactive visualizations,
+            for instance, categorical and numerical distributions, scatters, correlations, and box plots.
+        </p>
+
+        <p>
+            Moreover, one of Ada's main functionalities is to produce dynamic and personalized <it>views</it>
+            containing filters, statistical widgets, and tables, which can be saved and shared among the users.
+            This makes Ada an ideal tool for a collaborative reporting.
+        </p>
+    }
+
+    @imageSection(Some("section_transmart"), Some("tranSMART"), Some("images/carousel/stats-small.png")) {
+        <p>
+            <a href="http://transmartfoundation.org">tranSMART</a>
+        </p>
+
+        <p>
+            Moreover, one of Ada's main functionalities is to produce dynamic and personalized <it>views</it>
+            containing filters, statistical widgets, and tables, which can be saved and shared among the users.
+            This makes Ada an ideal tool for a collaborative reporting.
+        </p>
+    }
+
+    @imageSection(Some("section_redcap"), Some("REDCap"), Some("images/carousel/stats-small.png")) {
+        <p>
+            <a href="http://www.project-redcap.org">REDCap</a>
+        </p>
+
+        <p>
+            Moreover, one of Ada's main functionalities is to produce dynamic and personalized <it>views</it>
+            containing filters, statistical widgets, and tables, which can be saved and shared among the users.
+            This makes Ada an ideal tool for a collaborative reporting.
+        </p>
+    }
+
+    @imageSection(Some("section_synapse"), Some("Synapse"), Some("images/carousel/stats-small.png")) {
+        <p>
+            <a href="https://www.synapse.org">Synapse</a>
+        </p>
+
+        <p>
+            Moreover, one of Ada's main functionalities is to produce dynamic and personalized <it>views</it>
+            containing filters, statistical widgets, and tables, which can be saved and shared among the users.
+            This makes Ada an ideal tool for a collaborative reporting.
+        </p>
+    }
+
+    @imageSection(Some("section_egait"), Some("eGAIT"), Some("images/carousel/stats-small.png")) {
+        <p>
+            <a href="http://www.egait.de">eGAIT</a>
+        </p>
+
+        <p>
+            Moreover, one of Ada's main functionalities is to produce dynamic and personalized <it>views</it>
+            containing filters, statistical widgets, and tables, which can be saved and shared among the users.
+            This makes Ada an ideal tool for a collaborative reporting.
+        </p>
     }
 }

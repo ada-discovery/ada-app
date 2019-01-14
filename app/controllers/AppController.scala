@@ -15,6 +15,7 @@ import org.incal.play.security.SecurityUtil._
 import persistence.RepoTypes.HtmlSnippetRepo
 import views.html.layout
 import play.api.cache.Cached
+import play.api.mvc.Action
 
 import scala.concurrent.Future
 

@@ -10,7 +10,7 @@
 <input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[JsonDataSetImport].getName}">
 
 <div class="panel panel-default">
-    <div class="panel-heading">File</div>
+    <div class="panel-heading">JSON Import Specifics</div>
     <div class="panel-body">
         @fileOrPathInput("jsonDataSetImport", "sourceChoice", "Source", "dataFile", "path", form)
         @inputText("jsonDataSetImport", "charsetName", form)

@@ -29,6 +29,8 @@
 
 @bottomResources = {
 
+    <script src="@routes.CustomDirAssets.versioned("javascripts/ada-charts.min.js")"></script>
+
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.calcMatthewsCorrelations,
         dataSetJsRouter.getWidgets
@@ -39,12 +41,16 @@
     )
 
     <script type="text/javascript">
+        let heatmap = null;
+
         $(function () {
             populateBooleanTypeahead("field")
 
             $("#dataViewSelectionModal #submitButton").on("click", addCorrelationToView);
 
             $('#fieldNameDiv #addRowButton').focus();
+
+            $("#widgetsDiv").html("<div id='spinnerDiv' class='row'></div><div id='heatmapDiv' class='row' style='margin-left: 30px;'></div>")
 
             activateAllFilters(function(filterOrId) {calcCorrelations()});
         });
@@ -58,12 +64,12 @@
             if (inputFieldNames.length == 0) {
                 showError("Matthews correlation calculation cannot be launched. No fields specified.");
             } else {
-                var ajaxHandler = handleResponse("Matthews correlation calculation finished.")
+                var ajaxHandler = handleHeatmapResponse("Matthews correlation calculation finished.")
                 ajaxHandler["data"] = {
                     "fieldNames": inputFieldNames
                 };
 
-                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcMatthewsCorrelations(filterOrIdJson).ajax(ajaxHandler)
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcMatthewsCorrelations(filterOrIdJson).ajax(ajaxHandler);
 
                 hideErrors();
                 showMessage("Matthews correlation calculation for " + inputFieldNames.length + " fields launched.")

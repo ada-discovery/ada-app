@@ -38,7 +38,7 @@ class DocumentationController @Inject() (cached: Cached) extends BaseController 
     showHtml("mlRegression", documentation.mlRegression()(_))
 
   def mlClusterization =
-    showHtml("mlClusterization", documentation.mlClusterization()(_))
+    showHtml("mlClusterization", documentation.mlClustering()(_))
 
   def userManagement =
     showHtml("userManagement", documentation.userManagement()(_))

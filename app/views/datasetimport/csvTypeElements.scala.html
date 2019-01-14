@@ -10,7 +10,7 @@
 <input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[CsvDataSetImport].getName}">
 
 <div class="panel panel-default">
-    <div class="panel-heading">File</div>
+    <div class="panel-heading">CSV Import Specifics</div>
     <div class="panel-body">
         @fileOrPathInput("csvDataSetImport", "sourceChoice", "Source", "dataFile", "path", form)
         @inputText("csvDataSetImport", "delimiter", form)

@@ -28,6 +28,8 @@
 
 @bottomResources = {
 
+    <script src="@routes.CustomDirAssets.versioned("javascripts/ada-charts.min.js")"></script>
+
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.calcHeatmap,
         dataSetJsRouter.getWidgets
@@ -39,6 +41,8 @@
     )
 
     <script type="text/javascript">
+        let heatmap = null;
+
         $(function () {
             populateMultiNumericalTypeahead(["xField", "yField", "valueField"], true);
 
@@ -76,6 +80,8 @@
 
             $("#dataViewSelectionModal #submitButton").on("click", addHeatmapToView)
 
+            $("#widgetsDiv").html("<div id='spinnerDiv' class='row'></div><div id='heatmapDiv' class='row' style='margin-left: 30px;'></div>")
+
             activateAllFilters(function(filterOrId) {calcHeatmap()});
         });
 
@@ -101,9 +107,9 @@
             if (!xFieldName || !yFieldName) {
                 showError("Heatmap calculation cannot be launched. No x or y field specified.");
             } else {
-                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcHeatmap(xFieldName, yFieldName, valueFieldName, aggType, filterOrIdJson).ajax(
-                    handleResponse("Heatmap calculation finished.")
-                );
+                var ajaxHandler = handleHeatmapResponse("Heatmap generation finished.")
+
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcHeatmap(xFieldName, yFieldName, valueFieldName, aggType, filterOrIdJson).ajax(ajaxHandler);
 
                 hideErrors();
                 showMessage("Heatmap calculation for the fields '" + xFieldLabel + "' and '" + yFieldLabel + "' launched.")
