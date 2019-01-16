@@ -1755,9 +1755,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     for {
       multiCriteria <- Future.sequence(filters.map(filter => toCriteria(filter.conditions)))
 
-      allWidgets <- Future.sequence(filters.zip(multiCriteria).map((widgetsAux(_, _)).tupled))
+      multiCriteriaWithFieldNonNull = multiCriteria.map(_ ++ Seq(NotEqualsNullCriterion(field.name)))
 
-      chiSquareResult <- statsService.testChiSquareForMultiCriteriaSorted(repo, multiCriteria, Seq(field)).map(_.head._2)
+      allWidgets <- Future.sequence(filters.zip(multiCriteriaWithFieldNonNull).map((widgetsAux(_, _)).tupled))
+
+      chiSquareResult <- statsService.testChiSquareForMultiCriteriaSorted(repo, multiCriteriaWithFieldNonNull, Seq(field)).map(_.head._2)
     } yield {
       // distribution widget
       val distributionWidgets = allWidgets.zip(filters).zipWithIndex.map { case ((widgets, filter), filterIndex) =>
