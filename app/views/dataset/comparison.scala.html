@@ -47,17 +47,16 @@
         });
 
         function addNewFilter() {
-            if($("#filtersTr>td").length < 6) {
+            const filterCount = $("#filtersTr>td").length
+            if(filterCount < 6) {
                 dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getNewFilter().ajax({
                     success: function (data) {
                         // filter
                         var filterTd = $("<td style='padding-left: 10px; vertical-align:top'>")
-                        filterTd.html(data)
+                        filterTd.html(data.replace("Filter:", "Filter " + (filterCount + 1) + ":"))
                         $("#filtersTr").append(filterTd)
                         var filterElement = filterTd.find(".filter-div")
-                        activateFilter(filterElement, function (filterOrId) {
-                            calcComparison()
-                        }, [], '')
+                        activateFilter(filterElement, function (filterOrId) { calcComparison()}, [], '')
 
                         calcComparison();
                     },

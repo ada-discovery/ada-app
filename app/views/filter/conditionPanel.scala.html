@@ -2,7 +2,8 @@
 @import org.incal.core.FilterCondition
 
 @(
-    filter: Option[Filter]
+    filter: Option[Filter],
+    filterLabel: String = "Filter"
 )
 
 @valueOrUndefined(condition: FilterCondition) = @{
@@ -23,7 +24,7 @@
 
     <div id="conditionPanel" class="filter-part">
 
-        <span class="filter-part" style="padding-top: 5px">Filter:</span>
+        <span class="filter-part" style="padding-top: 5px">@filterLabel:</span>
 
         @if(!showPanel) {
             <button id="filterNameButton" type="button" class="filter-part btn btn-sm" title="Show Conditions">

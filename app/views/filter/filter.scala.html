@@ -9,7 +9,8 @@
     enableSaveFilter: Boolean = false,
     filterElementId: String = "filterDiv",
     categoriesOrCall: Option[Either[Traversable[Category], Call]] = None,
-    categoricalTreeId: String = "categoryTree"
+    categoricalTreeId: String = "categoryTree",
+    filterLabel: String = "Filter"
 )(
     implicit request: Request[_], webJarAssets: WebJarAssets
 )
@@ -36,7 +37,7 @@
 <div id="@filterElementId" class="filter-div">
     @conditionModal(filterElementId, categoriesOrCall, categoricalTreeId, showFieldStyle)
 
-    @conditionPanel(filter)
+    @conditionPanel(filter, filterLabel)
 
     <span class="filter-part">
         <button id="showAddConditioButton" type="button" class="btn btn-sm btn-default" data-toggle="tooltip" title="Add Filter Condition">

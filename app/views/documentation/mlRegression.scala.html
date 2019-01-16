@@ -15,7 +15,7 @@
         ("section_other_functionality", "Other Functionality")
     )
 
-    @imageSection(Some("section_models"), Some("Models"), None, 1) {
+    @imageSection(id = Some("section_models"), caption = Some("Models")) {
         <p>
             <ul>
                 <li>Linear regression</li>
@@ -27,7 +27,7 @@
         </p>
     }
 
-    @imageSection(Some("section_evaluation_metrics"), Some("Evaluation Metrics"), None, 1) {
+    @imageSection(id = Some("section_evaluation_metrics"), caption = Some("Evaluation Metrics")) {
         <p>
             <ul>
                 <li>MSE</li>
@@ -38,7 +38,7 @@
         </p>
     }
 
-    @imageSection(Some("section_feature_normalization_and_scaling"), Some("Feature Normalization and Scaling"), None, 1) {
+    @imageSection(id = Some("section_feature_normalization_and_scaling"), caption = Some("Feature Normalization and Scaling")) {
         <p>
             <ul>
                 <li>Standard scaling (z-score)</li>
@@ -51,7 +51,7 @@
         </p>
     }
 
-    @imageSection(Some("section_other_functionality"), Some("Other Functionality"), None, 1, false) {
+    @imageSection(id = Some("section_other_functionality"), caption = Some("Other Functionality"), withLine = false) {
         <p>
             <ul>
                 <li>Cross-validation (param grid)</li>

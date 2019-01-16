@@ -1594,7 +1594,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             jsonWidgetResponseCache.put(widgetsCallbackId, jsonWidgetsFuture)
 
             // get new filters
-            val conditionPanels = newFilters.map(newFilter => views.html.filter.conditionPanel(Some(newFilter)).toString)
+            val conditionPanels = newFilters.zipWithIndex.map { case (newFilter, index) => views.html.filter.conditionPanel(Some(newFilter), s"Filter ${index + 1}").toString }
             val filterModels = newFilters.map(newFilter => Json.toJson(newFilter.conditions))
 
             val jsonResponse = Ok(Json.obj(

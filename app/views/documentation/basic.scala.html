@@ -16,7 +16,7 @@
         ("section_data_export", "Export")
     )
 
-    @imageSection(Some("section_data_set_tree"), Some("Data Set Tree"), Some("images/documentation/data_set_tree_2.png"), 1) {
+    @imageSection(id = Some("section_data_set_tree"), caption = Some("Data Set Tree"), picPath = Some("images/documentation/data_set_tree_2.png")) {
         <p>
             Imported data are organized hierarchically as a tree, which is located on the left side and is used for navigation.
         </p>
@@ -33,7 +33,7 @@
         </p>
     }
 
-    @section(Some("section_data_exploration"), Some("Data Exploration"), 1) {
+    @section(id = Some("section_data_exploration"), caption = Some("Data Exploration")) {
         <p>
             Each data set contains any number of <it>views</it>. View is a container of different filters, widgets, and tables.
             Main view (usually called "Main") is invoked by default when a data set is selected in the navigation tree.
@@ -55,7 +55,7 @@
         </div>
     }
 
-    @section(Some("section_data_export"), Some("Export"), 1, false) {
+    @section(id = Some("section_data_export"), caption = Some("Export"), withLine = false) {
         <p>
             Since one of the main functionalities of Ada is to provide comprehensive reports, which can be later included in other documents or post-processed, Ada provides several options for exporting.
         </p>

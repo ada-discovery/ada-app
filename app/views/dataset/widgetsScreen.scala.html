@@ -33,9 +33,9 @@
     <div class="row">
         <div class="@if(extraActions.isDefined) { col-md-10 } else { col-md-12 }">
             @fixedTableRow("filtersTr") {
-                @filters.map { filterSpec =>
+                @filters.zipWithIndex.map { case (filterSpec, index) =>
                     <td style='padding-left: 10px; vertical-align:top'>
-                        @dataSetFilter(Some(filterSpec), filterShowFieldStyle)
+                        @dataSetFilter(Some(filterSpec), filterShowFieldStyle, filterLabel = if(filters.size > 1) s"Filter ${index + 1}" else "Filter")
                     </td>
                 }
             }

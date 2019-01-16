@@ -107,7 +107,7 @@ protected class LdapServiceImpl @Inject()(
 
   /**
     * Establish connection and check if bind possible.
-    * Useful for authentification.
+    * Useful for authentication.
     * @param userDN DN for binding.
     * @param password password for binding.
     * @return true, if bind successful.
@@ -136,7 +136,7 @@ protected class LdapServiceImpl @Inject()(
     * Find Entry based on its DN.
     *
     * @param dn Distinguished name for search operation.
-    * @return Entry wrappend in Option if found; None else.
+    * @return Entry wrapped in Option if found; None else.
     */
   override def getEntry(dn: String): Option[Entry] =
     interface.flatMap( interface =>

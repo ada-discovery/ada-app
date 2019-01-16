@@ -1,12 +1,13 @@
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
 @import views.html.documentation.core
+@import views.html.documentation.imageSection
 
 @()(implicit context: WebContext)
 
 @core("Stats") {
 
-    @imageSection(None, None, Some("images/documentation/correlations.png"), 0, false) {
+    @imageSection(picPath = Some("images/documentation/correlations.png"), picOffset = 0, withLine = false) {
         <p>
             Ada offers several analytical/statistical methods, which can be easily applied to any data set.
             Each method has its own screen producing various visualizations/widgets for the selected fields.

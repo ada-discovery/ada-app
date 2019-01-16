@@ -5,6 +5,7 @@
     caption: Option[String] = None,
     picPath: Option[String] = None,
     picOffset: Int = 1,
+    picWidth: Int = 5,
     withLine: Boolean = true)(
     content: Html
 )
@@ -13,4 +14,4 @@
     <img class="img-responsive" src="@routes.CustomDirAssets.versioned(picPath)"/>
 }
 
-@section(id, caption, picOffset, withLine)(content)(picPath.map(imageAux).getOrElse(Html("")))
+@section(id, caption, picOffset, picWidth, withLine)(content)(picPath.map(imageAux).getOrElse(Html("")))

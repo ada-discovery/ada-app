@@ -16,7 +16,7 @@
         ("section_other_functionality", "Other Functionality")
     )
 
-    @imageSection(Some("section_models"), Some("Models"), Some("images/carousel/ml2.jpg"), 1) {
+    @imageSection(id = Some("section_models"), caption = Some("Models"), picPath = Some("images/carousel/ml2.jpg")) {
         <p>
             <ul>
                 <li>Logistic regression</li>
@@ -30,7 +30,7 @@
         </p>
     }
 
-    @imageSection(Some("section_evaluation_metrics"), Some("Evaluation Metrics"), Some("images/documentation/classification_results.png"), 1) {
+    @imageSection(id = Some("section_evaluation_metrics"), caption = Some("Evaluation Metrics"), picPath = Some("images/documentation/classification_results.png")) {
         <p>
             <ul>
                 <li>Accuracy</li>
@@ -43,7 +43,7 @@
         </p>
     }
 
-    @imageSection(Some("section_feature_normalization_and_scaling"), Some("Feature Normalization and Scaling"), None, 1) {
+    @imageSection(id = Some("section_feature_normalization_and_scaling"), caption = Some("Feature Normalization and Scaling")) {
         <ul>
             <li>Standard scaling (z-score)</li>
             <li>Min-max 0-1 scaling</li>
@@ -54,7 +54,7 @@
         </ul>
     }
 
-    @imageSection(Some("section_other_functionality"), Some("Other Functionality"), Some("images/documentation/roc.png"), 1, false) {
+    @imageSection(id = Some("section_other_functionality"), caption = Some("Other Functionality"), picPath = Some("images/documentation/roc.png"), withLine = false) {
         <p>
             <ul>
                 <li>ROC and other curves for binary classification</li>

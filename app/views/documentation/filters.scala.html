@@ -7,7 +7,7 @@
 
 @core("Filters") {
 
-    @imageSection(None, None, Some("images/documentation/filter.png"), 1, false) {
+    @imageSection(picPath = Some("images/documentation/filter.png"), withLine = false) {
         <p>
             Filter defines a data/cohort selection and is specified as a sequence of conditions connected by <code>AND</code> operator.
             Supported condition types are:
