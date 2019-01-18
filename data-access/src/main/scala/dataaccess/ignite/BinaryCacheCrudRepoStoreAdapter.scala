@@ -1,6 +1,7 @@
 package dataaccess.ignite
 
 import java.io.Serializable
+import java.{util => ju}
 import javax.cache.Cache.Entry
 import javax.cache.configuration.Factory
 
@@ -19,40 +20,17 @@ import scala.concurrent.duration._
 
 protected class BinaryCacheCrudRepoStoreAdapter[ID](
     cacheName: String,
-    repoFactory: Factory[AsyncCrudRepo[JsObject, ID]],
-    getId: JsObject => Option[ID],
+    val repoFactory: Factory[AsyncCrudRepo[JsObject, ID]],
+    val getId: JsObject => Option[ID],
     fieldNameClassMap: Map[String, Class[_ >: Any]]
-  ) extends CacheStoreAdapter[ID, BinaryObject] with Serializable {
-
-  private val logger = Logger
-  private val crudRepo: AsyncCrudRepo[JsObject, ID] = repoFactory.create
-  private lazy val syncRepo = RepoSynchronizer(crudRepo, 2 minutes)
+  ) extends AbstractCacheAsyncCrudRepoProvider[ID, BinaryObject, JsObject] with Serializable {
 
   @IgniteInstanceResource
   private var ignite: Ignite = _
   private lazy val toBinary = toBinaryObject(ignite.binary(), fieldNameClassMap, cacheName)_
 
-  override def delete(key: scala.Any): Unit = {
-    syncRepo.delete(key.asInstanceOf[ID])
-  }
-
-  override def write(entry: Entry[_ <: ID, _ <: BinaryObject]): Unit = {
-    val binaryObject = entry.getValue
-    syncRepo.save(toJsObject(binaryObject))
-  }
-
-  override def load(key: ID): BinaryObject =
-    syncRepo.get(key).map(toBinary).
-      getOrElse(null.asInstanceOf[BinaryObject])
-
-  override def loadCache(clo: IgniteBiInClosure[ID, BinaryObject], args: AnyRef *): Unit = {
-    logger.info(s"Loading Cache $cacheName")
-    syncRepo.find().map( item =>
-      getId(item).map( id =>
-        clo.apply(id, toBinary(item))
-      )
-    )
-  }
+  override def toRepoItem = toJsObject(_)
+  override def fromRepoItem = toBinary
 }
 
 protected class BinaryCacheCrudRepoStoreFactory[ID](

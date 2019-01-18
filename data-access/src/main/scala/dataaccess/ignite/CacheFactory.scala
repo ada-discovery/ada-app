@@ -9,11 +9,13 @@ import javax.inject.Inject
 
 import org.incal.core.dataaccess.AsyncCrudRepo
 import org.incal.core.util.ReflectionUtil._
-import org.apache.ignite.cache.{QueryIndex, QueryEntity, CacheAtomicityMode, CacheMode}
+import org.apache.ignite.cache.{CacheAtomicityMode, CacheMode, QueryEntity, QueryIndex}
 import org.apache.ignite.configuration.{BinaryConfiguration, CacheConfiguration}
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion
+import org.apache.ignite.lang.IgniteBiTuple
 import org.apache.ignite.{Ignite, IgniteCache}
-import scala.collection.JavaConversions._
 
+import scala.collection.JavaConversions._
 import scala.reflect.ClassTag
 
 class CacheFactory @Inject()(ignite: Ignite) extends Serializable {

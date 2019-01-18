@@ -242,6 +242,9 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
       }
     }
 
+  override def exists(id: ID): Future[Boolean] =
+    count(Seq(EqualsCriterion(identityName, id))).map(_ > 0)
+
   protected def handleResult(result : WriteResult) =
     if (!result.ok) throw new AdaDataAccessException(result.writeErrors.map(_.errmsg).mkString(". "))
 
@@ -360,10 +363,10 @@ class MongoAsyncCrudRepo[E: Format, ID: Format](
     val jsonSubCriteria = subCriteria.headOption.map(_ => toMongoCriteria((subCriteria)))
 
     val params = List(
+      projection.map(Project(_)),                                     // $project // TODO: should add field names used in criteria to the projection
       jsonRootCriteria.map(Match(_)),                                 // $match
       unwindFieldName.map(Unwind(_)),                                 // $unwind
       jsonSubCriteria.map(Match(_)),                                  // $match
-      projection.map(Project(_)),                                     // $project
       sort.headOption.map(_ => AggSort(toAggregateSort(sort): _ *)),  // $sort
       skip.map(Skip(_)),                                              // $skip
       limit.map(Limit(_)),                                            // $limit

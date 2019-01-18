@@ -22,6 +22,7 @@ import play.api.Logger
 abstract protected class ElasticAsyncReadonlyRepo[E, ID](
     indexName: String,
     typeName: String,
+    identityName : String,
     val client: ElasticClient,
     setting: ElasticSetting
   ) extends AsyncReadonlyRepo[E, ID]
@@ -213,6 +214,9 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
       .recover(handleExceptions)
   }
 
+  override def exists(id: ID): Future[Boolean] =
+    count(Seq(EqualsCriterion(identityName, id))).map(_ > 0)
+
   protected def createIndex(): Future[_] =
     client execute {
       create index indexName replicas 0 indexSetting("max_result_window", unboundLimit) // indexSetting("_all", false)
@@ -254,7 +258,7 @@ abstract protected class ElasticAsyncRepo[E, ID](
     client: ElasticClient,
     setting: ElasticSetting)(
     implicit identity: Identity[E, ID]
-  ) extends ElasticAsyncReadonlyRepo[E, ID](indexName, typeName, client, setting) with AsyncRepo[E, ID] {
+  ) extends ElasticAsyncReadonlyRepo[E, ID](indexName, typeName, identity.name, client, setting) with AsyncRepo[E, ID] {
 
   protected def flushIndex: Future[Unit] = {
     client execute {flush index indexName} map (_ => ())

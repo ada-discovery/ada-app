@@ -5,7 +5,7 @@ import org.incal.core.dataaccess.Criterion.Infix
 import dataaccess._
 import org.incal.core.Identity
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json._
+import play.api.libs.json.{JsObject, _}
 import play.modules.reactivemongo.json.commands.JSONAggregationFramework.{Push, PushField, SumValue}
 
 import scala.concurrent.duration._
@@ -40,7 +40,6 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
       response
     }
   }
-
 
   protected lazy val rootId: ROOT_ID = synchronized {
     val futureId = getRootObject.map(rootObject => rootIdentity.of(rootObject.get).get)
@@ -161,11 +160,13 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
     val rootCriteria = Seq(rootIdentity.name #== rootId)
     val subCriteria = criteria.map(criterion => criterion.copyWithFieldName(listName + "." + criterion.fieldName))
 
+    val referencedFieldNames = (Seq(rootIdentity.name) ++ subCriteria.map(_.fieldName)).toSet.toSeq
+
     val result = rootRepo.findAggregate(
       rootCriteria = rootCriteria,
       subCriteria = subCriteria,
       sort = Nil,
-      projection = None,
+      projection = Some(JsObject(referencedFieldNames.map(_ -> JsNumber(1)))),
       idGroup = Some(JsNull),
       groups = Some(Seq("count" -> SumValue(1))),
       unwindFieldName = Some(listName),
@@ -178,6 +179,9 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
     }
   }
 
+  override def exists(id: ID): Future[Boolean] =
+    count(Seq(identity.name #== id)).map(_ > 0)
+
   /**
     * Retrieve subordinate(s) from the repo.
     *
@@ -185,7 +189,7 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
     * @return subordinateListNames in the dictionary with exact name match.
     */
   override def get(id: ID): Future[Option[E]] =
-    find(Seq(identity.name #== id)).map(_.headOption)
+    find(Seq(identity.name #== id), limit = Some(1)).map(_.headOption)
 
   /**
     * Find object matching the filtering criteria. subordinateListNames may be ordered and only a subset of them used.

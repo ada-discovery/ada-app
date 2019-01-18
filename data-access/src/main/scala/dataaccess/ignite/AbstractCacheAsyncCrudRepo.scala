@@ -277,9 +277,7 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
     Future {
       val idWithCacheItems = entities.map(createNewIdWithCacheItem)
       val ids = idWithCacheItems.map(_._1)
-      val cacheIdItems = idWithCacheItems.map { case (id, cacheItem) =>
-        (toCacheId(id), cacheItem)
-      }.toMap
+      val cacheIdItems = idWithCacheItems.map { case (id, cacheItem) => (toCacheId(id), cacheItem) }.toMap
       cache.putAll(cacheIdItems)
       ids
     }
@@ -291,6 +289,18 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
       cache.replace(toCacheId(id), toCacheItem(entity))
       id
     }
+
+  // bulk update is replace all and re-save
+  override def update(entities: Traversable[E]): Future[Traversable[ID]] = {
+    // identities must be set for all the items
+    val ids = entities.map(entity => identity.of(entity).get)
+
+    for {
+      _ <- delete(ids)
+      _ <- save(entities)
+    } yield
+      ids
+  }
 
   override def delete(id: ID): Future[Unit] =
     Future(cache.remove(toCacheId(id)))
