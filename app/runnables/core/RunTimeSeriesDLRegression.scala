@@ -43,7 +43,7 @@ class RunTimeSeriesDLRegression @Inject() (
 
       // run the selected classifier (ML model)
       resultsHolder <- mlModel.map { mlModel =>
-        val results = mlService.regressTimeSeries(
+        val results = mlService.regressTemporalSeries(
           item.get,
           input.ioSpec,
           input.predictAhead,
@@ -51,7 +51,9 @@ class RunTimeSeriesDLRegression @Inject() (
           None,
           mlModel,
           input.learningSetting,
-          input.crossValidationMinTrainingSize,
+          input.outputNormalizationType,
+          input.crossValidationMinTrainingSizeRatio,
+          input.trainingTestSplitOrderValue,
           replicationItem
         )
         results.map(Some(_))
@@ -73,16 +75,18 @@ case class RunTimeSeriesDLRegressionSpec(
   predictAhead: Int,
   windowSize: Int,
   featuresNormalizationType: Option[VectorScalerType.Value],
+  outputNormalizationType: Option[VectorScalerType.Value],
   pcaDims: Option[Int],
-  trainingTestingSplit: Option[Double],
+  trainingTestSplitRatio: Option[Double],
+  trainingTestSplitOrderValue: Option[Double],
   replicationItemId: Option[BSONObjectID],
   repetitions: Option[Int],
   crossValidationFolds: Option[Int],
-  crossValidationMinTrainingSize: Option[Double],
+  crossValidationMinTrainingSizeRatio: Option[Double],
   crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
 ) {
   def learningSetting =
-    LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
+    LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestSplitRatio, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
 }
 
 

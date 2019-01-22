@@ -1,6 +1,7 @@
 package field
 
 object FieldTypeHelper {
+
   val nullAliases = Set("", "na", "n/a", "null")
   val dateFormats = Seq(
     "yyyy-MM-dd HH:mm:ss.SS",

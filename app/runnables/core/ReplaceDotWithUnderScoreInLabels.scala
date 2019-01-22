@@ -8,7 +8,7 @@ import scala.reflect.runtime.universe.typeOf
 class ReplaceDotWithUnderScoreInLabels extends DsaInputFutureRunnable[ReplaceDotWithUnderScoreInLabelsSpec] {
 
   override def runAsFuture(spec: ReplaceDotWithUnderScoreInLabelsSpec) = {
-    val fieldRepo = dsa(spec.dataSetId).fieldRepo
+    val fieldRepo = createDsa(spec.dataSetId).fieldRepo
 
     for {
       // get all the fields

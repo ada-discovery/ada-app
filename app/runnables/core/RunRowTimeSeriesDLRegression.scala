@@ -10,9 +10,11 @@ import reactivemongo.bson.BSONObjectID
 import services.ml.MachineLearningService
 import org.incal.core.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.NotEqualsNullCriterion
 import org.incal.spark_ml.models.VectorScalerType
 import org.incal.spark_ml.models.LearningSetting
 import org.incal.spark_ml.models.regression.RegressionEvalMetric
+import util.FieldUtil
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
@@ -31,7 +33,7 @@ class RunRowTimeSeriesDLRegression @Inject() (
   ): Future[Unit] = {
     val dsa = dsaf(input.dataSetId).get
 
-    val fieldNames = (input.inputFieldNames ++ Seq(input.outputFieldName, input.orderFieldName)).toSet.toSeq
+    val fieldNames = (input.inputFieldNames ++ Seq(input.outputFieldName, input.orderFieldName, input.idFieldName)).toSet.toSeq
 
     for {
       // load a ML model
@@ -46,29 +48,45 @@ class RunRowTimeSeriesDLRegression @Inject() (
       orderFieldType = ftf(orderField.fieldTypeSpec).asValueOf[Any]
       orderedValues = input.orderedStringValues.map(x => orderFieldType.displayStringToValue(x).get)
 
-      // criterion field (and type)
-      criterionField <- dsa.fieldRepo.get(input.criterionFieldName).map(_.get)
-      criterionFieldType = ftf(criterionField.fieldTypeSpec).asValueOf[Any]
-      criterionValue = criterionFieldType.displayStringToValue(input.criterionStringValue).get
+      // id field (and type)
+      idField <- dsa.fieldRepo.get(input.idFieldName).map(_.get)
+      idFieldType = ftf(idField.fieldTypeSpec).asValueOf[Any]
+
+      // id match criterion (if requested)
+      idMatchCriterion = input.idStringValue.map(idStringValue =>
+        input.idFieldName #== idFieldType.displayStringToValue(idStringValue).get
+      )
+
+      // filter criteria
+      filterCriteria <- loadCriteria(dsa, input.filterId)
+
+      // not null field criteria
+      notNullFieldCriteria = fields.map(field => NotEqualsNullCriterion(field.name))
 
       // jsons
-      data <- dsa.dataSetRepo.find(criteria = Seq(input.criterionFieldName #== criterionValue), projection = fieldNames)
+      data <- dsa.dataSetRepo.find(
+        criteria = filterCriteria ++ notNullFieldCriteria ++ Seq(idMatchCriterion).flatten,
+        projection = fieldNames
+      )
 
       // run the selected classifier (ML model)
       resultsHolder <- mlModel.map { mlModel =>
-        val results = mlService.regressRowTimeSeries(
+        val results = mlService.regressRowTemporalSeries(
           data,
           fieldNameSpecs,
           input.inputFieldNames,
           input.outputFieldName,
           input.orderFieldName,
           orderedValues,
+          Some(input.idFieldName),
           input.predictAhead,
           Some(input.windowSize),
           None,
           mlModel,
           input.learningSetting,
-          input.crossValidationMinTrainingSize,
+          input.outputNormalizationType,
+          input.crossValidationMinTrainingSizeRatio,
+          input.trainingTestSplitOrderValue,
           Nil
         )
         results.map(Some(_))
@@ -79,6 +97,20 @@ class RunRowTimeSeriesDLRegression @Inject() (
       resultsHolder.foreach(exportResults)
   }
 
+  private def loadCriteria(dsa: DataSetAccessor, filterId: Option[BSONObjectID]) =
+    for {
+      filter <- filterId match {
+        case Some(filterId) => dsa.filterRepo.get(filterId)
+        case None => Future(None)
+      }
+
+      criteria <- filter match {
+        case Some(filter) => FieldUtil.toDataSetCriteria(dsa.fieldRepo, filter.conditions)
+        case None => Future(Nil)
+      }
+    } yield
+      criteria
+
   override def inputType = typeOf[RunRowTimeSeriesDLRegressionSpec]
 }
 
@@ -88,19 +120,22 @@ case class RunRowTimeSeriesDLRegressionSpec(
   outputFieldName: String,
   orderFieldName: String,
   orderedStringValues: Seq[String],
-  criterionFieldName: String,
-  criterionStringValue: String,
+  idFieldName: String,
+  idStringValue: Option[String],
+  filterId: Option[BSONObjectID],
   mlModelId: BSONObjectID,
   predictAhead: Int,
   windowSize: Int,
   featuresNormalizationType: Option[VectorScalerType.Value],
+  outputNormalizationType: Option[VectorScalerType.Value],
   pcaDims: Option[Int],
-  trainingTestingSplit: Option[Double],
+  trainingTestSplitRatio: Option[Double],
+  trainingTestSplitOrderValue: Option[Double],
   repetitions: Option[Int],
   crossValidationFolds: Option[Int],
-  crossValidationMinTrainingSize: Option[Double],
+  crossValidationMinTrainingSizeRatio: Option[Double],
   crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
 ) {
   def learningSetting =
-    LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
+    LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestSplitRatio, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
 }

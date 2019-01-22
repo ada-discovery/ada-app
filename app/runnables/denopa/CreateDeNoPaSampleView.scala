@@ -15,7 +15,7 @@ class CreateDeNoPaSampleView extends DsaInputFutureRunnable[CreateDeNoPaSampleVi
   private val columnNames = Seq("Subject_ID","Visit","Visit_ID","IBBL_ID","Box_ID","Box_Position")
 
   override def runAsFuture(input: CreateDeNoPaSampleViewSpec) = {
-    val viewRepo = dsa(input.dataSetId).dataViewRepo
+    val viewRepo = createDsa(input.dataSetId).dataViewRepo
 
     for {
       // create and save the main view

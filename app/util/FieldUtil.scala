@@ -1,7 +1,6 @@
 package util
 
 import scala.reflect.runtime.universe._
-import models._
 import play.api.libs.json.{JsObject, JsValue}
 import java.{util => ju}
 
@@ -10,6 +9,10 @@ import dataaccess.RepoTypes.FieldRepo
 import org.incal.core.util.ReflectionUtil
 import field.{FieldType, FieldTypeHelper}
 import models.DataSetFormattersAndIds.FieldIdentity
+import models._
+import org.incal.core.FilterCondition
+import org.incal.core.FilterCondition.toCriterion
+import org.incal.core.dataaccess.Criterion
 import reactivemongo.bson.BSONObjectID
 
 import scala.collection.Traversable
@@ -19,6 +22,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object FieldUtil {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()
+
+  type NamedFieldType[T] = (String, FieldType[T])
 
   def valueConverters(
     fields: Traversable[Field]
@@ -40,6 +45,19 @@ object FieldUtil {
         Future(Nil)
     } yield
       valueConverters(fields)
+
+  // this is filter/criteria stuff... should be moved somewhere else
+  def toDataSetCriteria(
+    fieldRepo: FieldRepo,
+    conditions: Seq[FilterCondition]
+  ): Future[Seq[Criterion[Any]]] =
+    for {
+      valueConverters <- {
+        val fieldNames = conditions.map(_.fieldName)
+        FieldUtil.valueConverters(fieldRepo, fieldNames)
+      }
+    } yield
+      conditions.map(toCriterion(valueConverters)).flatten
 
   def caseClassToFlatFieldTypes[T: TypeTag](
     delimiter: String = ".",
@@ -104,26 +122,32 @@ object FieldUtil {
     def isJson = field.fieldType == FieldTypeId.Json
 
     def isNull = field.fieldType == FieldTypeId.Null
+
+    def toTypeAny = toType[Any]
+
+    def toType[T] = ftf.apply(field.fieldTypeSpec).asValueOf[T]
+
+    def toNamedTypeAny = toNamedType[Any]
+
+    def toNamedType[T]: NamedFieldType[T] = (field.name, toType[T])
   }
 
   implicit class JsonFieldOps(val json: JsObject) {
 
     def toValue[T](
-      fieldName: String,
-      fieldType: FieldType[T]
-    ) = fieldType.jsonToValue(json \ fieldName)
+      namedFieldType: NamedFieldType[T]
+    ) = namedFieldType._2.jsonToValue(json \ namedFieldType._1)
 
     def toValues[T](
-      fieldNameTypes: Seq[(String, FieldType[T])]
+      fieldNameTypes: Seq[NamedFieldType[T]]
     ): Seq[Option[T]] =
       fieldNameTypes.map { case (fieldName, fieldType) =>
         json.toValue(fieldName, fieldType)
       }
 
     def toDisplayString[T](
-      fieldName: String,
-      fieldType: FieldType[T]
-    ) = fieldType.jsonToDisplayString(json \ fieldName)
+      namedFieldType: NamedFieldType[T]
+    ) = namedFieldType._2.jsonToDisplayString(json \ namedFieldType._1)
   }
 
   implicit class InfixOp(val typ: Type) {

@@ -24,7 +24,7 @@ class CovertNumericValuesToNull extends DsaInputFutureRunnable[CovertNumericValu
   private implicit val materializer = ActorMaterializer()
 
   override def runAsFuture(spec: CovertNumericValuesToNullSpec) = {
-    val dsa_ = dsa(spec.dataSetId)
+    val dsa_ = createDsa(spec.dataSetId)
     val dataSetRepo = dsa_.dataSetRepo
 
     // aux function to replace values with null and update jsons

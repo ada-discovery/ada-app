@@ -17,7 +17,7 @@ class ExportDictionary extends DsaInputFutureRunnable[ExportDictionarySpec] {
   private val delimiter = "\t"
 
   override def runAsFuture(input: ExportDictionarySpec) = {
-    val fieldRepo = dsa(input.dataSetId).fieldRepo
+    val fieldRepo = createDsa(input.dataSetId).fieldRepo
 
     for {
       // get the fields

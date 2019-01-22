@@ -9,6 +9,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import runnables.DsaInputFutureRunnable
 import org.incal.core.util.seqFutures
+import util.FieldUtil.{InfixFieldOps, JsonFieldOps, NamedFieldType}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -20,17 +21,16 @@ class DropExtraMiliSecsPoints extends DsaInputFutureRunnable[DropExtraMiliSecsPo
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   override def runAsFuture(spec: DropExtraMiliSecsPointsSpec) = {
-    val dsa_ = dsa(spec.dataSetId)
+    val dsa_ = createDsa(spec.dataSetId)
 
     for {
       // field
       fieldOption <- dsa_.fieldRepo.get(spec.fieldName)
       field = fieldOption.getOrElse(throw new AdaException(s"Field ${spec.fieldName} not found."))
-      fieldType = ftf(field.fieldTypeSpec)
 
       // replace for String or Enum
-      _ <- field.fieldTypeSpec.fieldType match {
-        case FieldTypeId.String => replaceForString(dsa_.dataSetRepo, fieldType.asValueOf[String], spec)
+      _ <- field.fieldType match {
+        case FieldTypeId.String => replaceForString(dsa_.dataSetRepo, field.toNamedType[String], spec)
         case _ => throw new AdaException(s"DropExtraMiliSecsPoints is possible only for String type but got ${field.fieldTypeSpec}.")
       }
     } yield
@@ -39,7 +39,7 @@ class DropExtraMiliSecsPoints extends DsaInputFutureRunnable[DropExtraMiliSecsPo
 
   private def replaceForString(
     repo: JsonCrudRepo,
-    fieldType: FieldType[String],
+    fieldType: NamedFieldType[String],
     spec: DropExtraMiliSecsPointsSpec
   ) = {
     for {
@@ -49,7 +49,7 @@ class DropExtraMiliSecsPoints extends DsaInputFutureRunnable[DropExtraMiliSecsPo
       // get the records as String and replace
       idReplacedStringValues = idJsons.map { json =>
         val id = (json \ JsObjectIdentity.name).as[BSONObjectID]
-        val replacedStringValue = fieldType.jsonToValue(json \ spec.fieldName).map { originalValue =>
+        val replacedStringValue = json.toValue(fieldType).map { originalValue =>
           val dotIndex = originalValue.indexOf('.')
           if (dotIndex > 0)
             originalValue.substring(0, Math.min(originalValue.length, dotIndex + 4))

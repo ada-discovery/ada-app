@@ -16,7 +16,7 @@ class CreateTwoFeatureViews extends DsaInputFutureRunnable[CreateTwoFeatureViews
   private val defaultWidgetNum = 100
 
   override def runAsFuture(input: CreateTwoFeatureViewsSpec) = {
-    val dsa_ = dsa(input.dataSetId)
+    val dsa_ = createDsa(input.dataSetId)
     val fieldRepo = dsa_.fieldRepo
     val viewRepo = dsa_.dataViewRepo
 

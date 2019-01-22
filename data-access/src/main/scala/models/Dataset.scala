@@ -80,7 +80,7 @@ case class Field(
   label: Option[String] = None,
   fieldType: FieldTypeId.Value = FieldTypeId.String,
   isArray: Boolean = false,
-  numValues: Option[Map[String, String]] = None, // TODO: rename to enumValues
+  numValues: Option[Map[String, String]] = None, // TODO: rename to enumValues // also rename FieldCacheCrudRepoFactory fieldsToExclude
   displayDecimalPlaces: Option[Int] = None,
   displayTrueValue: Option[String] = None,
   displayFalseValue: Option[String] = None,

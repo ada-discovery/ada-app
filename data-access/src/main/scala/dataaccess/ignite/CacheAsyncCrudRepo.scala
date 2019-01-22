@@ -24,6 +24,7 @@ import scala.reflect.ClassTag
 private class CacheAsyncCrudRepo[ID, E: TypeTag](
     cache: IgniteCache[ID, E],
     entityName: String,
+    val ignite: Ignite,
     identity: Identity[E, ID]
   ) extends AbstractCacheAsyncCrudRepo[ID, E, ID, E](cache, entityName, identity) {
 
@@ -71,31 +72,36 @@ class CacheAsyncCrudRepoFactory {
 
   @Inject var cacheFactory: CacheFactory = _
   @Inject var configuration: Configuration = _
+  @Inject var ignite: Ignite = _
+
   private val applicationLifecycle = new SerializableApplicationLifecycle()
 
   def apply[ID: ClassTag, E: TypeTag](
     repoFactory: Factory[AsyncCrudRepo[E, ID]],
-    cacheName: String)(
+    cacheName: String,
+    fieldsToExcludeFromIndex: Set[String] = Set())(
     implicit identity: Identity[E, ID]
   ): AsyncCrudRepo[E, ID] = {
     val cache = cacheFactory[ID, E](
       cacheName,
       repoFactory,
-      identity.of(_)
+      identity.of(_),
+      fieldsToExcludeFromIndex
     )
     cache.loadCache(null)
     val entityName = shortName(typeOf[E].typeSymbol)
-    new CacheAsyncCrudRepo(cache, entityName, identity)
+    new CacheAsyncCrudRepo(cache, entityName, ignite, identity)
   }
 
   // Important: instead of passing Format with need to decompose (accept) only reads and writes functions
   def applyMongo[ID: ClassTag, E: TypeTag](
     mongoCollectionName: String,
-    cacheName: Option[String] = None)(
+    cacheName: Option[String] = None,
+    fieldsToExcludeFromIndex: Set[String] = Set())(
     implicit formatId: Format[ID], formatE: Format[E], identity: Identity[E, ID]
   ): AsyncCrudRepo[E, ID] = {
     val repoFactory = new MongoAsyncCrudRepoFactory[E, ID](mongoCollectionName, configuration, applicationLifecycle)
-    apply(repoFactory, cacheName.getOrElse(mongoCollectionName))
+    apply(repoFactory, cacheName.getOrElse(mongoCollectionName), fieldsToExcludeFromIndex)
   }
 }
 

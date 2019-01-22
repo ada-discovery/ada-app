@@ -114,15 +114,18 @@ class ClassifyRCResults @Inject() (
       _ <- mlModel match {
         case Some(mlModel) =>
           val setting = ClassificationSetting(
-            spec.mlModelId,
-            spec.outputFieldName,
+            // IO
             weightsFieldNames,
+            spec.outputFieldName,
             filter.map(_._id.get),
+            spec.replicationFilterId,
+
+            // Learning Setting
+            spec.mlModelId,
             spec.featuresNormalizationType,
             spec.featuresSelectionNum,
             spec.pcaDims,
-            spec.trainingTestingSplit,
-            spec.replicationFilterId,
+            spec.trainingTestSplitRatio,
             spec.samplingOutputValues.zip(spec.samplingRatios),
             spec.repetitions,
             spec.crossValidationFolds,
@@ -140,7 +143,7 @@ class ClassifyRCResults @Inject() (
           )
 
           val fieldNameAndSpecs = selectedFields.map(field => (field.name, field.fieldTypeSpec))
-          mlService.classify(jsons, fieldNameAndSpecs, spec.outputFieldName, mlModel, setting.learningSetting).map { resultsHolder =>
+          mlService.classifyStatic(jsons, fieldNameAndSpecs, spec.outputFieldName, mlModel, setting.learningSetting).map { resultsHolder =>
             val finalResult = MachineLearningUtil.createClassificationResult(setting, resultsHolder.performanceResults, Nil)
             dsa.classificationResultRepo.save(finalResult)
           }
@@ -155,21 +158,9 @@ class ClassifyRCResults @Inject() (
 
   private def loadCriteria(dsa: DataSetAccessor, filter: Option[Filter]) =
     filter match {
-      case Some(filter) => toDataSetCriteria(dsa.fieldRepo, filter.conditions)
+      case Some(filter) => FieldUtil.toDataSetCriteria(dsa.fieldRepo, filter.conditions)
       case None => Future(Nil)
     }
-
-  private def toDataSetCriteria(
-    fieldRepo: FieldRepo,
-    conditions: Seq[FilterCondition]
-  ): Future[Seq[Criterion[Any]]] =
-    for {
-      valueConverters <- {
-        val fieldNames = conditions.map(_.fieldName)
-        FieldUtil.valueConverters(fieldRepo, fieldNames)
-    }
-  } yield
-    conditions.map(toCriterion(valueConverters)).flatten
 }
 
 case class ClassifyRCResultsSpec(
@@ -183,7 +174,7 @@ case class ClassifyRCResultsSpec(
   featuresNormalizationType: Option[VectorScalerType.Value],
   featuresSelectionNum: Option[Int],
   pcaDims: Option[Int],
-  trainingTestingSplit: Option[Double],
+  trainingTestSplitRatio: Option[Double],
   replicationFilterId: Option[BSONObjectID],
   samplingOutputValues: Seq[String],
   samplingRatios: Seq[Double],

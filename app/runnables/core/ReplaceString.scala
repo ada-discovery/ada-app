@@ -9,6 +9,7 @@ import play.api.libs.json.{JsNull, JsString, JsValue, Json}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import runnables.DsaInputFutureRunnable
+import util.FieldUtil.{InfixFieldOps, JsonFieldOps, NamedFieldType}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -17,21 +18,19 @@ import scala.reflect.runtime.universe.typeOf
 class ReplaceString extends DsaInputFutureRunnable[ReplaceStringSpec] {
 
   private val idName = JsObjectIdentity.name
-  private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   override def runAsFuture(spec: ReplaceStringSpec) = {
-    val dsa_ = dsa(spec.dataSetId)
+    val dsa = createDsa(spec.dataSetId)
 
     for {
       // field
-      fieldOption <- dsa_.fieldRepo.get(spec.fieldName)
+      fieldOption <- dsa.fieldRepo.get(spec.fieldName)
       field = fieldOption.getOrElse(throw new AdaException(s"Field ${spec.fieldName} not found."))
-      fieldType = ftf(field.fieldTypeSpec)
 
       // replace for String or Enum
-      _ <- field.fieldTypeSpec.fieldType match {
-        case FieldTypeId.String => replaceForString(dsa_.dataSetRepo, fieldType.asValueOf[String], spec)
-        case FieldTypeId.Enum => replaceForEnum(dsa_.fieldRepo, field, spec)
+      _ <- field.fieldType match {
+        case FieldTypeId.String => replaceForString(dsa.dataSetRepo, field.toNamedType[String], spec)
+        case FieldTypeId.Enum => replaceForEnum(dsa.fieldRepo, field, spec)
         case _ => throw new AdaException(s"Comma-to-dot conversion is possible only for String and Enum types but got ${field.fieldTypeSpec}.")
       }
     } yield
@@ -40,7 +39,7 @@ class ReplaceString extends DsaInputFutureRunnable[ReplaceStringSpec] {
 
   private def replaceForString(
     repo: JsonCrudRepo,
-    fieldType: FieldType[String],
+    fieldType: NamedFieldType[String],
     spec: ReplaceStringSpec
   ) = {
     for {
@@ -50,7 +49,7 @@ class ReplaceString extends DsaInputFutureRunnable[ReplaceStringSpec] {
       // get the records as String and replace
       idReplacedStringValues = idJsons.map { json =>
         val id = (json \ JsObjectIdentity.name).as[BSONObjectID]
-        val replacedStringValue = fieldType.jsonToValue(json \ spec.fieldName).map(_.replaceAllLiterally(spec.from, spec.to))
+        val replacedStringValue = json.toValue(fieldType).map(_.replaceAllLiterally(spec.from, spec.to))
         (id, replacedStringValue)
       }
 
@@ -79,9 +78,7 @@ class ReplaceString extends DsaInputFutureRunnable[ReplaceStringSpec] {
     field: Field,
     spec: ReplaceStringSpec
   ) = {
-    val newNumValue = field.numValues.map(_.map { case (key, value) =>
-      (key, value.replaceAllLiterally(spec.from, spec.to))
-    })
+    val newNumValue = field.numValues.map(_.map { case (key, value) => (key, value.replaceAllLiterally(spec.from, spec.to))})
 
     repo.update(field.copy(numValues = newNumValue))
   }

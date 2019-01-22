@@ -19,7 +19,7 @@ import reactivemongo.bson.BSONObjectID
 class JsonBinaryCacheAsyncCrudRepo[ID](
     cache: IgniteCache[ID, BinaryObject],
     cacheName: String,
-    ignite: Ignite,
+    val ignite: Ignite,
     identity: Identity[JsObject, ID]
   ) extends AbstractCacheAsyncCrudRepo[ID, JsObject, ID, BinaryObject](cache, cacheName, identity) {
 

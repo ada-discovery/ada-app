@@ -24,7 +24,7 @@ class ConvertZeroToNull extends DsaInputFutureRunnable[ConvertZeroToNullSpec] {
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   override def runAsFuture(spec: ConvertZeroToNullSpec) = {
-    val dsa_ = dsa(spec.dataSetId)
+    val dsa_ = createDsa(spec.dataSetId)
     val repo = dsa_.dataSetRepo
 
     for {

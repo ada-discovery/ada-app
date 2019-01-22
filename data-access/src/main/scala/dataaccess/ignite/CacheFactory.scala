@@ -9,10 +9,8 @@ import javax.inject.Inject
 
 import org.incal.core.dataaccess.AsyncCrudRepo
 import org.incal.core.util.ReflectionUtil._
-import org.apache.ignite.cache.{CacheAtomicityMode, CacheMode, QueryEntity, QueryIndex}
+import org.apache.ignite.cache._
 import org.apache.ignite.configuration.{BinaryConfiguration, CacheConfiguration}
-import org.apache.ignite.internal.processors.cache.version.GridCacheVersion
-import org.apache.ignite.lang.IgniteBiTuple
 import org.apache.ignite.{Ignite, IgniteCache}
 
 import scala.collection.JavaConversions._
@@ -20,20 +18,26 @@ import scala.reflect.ClassTag
 
 class CacheFactory @Inject()(ignite: Ignite) extends Serializable {
 
+  private val writeThrough = true
+  private val readThrough = true
+
   def apply[ID, E](
     cacheName: String,
     repoFactory: Factory[AsyncCrudRepo[E, ID]],
-    getId: E => Option[ID])(
+    getId: E => Option[ID],
+    fieldsToExcludeFromIndex: Set[String])(
     implicit tagId: ClassTag[ID], typeTagE: TypeTag[E]
   ): IgniteCache[ID, E] =
     apply(
       cacheName,
-      Some(new CacheCrudRepoStoreFactory[ID, E](repoFactory, getId))
+      Some(new CacheCrudRepoStoreFactory[ID, E](repoFactory, getId)),
+      fieldsToExcludeFromIndex
     )
 
   def apply[ID, E](
     cacheName: String,
-    cacheStoreFactoryOption: Option[Factory[CacheStore[ID, E]]])(
+    cacheStoreFactoryOption: Option[Factory[CacheStore[ID, E]]],
+    fieldsToExcludeFromIndex: Set[String])(
     implicit tagId: ClassTag[ID], typeTagE: TypeTag[E]
   ): IgniteCache[ID, E] = {
     val cacheConfig = new CacheConfiguration[ID, E]()
@@ -41,24 +45,28 @@ class CacheFactory @Inject()(ignite: Ignite) extends Serializable {
     val fieldNamesAndTypes = getCaseClassMemberAndTypeNames[E]
     val fieldNames = fieldNamesAndTypes.map(_._1)
     val fields = fieldNamesAndTypes.toMap
+    val indeces = fieldNames.filterNot(fieldsToExcludeFromIndex.contains).map(new QueryIndex(_)).toSeq
 
     val queryEntity = new QueryEntity() {
       setKeyType(tagId.runtimeClass.getName)
       setValueType(typeOf[E].typeSymbol.fullName)
       setFields(new java.util.LinkedHashMap[String, String](fields))
-      setIndexes(fieldNames.map(new QueryIndex(_)).toSeq)
+      setIndexes(indeces)
     }
 
     cacheConfig.setSqlFunctionClasses(classOf[CustomSqlFunctions])
     cacheConfig.setName(cacheName)
     cacheConfig.setQueryEntities(Seq(queryEntity))
-    cacheConfig.setCacheMode(CacheMode.LOCAL) //  PARTITIONED
+    cacheConfig.setCacheMode(CacheMode.LOCAL) // PARTITIONED
     cacheConfig.setAtomicityMode(CacheAtomicityMode.ATOMIC)
+    cacheConfig.setAtomicWriteOrderMode(CacheAtomicWriteOrderMode.PRIMARY)
 
     cacheStoreFactoryOption.foreach{ cacheStoreFactory =>
       cacheConfig.setCacheStoreFactory(cacheStoreFactory)
-      cacheConfig.setWriteThrough(true)
-      cacheConfig.setReadThrough(true)
+      cacheConfig.setWriteThrough(writeThrough)
+//      cacheConfig.setWriteBehindEnabled(!writeThrough)
+//      cacheConfig.setWriteBehindBatchSize()
+      cacheConfig.setReadThrough(readThrough)
     }
 
 //    val bCfg = new BinaryConfiguration()

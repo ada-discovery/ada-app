@@ -26,8 +26,8 @@ import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, SparkApp}
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.{ConditionType, FilterCondition}
-import org.incal.core.util.{seqFutures, retry}
-import org.incal.spark_ml.transformers.VectorColumnScalerNormalizer
+import org.incal.core.util.{retry, seqFutures}
+import org.incal.spark_ml.transformers.VectorColumnScaler
 import org.incal.spark_ml.models.VectorScalerType
 
 import scala.collection.JavaConversions._
@@ -688,7 +688,7 @@ object RCPredictionStaticHelper extends Serializable {
     }
 
     val df = session.createDataFrame(rows).toDF("id", "features")
-    val newDf = VectorColumnScalerNormalizer(transformType).fit(df).transform(df)
+    val newDf = VectorColumnScaler(transformType).fit(df).transform(df)
 
     for {
       rows <- newDf.select("scaledFeatures").rdd.collectAsync()

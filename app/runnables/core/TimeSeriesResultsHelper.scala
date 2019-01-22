@@ -16,10 +16,15 @@ trait TimeSeriesResultsHelper {
     // prepare the results stats
     val metricStatsMap = MachineLearningUtil.calcMetricStats(resultsHolder.performanceResults)
 
-    val (trainingScore, testScore, _) = metricStatsMap.get(RegressionEvalMetric.rmse).get
+    val (rmseTrainingScore, rmseTestScore, _) = metricStatsMap.get(RegressionEvalMetric.rmse).get
+    val (maeTrainingScore, maeTestScore, _) = metricStatsMap.get(RegressionEvalMetric.mae).get
 
-    logger.info("Mean Training RMSE: " + trainingScore.mean)
-    logger.info("Mean Test RMSE    : " + testScore.mean)
+
+    logger.info("Mean Training RMSE: " + rmseTrainingScore.mean)
+    logger.info("Mean Training MAE : " + maeTrainingScore.mean)
+    logger.info("-----------------------------")
+    logger.info("Mean Test RMSE    : " + rmseTestScore.map(_.mean).getOrElse("N/A"))
+    logger.info("Mean Test MAE     : " + maeTestScore.map(_.mean).getOrElse("N/A"))
 
     resultsHolder.expectedAndActualOutputs.headOption.map { outputs =>
       val trainingOutputs = outputs.head
@@ -34,8 +39,11 @@ trait TimeSeriesResultsHelper {
 //      println(testOutputs.map(_._1).mkString(","))
 //      println(testOutputs.map(_._2).mkString(","))
 
-      exportOutputs(trainingOutputs, "training_io.svg")
-      exportOutputs(testOutputs, "test_io.svg")
+      if (trainingOutputs.nonEmpty)
+        exportOutputs(trainingOutputs, "training_io.svg")
+
+      if (testOutputs.nonEmpty)
+        exportOutputs(testOutputs, "test_io.svg")
     }
   }
 

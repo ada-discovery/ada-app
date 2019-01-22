@@ -295,7 +295,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
         )
 
         val fieldNameAndSpecs = selectedFields.toSeq.map(field => (field.name, field.fieldTypeSpec))
-        val results = mlService.classify(mainData, fieldNameAndSpecs, setting.outputFieldName, mlModel, setting.learningSetting, replicationData, setting.binCurvesNumBins)
+        val results = mlService.classifyStatic(mainData, fieldNameAndSpecs, setting.outputFieldName, mlModel, setting.learningSetting, replicationData, setting.binCurvesNumBins)
         results.map(Some(_))
       }.getOrElse(
         Future(None)
@@ -332,14 +332,14 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
   }
 
   private def resultsToJson(
-    evalMetricStatsMap: Map[ClassificationEvalMetric.Value, (MetricStatsValues, MetricStatsValues, Option[MetricStatsValues])]
+    evalMetricStatsMap: Map[ClassificationEvalMetric.Value, (MetricStatsValues, Option[MetricStatsValues], Option[MetricStatsValues])]
   ): JsArray = {
     val metricJsons = ClassificationEvalMetric.values.toSeq.sorted.flatMap { metric =>
       evalMetricStatsMap.get(metric).map { case (trainingStats, testStats, replicationStats) =>
         Json.obj(
           "metricName" -> toHumanReadableCamel(metric.toString),
           "trainEvalRate" -> trainingStats.mean,
-          "testEvalRate" -> testStats.mean,
+          "testEvalRate" -> testStats.map(_.mean),
           "replicationEvalRate" -> replicationStats.map(_.mean)
         )
       }
@@ -411,22 +411,11 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       }
 
       criteria <- filter match {
-        case Some(filter) => toDataSetCriteria(filter.conditions)
+        case Some(filter) => FieldUtil.toDataSetCriteria(dsa.fieldRepo, filter.conditions)
         case None => Future(Nil)
       }
     } yield
       criteria
-
-  private def toDataSetCriteria(
-    conditions: Seq[FilterCondition]
-  ): Future[Seq[Criterion[Any]]] =
-    for {
-      valueConverters <- {
-        val fieldNames = conditions.map(_.fieldName)
-        FieldUtil.valueConverters(dsa.fieldRepo, fieldNames)
-      }
-    } yield
-      conditions.map(toCriterion(valueConverters)).flatten
 
   private def getDataSetFields(fieldNames: Traversable[String]) =
     if (fieldNames.nonEmpty)

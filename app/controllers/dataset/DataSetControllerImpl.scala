@@ -1039,15 +1039,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     else
       fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSet.toSeq))
 
-  private def getValues[T](
-    field: Field,
-    jsons: Traversable[JsObject]
-  ): Traversable[Option[T]] = {
-    val typedFieldType = ftf(field.fieldTypeSpec).asValueOf[T]
-    val jsonValues = project(jsons, field.name)
-    jsonValues.map(typedFieldType.jsonToValue)
-  }
-
   override def getDistribution(
     filterOrId: FilterOrId
   ) = AuthAction { implicit request => {

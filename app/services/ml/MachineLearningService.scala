@@ -15,6 +15,7 @@ import org.apache.spark.ml.clustering._
 import org.apache.spark.ml.linalg.{DenseVector, Vector, Vectors}
 import org.apache.spark.ml.param._
 import org.apache.spark.sql.functions._
+import org.incal.spark_ml.MachineLearningUtil.orderDependentTestPredictions
 import play.api.libs.json.{JsObject, Json}
 import services.SparkApp
 import play.api.{Configuration, Logger}
@@ -22,18 +23,17 @@ import services.stats.StatsService
 import org.incal.spark_ml.transformers._
 import org.incal.spark_ml.models.{LearningSetting, ReservoirSpec}
 import org.incal.spark_ml.models.VectorScalerType
-import org.incal.spark_ml.{SparKMLServiceSetting, SparkMLService}
+import org.incal.spark_ml._
 import org.incal.spark_ml.models.classification.{Classification, ClassificationEvalMetric}
 import org.incal.spark_ml.models.regression.{Regression, RegressionEvalMetric}
 import org.incal.spark_ml.models.results.{ClassificationResultsHolder, RegressionResultsHolder}
 
 import scala.concurrent.{Await, Future}
-import scala.concurrent.ExecutionContext.Implicits.global
 
 @ImplementedBy(classOf[MachineLearningServiceImpl])
 trait MachineLearningService {
 
-  def classify(
+  def classifyStatic(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
@@ -43,20 +43,21 @@ trait MachineLearningService {
     binCurvesNumBins: Option[Int] = None
   ): Future[ClassificationResultsHolder]
 
-  def classifyTimeSeries(
+  def classifyTemporalSeries(
     data: JsObject,
     ioSpec: IOJsonTimeSeriesSpec,
     predictAhead: Int,
-    windowSize: Option[Int],
-    reservoirSetting: Option[ReservoirSpec],
+    windowSize: Option[Int] = None,
+    reservoirSetting: Option[ReservoirSpec] = None,
     mlModel: Classification,
-    setting: LearningSetting[ClassificationEvalMetric.Value] = LearningSetting[ClassificationEvalMetric.Value](),
-    minCrossValidationTrainingSize: Option[Double],
+    setting: LearningSetting[ClassificationEvalMetric.Value],
+    minCrossValidationTrainingSizeRatio: Option[Double] = None,
+    trainingTestSplitOrderValue: Option[Double] = None,
     replicationData: Option[JsObject] = None,
     binCurvesNumBins: Option[Int] = None
   ): Future[ClassificationResultsHolder]
 
-  def classifyRowTimeSeries(
+  def classifyRowTemporalSeries(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
@@ -64,24 +65,26 @@ trait MachineLearningService {
     orderedValues: Seq[Any],
     predictAhead: Int,
     windowSize: Option[Int],
-    reservoirSetting: Option[ReservoirSpec],
+    reservoirSetting: Option[ReservoirSpec] = None,
     mlModel: Classification,
     setting: LearningSetting[ClassificationEvalMetric.Value] = LearningSetting[ClassificationEvalMetric.Value](),
-    minCrossValidationTrainingSize: Option[Double] = None,
+    minCrossValidationTrainingSizeRatio: Option[Double] = None,
+    trainingTestSplitOrderValue: Option[Double] = None,
     replicationData: Traversable[JsObject] = Nil,
     binCurvesNumBins: Option[Int] = None
   ): Future[ClassificationResultsHolder]
 
-  def regress(
+  def regressStatic(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Regression,
     setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value](),
+    outputNormalizationType: Option[VectorScalerType.Value] = None,
     replicationData: Traversable[JsObject] = Nil
   ): Future[RegressionResultsHolder]
 
-  def regressTimeSeries(
+  def regressTemporalSeries(
     data: JsObject,
     ioSpec: IOJsonTimeSeriesSpec,
     predictAhead: Int,
@@ -89,23 +92,28 @@ trait MachineLearningService {
     reservoirSetting: Option[ReservoirSpec],
     mlModel: Regression,
     setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value](),
-    minCrossValidationTrainingSize: Option[Double] = None,
+    outputNormalizationType: Option[VectorScalerType.Value] = None,
+    minCrossValidationTrainingSizeRatio: Option[Double] = None,
+    trainingTestSplitOrderValue: Option[Double] = None,
     replicationData: Option[JsObject] = None
   ): Future[RegressionResultsHolder]
 
-  def regressRowTimeSeries(
+  def regressRowTemporalSeries(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     inputFieldNames: Seq[String],
     outputFieldName: String,
     orderFieldName: String,
     orderedValues: Seq[Any],
+    groupIdFieldName: Option[String],
     predictAhead: Int,
     windowSize: Option[Int],
     reservoirSetting: Option[ReservoirSpec],
     mlModel: Regression,
     setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value](),
-    minCrossValidationTrainingSize: Option[Double] = None,
+    outputNormalizationType: Option[VectorScalerType.Value] = None,
+    minCrossValidationTrainingSizeRatio: Option[Double] = None,
+    trainingTestSplitOrderValue: Option[Double] = None,
     replicationData: Traversable[JsObject] = Nil
   ): Future[RegressionResultsHolder]
 
@@ -150,16 +158,17 @@ private class MachineLearningServiceImpl @Inject() (
     val rcStatesWindowFactory: RCStatesWindowFactory
   ) extends MachineLearningService with SparkMLService {
 
-  override val setting = SparKMLServiceSetting(
+  override val setting = SparkMLServiceSetting(
     repetitionParallelism = configuration.getInt("ml.repetition_parallelism"),
     binaryClassifierInputName = configuration.getString("ml.binary_classifier.input"),
-    useConsecutiveOrderForDL = configuration.getBoolean("ml.dl_use_consecutive_order_transformers")
+    useConsecutiveOrderForDL = configuration.getBoolean("ml.dl_use_consecutive_order_transformers"),
+    debugMode = true
   )
 
   private val session = sparkApp.session
   private implicit val sqlContext = sparkApp.sqlContext
 
-  override def classify(
+  override def classifyStatic(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
@@ -186,7 +195,7 @@ private class MachineLearningServiceImpl @Inject() (
     classify(df, replicationDf, mlModel, setting, binCurvesNumBins)
   }
 
-  override def classifyTimeSeries(
+  override def classifyTemporalSeries(
     data: JsObject,
     ioSpec: IOJsonTimeSeriesSpec,
     predictAhead: Int,
@@ -194,7 +203,8 @@ private class MachineLearningServiceImpl @Inject() (
     reservoirSetting: Option[ReservoirSpec],
     mlModel: Classification,
     setting: LearningSetting[ClassificationEvalMetric.Value],
-    minCrossValidationTrainingSize: Option[Double],
+    minCrossValidationTrainingSizeRatio: Option[Double],
+    trainingTestSplitOrderValue: Option[Double],
     replicationData: Option[JsObject],
     binCurvesNumBins: Option[Int]
   ): Future[ClassificationResultsHolder] = {
@@ -213,10 +223,10 @@ private class MachineLearningServiceImpl @Inject() (
     val replicationDf = replicationData.map(crateDataFrame)
 
     // run time-series classification with the newly created data frames
-    classifyTimeSeries(df, replicationDf, predictAhead, windowSize, reservoirSetting, mlModel, setting, minCrossValidationTrainingSize, binCurvesNumBins)
+    classifyTimeSeries(df, replicationDf, predictAhead, windowSize, reservoirSetting, mlModel, setting, minCrossValidationTrainingSizeRatio, trainingTestSplitOrderValue, binCurvesNumBins)
   }
 
-  override def classifyRowTimeSeries(
+  override def classifyRowTemporalSeries(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
@@ -227,7 +237,8 @@ private class MachineLearningServiceImpl @Inject() (
     reservoirSetting: Option[ReservoirSpec],
     mlModel: Classification,
     setting: LearningSetting[ClassificationEvalMetric.Value],
-    minCrossValidationTrainingSize: Option[Double],
+    minCrossValidationTrainingSizeRatio: Option[Double],
+    trainingTestSplitOrderValue: Option[Double],
     replicationData: Traversable[JsObject],
     binCurvesNumBins: Option[Int]
   ): Future[ClassificationResultsHolder] = {
@@ -251,7 +262,7 @@ private class MachineLearningServiceImpl @Inject() (
     val replicationDf = if (replicationData.nonEmpty) Some(crateDataFrame(replicationData)) else None
 
     // run time-series classification with the newly created data frames
-    classifyTimeSeries(df, replicationDf, predictAhead, windowSize, reservoirSetting, mlModel, setting, minCrossValidationTrainingSize, binCurvesNumBins)
+    classifyTimeSeries(df, replicationDf, predictAhead, windowSize, reservoirSetting, mlModel, setting, minCrossValidationTrainingSizeRatio, trainingTestSplitOrderValue, binCurvesNumBins)
   }
 
   private def mapValuesUDF(map: Map[Any, Int]) = udf { value: Any =>
@@ -260,12 +271,13 @@ private class MachineLearningServiceImpl @Inject() (
     )
   }
 
-  override def regress(
+  override def regressStatic(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Regression,
     setting: LearningSetting[RegressionEvalMetric.Value],
+    outputNormalizationType: Option[VectorScalerType.Value],
     replicationData: Traversable[JsObject]
   ): Future[RegressionResultsHolder] = {
     // create training-test and replication data
@@ -281,10 +293,10 @@ private class MachineLearningServiceImpl @Inject() (
     val replicationDf = if (replicationData.nonEmpty) Some(crateDataFrame(replicationData)) else None
 
     // run regression with the newly created data frames
-    regress(df, replicationDf, mlModel, setting)
+    regress(df, replicationDf, mlModel, setting, outputNormalizationType)
   }
 
-  override def regressTimeSeries(
+  override def regressTemporalSeries(
     data: JsObject,
     ioSpec: IOJsonTimeSeriesSpec,
     predictAhead: Int,
@@ -292,8 +304,10 @@ private class MachineLearningServiceImpl @Inject() (
     reservoirSetting: Option[ReservoirSpec],
     mlModel: Regression,
     setting: LearningSetting[RegressionEvalMetric.Value],
-    minCrossValidationTrainingSize: Option[Double],
-    replicationData: Option[JsObject] = None
+    outputNormalizationType: Option[VectorScalerType.Value],
+    minCrossValidationTrainingSizeRatio: Option[Double],
+    trainingTestSplitOrderValue: Option[Double],
+    replicationData: Option[JsObject]
   ): Future[RegressionResultsHolder] = {
     // create training-test and replication data
 
@@ -307,26 +321,33 @@ private class MachineLearningServiceImpl @Inject() (
     val replicationDf = replicationData.map(crateDataFrame)
 
     // run time-series regression with the newly created data frames
-    regressTimeSeries(df, replicationDf, predictAhead, windowSize, reservoirSetting, mlModel, setting, minCrossValidationTrainingSize)
+    regressTimeSeries(df, replicationDf, predictAhead, windowSize, reservoirSetting, mlModel, setting, outputNormalizationType, minCrossValidationTrainingSizeRatio, trainingTestSplitOrderValue, None)
   }
 
-  override def regressRowTimeSeries(
+  override def regressRowTemporalSeries(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     inputFieldNames: Seq[String],
     outputFieldName: String,
     orderFieldName: String,
     orderedValues: Seq[Any],
+    groupIdFieldName: Option[String],
     predictAhead: Int,
     windowSize: Option[Int],
     reservoirSetting: Option[ReservoirSpec],
     mlModel: Regression,
     setting: LearningSetting[RegressionEvalMetric.Value],
-    minCrossValidationTrainingSize: Option[Double],
+    outputNormalizationType: Option[VectorScalerType.Value],
+    minCrossValidationTrainingSizeRatio: Option[Double],
+    trainingTestSplitOrderValue: Option[Double],
     replicationData: Traversable[JsObject]
   ): Future[RegressionResultsHolder] = {
+
     // mapping between an order value and index
     val orderValueIndexFun = mapValuesUDF(orderedValues.zipWithIndex.toMap)
+
+    // transformer to filter groups with an insufficient count
+    val filterGroups = groupIdFieldName.map(FilterOrderedGroupsWithCount(_, orderedValues.size))
 
     // create training-test and replication data
 
@@ -335,19 +356,22 @@ private class MachineLearningServiceImpl @Inject() (
       val df = FeaturesDataFrameFactory(session, jsons, fields)
       val featuresDf = FeaturesDataFrameFactory.prepFeaturesDataFrame(inputFieldNames.toSet, Some(outputFieldName))(df)
 
-      featuresDf.withColumn(seriesOrderCol, orderValueIndexFun(featuresDf(orderFieldName)))
+      val seriesDf = featuresDf.withColumn(seriesOrderCol, orderValueIndexFun(featuresDf(orderFieldName))).drop(orderFieldName)
+
+      // filter groups
+      filterGroups.map(_.transform(seriesDf)).getOrElse(seriesDf)
     }
 
     // create a training/test data frame with all the features
     val df = crateDataFrame(data)
 
-    df.show()
+    df.show(truncate = false)
 
     // create a replication data frame with all the features
     val replicationDf = if (replicationData.nonEmpty) Some(crateDataFrame(replicationData)) else None
 
     // run time-series regression with the newly created data frames
-    regressTimeSeries(df, replicationDf, predictAhead, windowSize, reservoirSetting, mlModel, setting, minCrossValidationTrainingSize)
+    regressTimeSeries(df, replicationDf, predictAhead, windowSize, reservoirSetting, mlModel, setting, outputNormalizationType, minCrossValidationTrainingSizeRatio, trainingTestSplitOrderValue, groupIdFieldName)
   }
 
   override def cluster(
@@ -425,7 +449,7 @@ private class MachineLearningServiceImpl @Inject() (
     val trainer = SparkUnsupervisedEstimatorFactory[M](mlModel)
 
     // normalize
-    val normalize = featuresNormalizationType.map(VectorColumnScalerNormalizer.applyInPlace(_, "features"))
+    val normalize = featuresNormalizationType.map(VectorColumnScaler.applyInPlace(_, "features"))
 
     // reduce the dimensionality if needed
     val reduceDim = pcaDim.map(InPlacePCA(_))

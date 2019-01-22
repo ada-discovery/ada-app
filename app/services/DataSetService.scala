@@ -152,6 +152,15 @@ trait DataSetService {
     newStorageType: StorageType.Value
   ): Future[DataSetAccessor]
 
+  def saveDerivedDataSet(
+    sourceDsa: DataSetAccessor,
+    derivedDataSetSpec: DerivedDataSetSpec,
+    inputSource: Source[JsObject, _],
+    fields: Seq[Field],
+    streamSpec: StreamSpec = StreamSpec(),
+    saveViewsAndFiltersFlag: Boolean = true
+  ): Future[Unit]
+
   def mergeDataSets(
     resultDataSetSpec: DerivedDataSetSpec,
     dataSetIds: Seq[String],
@@ -1950,7 +1959,7 @@ class DataSetServiceImpl @Inject()(
       ()
   }
 
-  private def saveDerivedDataSet(
+  override def saveDerivedDataSet(
     sourceDsa: DataSetAccessor,
     derivedDataSetSpec: DerivedDataSetSpec,
     inputSource: Source[JsObject, _],
@@ -1969,9 +1978,10 @@ class DataSetServiceImpl @Inject()(
       _ <- targetDsa.categoryRepo.deleteAll
 
       // save the referenced categories and collect new ids
-      newCategoryIds <- sourceDsa.categoryRepo.find(Seq(CategoryIdentity.name #-> refCategoryIds)).flatMap(categories =>
+      newCategoryIds <- sourceDsa.categoryRepo.find(Seq(CategoryIdentity.name #-> refCategoryIds)).flatMap { categories =>
+        println(s"Categories: ${categories.size}")
         targetDsa.categoryRepo.save(categories.map(_.copy(_id = None)))
-      )
+      }
 
       // old -> new category id map
       oldNewCategoryIdMap = refCategoryIds.zip(newCategoryIds.toSeq).toMap
@@ -1981,6 +1991,8 @@ class DataSetServiceImpl @Inject()(
 
       // delete all the new fields (if any)
       _ <- targetDsa.fieldRepo.deleteAll
+
+      _ <- targetDsa.fieldRepo.flushOps
 
       // save the new fields (minus the dropped ones)
       _ <- targetDsa.fieldRepo.save(newFields)

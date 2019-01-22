@@ -68,7 +68,7 @@ libraryDependencies ++= Seq(
 //  "org.apache.spark" %% "spark-core" % "2.3.1", // exclude("io.netty", "netty-all"),  // uses netty 4.1.17.Final incompatible with Play's netty 4.0.39.Final (which was upgraded to 4.0.56.Final)
 //  "org.apache.spark" %% "spark-sql" % "2.3.1",
 //  "org.apache.spark" %% "spark-mllib" % "2.3.1",
-  "org.in-cal" %% "incal-spark_ml" % "0.0.5"  exclude("com.fasterxml.jackson.core", "jackson-databind"),
+  "org.in-cal" %% "incal-spark_ml" % "0.0.13"  exclude("com.fasterxml.jackson.core", "jackson-databind"),
   //  "io.netty" % "netty-all" % "4.0.56.Final",
   "commons-net" % "commons-net" % "3.5",   // for ftp access
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",

@@ -62,19 +62,22 @@ class RunRowTimeSeriesRCRegression @Inject() (
 
       // run the selected classifier (ML model)
       resultsHolder <- mlModel.map { mlModel =>
-        val results = mlService.regressRowTimeSeries(
+        val results = mlService.regressRowTemporalSeries(
           data,
           fieldNameSpecs,
           input.inputFieldNames,
           input.outputFieldName,
           input.orderFieldName,
           orderedValues,
+          None,
           input.predictAhead,
           input.windowSize,
           Some(input.reservoirSpec),
           mlModel,
           input.learningSetting,
-          input.crossValidationMinTrainingSize,
+          input.outputNormalizationType,
+          input.crossValidationMinTrainingSizeRatio,
+          input.trainingTestSplitOrderValue,
           Nil
         )
         results.map(Some(_))
@@ -120,18 +123,20 @@ case class RunRowTimeSeriesRCRegressionSpec(
 
   // cross-validation
   crossValidationFolds: Option[Int],
-  crossValidationMinTrainingSize: Option[Double],
+  crossValidationMinTrainingSizeRatio: Option[Double],
   crossValidationEvalMetric: Option[RegressionEvalMetric.Value],
 
-  // pre-processing and other stuff
+  // pre-processing and learning setting
   featuresNormalizationType: Option[VectorScalerType.Value],
+  outputNormalizationType: Option[VectorScalerType.Value],
   pcaDims: Option[Int],
-  trainingTestingSplit: Option[Double],
+  trainingTestSplitRatio: Option[Double],
+  trainingTestSplitOrderValue: Option[Double],
   replicationItemId: Option[BSONObjectID],
   repetitions: Option[Int]
 ) {
   def learningSetting =
-    LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
+    LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestSplitRatio, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
 
   def reservoirSpec =
     ReservoirSpec(

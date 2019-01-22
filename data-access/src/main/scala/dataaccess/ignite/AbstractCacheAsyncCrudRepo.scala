@@ -3,11 +3,12 @@ package dataaccess.ignite
 import java.util.Date
 
 import dataaccess._
-import org.apache.ignite.cache.query.SqlFieldsQuery
-import org.apache.ignite.IgniteCache
+import org.apache.ignite.cache.query.{QueryCursor, ScanQuery, SqlFieldsQuery}
+import org.apache.ignite.{Ignite, IgniteCache}
 import org.apache.ignite.configuration.CacheConfiguration
 import org.h2.value.DataType
 import dataaccess.ignite.BinaryJsonUtil.escapeIgniteFieldName
+import org.apache.ignite.transactions.{TransactionConcurrency, TransactionIsolation}
 import org.h2.value.Value
 import org.incal.core.Identity
 import play.api.Logger
@@ -17,6 +18,7 @@ import org.incal.core.dataaccess._
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
     cache: IgniteCache[CACHE_ID, CACHE_E],
@@ -27,6 +29,8 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
   private val logger = Logger
 
   // hooks
+  val ignite: Ignite
+
   def toCacheId(id: ID): CACHE_ID
 
   def toItem(cacheItem: CACHE_E): E
@@ -308,8 +312,31 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
   override def delete(ids: Traversable[ID]): Future[Unit] =
     Future(cache.removeAll(ids.map(toCacheId).toSet[CACHE_ID]))
 
-  override def deleteAll: Future[Unit] =
-    Future(cache.removeAll())
+  override def deleteAll: Future[Unit] = Future {
+    // Note that this operation is transactional if AtomicWriteOrderMode is not set to PRIMARY
+    // otherwise items are removed from the cache before the keys (which are handled in an independent thread)
+    cache.removeAll()
+
+//    val tx = ignite.transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.READ_COMMITTED)
+//
+//    try {
+//      val cursor = cache.query(new ScanQuery[CACHE_ID, CACHE_E]())
+//      val keys = cursor.map(_.getKey)
+//      cursor.close()
+//
+//      if (keys.nonEmpty) {
+//        cache.removeAll(setAsJavaSet(keys.toSet))
+//        cache.localClearAll(setAsJavaSet(keys.toSet))
+////      cache.clearAll(setAsJavaSet(keys.toSet))
+//      }
+//      Thread.sleep(100)
+//      tx.commit()
+//    } catch {
+//      case e => throw e // what to do with an exception
+//    } finally {
+//      tx.close()
+//    }
+  }
 
   private def createNewIdWithCacheItem(entity: E): (ID, CACHE_E) = {
     // TODO: perhaps we could get an id from the underlying db before saving the item

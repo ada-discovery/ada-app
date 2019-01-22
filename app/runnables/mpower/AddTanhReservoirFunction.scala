@@ -13,7 +13,7 @@ class AddTanhReservoirFunction extends DsaInputFutureRunnable[AddTanhReservoirFu
   private val tanhJsValue = JsNumber(ActivationFunctionType.Tanh.ordinal())
 
   override def runAsFuture(spec: AddTanhReservoirFunctionSpec) = {
-    val repo = dataSetRepo(spec.dataSetId)
+    val repo = createDataSetRepo(spec.dataSetId)
 
     for {
       // get all the entries

@@ -10,9 +10,9 @@ trait DsaInputFutureRunnable[I] extends InputFutureRunnable[I] {
 
   @Inject var dsaf: DataSetAccessorFactory = _
 
-  protected def dsa(dataSetId: String) = dsaf(dataSetId).getOrElse(
+  protected def createDsa(dataSetId: String) = dsaf(dataSetId).getOrElse(
     throw new AdaException(s"Data set id ${dataSetId} not found.")
   )
 
-  protected def dataSetRepo(dataSetId: String) = dsa(dataSetId).dataSetRepo
+  protected def createDataSetRepo(dataSetId: String) = createDsa(dataSetId).dataSetRepo
 }

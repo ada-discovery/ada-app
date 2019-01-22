@@ -39,7 +39,7 @@ class TestVectorScaler @Inject()(sparkApp: SparkApp) extends Runnable {
 
   private def runAux(fitDf: DataFrame, testDf: DataFrame, inRow: Boolean) = {
     def scaleVectors(transformType: VectorScalerType.Value) =
-      VectorColumnScalerNormalizer(transformType).fit(fitDf).transform(testDf)
+      VectorColumnScaler(transformType).fit(fitDf).transform(testDf)
 
     val l1NormalizedDf = scaleVectors(VectorScalerType.L1Normalizer)
     val l2NormalizedDf = scaleVectors(VectorScalerType.L2Normalizer)

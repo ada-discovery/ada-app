@@ -13,7 +13,7 @@ class CreateDefaultMainView extends DsaInputFutureRunnable[CreateDefaultMainView
   private val logger = Logger // (this.getClass())
 
   override def runAsFuture(input: CreateDefaultMainViewSpec) = {
-    val dsa_ = dsa(input.dataSetId)
+    val dsa_ = createDsa(input.dataSetId)
     val fieldRepo = dsa_.fieldRepo
     val viewRepo = dsa_.dataViewRepo
 

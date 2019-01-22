@@ -1,10 +1,10 @@
 package runnables.core
 
-import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
+import models.DataSetFormattersAndIds.FieldIdentity
 import play.api.Logger
 import runnables.DsaInputFutureRunnable
 import org.incal.core.dataaccess.Criterion._
-import field.FieldTypeHelper
+import util.FieldUtil.{InfixFieldOps, JsonFieldOps}
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -13,34 +13,24 @@ class CountDistinct extends DsaInputFutureRunnable[CountDistinctSpec] {
 
   private val logger = Logger // (this.getClass())
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory()
-
   override def runAsFuture(input: CountDistinctSpec) = {
-    val dsa_ = dsa(input.dataSetId)
-    val repo = dsa_.dataSetRepo
-    val fieldRepo = dsa_.fieldRepo
-
-    val jsonsFuture = repo.find(projection = input.fieldNames)
-    val fieldsFuture  = fieldRepo.find(Seq(FieldIdentity.name #-> input.fieldNames))
+    val dsa = createDsa(input.dataSetId)
 
     for {
       // get the items
-      jsons <- jsonsFuture
+      jsons <- dsa.dataSetRepo.find(projection = input.fieldNames)
 
       // get the fields
-      fields <- fieldsFuture
+      fields <- dsa.fieldRepo.find(Seq(FieldIdentity.name #-> input.fieldNames))
     } yield {
-      val fieldNameTypes = fields.map( field => (field.name, ftf(field.fieldTypeSpec))).toSeq
-
-      val values = jsons.map { json =>
-        fieldNameTypes.map { case (name, fieldType) =>
-          fieldType.jsonToValue(json \ name)
-        }
-      }
+      val fieldNameTypes = fields.map(_.toNamedType).toSeq
+      val values = jsons.map(_.toValues(fieldNameTypes))
 
       val distinctValues = values.groupBy(identity)
+
       logger.info("Distinct values found: " + distinctValues.size)
       logger.info("-----------------")
+
       distinctValues.foreach { case (value, items) =>
         logger.info(value.mkString(", ") + " : " + items.size)
       }
