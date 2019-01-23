@@ -1,11 +1,13 @@
 @import controllers.routes.javascript.{MessageController => messageJsRoutes}
+@import play.api.Configuration
 
-@()(implicit req: play.api.mvc.RequestHeader, webJarAssets: WebJarAssets)
+@()(implicit req: play.api.mvc.RequestHeader, webJarAssets: WebJarAssets, conf: Configuration)
 
 @helper.javascriptRouter("jsMessageRoutes")(
     messageJsRoutes.saveUserMessage,
     messageJsRoutes.listMostRecent
 )
+
 <script src="@routes.WebJarAssets.at(webJarAssets.locate("Autolinker.js", "Autolinker.min.js"))"></script>
 <script type="text/javascript" defer="defer">
     $(function() {
@@ -17,7 +19,9 @@
                     prependTrollboxJsonMessage(json, false);
                 });
                 $("#trollmessagebox").scrollTop($(document).height());
-                registerMessageEventSource('@routes.MessageController.eventStream.url');
+                @if(conf.getBoolean("messages.listener.enabled").getOrElse(true)) {
+                    registerMessageEventSource('@routes.MessageController.eventStream.url');
+                }
             },
             error: function(data){
                 console.log(data);

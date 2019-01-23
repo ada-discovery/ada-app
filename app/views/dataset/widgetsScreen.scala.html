@@ -192,6 +192,8 @@
                             const heatmapData = data[0][0]
                             const values = [].concat.apply([], heatmapData.data)
 
+                            console.log(values)
+
                             if (!heatmap) {
                                 const container = document.querySelector('#heatmapDiv');
                                 heatmap = AdaCharts.chart({chartType: 'heatmap', container});

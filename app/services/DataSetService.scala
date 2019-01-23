@@ -1978,10 +1978,9 @@ class DataSetServiceImpl @Inject()(
       _ <- targetDsa.categoryRepo.deleteAll
 
       // save the referenced categories and collect new ids
-      newCategoryIds <- sourceDsa.categoryRepo.find(Seq(CategoryIdentity.name #-> refCategoryIds)).flatMap { categories =>
-        println(s"Categories: ${categories.size}")
+      newCategoryIds <- sourceDsa.categoryRepo.find(Seq(CategoryIdentity.name #-> refCategoryIds.map(Some(_)))).flatMap(categories =>
         targetDsa.categoryRepo.save(categories.map(_.copy(_id = None)))
-      }
+      )
 
       // old -> new category id map
       oldNewCategoryIdMap = refCategoryIds.zip(newCategoryIds.toSeq).toMap

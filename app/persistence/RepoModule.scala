@@ -46,7 +46,7 @@ private object RepoDef extends Enumeration {
     new MongoAsyncCrudRepo[Translation, BSONObjectID]("translations"))
 
   val MessageRepo = Repo[MessageRepo](
-    new MongoAsyncStreamRepo[Message, BSONObjectID]("messages"))
+    new MongoAsyncStreamRepo[Message, BSONObjectID]("messages", Some("timeCreated")))
 
   val UserSettingsRepo = Repo[UserSettingsRepo](
     new MongoAsyncCrudRepo[Workspace, BSONObjectID]("workspace"))

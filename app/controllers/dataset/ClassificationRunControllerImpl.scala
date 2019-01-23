@@ -179,7 +179,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 
     val allClassificationRunFieldsFuture = fieldCaseClassRepo.find()
 
-    val mlModelIds = page.items.map(_.setting.mlModelId).toSet
+    val mlModelIds = page.items.map(result => Some(result.setting.mlModelId)).toSet
 
     val mlModelsFuture = classificationRepo.find(Seq(ClassificationIdentity.name #-> mlModelIds.toSeq))
 

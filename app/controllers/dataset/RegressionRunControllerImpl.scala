@@ -173,7 +173,7 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
 
     val allRegressionRunFieldsFuture = fieldCaseClassRepo.find()
 
-    val mlModelIds = page.items.map(_.setting.mlModelId).toSet
+    val mlModelIds = page.items.map(result => Some(result.setting.mlModelId)).toSet
 
     val mlModelsFuture = regressionRepo.find(Seq(RegressionIdentity.name #-> mlModelIds.toSeq))
 
