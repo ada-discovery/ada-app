@@ -160,7 +160,7 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
     val rootCriteria = Seq(rootIdentity.name #== rootId)
     val subCriteria = criteria.map(criterion => criterion.copyWithFieldName(listName + "." + criterion.fieldName))
 
-    val referencedFieldNames = (Seq(rootIdentity.name) ++ subCriteria.map(_.fieldName)).toSet.toSeq
+    val referencedFieldNames = (Seq(rootIdentity.name, listName + "." + identity.name) ++ subCriteria.map(_.fieldName)).toSet.toSeq
 
     val result = rootRepo.findAggregate(
       rootCriteria = rootCriteria,

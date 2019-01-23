@@ -423,7 +423,8 @@ trait MongoAsyncCrudExtraRepo[E, ID] extends AsyncCrudRepo[E, ID] {
 }
 
 class MongoAsyncStreamRepo[E: Format, ID: Format](
-    collectionName : String)(
+    collectionName : String,
+    timestampFieldName: Option[String] = None)(
     implicit identity: Identity[E, ID]
   ) extends MongoAsyncRepo[E, ID](collectionName) with AsyncStreamRepo[E, ID] {
 
@@ -449,7 +450,12 @@ class MongoAsyncStreamRepo[E: Format, ID: Format](
 //    val since = BSONObjectID.generate
 //    val criteria = Json.obj("_id" -> Json.obj("$gt" -> since))
 //    Json.obj("$natural" -> 1)
-    var criteria = Json.obj("timeCreated" -> Json.obj("$gt" -> new java.util.Date().getTime))
+    val criteria = timestampFieldName.map(fieldName =>
+      Json.obj(fieldName -> Json.obj("$gt" -> new java.util.Date().getTime))
+    ).getOrElse(
+      Json.obj()
+    )
+
     for {
       coll <- cappedCollection
     } yield
@@ -467,10 +473,13 @@ class MongoAsyncStreamRepo[E: Format, ID: Format](
       case _ =>
         collection.createCapped(102400, Some(1000))
     }.flatMap( _ =>
-      collection.indexesManager.ensure(Index(
-        key = Seq("timeCreated" -> IndexType.Ascending),
-        unique = true
-      )).map(_ => collection)
+      if (timestampFieldName.isDefined) {
+        collection.indexesManager.ensure(Index(
+          key = Seq(timestampFieldName.get -> IndexType.Ascending),
+          unique = true
+        )).map(_ => collection)
+      } else
+        Future(collection)
     )
   }
 }
