@@ -92,7 +92,7 @@
             if (!featuresNormalizationType)
                 featuresNormalizationType = null
 
-            var trainingTestingSplit = $("#trainingTestingSplit").val()
+            var trainingTestSplitRatio = $("#trainingTestSplitRatio").val()
             var replicationFilterId = ($('#replicationFilterNameTypeahead').val()) ? $("#replicationFilterId").val() : null
             var replicationFilterIdJson = (replicationFilterId) ? {'$oid': replicationFilterId} : null
 
@@ -110,20 +110,24 @@
             var saveBinCurves = $("#saveBinCurves").is(":checked")
 
             var setting = {
+                "ioSpec": {
+                    "inputFieldNames": inputFieldNames,
+                    "outputFieldName": outputFieldName,
+                    "filterId": filterIdJson,
+                    "replicationFilterId": replicationFilterIdJson
+                },
                 "mlModelId": mlModelIdJson,
-                "outputFieldName": outputFieldName,
-                "inputFieldNames": inputFieldNames,
-                "filterId": filterIdJson,
-                "featuresNormalizationType": featuresNormalizationType,
-                "featuresSelectionNum": intValue(featuresSelectionNum),
-                "pcaDims": intValue(pcaDims),
-                "trainingTestingSplit": floatValue(trainingTestingSplit),
-                "replicationFilterId": replicationFilterIdJson,
-                "samplingRatios": samplingTuples,
-                "repetitions": intValue(repetitions),
-                "crossValidationFolds": intValue(crossValidationFolds),
-                "crossValidationEvalMetric": crossValidationEvalMetric,
-                "binCurvesNumBins": intValue(binCurvesNumBins)
+                "learningSetting": {
+                    "featuresNormalizationType": featuresNormalizationType,
+                    "featuresSelectionNum": intValue(featuresSelectionNum),
+                    "pcaDims": intValue(pcaDims),
+                    "trainingTestSplitRatio": floatValue(trainingTestSplitRatio),
+                    "samplingRatios": samplingTuples,
+                    "repetitions": intValue(repetitions),
+                    "crossValidationFolds": intValue(crossValidationFolds),
+                    "crossValidationEvalMetric": crossValidationEvalMetric,
+                    "binCurvesNumBins": intValue(binCurvesNumBins)
+                }
             };
 
             var settingJSON = JSON.stringify(setting);

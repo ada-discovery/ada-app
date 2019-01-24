@@ -2,7 +2,7 @@ package controllers.dataset
 
 import org.incal.core.FilterCondition
 import org.incal.play.controllers.ReadonlyController
-import org.incal.spark_ml.models.results.RegressionSetting
+import org.incal.spark_ml.models.setting.RegressionRunSpec
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 
@@ -11,7 +11,7 @@ trait RegressionRunController extends ReadonlyController[BSONObjectID]{
   def create: Action[AnyContent]
 
   def regress(
-    setting: RegressionSetting,
+    setting: RegressionRunSpec,
     saveResults: Boolean
   ): Action[AnyContent]
 

@@ -1,7 +1,6 @@
 package runnables.core
 
 import javax.inject.Inject
-
 import field.FieldTypeHelper
 import models.DataSetFormattersAndIds.FieldIdentity
 import persistence.RepoTypes.RegressionRepo
@@ -11,9 +10,7 @@ import services.ml.MachineLearningService
 import org.incal.core.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.dataaccess.NotEqualsNullCriterion
-import org.incal.spark_ml.models.VectorScalerType
-import org.incal.spark_ml.models.LearningSetting
-import org.incal.spark_ml.models.regression.RegressionEvalMetric
+import org.incal.spark_ml.models.setting.{TemporalGroupIOSpec, TemporalRegressionLearningSetting}
 import util.FieldUtil
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -33,7 +30,8 @@ class RunRowTimeSeriesDLRegression @Inject() (
   ): Future[Unit] = {
     val dsa = dsaf(input.dataSetId).get
 
-    val fieldNames = (input.inputFieldNames ++ Seq(input.outputFieldName, input.orderFieldName, input.idFieldName)).toSet.toSeq
+    val ioSpec = input.ioSpec
+    val fieldNames = ioSpec.allFieldNames
 
     for {
       // load a ML model
@@ -44,28 +42,23 @@ class RunRowTimeSeriesDLRegression @Inject() (
       fieldNameSpecs = fields.map(field => (field.name, field.fieldTypeSpec)).toSeq
 
       // order field (and type)
-      orderField <- dsa.fieldRepo.get(input.orderFieldName).map(_.get)
+      orderField <- dsa.fieldRepo.get(ioSpec.orderFieldName).map(_.get)
       orderFieldType = ftf(orderField.fieldTypeSpec).asValueOf[Any]
-      orderedValues = input.orderedStringValues.map(x => orderFieldType.displayStringToValue(x).get)
+      orderedValues = ioSpec.orderedStringValues.map(x => orderFieldType.displayStringToValue(x).get)
 
-      // id field (and type)
-      idField <- dsa.fieldRepo.get(input.idFieldName).map(_.get)
-      idFieldType = ftf(idField.fieldTypeSpec).asValueOf[Any]
-
-      // id match criterion (if requested)
-      idMatchCriterion = input.idStringValue.map(idStringValue =>
-        input.idFieldName #== idFieldType.displayStringToValue(idStringValue).get
-      )
+      // group id field (and type)
+      groupIdField <- dsa.fieldRepo.get(ioSpec.groupIdFieldName).map(_.get)
+      groupIdFieldType = ftf(groupIdField.fieldTypeSpec).asValueOf[Any]
 
       // filter criteria
-      filterCriteria <- loadCriteria(dsa, input.filterId)
+      filterCriteria <- loadCriteria(dsa, ioSpec.filterId)
 
       // not null field criteria
       notNullFieldCriteria = fields.map(field => NotEqualsNullCriterion(field.name))
 
       // jsons
       data <- dsa.dataSetRepo.find(
-        criteria = filterCriteria ++ notNullFieldCriteria ++ Seq(idMatchCriterion).flatten,
+        criteria = filterCriteria ++ notNullFieldCriteria,
         projection = fieldNames
       )
 
@@ -74,20 +67,13 @@ class RunRowTimeSeriesDLRegression @Inject() (
         val results = mlService.regressRowTemporalSeries(
           data,
           fieldNameSpecs,
-          input.inputFieldNames,
-          input.outputFieldName,
-          input.orderFieldName,
+          ioSpec.inputFieldNames,
+          ioSpec.outputFieldName,
+          ioSpec.orderFieldName,
           orderedValues,
-          Some(input.idFieldName),
-          input.predictAhead,
-          Some(input.windowSize),
-          None,
+          Some(ioSpec.groupIdFieldName),
           mlModel,
-          input.learningSetting,
-          input.outputNormalizationType,
-          input.crossValidationMinTrainingSizeRatio,
-          input.trainingTestSplitOrderValue,
-          Nil
+          input.learningSetting
         )
         results.map(Some(_))
       }.getOrElse(
@@ -116,26 +102,7 @@ class RunRowTimeSeriesDLRegression @Inject() (
 
 case class RunRowTimeSeriesDLRegressionSpec(
   dataSetId: String,
-  inputFieldNames: Seq[String],
-  outputFieldName: String,
-  orderFieldName: String,
-  orderedStringValues: Seq[String],
-  idFieldName: String,
-  idStringValue: Option[String],
-  filterId: Option[BSONObjectID],
+  ioSpec: TemporalGroupIOSpec,
   mlModelId: BSONObjectID,
-  predictAhead: Int,
-  windowSize: Int,
-  featuresNormalizationType: Option[VectorScalerType.Value],
-  outputNormalizationType: Option[VectorScalerType.Value],
-  pcaDims: Option[Int],
-  trainingTestSplitRatio: Option[Double],
-  trainingTestSplitOrderValue: Option[Double],
-  repetitions: Option[Int],
-  crossValidationFolds: Option[Int],
-  crossValidationMinTrainingSizeRatio: Option[Double],
-  crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
-) {
-  def learningSetting =
-    LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestSplitRatio, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
-}
+  learningSetting: TemporalRegressionLearningSetting
+)

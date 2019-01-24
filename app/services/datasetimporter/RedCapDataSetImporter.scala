@@ -57,6 +57,7 @@ private class RedCapDataSetImporter @Inject() (
       val enumStringValue = stringFieldType.displayJsonToValue(json)
       enumStringValue match {
         case Some(string) =>
+          // TODO: this looks like a bug... investigate
           if (ConversionUtil.isInt(string)) {
             JsNumber(string.toInt)
           } else {

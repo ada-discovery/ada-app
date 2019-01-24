@@ -15,7 +15,7 @@
 @elements = {
     @inputTextReadonly("htmlSnippet", "snippetId", data.form)
     @labelValue("content", "Content") {
-        <textarea id="content" name="content" rows="15" cols="65">@data.form("content").value.getOrElse("")</textarea>
+        <textarea id="content" name="content" rows="15" cols="85">@data.form("content").value.getOrElse("")</textarea>
     }
     @checkbox("htmlSnippet", "active", data.form)
     @inputTextReadonly("htmlSnippet", "timeCreated", data.form)

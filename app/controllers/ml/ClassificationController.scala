@@ -36,10 +36,10 @@ class ClassificationController @Inject()(
     repo: ClassificationRepo,
     dataSpaceService: DataSpaceService
 
-  ) extends AdaCrudControllerImpl[Classification, BSONObjectID](repo)
+  ) extends AdaCrudControllerImpl[ClassificationModel, BSONObjectID](repo)
     with AdminRestrictedCrudController[BSONObjectID]
-    with HasCreateEditSubTypeFormViews[Classification, BSONObjectID]
-    with HasFormShowEqualEditView[Classification, BSONObjectID] {
+    with HasCreateEditSubTypeFormViews[ClassificationModel, BSONObjectID]
+    with HasFormShowEqualEditView[ClassificationModel, BSONObjectID] {
 
   private implicit val logisticModelFamilyFormatter = EnumFormatter(LogisticModelFamily)
   private implicit val mlpSolverFormatter = EnumFormatter(MLPSolver)
@@ -156,7 +156,7 @@ class ClassificationController @Inject()(
       "timeCreated" -> ignored(new Date())
     )(LinearSupportVectorMachine.apply)(LinearSupportVectorMachine.unapply))
 
-  protected case class ClassificationCreateEditViews[E <: Classification](
+  protected case class ClassificationCreateEditViews[E <: ClassificationModel](
     displayName: String,
     val form: Form[E],
     viewElements: (Form[E], Messages) => Html)(
@@ -243,7 +243,7 @@ class ClassificationController @Inject()(
   override protected val homeCall = routes.ClassificationController.find()
 
   // default form... unused
-  override protected[controllers] val form = logisticRegressionForm.asInstanceOf[Form[Classification]]
+  override protected[controllers] val form = logisticRegressionForm.asInstanceOf[Form[ClassificationModel]]
 
   def create(concreteClassName: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
@@ -254,13 +254,13 @@ class ClassificationController @Inject()(
   }
 
   override protected type ListViewData = (
-    Page[Classification],
+    Page[ClassificationModel],
     Seq[FilterCondition],
     Traversable[DataSpaceMetaInfo]
   )
 
   override protected def getListViewData(
-    page: Page[Classification],
+    page: Page[ClassificationModel],
     conditions: Seq[FilterCondition]
   ) = { request =>
     for {

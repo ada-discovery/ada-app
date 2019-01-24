@@ -36,7 +36,7 @@ class MachineLearningClassificationTest @Inject()(
     // featureFieldNames,
 
 
-    def classify(model: Classification) = {
+    def classify(model: ClassificationModel) = {
       val resultFuture = machineLearningService.classifyStatic(jsons, fieldNameSpecs, outputFieldName, model)
       result(resultFuture, 1 hour)
     }

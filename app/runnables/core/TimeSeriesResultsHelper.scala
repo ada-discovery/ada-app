@@ -3,7 +3,7 @@ package runnables.core
 import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import org.incal.spark_ml.MachineLearningUtil
 import org.incal.spark_ml.models.regression.RegressionEvalMetric
-import org.incal.spark_ml.models.results.RegressionResultsHolder
+import org.incal.spark_ml.models.result.RegressionResultsHolder
 import org.incal.core.util.writeStringAsStream
 import play.api.Logger
 

@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.incal.play.controllers.SecureControllerDispatcher
 import org.incal.core.FilterCondition
-import org.incal.spark_ml.models.results.ClassificationSetting
+import org.incal.spark_ml.models.setting.ClassificationRunSpec
 import reactivemongo.bson.BSONObjectID
 import org.incal.play.security.SecurityRole
 import models.security.DataSetPermission
@@ -36,7 +36,7 @@ class ClassificationRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf
   override def create = dispatch(_.create)
 
   override def classify(
-    setting: ClassificationSetting,
+    setting: ClassificationRunSpec,
     saveResults: Boolean,
     saveBinCurves: Boolean
   ) = dispatch(_.classify(setting, saveResults, saveBinCurves))

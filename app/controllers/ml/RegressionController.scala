@@ -35,10 +35,10 @@ class RegressionController @Inject()(
     repo: RegressionRepo,
     dataSpaceService: DataSpaceService
 
-  ) extends AdaCrudControllerImpl[Regression, BSONObjectID](repo)
+  ) extends AdaCrudControllerImpl[RegressionModel, BSONObjectID](repo)
     with AdminRestrictedCrudController[BSONObjectID]
-    with HasCreateEditSubTypeFormViews[Regression, BSONObjectID]
-    with HasFormShowEqualEditView[Regression, BSONObjectID] {
+    with HasCreateEditSubTypeFormViews[RegressionModel, BSONObjectID]
+    with HasFormShowEqualEditView[RegressionModel, BSONObjectID] {
 
   private implicit val regressionSolverFormatter = EnumFormatter(RegressionSolver)
   private implicit val generalizedLinearRegressionLinkTypeFormatter = EnumFormatter(GeneralizedLinearRegressionLinkType)
@@ -129,7 +129,7 @@ class RegressionController @Inject()(
       "timeCreated" -> ignored(new Date())
     )(GradientBoostRegressionTree.apply)(GradientBoostRegressionTree.unapply))
 
-  protected case class RegressionCreateEditViews[E <: Regression](
+  protected case class RegressionCreateEditViews[E <: RegressionModel](
     displayName: String,
     val form: Form[E],
     viewElements: (Form[E], Messages) => Html)(
@@ -204,7 +204,7 @@ class RegressionController @Inject()(
   override protected val homeCall = routes.RegressionController.find()
 
   // default form... unused
-  override protected[controllers] val form = linearRegressionForm.asInstanceOf[Form[Regression]]
+  override protected[controllers] val form = linearRegressionForm.asInstanceOf[Form[RegressionModel]]
 
   def create(concreteClassName: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
@@ -215,13 +215,13 @@ class RegressionController @Inject()(
   }
 
   override protected type ListViewData = (
-    Page[Regression],
+    Page[RegressionModel],
     Seq[FilterCondition],
     Traversable[DataSpaceMetaInfo]
   )
 
   override protected def getListViewData(
-    page: Page[Regression],
+    page: Page[RegressionModel],
     conditions: Seq[FilterCondition]
   ) = { request =>
     for {

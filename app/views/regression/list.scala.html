@@ -13,7 +13,7 @@
 @import org.incal.core.FilterCondition
 
 @(
-    page: Page[Regression],
+    page: Page[RegressionModel],
     conditions: Seq[FilterCondition],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -61,12 +61,12 @@
     paginatedTable(
         page,
         regressionRoutes.find(_, _, conditions),
-        typeColumns[Regression](
+        typeColumns[RegressionModel](
             (Some("concreteClass"), "Type", {classification => toHumanReadableCamel(classification.getClass.getSimpleName)}),
             (Some("name"), "Name", _.name.getOrElse("")),
             (Some("timeCreated"), "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss"))
         ),
-        Some({ item : Any => regressionRoutes.get(item.asInstanceOf[Regression]._id.get)})
+        Some({ item : Any => regressionRoutes.get(item.asInstanceOf[RegressionModel]._id.get)})
     )
 }
 

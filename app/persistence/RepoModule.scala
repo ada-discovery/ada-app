@@ -23,8 +23,8 @@ import persistence.dataset._
 import reactivemongo.bson.BSONObjectID
 import persistence.RepoDef.Repo
 import models.workspace.Workspace
-import org.incal.spark_ml.models.classification.Classification
-import org.incal.spark_ml.models.regression.Regression
+import org.incal.spark_ml.models.classification.ClassificationModel
+import org.incal.spark_ml.models.regression.RegressionModel
 
 private object RepoDef extends Enumeration {
   abstract class AbstractRepo[T: Manifest] extends super.Val {
@@ -52,10 +52,10 @@ private object RepoDef extends Enumeration {
     new MongoAsyncCrudRepo[Workspace, BSONObjectID]("workspace"))
 
   val ClassificationRepo = Repo[ClassificationRepo](
-    new MongoAsyncCrudRepo[Classification, BSONObjectID]("classifications"))
+    new MongoAsyncCrudRepo[ClassificationModel, BSONObjectID]("classifications"))
 
   val RegressionRepo = Repo[RegressionRepo](
-    new MongoAsyncCrudRepo[Regression, BSONObjectID]("regressions"))
+    new MongoAsyncCrudRepo[RegressionModel, BSONObjectID]("regressions"))
 
   val UnsupervisedLearningRepo = Repo[UnsupervisedLearningRepo](
     new MongoAsyncCrudRepo[UnsupervisedLearning, BSONObjectID]("unsupervisedLearnings"))

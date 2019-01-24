@@ -13,7 +13,7 @@ import org.incal.core.FilterCondition
 import org.incal.play.PageOrder
 import org.incal.spark_ml.models.classification.ClassificationEvalMetric
 import org.incal.spark_ml.models.regression.RegressionEvalMetric
-import org.incal.spark_ml.models.results.{ClassificationSetting, RegressionSetting}
+import org.incal.spark_ml.models.setting.{ClassificationRunSpec, RegressionRunSpec}
 import org.incal.spark_ml.models.VectorScalerType
 import play.api.libs.json.{Format, Json}
 import play.api.mvc.QueryStringBindable
@@ -47,16 +47,16 @@ object QueryStringBinders {
       stringBinder.unbind(key, Json.stringify(Json.toJson(filterSpec)))
   }
 
-  implicit val FilterConditionQueryStringBinder = new JsonQueryStringBinder[Seq[FilterCondition]]
-  implicit val FilterQueryStringBinder = new JsonQueryStringBinder[Filter]
-  implicit val FieldTypeIdsQueryStringBinder = new JsonQueryStringBinder[Seq[FieldTypeId.Value]]
+  implicit val filterConditionQueryStringBinder = new JsonQueryStringBinder[Seq[FilterCondition]]
+  implicit val filterQueryStringBinder = new JsonQueryStringBinder[Filter]
+  implicit val fieldTypeIdsQueryStringBinder = new JsonQueryStringBinder[Seq[FieldTypeId.Value]]
   implicit val BSONObjectIDQueryStringBinder = BSONObjectIDQueryStringBindable
-  implicit val FilterOrIdBinder = new JsonQueryStringBinder[FilterOrId]
-  implicit val FilterOrIdSeqBinder = new JsonQueryStringBinder[Seq[FilterOrId]]
-  implicit val TablePageSeqBinder = new JsonQueryStringBinder[Seq[PageOrder]]
+  implicit val filterOrIdBinder = new JsonQueryStringBinder[FilterOrId]
+  implicit val filterOrIdSeqBinder = new JsonQueryStringBinder[Seq[FilterOrId]]
+  implicit val tablePageSeqBinder = new JsonQueryStringBinder[Seq[PageOrder]]
 
-  implicit val ClassificationSettingBinder = new JsonQueryStringBinder[ClassificationSetting]
-  implicit val RegressionSettingBinder = new JsonQueryStringBinder[RegressionSetting]
+  implicit val classificationRunSpecBinder = new JsonQueryStringBinder[ClassificationRunSpec]
+  implicit val regressionRunSpecBinder = new JsonQueryStringBinder[RegressionRunSpec]
 
   implicit val vectorScalerTypeQueryStringBinder = new EnumStringBindable(VectorScalerType)
   implicit val classificationEvalMetricQueryStringBinder = new EnumStringBindable(ClassificationEvalMetric)

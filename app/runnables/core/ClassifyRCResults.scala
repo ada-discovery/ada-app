@@ -1,18 +1,12 @@
 package runnables.core
 
 import javax.inject.Inject
-
-import dataaccess.RepoTypes.FieldRepo
-import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion._
-import org.incal.core.FilterCondition.toCriterion
 import models.{AdaException, Filter}
 import org.incal.core.{FilterCondition, InputFutureRunnable}
 import org.incal.core.util.seqFutures
 import org.incal.spark_ml.MachineLearningUtil
-import org.incal.spark_ml.models.classification.ClassificationEvalMetric
-import org.incal.spark_ml.models.results.ClassificationSetting
-import org.incal.spark_ml.models.VectorScalerType
+import org.incal.spark_ml.models.setting.{ClassificationLearningSetting, ClassificationRunSpec, IOSpec}
 import persistence.RepoTypes.ClassificationRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
@@ -113,29 +107,19 @@ class ClassifyRCResults @Inject() (
       // classify and save the result
       _ <- mlModel match {
         case Some(mlModel) =>
-          val setting = ClassificationSetting(
-            // IO
+          // IO
+          val ioSpec = IOSpec(
             weightsFieldNames,
             spec.outputFieldName,
             filter.map(_._id.get),
-            spec.replicationFilterId,
-
-            // Learning Setting
-            spec.mlModelId,
-            spec.featuresNormalizationType,
-            spec.featuresSelectionNum,
-            spec.pcaDims,
-            spec.trainingTestSplitRatio,
-            spec.samplingOutputValues.zip(spec.samplingRatios),
-            spec.repetitions,
-            spec.crossValidationFolds,
-            spec.crossValidationEvalMetric,
-            spec.binCurvesNumBins
+            spec.replicationFilterId
           )
 
-          val selectedFields = spec.featuresSelectionNum.map { featuresSelectionNum =>
-            val inputFields = fields.filter(!_.name.equals(setting.outputFieldName))
-            val outputField = fields.find(_.name.equals(setting.outputFieldName)).get
+          val runSpec = ClassificationRunSpec(ioSpec, spec.mlModelId, spec.learningSetting)
+
+          val selectedFields = spec.learningSetting.featuresSelectionNum.map { featuresSelectionNum =>
+            val inputFields = fields.filter(!_.name.equals(ioSpec.outputFieldName))
+            val outputField = fields.find(_.name.equals(ioSpec.outputFieldName)).get
             val selectedInputFields = statsService.selectFeaturesAsAnovaChiSquare(jsons, inputFields, outputField, featuresSelectionNum)
             selectedInputFields ++ Seq(outputField)
           }.getOrElse(
@@ -143,8 +127,8 @@ class ClassifyRCResults @Inject() (
           )
 
           val fieldNameAndSpecs = selectedFields.map(field => (field.name, field.fieldTypeSpec))
-          mlService.classifyStatic(jsons, fieldNameAndSpecs, spec.outputFieldName, mlModel, setting.learningSetting).map { resultsHolder =>
-            val finalResult = MachineLearningUtil.createClassificationResult(setting, resultsHolder.performanceResults, Nil)
+          mlService.classifyStatic(jsons, fieldNameAndSpecs, spec.outputFieldName, mlModel, runSpec.learningSetting).map { resultsHolder =>
+            val finalResult = MachineLearningUtil.createClassificationResult(runSpec, resultsHolder.performanceResults, Nil)
             dsa.classificationResultRepo.save(finalResult)
           }
 
@@ -171,15 +155,6 @@ case class ClassifyRCResultsSpec(
   mlModelId: BSONObjectID,
   outputFieldName: String,
   filterName: Option[String],
-  featuresNormalizationType: Option[VectorScalerType.Value],
-  featuresSelectionNum: Option[Int],
-  pcaDims: Option[Int],
-  trainingTestSplitRatio: Option[Double],
   replicationFilterId: Option[BSONObjectID],
-  samplingOutputValues: Seq[String],
-  samplingRatios: Seq[Double],
-  repetitions: Option[Int],
-  crossValidationFolds: Option[Int],
-  crossValidationEvalMetric: Option[ClassificationEvalMetric.Value],
-  binCurvesNumBins: Option[Int]
+  learningSetting: ClassificationLearningSetting
 )

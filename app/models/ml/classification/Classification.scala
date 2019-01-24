@@ -28,7 +28,7 @@ object Classification {
 
   private implicit val treeCoreFormat = Json.format[TreeCore]
 
-  implicit val classificationFormat: Format[Classification] = new SubTypeFormat[Classification](
+  implicit val classificationFormat: Format[ClassificationModel] = new SubTypeFormat[ClassificationModel](
     Seq(
       ManifestedFormat(Json.format[LogisticRegression]),
       ManifestedFormat(Json.format[MultiLayerPerceptron]),
@@ -40,10 +40,10 @@ object Classification {
     )
   )
 
-  implicit object ClassificationIdentity extends BSONObjectIdentity[Classification] {
-    def of(entity: Classification): Option[BSONObjectID] = entity._id
+  implicit object ClassificationIdentity extends BSONObjectIdentity[ClassificationModel] {
+    def of(entity: ClassificationModel): Option[BSONObjectID] = entity._id
 
-    protected def set(entity: Classification, id: Option[BSONObjectID]) =
+    protected def set(entity: ClassificationModel, id: Option[BSONObjectID]) =
       entity match {
         case x: LogisticRegression => x.copy(_id = id)
         case x: MultiLayerPerceptron => x.copy(_id = id)

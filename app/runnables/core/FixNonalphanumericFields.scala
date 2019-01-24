@@ -135,30 +135,30 @@ class FixNonalphanumericFields @Inject() (
 
       // classification runs
 
-      classificationRuns <- dsa.classificationResultRepo.find()
+      classificationResults <- dsa.classificationResultRepo.find()
 
-      newClassificationRuns = classificationRuns.map { classificationRun =>
-        val newInputFieldNames = classificationRun.setting.inputFieldNames.map(fieldName => oldToNewFieldNameMap.getOrElse(fieldName, fieldName))
-        val outputFieldName = classificationRun.setting.outputFieldName
+      newClassificationRuns = classificationResults.map { classificationRun =>
+        val newInputFieldNames = classificationRun.ioSpec.inputFieldNames.map(fieldName => oldToNewFieldNameMap.getOrElse(fieldName, fieldName))
+        val outputFieldName = classificationRun.ioSpec.outputFieldName
         val newOutputFieldName = oldToNewFieldNameMap.getOrElse(outputFieldName, outputFieldName)
 
-        val newSetting = classificationRun.setting.copy(inputFieldNames = newInputFieldNames, outputFieldName = newOutputFieldName)
-        classificationRun.copy(setting = newSetting)
+        val newIOSpec = classificationRun.ioSpec.copy(inputFieldNames = newInputFieldNames, outputFieldName = newOutputFieldName)
+        classificationRun.copy(runSpec = classificationRun.runSpec.copy(ioSpec = newIOSpec))
       }
 
       _ <- dsa.classificationResultRepo.update(newClassificationRuns)
 
       // regression runs
 
-      regressionRuns <- dsa.regressionResultRepo.find()
+      regressionResults <- dsa.regressionResultRepo.find()
 
-      newRegressionRuns = regressionRuns.map { regressionRun =>
-        val newInputFieldNames = regressionRun.setting.inputFieldNames.map(fieldName => oldToNewFieldNameMap.getOrElse(fieldName, fieldName))
-        val outputFieldName = regressionRun.setting.outputFieldName
+      newRegressionRuns = regressionResults.map { regressionRun =>
+        val newInputFieldNames = regressionRun.ioSpec.inputFieldNames.map(fieldName => oldToNewFieldNameMap.getOrElse(fieldName, fieldName))
+        val outputFieldName = regressionRun.ioSpec.outputFieldName
         val newOutputFieldName = oldToNewFieldNameMap.getOrElse(outputFieldName, outputFieldName)
 
-        val newSetting = regressionRun.setting.copy(inputFieldNames = newInputFieldNames, outputFieldName = newOutputFieldName)
-        regressionRun.copy(setting = newSetting)
+        val newIOSpec = regressionRun.ioSpec.copy(inputFieldNames = newInputFieldNames, outputFieldName = newOutputFieldName)
+        regressionRun.copy(runSpec = regressionRun.runSpec.copy(ioSpec = newIOSpec))
       }
 
       _ <- dsa.regressionResultRepo.update(newRegressionRuns)

@@ -9,7 +9,7 @@ import persistence.dataset.{ClassificationResultRepoFactory, DataSetAccessor, Da
 import play.api.Logger
 import play.api.libs.json.{JsObject, Json}
 import org.incal.core.InputFutureRunnable
-import org.incal.spark_ml.models.results.ClassificationResult
+import org.incal.spark_ml.models.result.ClassificationResult
 import models.ml.classification.ClassificationResult._
 import services.DataSetService
 import util.FieldUtil.caseClassToFlatFieldTypes
@@ -81,8 +81,8 @@ class ExportClassificationResultsToDataSet @Inject() (
       // add some extra stuff for easier reference (model and filter name)
       resultsWithExtra <- Future.sequence(
         results.map { result =>
-          val classificationFuture = classificationRepo.get(result.setting.mlModelId)
-          val filterFuture = result.setting.filterId.map(dsa.filterRepo.get).getOrElse(Future(None))
+          val classificationFuture = classificationRepo.get(result.runSpec.mlModelId)
+          val filterFuture = result.ioSpec.filterId.map(dsa.filterRepo.get).getOrElse(Future(None))
 
           for {
             mlModel <- classificationFuture

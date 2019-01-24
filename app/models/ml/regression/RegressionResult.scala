@@ -4,7 +4,8 @@ import dataaccess.BSONObjectIdentity
 import models.json.{EnumFormat, FlattenFormat, TupleFormat}
 import org.incal.spark_ml.models.VectorScalerType
 import org.incal.spark_ml.models.regression.RegressionEvalMetric
-import org.incal.spark_ml.models.results.{MetricStatsValues, RegressionMetricStats, RegressionResult, RegressionSetting}
+import org.incal.spark_ml.models.result.{MetricStatsValues, RegressionMetricStats, RegressionResult}
+import org.incal.spark_ml.models.setting.{ClassificationLearningSetting, IOSpec, RegressionLearningSetting, RegressionRunSpec}
 import play.api.libs.json.{Json, _}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
@@ -17,7 +18,7 @@ object RegressionResult {
     createRegressionResultFormat(VectorScalerTypeFormat, regressionEvalMetricFormat)
   }
 
-  implicit val regressionSettingFormat: Format[RegressionSetting] = {
+  implicit val regressionSettingFormat: Format[RegressionRunSpec] = {
     implicit val VectorScalerTypeFormat = EnumFormat.enumFormat(VectorScalerType)
     implicit val regressionEvalMetricFormat = EnumFormat.enumFormat(RegressionEvalMetric)
     createRegressionSettingFormat(VectorScalerTypeFormat, regressionEvalMetricFormat)
@@ -28,7 +29,10 @@ object RegressionResult {
     regressionEvalMetricFormat: Format[RegressionEvalMetric.Value]
   ) = {
     implicit val tupleFormat = TupleFormat[String, Double]
-    Json.format[RegressionSetting]
+    implicit val ioSpecFormat = Json.format[IOSpec]
+    implicit val learningSettingFormat = Json.format[RegressionLearningSetting]
+
+    Json.format[RegressionRunSpec]
   }
 
   def createRegressionResultFormat(

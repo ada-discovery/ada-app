@@ -87,24 +87,29 @@
                 if (!featuresNormalizationType)
                     featuresNormalizationType = null
 
-                var trainingTestingSplit = $("#trainingTestingSplit").val()
+                var trainingTestSplitRatio = $("#trainingTestSplitRatio").val()
                 var replicationFilterId = ($('#replicationFilterNameTypeahead').val()) ? $("#replicationFilterId").val() : null
                 var replicationFilterIdJson = (replicationFilterId) ? {'$oid': replicationFilterId} : null
 
                 var saveResults = $("#saveResults").is(":checked")
 
                 var setting = {
+                    "ioSpec": {
+                        "inputFieldNames": inputFieldNames,
+                        "outputFieldName": outputFieldName,
+                        "filterId": filterIdJson,
+                        "replicationFilterId": replicationFilterIdJson
+                    },
                     "mlModelId": mlModelIdJson,
-                    "outputFieldName": outputFieldName,
-                    "inputFieldNames": inputFieldNames,
-                    "filterId": filterIdJson,
-                    "featuresNormalizationType": featuresNormalizationType,
-                    "pcaDims": intValue(pcaDims),
-                    "trainingTestingSplit": floatValue(trainingTestingSplit),
-                    "replicationFilterId": replicationFilterIdJson,
-                    "repetitions": intValue(repetitions),
-                    "crossValidationFolds": intValue(crossValidationFolds),
-                    "crossValidationEvalMetric": crossValidationEvalMetric
+                    "learningSetting": {
+                        "featuresNormalizationType": featuresNormalizationType,
+                        "pcaDims": intValue(pcaDims),
+                        "trainingTestSplitRatio": floatValue(trainingTestSplitRatio),
+                        "repetitions": intValue(repetitions),
+                        "crossValidationFolds": intValue(crossValidationFolds),
+                        "crossValidationEvalMetric": crossValidationEvalMetric,
+                        "collectOutputs": false
+                    }
                 };
 
                 var settingJSON = JSON.stringify(setting)

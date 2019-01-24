@@ -1,7 +1,6 @@
 package runnables.core
 
 import javax.inject.Inject
-
 import models.ml.IOJsonTimeSeriesSpec
 import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -9,8 +8,8 @@ import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
 import org.incal.spark_ml.models.VectorScalerType
 import services.ml.MachineLearningService
-import org.incal.spark_ml.models.LearningSetting
 import org.incal.spark_ml.models.regression.RegressionEvalMetric
+import org.incal.spark_ml.models.setting.{TemporalGroupIOSpec, TemporalRegressionLearningSetting}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
@@ -46,14 +45,8 @@ class RunTimeSeriesDLRegression @Inject() (
         val results = mlService.regressTemporalSeries(
           item.get,
           input.ioSpec,
-          input.predictAhead,
-          Some(input.windowSize),
-          None,
           mlModel,
           input.learningSetting,
-          input.outputNormalizationType,
-          input.crossValidationMinTrainingSizeRatio,
-          input.trainingTestSplitOrderValue,
           replicationItem
         )
         results.map(Some(_))
@@ -72,21 +65,8 @@ case class RunTimeSeriesDLRegressionSpec(
   itemId: BSONObjectID,
   ioSpec: IOJsonTimeSeriesSpec,
   mlModelId: BSONObjectID,
-  predictAhead: Int,
-  windowSize: Int,
-  featuresNormalizationType: Option[VectorScalerType.Value],
-  outputNormalizationType: Option[VectorScalerType.Value],
-  pcaDims: Option[Int],
-  trainingTestSplitRatio: Option[Double],
-  trainingTestSplitOrderValue: Option[Double],
-  replicationItemId: Option[BSONObjectID],
-  repetitions: Option[Int],
-  crossValidationFolds: Option[Int],
-  crossValidationMinTrainingSizeRatio: Option[Double],
-  crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
-) {
-  def learningSetting =
-    LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestSplitRatio, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
-}
+  learningSetting: TemporalRegressionLearningSetting,
+  replicationItemId: Option[BSONObjectID]
+)
 
 

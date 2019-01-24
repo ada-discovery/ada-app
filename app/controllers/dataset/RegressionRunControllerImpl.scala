@@ -1,7 +1,6 @@
 package controllers.dataset
 
 import javax.inject.Inject
-import java.{util => ju}
 
 import com.google.inject.assistedinject.Assisted
 import dataaccess.AdaDataAccessException
@@ -28,7 +27,6 @@ import _root_.util.FieldUtil.caseClassToFlatFieldTypes
 import _root_.util.toHumanReadableCamel
 import controllers.core.AdaReadonlyControllerImpl
 import controllers.core.{ExportableAction, WidgetRepoController}
-import dataaccess.RepoTypes.FieldRepo
 import models.json.OrdinalEnumFormat
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.FilterCondition.toCriterion
@@ -39,7 +37,8 @@ import org.incal.play.controllers.{ReadonlyControllerImpl, WebContext}
 import org.incal.play.security.AuthAction
 import org.incal.spark_ml.MachineLearningUtil
 import org.incal.spark_ml.models.regression.RegressionEvalMetric
-import org.incal.spark_ml.models.results.{MetricStatsValues, RegressionResult, RegressionSetting}
+import org.incal.spark_ml.models.result.{MetricStatsValues, RegressionResult}
+import org.incal.spark_ml.models.setting.RegressionRunSpec
 import org.incal.spark_ml.models.VectorScalerType
 
 import scala.reflect.runtime.universe.TypeTag
@@ -86,8 +85,8 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
     DistributionWidgetSpec("testStats-r2-mean", None, displayOptions = distributionDisplayOptions),
     DistributionWidgetSpec("testStats-mae-mean", None, displayOptions = distributionDisplayOptions),
     DistributionWidgetSpec("timeCreated", None, displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column))),
-    ScatterWidgetSpec("trainingStats-mse-mean", "testStats-mse-mean", Some("setting-mlModelId")),
-    ScatterWidgetSpec("testStats-r2-mean", "testStats-mse-mean", Some("setting-mlModelId"))
+    ScatterWidgetSpec("trainingStats-mse-mean", "testStats-mse-mean", Some("runSpec-mlModelId")),
+    ScatterWidgetSpec("testStats-r2-mean", "testStats-mse-mean", Some("runSpec-mlModelId"))
   )
 
   // export stuff
@@ -99,9 +98,9 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
   private val csvEOL = "\n"
 
   override protected val listViewColumns = Some(Seq(
-    "setting-mlModelId",
-    "setting-filterId",
-    "setting-outputFieldName",
+    "runSpec-mlModelId",
+    "runSpec-ioSpec-filterId",
+    "runSpec-ioSpec-outputFieldName",
     "testStats-mae-mean",
     "testStats-mse-mean",
     "testStats-rmse-mean",
@@ -165,19 +164,19 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
     val nameFuture = dsa.dataSetName
 
     val fieldNames = page.items.flatMap { regressionResult =>
-      val setting = regressionResult.setting
-      setting.inputFieldNames ++ Seq(setting.outputFieldName)
+      val ioSpec = regressionResult.ioSpec
+      ioSpec.inputFieldNames ++ Seq(ioSpec.outputFieldName)
     }.toSet
 
     val fieldsFuture = getDataSetFields(fieldNames)
 
     val allRegressionRunFieldsFuture = fieldCaseClassRepo.find()
 
-    val mlModelIds = page.items.map(result => Some(result.setting.mlModelId)).toSet
+    val mlModelIds = page.items.map(result => Some(result.runSpec.mlModelId)).toSet
 
     val mlModelsFuture = regressionRepo.find(Seq(RegressionIdentity.name #-> mlModelIds.toSeq))
 
-    val filterIds = page.items.map(_.setting.filterId).toSet
+    val filterIds = page.items.map(_.ioSpec.filterId).toSet
 
     val filtersFuture = dsa.filterRepo.find(Seq(FilterIdentity.name #-> filterIds.toSeq))
 
@@ -237,25 +236,18 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
   }
 
   override def regress(
-    setting: RegressionSetting,
+    setting: RegressionRunSpec,
     saveResults: Boolean
   ) = Action.async { implicit request =>
     val mlModelFuture = regressionRepo.get(setting.mlModelId)
-    val criteriaFuture = loadCriteria(setting.filterId)
-    val replicationCriteriaFuture = loadCriteria(setting.replicationFilterId)
+    val criteriaFuture = loadCriteria(setting.ioSpec.filterId)
+    val replicationCriteriaFuture = loadCriteria(setting.ioSpec.replicationFilterId)
 
-    val fieldNames = setting.fieldNamesToLoads
-    val fieldsFuture =
-      if (fieldNames.nonEmpty)
-        dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
-      else
-        dsa.fieldRepo.find()
+    val fieldNames = setting.ioSpec.allFieldNames
+    val fieldsFuture = dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
 
     def findData(criteria: Seq[Criterion[Any]]) =
-      if (fieldNames.nonEmpty)
-        dsa.dataSetRepo.find(criteria, projection = fieldNames)
-      else
-        dsa.dataSetRepo.find(criteria)
+      dsa.dataSetRepo.find(criteria, projection = fieldNames)
 
     for {
       // load a ML model
@@ -279,7 +271,7 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
       // run the selected classifier (ML model)
       resultsHolder <- mlModel.map { mlModel =>
         val fieldNameAndSpecs = fields.toSeq.map(field => (field.name, field.fieldTypeSpec))
-        val results = mlService.regressStatic(mainData, fieldNameAndSpecs, setting.outputFieldName, mlModel, setting.learningSetting, setting.outputNormalizationType, replicationData)
+        val results = mlService.regressStatic(mainData, fieldNameAndSpecs, setting.ioSpec.outputFieldName, mlModel, setting.learningSetting, replicationData)
         results.map(Some(_))
       }.getOrElse(
         Future(None)
@@ -437,8 +429,8 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
       // save the results
       _ <- targetDsa.dataSetRepo.save(
         allResults.map { case (result, extraResult) =>
-          val regressionEvalMetricFieldSpec = fields.find(_._1.equals("setting-crossValidationEvalMetric")).get._2
-          val vectorTransformTypeFieldSpec = fields.find(_._1.equals("setting-featuresNormalizationType")).get._2
+          val regressionEvalMetricFieldSpec = fields.find(_._1.equals("runSpec-learningSetting-crossValidationEvalMetric")).get._2
+          val vectorTransformTypeFieldSpec = fields.find(_._1.equals("runSpec-learningSetting-featuresNormalizationType")).get._2
 
           val regressionEvalMetricMap = regressionEvalMetricFieldSpec.enumValues.get.map { case (int, string) => (RegressionEvalMetric.withName(string), int)}
           val vectorTransformTypeMap = vectorTransformTypeFieldSpec.enumValues.get.map { case (int, string) => (VectorScalerType.withName(string), int)}
@@ -465,8 +457,8 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
       // add some extra stuff for easier reference (model and filter name)
       resultsWithExtra <- Future.sequence(
         results.map { result =>
-          val regressionFuture = regressionRepo.get(result.setting.mlModelId)
-          val filterFuture = result.setting.filterId.map(dsa.filterRepo.get).getOrElse(Future(None))
+          val regressionFuture = regressionRepo.get(result.runSpec.mlModelId)
+          val filterFuture = result.ioSpec.filterId.map(dsa.filterRepo.get).getOrElse(Future(None))
 
           for {
             mlModel <- regressionFuture

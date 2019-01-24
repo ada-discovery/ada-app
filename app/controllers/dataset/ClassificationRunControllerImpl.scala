@@ -41,7 +41,8 @@ import org.incal.play.controllers._
 import org.incal.play.security.AuthAction
 import org.incal.spark_ml.MachineLearningUtil
 import org.incal.spark_ml.models.classification.ClassificationEvalMetric
-import org.incal.spark_ml.models.results.{BinaryClassificationCurves, ClassificationResult, ClassificationSetting, MetricStatsValues}
+import org.incal.spark_ml.models.result.{BinaryClassificationCurves, ClassificationResult, MetricStatsValues}
+import org.incal.spark_ml.models.setting.ClassificationRunSpec
 
 import scala.reflect.runtime.universe.TypeTag
 import views.html.{classificationrun => view}
@@ -90,8 +91,8 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     DistributionWidgetSpec("testStats-areaUnderROC-mean", None, displayOptions = distributionDisplayOptions),
     DistributionWidgetSpec("testStats-areaUnderPR-mean", None, displayOptions = distributionDisplayOptions),
     DistributionWidgetSpec("timeCreated", None, displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column))),
-    ScatterWidgetSpec("trainingStats-accuracy-mean", "testStats-accuracy-mean", Some("setting-mlModelId")),
-    ScatterWidgetSpec("testStats-areaUnderROC-mean", "testStats-accuracy-mean", Some("setting-mlModelId"))
+    ScatterWidgetSpec("trainingStats-accuracy-mean", "testStats-accuracy-mean", Some("runSpec-mlModelId")),
+    ScatterWidgetSpec("testStats-areaUnderROC-mean", "testStats-accuracy-mean", Some("runSpec-mlModelId"))
   )
 
   // export stuff
@@ -103,9 +104,9 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
   private val csvEOL = "\n"
 
   override protected val listViewColumns = Some(Seq(
-    "setting-mlModelId",
-    "setting-filterId",
-    "setting-outputFieldName",
+    "runSpec-mlModelId",
+    "runSpec-ioSpec-filterId",
+    "runSpec-ioSpec-outputFieldName",
     "testStats-accuracy-mean",
     "testStats-weightedPrecision-mean",
     "testStats-weightedRecall-mean",
@@ -171,19 +172,19 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     val nameFuture = dsa.dataSetName
 
     val fieldNames = page.items.flatMap { classificationResult =>
-      val setting = classificationResult.setting
-      setting.inputFieldNames ++ Seq(setting.outputFieldName)
+      val ioSpec = classificationResult.ioSpec
+      ioSpec.inputFieldNames ++ Seq(ioSpec.outputFieldName)
     }.toSet
 
     val fieldsFuture = getDataSetFields(fieldNames)
 
     val allClassificationRunFieldsFuture = fieldCaseClassRepo.find()
 
-    val mlModelIds = page.items.map(result => Some(result.setting.mlModelId)).toSet
+    val mlModelIds = page.items.map(result => Some(result.runSpec.mlModelId)).toSet
 
     val mlModelsFuture = classificationRepo.find(Seq(ClassificationIdentity.name #-> mlModelIds.toSeq))
 
-    val filterIds = page.items.map(_.setting.filterId).toSet
+    val filterIds = page.items.map(_.ioSpec.filterId).toSet
 
     val filtersFuture = dsa.filterRepo.find(Seq(FilterIdentity.name #-> filterIds.toSeq))
 
@@ -243,26 +244,19 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
   }
 
   override def classify(
-    setting: ClassificationSetting,
+    setting: ClassificationRunSpec,
     saveResults: Boolean,
     saveBinCurves: Boolean
   ) = Action.async { implicit request =>
     val mlModelFuture = classificationRepo.get(setting.mlModelId)
-    val criteriaFuture = loadCriteria(setting.filterId)
-    val replicationCriteriaFuture = loadCriteria(setting.replicationFilterId)
+    val criteriaFuture = loadCriteria(setting.ioSpec.filterId)
+    val replicationCriteriaFuture = loadCriteria(setting.ioSpec.replicationFilterId)
 
-    val fieldNames = setting.fieldNamesToLoads
-    val fieldsFuture =
-      if (fieldNames.nonEmpty)
-        dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
-      else
-        dsa.fieldRepo.find()
+    val fieldNames = setting.ioSpec.allFieldNames
+    val fieldsFuture = dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
 
     def findData(criteria: Seq[Criterion[Any]]) =
-      if (fieldNames.nonEmpty)
-        dsa.dataSetRepo.find(criteria, projection = fieldNames)
-      else
-        dsa.dataSetRepo.find(criteria)
+      dsa.dataSetRepo.find(criteria, projection = fieldNames)
 
     for {
       // load a ML model
@@ -285,9 +279,9 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 
       // run the selected classifier (ML model)
       resultsHolder <- mlModel.map { mlModel =>
-        val selectedFields = setting.featuresSelectionNum.map { featuresSelectionNum =>
-          val inputFields = fields.filter(!_.name.equals(setting.outputFieldName))
-          val outputField = fields.find(_.name.equals(setting.outputFieldName)).get
+        val selectedFields = setting.learningSetting.featuresSelectionNum.map { featuresSelectionNum =>
+          val inputFields = fields.filter(!_.name.equals(setting.ioSpec.outputFieldName))
+          val outputField = fields.find(_.name.equals(setting.ioSpec.outputFieldName)).get
           val selectedInputFields = statsService.selectFeaturesAsAnovaChiSquare(mainData, inputFields.toSeq, outputField, featuresSelectionNum)
           selectedInputFields ++ Seq(outputField)
         }.getOrElse(
@@ -295,7 +289,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
         )
 
         val fieldNameAndSpecs = selectedFields.toSeq.map(field => (field.name, field.fieldTypeSpec))
-        val results = mlService.classifyStatic(mainData, fieldNameAndSpecs, setting.outputFieldName, mlModel, setting.learningSetting, replicationData, setting.binCurvesNumBins)
+        val results = mlService.classifyStatic(mainData, fieldNameAndSpecs, setting.ioSpec.outputFieldName, mlModel, setting.learningSetting, replicationData)
         results.map(Some(_))
       }.getOrElse(
         Future(None)
@@ -519,9 +513,9 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       // save the results
       _ <- targetDsa.dataSetRepo.save(
         allResults.map { case (result, extraResult) =>
-          val classificationEvalMetricFieldSpec = fields.find(_._1.equals("setting-crossValidationEvalMetric")).get._2
-          val vectorTransformTypeFieldSpec = fields.find(_._1.equals("setting-featuresNormalizationType")).get._2
-          val subsamplingRatiosFieldSpec = fields.find(_._1.equals("setting-samplingRatios")).get._2
+          val classificationEvalMetricFieldSpec = fields.find(_._1.equals("runSpec-learningSetting-crossValidationEvalMetric")).get._2
+          val vectorTransformTypeFieldSpec = fields.find(_._1.equals("runSpec-learningSetting-featuresNormalizationType")).get._2
+          val subsamplingRatiosFieldSpec = fields.find(_._1.equals("runSpec-learningSetting-samplingRatios")).get._2
 
           val classificationEvalMetricMap = classificationEvalMetricFieldSpec.enumValues.get.map { case (int, string) => (ClassificationEvalMetric.withName(string), int)}
           val vectorTransformTypeMap = vectorTransformTypeFieldSpec.enumValues.get.map { case (int, string) => (VectorScalerType.withName(string), int)}
@@ -534,7 +528,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
           val resultJson = Json.toJson(result)(classificationResultFormat).as[JsObject]
 
           // handle sampling ratios, which are stored as an unstructured array
-          val newSamplingRatioJson = (resultJson \ "setting-samplingRatios").asOpt[JsArray].map { jsonArray =>
+          val newSamplingRatioJson = (resultJson \ "runSpec-learningSetting-samplingRatios").asOpt[JsArray].map { jsonArray =>
             val samplingRatioJsons = jsonArray.value.map { case json: JsArray =>
               val outputValue = json.value(0)
               val samplingRatio = json.value(1)
@@ -544,7 +538,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
           }.getOrElse(JsNull)
 
           val extraResultJson = Json.toJson(extraResult).as[JsObject]
-          resultJson.+("setting-samplingRatios", newSamplingRatioJson) ++ extraResultJson
+          resultJson.+("runSpec-learningSetting-samplingRatios", newSamplingRatioJson) ++ extraResultJson
         }
       )
     } yield
@@ -559,8 +553,8 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       // add some extra stuff for easier reference (model and filter name)
       resultsWithExtra <- Future.sequence(
         results.map { result =>
-          val classificationFuture = classificationRepo.get(result.setting.mlModelId)
-          val filterFuture = result.setting.filterId.map(dsa.filterRepo.get).getOrElse(Future(None))
+          val classificationFuture = classificationRepo.get(result.runSpec.mlModelId)
+          val filterFuture = result.ioSpec.filterId.map(dsa.filterRepo.get).getOrElse(Future(None))
 
           for {
             mlModel <- classificationFuture

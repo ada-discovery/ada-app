@@ -1,13 +1,12 @@
 package controllers.dataset
 
 import javax.inject.Inject
-
 import org.incal.play.controllers.SecureControllerDispatcher
 import org.incal.core.FilterCondition
 import org.incal.play.security.SecurityRole
 import reactivemongo.bson.BSONObjectID
 import models.security.DataSetPermission
-import org.incal.spark_ml.models.results.RegressionSetting
+import org.incal.spark_ml.models.setting.RegressionRunSpec
 
 class RegressionRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf: RegressionRunControllerFactory)
   extends SecureControllerDispatcher[RegressionRunController]("dataSet") with RegressionRunController {
@@ -36,7 +35,7 @@ class RegressionRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf: Re
   override def create = dispatch(_.create)
 
   override def regress(
-    setting: RegressionSetting,
+    setting: RegressionRunSpec,
     saveResults: Boolean
   ) = dispatch(_.regress(setting, saveResults))
 

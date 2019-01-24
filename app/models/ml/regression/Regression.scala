@@ -28,7 +28,7 @@ object Regression {
 
   private implicit val treeCoreFormat = Json.format[TreeCore]
 
-  implicit val regressionFormat: Format[Regression] = new SubTypeFormat[Regression](
+  implicit val regressionFormat: Format[RegressionModel] = new SubTypeFormat[RegressionModel](
     Seq(
       ManifestedFormat(Json.format[LinearRegression]),
       ManifestedFormat(Json.format[GeneralizedLinearRegression]),
@@ -38,10 +38,10 @@ object Regression {
     )
   )
 
-  implicit object RegressionIdentity extends BSONObjectIdentity[Regression] {
-    def of(entity: Regression): Option[BSONObjectID] = entity._id
+  implicit object RegressionIdentity extends BSONObjectIdentity[RegressionModel] {
+    def of(entity: RegressionModel): Option[BSONObjectID] = entity._id
 
-    protected def set(entity: Regression, id: Option[BSONObjectID]) =
+    protected def set(entity: RegressionModel, id: Option[BSONObjectID]) =
       entity match {
         case x: LinearRegression => x.copy(_id = id)
         case x: GeneralizedLinearRegression => x.copy(_id = id)

@@ -13,7 +13,7 @@
 @import org.incal.core.FilterCondition
 
 @(
-    page: Page[Classification],
+    page: Page[ClassificationModel],
     conditions: Seq[FilterCondition],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -63,12 +63,12 @@
     paginatedTable(
         page,
         classificationRoutes.find(_, _, conditions),
-        typeColumns[Classification](
+        typeColumns[ClassificationModel](
             (Some("concreteClass"), "Type", {classification => toHumanReadableCamel(classification.getClass.getSimpleName)}),
             (Some("name"), "Name", _.name.getOrElse("")),
             (Some("timeCreated"), "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss"))
         ),
-        Some({ item : Any => classificationRoutes.get(item.asInstanceOf[Classification]._id.get)})
+        Some({ item : Any => classificationRoutes.get(item.asInstanceOf[ClassificationModel]._id.get)})
     )
 }
 

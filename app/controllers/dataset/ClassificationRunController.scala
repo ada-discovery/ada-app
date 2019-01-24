@@ -2,7 +2,7 @@ package controllers.dataset
 
 import org.incal.core.FilterCondition
 import org.incal.play.controllers.ReadonlyController
-import org.incal.spark_ml.models.results.ClassificationSetting
+import org.incal.spark_ml.models.setting.ClassificationRunSpec
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 
@@ -11,7 +11,7 @@ trait ClassificationRunController extends ReadonlyController[BSONObjectID]{
   def create: Action[AnyContent]
 
   def classify(
-    setting: ClassificationSetting,
+    setting: ClassificationRunSpec,
     saveResults: Boolean,
     saveBinCurves: Boolean
   ): Action[AnyContent]
