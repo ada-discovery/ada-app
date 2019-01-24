@@ -15,11 +15,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.reflect.runtime.universe.typeOf
 
-class ReplaceString extends DsaInputFutureRunnable[ReplaceStringSpec] {
+class ReplaceNumber extends DsaInputFutureRunnable[ReplaceNumberSpec] {
 
   private val idName = JsObjectIdentity.name
 
-  override def runAsFuture(spec: ReplaceStringSpec) = {
+  override def runAsFuture(spec: ReplaceNumberSpec) = {
     val dsa = createDsa(spec.dataSetId)
 
     for {
@@ -28,10 +28,10 @@ class ReplaceString extends DsaInputFutureRunnable[ReplaceStringSpec] {
       field = fieldOption.getOrElse(throw new AdaException(s"Field ${spec.fieldName} not found."))
 
       // replace for String or Enum
-      _ <- field.fieldType match {
-        case FieldTypeId.String => replaceForString(dsa.dataSetRepo, field.toNamedType[String], spec)
-        case FieldTypeId.Enum => replaceForEnum(dsa.fieldRepo, field, spec)
-        case _ => throw new AdaException(s"String replacement is possible only for String and Enum types but got ${field.fieldTypeSpec}.")
+      _ <- if (!field.isArray && (field.isNumeric || field.isEnum)) {
+
+      } else {
+        throw new AdaException(s"Number replacement is possible only for double, integer, date, an enum types but got ${field.fieldTypeSpec}.")
       }
     } yield
       ()
@@ -40,7 +40,7 @@ class ReplaceString extends DsaInputFutureRunnable[ReplaceStringSpec] {
   private def replaceForString(
     repo: JsonCrudRepo,
     fieldType: NamedFieldType[String],
-    spec: ReplaceStringSpec
+    spec: ReplaceNumberSpec
   ) = {
     for {
       // jsons
@@ -76,14 +76,14 @@ class ReplaceString extends DsaInputFutureRunnable[ReplaceStringSpec] {
   private def replaceForEnum(
     repo: FieldRepo,
     field: Field,
-    spec: ReplaceStringSpec
+    spec: ReplaceNumberSpec
   ) = {
     val newNumValue = field.numValues.map(_.map { case (key, value) => (key, value.replaceAllLiterally(spec.from, spec.to))})
 
     repo.update(field.copy(numValues = newNumValue))
   }
 
-  override def inputType = typeOf[ReplaceStringSpec]
+  override def inputType = typeOf[ReplaceNumberSpec]
 }
 
-case class ReplaceStringSpec(dataSetId: String, fieldName: String, batchSize: Int, from: String, to: String)
+case class ReplaceNumberSpec(dataSetId: String, fieldName: String, batchSize: Int, from: String, to: String)

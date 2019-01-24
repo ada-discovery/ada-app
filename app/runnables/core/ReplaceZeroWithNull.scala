@@ -16,14 +16,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.reflect.runtime.universe.typeOf
 
-class ConvertZeroToNull extends DsaInputFutureRunnable[ConvertZeroToNullSpec] {
+class ReplaceZeroWithNull extends DsaInputFutureRunnable[ReplaceZeroWithNullSpec] {
 
   private val logger = Logger // (this.getClass())
 
   private val idName = JsObjectIdentity.name
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
-  override def runAsFuture(spec: ConvertZeroToNullSpec) = {
+  override def runAsFuture(spec: ReplaceZeroWithNullSpec) = {
     val dsa_ = createDsa(spec.dataSetId)
     val repo = dsa_.dataSetRepo
 
@@ -78,7 +78,7 @@ class ConvertZeroToNull extends DsaInputFutureRunnable[ConvertZeroToNullSpec] {
       ()
   }
 
-  override def inputType = typeOf[ConvertZeroToNullSpec]
+  override def inputType = typeOf[ReplaceZeroWithNullSpec]
 }
 
-case class ConvertZeroToNullSpec(dataSetId: String, fieldName: String, batchSize: Int)
+case class ReplaceZeroWithNullSpec(dataSetId: String, fieldName: String, batchSize: Int)

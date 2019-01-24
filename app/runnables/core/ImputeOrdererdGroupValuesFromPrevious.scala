@@ -23,17 +23,17 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.Future
 
-class CopyGroupValuesToNextInOrderIfUndefined @Inject() (
+class ImputeOrdererdGroupValuesFromPrevious @Inject() (
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService
-  ) extends InputFutureRunnable[CopyGroupValuesToNextInOrderIfUndefinedSpec] {
+  ) extends InputFutureRunnable[ImputeOrdererdGroupValuesFromPreviousSpec] {
 
   private val logger = Logger
 
   private implicit val ftf = FieldTypeHelper.fieldTypeFactory()
 
   override def runAsFuture(
-    input: CopyGroupValuesToNextInOrderIfUndefinedSpec
+    input: ImputeOrdererdGroupValuesFromPreviousSpec
   ) = {
     val dsa = dsaf(input.sourceDataSetId).get
 
@@ -80,14 +80,12 @@ class CopyGroupValuesToNextInOrderIfUndefined @Inject() (
         groupIdSource.mapAsync(1) { groupId =>
           dsa.dataSetRepo.find(Seq(idField.name #== groupId, NotEqualsNullCriterion(orderField.name))).map { jsonGroup =>
             logger.info(s"Processing ${jsonGroup.size} jsons for group id '$groupId'.")
-//            val orderedJsons = jsonGroup.map { json =>
-//              val order = toOrder(json).getOrElse(throw new AdaException(s"Order is undefined for json ${json \ JsObjectIdentity.name}."))
-//              (order, json)
-//            }.toSeq.sortBy(_._1).map(_._2)
-//
-//            updateOrderedJsons(orderedJsons).toList
+            val orderedJsons = jsonGroup.map { json =>
+              val order = toOrder(json).getOrElse(throw new AdaException(s"Order is undefined for json ${json \ JsObjectIdentity.name}."))
+              (order, json)
+            }.toSeq.sortBy(_._1).map(_._2)
 
-            jsonGroup.toList
+            updateOrderedJsons(orderedJsons).toList
           }
         }.mapConcat[JsObject](identity _)
       }
@@ -109,22 +107,23 @@ class CopyGroupValuesToNextInOrderIfUndefined @Inject() (
         val allFieldNames = (prevNameFieldValueMap.keys ++ curNameFieldValueMap.keys).toSet.toSeq.sorted
 
         val newFields = allFieldNames.map { case fieldName =>
-          val currentValue = curNameFieldValueMap.get(fieldName)
+          val prevValue = prevNameFieldValueMap.get(fieldName)
 
-          val newValue = prevNameFieldValueMap.get(fieldName) match {
-            case Some(prevValue) if (prevValue != JsNull) => Some(prev)
-            case _ => currentValue
+          val newValue = curNameFieldValueMap.get(fieldName) match {
+            case Some(currentValue) if (currentValue != JsNull) => Some(currentValue)
+            case _ => prevValue
           }
+
           (fieldName, newValue.getOrElse(JsNull))
         }
         JsObject(newFields)
       }
     }
 
-  override def inputType = typeOf[CopyGroupValuesToNextInOrderIfUndefinedSpec]
+  override def inputType = typeOf[ImputeOrdererdGroupValuesFromPreviousSpec]
 }
 
-case class CopyGroupValuesToNextInOrderIfUndefinedSpec(
+case class ImputeOrdererdGroupValuesFromPreviousSpec(
   sourceDataSetId: String,
   derivedDataSetSpec: DerivedDataSetSpec,
   groupIdFieldName: String,

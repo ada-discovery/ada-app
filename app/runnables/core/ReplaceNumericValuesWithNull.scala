@@ -2,60 +2,56 @@ package runnables.core
 
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.scaladsl.Sink
-import field.{FieldType, FieldTypeHelper}
-import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.{AdaException, FieldTypeId}
 import play.api.Logger
 import play.api.libs.json.{JsObject, _}
 import runnables.DsaInputFutureRunnable
 import org.incal.core.dataaccess.Criterion.Infix
-import _root_.util.FieldUtil.JsonFieldOps
+import _root_.util.FieldUtil.{InfixFieldOps, JsonFieldOps, NamedFieldType}
 import akka.actor.ActorSystem
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 
-class CovertNumericValuesToNull extends DsaInputFutureRunnable[CovertNumericValuesToNullSpec] {
+class ReplaceNumericValuesWithNull extends DsaInputFutureRunnable[ReplaceNumericValuesWithNullSpec] {
 
   private val logger = Logger // (this.getClass())
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory()
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
 
-  override def runAsFuture(spec: CovertNumericValuesToNullSpec) = {
-    val dsa_ = createDsa(spec.dataSetId)
-    val dataSetRepo = dsa_.dataSetRepo
+  override def runAsFuture(spec: ReplaceNumericValuesWithNullSpec) = {
+    val dsa = createDsa(spec.dataSetId)
 
     // aux function to replace values with null and update jsons
     def updateJsons(
-      fieldNameTypes: Traversable[(String, FieldType[_])])(
+      fieldTypes: Seq[NamedFieldType[Any]])(
       jsons: Traversable[JsObject]
     ) = {
       logger.info(s"Processing ${jsons.size} items...")
-      val jsonsToUpdate = jsons.map { json =>
-        val fieldsToReplace = fieldNameTypes.flatMap { case (fieldName, fieldType) =>
-          val value = json.toValue(fieldName, fieldType)
 
-          if ((value.isDefined) && (value.get == spec.valueToReplace)) Some((fieldName, JsNull)) else None
+      val jsonsToUpdate = jsons.map { json =>
+        val fieldValuesToReplace = fieldTypes.zip(json.toValues(fieldTypes)).flatMap {
+          case ((fieldName, _), value) =>
+            if ((value.isDefined) && (value.get == spec.valueToReplace)) Some((fieldName, JsNull)) else None
         }
 
-        json ++ JsObject(fieldsToReplace.toSeq)
+        json ++ JsObject(fieldValuesToReplace)
       }
 
-      dataSetRepo.update(jsonsToUpdate)
+      dsa.dataSetRepo.update(jsonsToUpdate)
     }
 
     for {
       // fields
-      numericFields <- dsa_.fieldRepo.find(
+      numericFields <- dsa.fieldRepo.find(
         criteria = Seq("fieldType" #-> Seq(FieldTypeId.Double, FieldTypeId.Integer))
       )
 
-      fieldNameTypes = numericFields.map(field => (field.name, ftf(field.fieldTypeSpec)))
+      nameFieldTypes = numericFields.map(_.toNamedTypeAny).toSeq
 
       // get a stream
-      stream <- dataSetRepo.findAsStream()
+      stream <- dsa.dataSetRepo.findAsStream()
 
       // group and updates the items from the stream as it goes
       _ <- {
@@ -63,17 +59,17 @@ class CovertNumericValuesToNull extends DsaInputFutureRunnable[CovertNumericValu
         stream
           .grouped(spec.processingBatchSize)
           .buffer(spec.backpressureBufferSize, OverflowStrategy.backpressure)
-          .mapAsync(spec.parallelism)(updateJsons(fieldNameTypes))
+          .mapAsync(spec.parallelism)(updateJsons(nameFieldTypes))
           .runWith(Sink.ignore)
       }
     } yield
       ()
   }
 
-  override def inputType = typeOf[CovertNumericValuesToNullSpec]
+  override def inputType = typeOf[ReplaceNumericValuesWithNullSpec]
 }
 
-case class CovertNumericValuesToNullSpec(
+case class ReplaceNumericValuesWithNullSpec(
   dataSetId: String,
   valueToReplace: Double,
   processingBatchSize: Int,
