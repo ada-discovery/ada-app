@@ -75,24 +75,58 @@ object JsonCrudRepoExtra {
       spec: StreamSpec = StreamSpec())(
       implicit materializer: Materializer
     ): Future[Unit] = {
-      val parallelismInit = spec.parallelism.getOrElse(1)
 
-      def buffer[T](stream: Source[T, _]): Source[T, _] =
-        spec.backpressureBufferSize.map(stream.buffer(_, OverflowStrategy.backpressure)).getOrElse(stream)
-
-      val finalStream = spec.batchSize match {
-
-        // batch size is defined
-        case Some(batchSize) =>
-          buffer(source.grouped(batchSize))
-            .mapAsync(parallelismInit)(dataSetRepo.save)
-
-        case None =>
-          buffer(source)
-            .mapAsync(parallelismInit)(dataSetRepo.save)
-      }
+      val finalStream = asyncStream(
+        source,
+        dataSetRepo.save(_: JsObject),
+        Some(dataSetRepo.save(_ : Traversable[JsObject])),
+        spec
+      )
 
       finalStream.runWith(Sink.ignore).map(_ => ())
+    }
+
+    def updateAsStream(
+      source: Source[JsObject, _],
+      spec: StreamSpec = StreamSpec())(
+      implicit materializer: Materializer
+    ): Future[Unit] = {
+
+      val finalStream = asyncStream(
+        source,
+        dataSetRepo.update(_: JsObject),
+        Some(dataSetRepo.update(_ : Traversable[JsObject])),
+        spec
+      )
+
+      finalStream.runWith(Sink.ignore).map(_ => ())
+    }
+  }
+
+  private def asyncStream[T, U](
+    source: Source[T, _],
+    process: T => Future[U],
+    batchProcess: Option[Traversable[T] => Future[Traversable[U]]] = None,
+    spec: StreamSpec = StreamSpec())(
+    implicit materializer: Materializer
+  ): Source[U, _] = {
+    val parallelismInit = spec.parallelism.getOrElse(1)
+
+    def buffer[T](stream: Source[T, _]): Source[T, _] =
+      spec.backpressureBufferSize.map(stream.buffer(_, OverflowStrategy.backpressure)).getOrElse(stream)
+
+    val batchProcessInit = batchProcess.getOrElse((values: Traversable[T]) => Future.sequence(values.map(process)))
+
+    spec.batchSize match {
+
+      // batch size is defined
+      case Some(batchSize) =>
+        buffer(source.grouped(batchSize))
+          .mapAsync(parallelismInit)(batchProcessInit).mapConcat(_.toList)
+
+      case None =>
+        buffer(source)
+          .mapAsync(parallelismInit)(process)
     }
   }
 }
