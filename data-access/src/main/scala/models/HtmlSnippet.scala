@@ -23,7 +23,7 @@ case class HtmlSnippet(
 
 object HtmlSnippet {
 
-  implicit val htmlSnippedIdEnumFormat = EnumFormat.enumFormat(HtmlSnippetId)
+  implicit val htmlSnippedIdEnumFormat = EnumFormat(HtmlSnippetId)
   val htmlSnippetFormat = Json.format[HtmlSnippet]
   implicit val serializableHtmlSnippetFormat = new SerializableFormat(htmlSnippetFormat.reads, htmlSnippetFormat.writes)
 

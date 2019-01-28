@@ -212,46 +212,66 @@ POST        /dataSets/metainfo/:id                                              
 POST        /dataSets/metainfo/:id/delete                                            controllers.dataset.DataSpaceMetaInfoController.delete(id: BSONObjectID)
 POST        /dataSets/metainfo/deleteDataSet/:id                                     controllers.dataset.DataSpaceMetaInfoController.deleteDataSet(id: BSONObjectID)
 
-# Clasification Run
-GET         /dataSets/classificationRuns                                             controllers.dataset.ClassificationRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
-GET         /dataSets/classificationRuns/get/:id                                     controllers.dataset.ClassificationRunDispatcher.get(id: BSONObjectID)
-GET         /dataSets/classificationRuns/new                                         controllers.dataset.ClassificationRunDispatcher.create
-POST        /dataSets/classificationRuns/:id/delete                                  controllers.dataset.ClassificationRunDispatcher.delete(id: BSONObjectID)
-POST        /dataSets/classify                                                       controllers.dataset.ClassificationRunDispatcher.classify(setting: org.incal.spark_ml.models.setting.ClassificationRunSpec, saveResults: Boolean, saveBinCurves: Boolean)
-POST        /dataSets/selectFeaturesAsAnovaChiSquare                                 controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsAnovaChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresToSelectNum: Int)
-GET         /dataSets/classificationRuns/exportToDataSet                             controllers.dataset.ClassificationRunDispatcher.exportToDataSet(targetDataSetId: Option[String] ?= None, targetDataSetName: Option[String] ?= None)
-GET         /dataSets/classificationRuns/exportAsCsv                                 controllers.dataset.ClassificationRunDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
-GET         /dataSets/classificationRuns/exportAsJson                                controllers.dataset.ClassificationRunDispatcher.exportRecordsAsJson(filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
+# Standard Clasification Run
+GET         /dataSets/classificationRuns                                             controllers.dataset.StandardClassificationRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /dataSets/classificationRuns/get/:id                                     controllers.dataset.StandardClassificationRunDispatcher.get(id: BSONObjectID)
+GET         /dataSets/classificationRuns/new                                         controllers.dataset.StandardClassificationRunDispatcher.create
+POST        /dataSets/classificationRuns/:id/delete                                  controllers.dataset.StandardClassificationRunDispatcher.delete(id: BSONObjectID)
+POST        /dataSets/classificationRuns/launch                                      controllers.dataset.StandardClassificationRunDispatcher.launch(runSpec: org.incal.spark_ml.models.setting.ClassificationRunSpec, saveResults: Boolean, saveBinCurves: Boolean)
+GET         /dataSets/classificationRuns/exportToDataSet                             controllers.dataset.StandardClassificationRunDispatcher.exportToDataSet(targetDataSetId: Option[String] ?= None, targetDataSetName: Option[String] ?= None)
+GET         /dataSets/classificationRuns/exportAsCsv                                 controllers.dataset.StandardClassificationRunDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
+GET         /dataSets/classificationRuns/exportAsJson                                controllers.dataset.StandardClassificationRunDispatcher.exportRecordsAsJson(filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
+POST        /dataSets/selectFeaturesAsAnovaChiSquare                                 controllers.dataset.StandardClassificationRunDispatcher.selectFeaturesAsAnovaChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresToSelectNum: Int)
 
-# Regression Run
-GET         /dataSets/regressionRuns                                                 controllers.dataset.RegressionRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
-GET         /dataSets/regressionRuns/get/:id                                         controllers.dataset.RegressionRunDispatcher.get(id: BSONObjectID)
-GET         /dataSets/regressionRuns/new                                             controllers.dataset.RegressionRunDispatcher.create
-POST        /dataSets/regressionRuns/:id/delete                                      controllers.dataset.RegressionRunDispatcher.delete(id: BSONObjectID)
-POST        /dataSets/regress                                                        controllers.dataset.RegressionRunDispatcher.regress(setting: org.incal.spark_ml.models.setting.RegressionRunSpec, saveResults: Boolean)
-GET         /dataSets/regressionRuns/exportToDataSet                                 controllers.dataset.RegressionRunDispatcher.exportToDataSet(targetDataSetId: Option[String] ?= None, targetDataSetName: Option[String] ?= None)
-GET         /dataSets/regressionRuns/exportAsCsv                                     controllers.dataset.RegressionRunDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
-GET         /dataSets/regressionRuns/exportAsJson                                    controllers.dataset.RegressionRunDispatcher.exportRecordsAsJson(filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
+# Temporal Clasification Run
+GET         /dataSets/temporalClassificationRuns                                     controllers.dataset.TemporalClassificationRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /dataSets/temporalClassificationRuns/get/:id                             controllers.dataset.TemporalClassificationRunDispatcher.get(id: BSONObjectID)
+GET         /dataSets/temporalClassificationRuns/new                                 controllers.dataset.TemporalClassificationRunDispatcher.create
+POST        /dataSets/temporalClassificationRuns/:id/delete                          controllers.dataset.TemporalClassificationRunDispatcher.delete(id: BSONObjectID)
+POST        /dataSets/temporalClassificationRuns/launch                              controllers.dataset.TemporalClassificationRunDispatcher.launch(runSpec: org.incal.spark_ml.models.setting.TemporalClassificationRunSpec, saveResults: Boolean, saveBinCurves: Boolean)
+GET         /dataSets/temporalClassificationRuns/exportToDataSet                     controllers.dataset.TemporalClassificationRunDispatcher.exportToDataSet(targetDataSetId: Option[String] ?= None, targetDataSetName: Option[String] ?= None)
+GET         /dataSets/temporalClassificationRuns/exportAsCsv                         controllers.dataset.TemporalClassificationRunDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
+GET         /dataSets/temporalClassificationRuns/exportAsJson                        controllers.dataset.TemporalClassificationRunDispatcher.exportRecordsAsJson(filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
+
+# Standard Regression Run
+GET         /dataSets/regressionRuns                                                 controllers.dataset.StandardRegressionRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /dataSets/regressionRuns/get/:id                                         controllers.dataset.StandardRegressionRunDispatcher.get(id: BSONObjectID)
+GET         /dataSets/regressionRuns/new                                             controllers.dataset.StandardRegressionRunDispatcher.create
+POST        /dataSets/regressionRuns/:id/delete                                      controllers.dataset.StandardRegressionRunDispatcher.delete(id: BSONObjectID)
+POST        /dataSets/regressionRuns/launch                                          controllers.dataset.StandardRegressionRunDispatcher.launch(runSpec: org.incal.spark_ml.models.setting.RegressionRunSpec, saveResults: Boolean)
+GET         /dataSets/regressionRuns/exportToDataSet                                 controllers.dataset.StandardRegressionRunDispatcher.exportToDataSet(targetDataSetId: Option[String] ?= None, targetDataSetName: Option[String] ?= None)
+GET         /dataSets/regressionRuns/exportAsCsv                                     controllers.dataset.StandardRegressionRunDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
+GET         /dataSets/regressionRuns/exportAsJson                                    controllers.dataset.StandardRegressionRunDispatcher.exportRecordsAsJson(filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
+
+# Temporal Regression Run
+GET         /dataSets/temporalRegressionRuns                                         controllers.dataset.TemporalRegressionRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /dataSets/temporalRegressionRuns/get/:id                                 controllers.dataset.TemporalRegressionRunDispatcher.get(id: BSONObjectID)
+GET         /dataSets/temporalRegressionRuns/new                                     controllers.dataset.TemporalRegressionRunDispatcher.create
+POST        /dataSets/temporalRegressionRuns/:id/delete                              controllers.dataset.TemporalRegressionRunDispatcher.delete(id: BSONObjectID)
+POST        /dataSets/temporalRegressionRuns/launch                                  controllers.dataset.TemporalRegressionRunDispatcher.launch(runSpec: org.incal.spark_ml.models.setting.TemporalRegressionRunSpec, saveResults: Boolean)
+GET         /dataSets/temporalRegressionRuns/exportToDataSet                         controllers.dataset.TemporalRegressionRunDispatcher.exportToDataSet(targetDataSetId: Option[String] ?= None, targetDataSetName: Option[String] ?= None)
+GET         /dataSets/temporalRegressionRuns/exportAsCsv                             controllers.dataset.TemporalRegressionRunDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
+GET         /dataSets/temporalRegressionRuns/exportAsJson                            controllers.dataset.TemporalRegressionRunDispatcher.exportRecordsAsJson(filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
 
 # ML Classification
-GET         /ml/classification                                                      controllers.ml.ClassificationController.find(p: Int ?= 0, s: String ?= "concreteClass", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
-GET         /ml/classification/all                                                  controllers.ml.ClassificationController.listAll(s: String ?= "concreteClass")
-GET         /ml/classification/new                                                  controllers.ml.ClassificationController.create(concreteClassName: String)
-POST        /ml/classification/save                                                 controllers.ml.ClassificationController.save
-GET         /ml/classification/get/:id                                              controllers.ml.ClassificationController.get(id: BSONObjectID)
-POST        /ml/classification/:id                                                  controllers.ml.ClassificationController.update(id: BSONObjectID)
-POST        /ml/classification/:id/delete                                           controllers.ml.ClassificationController.delete(id: BSONObjectID)
-GET         /ml/classification/idAndNames                                           controllers.ml.ClassificationController.idAndNames
+GET         /ml/classifiers                                                          controllers.ml.ClassifierController.find(p: Int ?= 0, s: String ?= "concreteClass", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /ml/classifiers/all                                                      controllers.ml.ClassifierController.listAll(s: String ?= "concreteClass")
+GET         /ml/classifiers/new                                                      controllers.ml.ClassifierController.create(concreteClassName: String)
+POST        /ml/classifiers/save                                                     controllers.ml.ClassifierController.save
+GET         /ml/classifiers/get/:id                                                  controllers.ml.ClassifierController.get(id: BSONObjectID)
+POST        /ml/classifiers/:id                                                      controllers.ml.ClassifierController.update(id: BSONObjectID)
+POST        /ml/classifiers/:id/delete                                               controllers.ml.ClassifierController.delete(id: BSONObjectID)
+GET         /ml/classifiers/idAndNames                                               controllers.ml.ClassifierController.idAndNames
 
 # ML Regression
-GET         /ml/regression                                                          controllers.ml.RegressionController.find(p: Int ?= 0, s: String ?= "concreteClass", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
-GET         /ml/regression/all                                                      controllers.ml.RegressionController.listAll(s: String ?= "concreteClass")
-GET         /ml/regression/new                                                      controllers.ml.RegressionController.create(concreteClassName: String)
-POST        /ml/regression/save                                                     controllers.ml.RegressionController.save
-GET         /ml/regression/get/:id                                                  controllers.ml.RegressionController.get(id: BSONObjectID)
-POST        /ml/regression/:id                                                      controllers.ml.RegressionController.update(id: BSONObjectID)
-POST        /ml/regression/:id/delete                                               controllers.ml.RegressionController.delete(id: BSONObjectID)
-GET         /ml/regression/idAndNames                                               controllers.ml.RegressionController.idAndNames
+GET         /ml/regressors                                                          controllers.ml.RegressorController.find(p: Int ?= 0, s: String ?= "concreteClass", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /ml/regressors/all                                                      controllers.ml.RegressorController.listAll(s: String ?= "concreteClass")
+GET         /ml/regressors/new                                                      controllers.ml.RegressorController.create(concreteClassName: String)
+POST        /ml/regressors/save                                                     controllers.ml.RegressorController.save
+GET         /ml/regressors/get/:id                                                  controllers.ml.RegressorController.get(id: BSONObjectID)
+POST        /ml/regressors/:id                                                      controllers.ml.RegressorController.update(id: BSONObjectID)
+POST        /ml/regressors/:id/delete                                               controllers.ml.RegressorController.delete(id: BSONObjectID)
+GET         /ml/regressors/idAndNames                                               controllers.ml.RegressorController.idAndNames
 
 # ML Clusterization
 GET         /ml/clustering                                                          controllers.ml.UnsupervisedLearningController.find(p: Int ?= 0, s: String ?= "concreteClass", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
@@ -294,7 +314,7 @@ POST        /htmlSnippets/:id/delete                                            
 GET         /htmlSnippets/linksAsHtml                                               controllers.HtmlSnippetController.getHtmlLinks
 
 # Map static resources from the /public folder to the /assets URL path
-GET         /assets/*file                                                           controllers.CustomDirAssets.versioned(path="/public", file)
+GET         /assets/*file                                                           org.incal.play.CustomDirAssets.versioned(path="/public", file)
 
 # Map the webjar static assets to the /webjars URL
 GET         /webjars/*file                                                          controllers.WebJarAssets.at(file)

@@ -45,7 +45,7 @@ object WidgetGenerationMethod extends Enumeration {
 object DataView {
 
   implicit val eitherFormat = EitherFormat[Seq[FilterCondition], BSONObjectID]
-  implicit val generationMethodFormat = EnumFormat.enumFormat(WidgetGenerationMethod)
+  implicit val generationMethodFormat = EnumFormat(WidgetGenerationMethod)
 
   implicit val dataViewFormat : Format[DataView] = (
     (__ \ "_id").formatNullable[BSONObjectID] and

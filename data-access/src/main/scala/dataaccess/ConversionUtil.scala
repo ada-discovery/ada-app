@@ -7,8 +7,8 @@ import scala.reflect.ClassTag
 
 object ConversionUtil {
 
-  private val minValidYear = 1800
-  private val maxValidYear = 3000
+  private val minValidYear = 1700
+  private val maxValidYear = new Date().getYear + 1000
 
   def toDouble = convert(_.toDouble)_
 

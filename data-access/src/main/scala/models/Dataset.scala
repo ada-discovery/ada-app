@@ -164,7 +164,7 @@ case class Category(
 // JSON converters and identities
 
 object DataSetFormattersAndIds {
-  implicit val enumTypeFormat = EnumFormat.enumFormat(FieldTypeId)
+  implicit val enumTypeFormat = EnumFormat(FieldTypeId)
   implicit val categoryFormat: Format[Category] = (
     (__ \ "_id").formatNullable[BSONObjectID] and
     (__ \ "name").format[String] and
@@ -191,9 +191,9 @@ object DataSetFormattersAndIds {
       )
   )
 
-  implicit val chartTypeFormat = EnumFormat.enumFormat(ChartType)
-  implicit val aggTypeFormat = EnumFormat.enumFormat(AggType)
-  implicit val correlationTypeFormat = EnumFormat.enumFormat(CorrelationType)
+  implicit val chartTypeFormat = EnumFormat(ChartType)
+  implicit val aggTypeFormat = EnumFormat(AggType)
+  implicit val correlationTypeFormat = EnumFormat(CorrelationType)
   implicit val basicDisplayOptionsFormat = Json.format[BasicDisplayOptions]
   implicit val distributionDisplayOptionsFormat = Json.format[MultiChartDisplayOptions]
 
@@ -235,8 +235,8 @@ object DataSetFormattersAndIds {
   )
   implicit val serializableDataSpaceMetaInfoFormat: Format[DataSpaceMetaInfo] = new SerializableFormat(dataSpaceMetaInfoFormat.reads, dataSpaceMetaInfoFormat.writes)
 
-  implicit val filterShowFieldStyleFormat = EnumFormat.enumFormat(FilterShowFieldStyle)
-  implicit val storageTypeFormat = EnumFormat.enumFormat(StorageType)
+  implicit val filterShowFieldStyleFormat = EnumFormat(FilterShowFieldStyle)
+  implicit val storageTypeFormat = EnumFormat(StorageType)
   val dataSetSettingFormat = Json.format[DataSetSetting]
   implicit val serializableDataSetSettingFormat = new SerializableFormat(dataSetSettingFormat.reads, dataSetSettingFormat.writes)
   val serializableBSONObjectIDFormat = new SerializableFormat(BSONObjectIDFormat.reads, BSONObjectIDFormat.writes)

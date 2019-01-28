@@ -29,7 +29,7 @@ object FilterShowFieldStyle extends Enumeration {
 
 object Filter {
 
-  implicit val conditionTypeFormat = EnumFormat.enumFormat(ConditionType)
+  implicit val conditionTypeFormat = EnumFormat(ConditionType)
 
   implicit val filterConditionFormat = Json.format[FilterCondition]
 
