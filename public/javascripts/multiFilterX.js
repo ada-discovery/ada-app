@@ -248,6 +248,7 @@ $.widget("custom.multiFilter", {
     },
 
     _submitFilter: function () {
+        console.log(this.jsonConditions)
         this._submitFilterOrId(this.jsonConditions, null);
     },
 
