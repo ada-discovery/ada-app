@@ -184,6 +184,7 @@ function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, defaul
         },
         error: function(data) {
             widgetsDiv.html("")
+            hideMessages();
             showErrorResponse(data)
         }
     });
