@@ -78,7 +78,7 @@ protected[controllers] class StandardRegressionRunControllerImpl @Inject()(
   override def launch(
     runSpec: RegressionRunSpec,
     saveResults: Boolean
-  ) = Action.async { implicit request =>
+  ) = Action.async { implicit request => {
     val mlModelFuture = mlMethodRepo.get(runSpec.mlModelId)
     val criteriaFuture = loadCriteria(runSpec.ioSpec.filterId)
     val replicationCriteriaFuture = loadCriteria(runSpec.ioSpec.replicationFilterId)
@@ -134,6 +134,7 @@ protected[controllers] class StandardRegressionRunControllerImpl @Inject()(
       }.getOrElse(
         BadRequest(s"ML regression model with id ${runSpec.mlModelId.stringify} not found.")
       )
+    }.recover(handleExceptionsWithErrorCodes("a launch"))
   }
 
   override protected def exportFormat=

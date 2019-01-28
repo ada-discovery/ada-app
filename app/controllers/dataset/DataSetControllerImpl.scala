@@ -46,7 +46,7 @@ import services.stats.StatsService
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import field.{FieldType, FieldTypeHelper}
 import controllers.FilterConditionExtraFormats.coreFilterConditionFormat
-import controllers.core.{AdaExceptionHandler, AdaJsonExceptionHandler, AdaReadonlyControllerImpl, ExportableAction}
+import controllers.core.{AdaExceptionHandler, AdaReadonlyControllerImpl, ExportableAction}
 import org.incal.core.{ConditionType, FilterCondition}
 import org.incal.core.ConditionType._
 import org.incal.core.FilterCondition.toCriterion
@@ -85,8 +85,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     with DataSetController
     with ExportableAction[JsObject]
     with AdaAuthConfig
-    with DistributionWidgetGeneratorHelper
-    with AdaJsonExceptionHandler {
+    with DistributionWidgetGeneratorHelper {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
 
@@ -722,7 +721,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case Accepts.Json() => jsonResponse
         }
       }
-    }.recover(handleExceptions("a getViewElementsAndWidgetsCallback"))
+    }.recover(handleExceptionsWithErrorCodes("a getViewElementsAndWidgetsCallback"))
   }
 
   override def getNewFilterViewElementsAndWidgetsCallback(
@@ -788,7 +787,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case Accepts.Json() => jsonResponse
         }
       }
-    }.recover(handleExceptions("a getNewFilterViewElementsAndWidgetsCallback"))
+    }.recover(handleExceptionsWithErrorCodes("a getNewFilterViewElementsAndWidgetsCallback"))
   }
 
   override def getNewFilter = AuthAction { implicit request =>
@@ -797,7 +796,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val filter = dataset.filter.dataSetFilter(None, setting.filterShowFieldStyle)
         Ok(filter.toString())
       }
-    }.recover(handleExceptions("a getNewFilter"))
+    }.recover(handleExceptionsWithErrorCodes("a getNewFilter"))
   }
 
   private def getFilterAndWidgetsCallbackAux(
@@ -1133,7 +1132,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       } yield
         response
-    }.recover(handleJsonExceptions("a distribution"))
+    }.recover(handleExceptionsWithErrorCodes("a distribution"))
   }
 
   override def getCumulativeCount(
@@ -1208,7 +1207,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       } yield
         response
-    }.recover(handleExceptions("a cumulative count"))
+    }.recover(handleExceptionsWithErrorCodes("a cumulative count"))
   }
 
   override def getScatter(
@@ -1286,7 +1285,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       } yield
         response
-    }.recover(handleExceptions("a scatter"))
+    }.recover(handleExceptionsWithErrorCodes("a scatter"))
   }
 
   override def getPearsonCorrelations(
@@ -1343,7 +1342,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       } yield
         response
-    }.recover(handleExceptions("Pearson correlations"))
+    }.recover(handleExceptionsWithErrorCodes("Pearson correlations"))
   }
 
   private def processCorrelationsWidgets(fieldsCount: Int) = { widgets: Traversable[Widget] =>
@@ -1416,7 +1415,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       } yield
         response
-    }.recover(handleExceptions("Matthews correlations"))
+    }.recover(handleExceptionsWithErrorCodes("Matthews correlations"))
   }
 
   override def getHeatmap(
@@ -1500,7 +1499,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       } yield
         response
-    }.recover(handleExceptions("a heatmap"))
+    }.recover(handleExceptionsWithErrorCodes("a heatmap"))
   }
 
   override def getTable(
@@ -1521,7 +1520,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case Accepts.Json() => BadRequest("The function getTable function doesn't support JSON response.")
       }
 
-    }.recover(handleExceptions("a table"))
+    }.recover(handleExceptionsWithErrorCodes("a table"))
   }
 
   override def getComparison(
@@ -1602,7 +1601,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case None =>
             BadRequest(s"Field $fieldName not found.")
         }
-    }.recover(handleExceptions("a comparison"))
+    }.recover(handleExceptionsWithErrorCodes("a comparison"))
   }
 
   private def numericComparisonWidgetsAsJson(
@@ -1821,7 +1820,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         Ok(dataset.view.viewTable(tablePage, Some(resolvedFilter), fieldsInOrder, true)(request, router))
       }
-    }.recover(handleExceptions("a generateTable"))
+    }.recover(handleExceptionsWithErrorCodes("a generateTable"))
   }
 
   override def generateTableWithFilter(
@@ -1868,7 +1867,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case Accepts.Json() => jsonResponse
         }
       }
-    }.recover(handleExceptions("a generateTableWithFilter"))
+    }.recover(handleExceptionsWithErrorCodes("a generateTableWithFilter"))
   }
 
   override def getIndependenceTest(
@@ -1915,7 +1914,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     if (inputFieldNames.isEmpty || targetFieldName.isEmpty)
       Future(BadRequest("No input provided."))
     else
-      testIndependenceAux(targetFieldName.get, inputFieldNames, filterOrId)
+      testIndependenceAux(targetFieldName.get, inputFieldNames, filterOrId).recover(
+        handleExceptionsWithErrorCodes("an independence test")
+      )
   }
 
   private def testIndependenceAux(
@@ -2142,7 +2143,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filterId: Option[BSONObjectID],
     featuresNormalizationType: Option[VectorScalerType.Value],
     pcaDims: Option[Int]
-  ) = AuthAction { implicit request =>
+  ) = AuthAction { implicit request => {
     val explFieldNamesToLoads =
       if (inputFieldNames.nonEmpty)
         (inputFieldNames ++ Seq(JsObjectIdentity.name)).toSet.toSeq
@@ -2182,11 +2183,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
           val jsonsWithClasses = jsonsWithStringIds.flatMap { json =>
             val stringId = (json \ JsObjectIdentity.name).as[String]
-            idClassMap.get(stringId).map(clazz =>  json.+("cluster_class", JsNumber(clazz)))
+            idClassMap.get(stringId).map(clazz => json.+("cluster_class", JsNumber(clazz)))
           }
 
           // Other scatters (fields pairwise_
-          def createScatter(xField: Field, yField: Field): Option[Widget] = {
+          def createScatter(
+            xField: Field,
+            yField: Field
+          ): Option[Widget] = {
             val clusterClassField = Field("cluster_class", Some("Cluster Class"), FieldTypeId.Integer, false)
 
             val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, Some(clusterClassField.name), None, displayOptions)
@@ -2198,14 +2202,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           // Transform Scatters into JSONs
           val scatters = numericFields.combinations(2).take(64).flatMap { fields => createScatter(fields(0), fields(1)) }
 
-          val scatterJsons = (Seq(pca12Scatter) ++ scatters).map( scatter =>
+          val scatterJsons = (Seq(pca12Scatter) ++ scatters).map(scatter =>
             scatterToJson(scatter.asInstanceOf[ScatterWidget[_, _]])
           )
 
           val classSizeJsons = idClasses.groupBy(_._2).toSeq.sortBy(_._1).map { case (_, values) => JsNumber(values.size) }
 
           // Independence Test
-          val numValues = idClassMap.values.map ( classId => (classId.toString, classId.toString)).toMap
+          val numValues = idClassMap.values.map(classId => (classId.toString, classId.toString)).toMap
           val clusterClassField = Field("cluster_class", Some("Cluster Class"), FieldTypeId.Enum, false, Some(numValues))
           val fieldNameLabelMap = fields.map(field => (field.name, field.labelOrElseName)).toMap
 
@@ -2217,7 +2221,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           val jsonResults = testResults.flatMap { case (field, result) =>
             val fieldLabel = fieldNameLabelMap.get(field.name).get
 
-            result.map( result =>
+            result.map(result =>
               Json.toJson((fieldLabel, result))
             )
           }
@@ -2231,6 +2235,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case None =>
           BadRequest(s"ML unsupervised learning model with id ${mlModelId.stringify} not found.")
       }
+  }.recover(handleExceptionsWithErrorCodes("a clustering"))
   }
 
   private def loadCriteria(filterId: Option[BSONObjectID]) =

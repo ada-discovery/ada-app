@@ -81,7 +81,7 @@ class StandardClassificationRunControllerImpl @Inject()(
     runSpec: ClassificationRunSpec,
     saveResults: Boolean,
     saveBinCurves: Boolean
-  ) = Action.async { implicit request =>
+  ) = Action.async { implicit request => {
     val mlModelFuture = mlMethodRepo.get(runSpec.mlModelId)
     val criteriaFuture = loadCriteria(runSpec.ioSpec.filterId)
     val replicationCriteriaFuture = loadCriteria(runSpec.ioSpec.replicationFilterId)
@@ -158,6 +158,7 @@ class StandardClassificationRunControllerImpl @Inject()(
       }.getOrElse(
         BadRequest(s"ML classification model with id ${runSpec.mlModelId.stringify} not found.")
       )
+    }.recover(handleExceptionsWithErrorCodes("a launch"))
   }
 
   override def selectFeaturesAsAnovaChiSquare(

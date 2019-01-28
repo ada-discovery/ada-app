@@ -8,7 +8,7 @@ import models.AdaException
 import org.incal.play.controllers.ExceptionHandler
 import play.api.Logger
 import play.api.mvc.{Request, Result}
-import play.api.mvc.Results.{Redirect, Ok, InternalServerError}
+import play.api.mvc.Results.{Redirect, Ok, InternalServerError, BadRequest}
 
 trait AdaExceptionHandler extends ExceptionHandler {
 
@@ -37,15 +37,32 @@ trait AdaExceptionHandler extends ExceptionHandler {
     case e: Throwable =>
       handleFatalException(functionName, extraMessage, e)
   }
-}
 
-trait AdaJsonExceptionHandler {
-
-  protected def handleJsonExceptions(
+  protected def handleExceptionsWithErrorCodes(
     functionName: String,
     extraMessage: Option[String] = None)(
     implicit request: Request[_]
   ): PartialFunction[Throwable, Result] = {
+
+    case e: TimeoutException =>
+      val message = s"The request timed out while executing $functionName function${extraMessage.getOrElse("")}."
+      Logger.error(message, e)
+      InternalServerError(message)
+
+    case e: AdaDataAccessException =>
+      val message = s"Repo/db problem found while executing $functionName function${extraMessage.getOrElse("")}."
+      Logger.error(message, e)
+      InternalServerError(message)
+
+    case e: AdaConversionException =>
+      val message = s"Conversion problem found while executing $functionName function${extraMessage.getOrElse("")}. Cause: ${e.getMessage}"
+      Logger.warn(message, e)
+      BadRequest(message)
+
+    case e: AdaException =>
+      val message = s"General problem found while executing $functionName function${extraMessage.getOrElse("")}. Cause: ${e.getMessage}"
+      Logger.warn(message, e)
+      BadRequest(message)
 
     case e: Throwable =>
       val message = s"Fatal problem found while executing $functionName function${extraMessage.getOrElse("")}."

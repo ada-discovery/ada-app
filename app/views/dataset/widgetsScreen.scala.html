@@ -163,6 +163,7 @@
                 },
                 error: function (data) {
                     $("#widgetsDiv").html("")
+                    hideMessages();
                     showErrorResponse(data);
                 }
             }
@@ -204,13 +205,14 @@
                         },
                         error: function(data) {
                             $("#spinnerDiv").html("")
+                            hideMessages();
                             showErrorResponse(data)
                         }
                     });
                 },
                 error: function (data) {
-                    console.log(data)
                     $("#spinnerDiv").html("")
+                    hideMessages();
                     showErrorResponse(data);
                 }
             }
