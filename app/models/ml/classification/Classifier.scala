@@ -9,14 +9,14 @@ import reactivemongo.play.json.BSONFormats._
 import org.incal.spark_ml.models.classification._
 import org.incal.spark_ml.models.TreeCore
 
-object Classification {
+object Classifier {
 
-  implicit val logisticModelFamilyEnumTypeFormat = EnumFormat.enumFormat(LogisticModelFamily)
-  implicit val mlpSolverEnumTypeFormat = EnumFormat.enumFormat(MLPSolver)
-  implicit val featureSubsetStrategyEnumTypeFormat = EnumFormat.enumFormat(RandomForestFeatureSubsetStrategy)
-  implicit val decisionTreeImpurityEnumTypeFormat = EnumFormat.enumFormat(DecisionTreeImpurity)
-  implicit val gbtClassificationLossTypeEnumTypeFormat = EnumFormat.enumFormat(GBTClassificationLossType)
-  implicit val bayesModelTypeEnumTypeFormat = EnumFormat.enumFormat(BayesModelType)
+  implicit val logisticModelFamilyEnumTypeFormat = EnumFormat(LogisticModelFamily)
+  implicit val mlpSolverEnumTypeFormat = EnumFormat(MLPSolver)
+  implicit val featureSubsetStrategyEnumTypeFormat = EnumFormat(RandomForestFeatureSubsetStrategy)
+  implicit val decisionTreeImpurityEnumTypeFormat = EnumFormat(DecisionTreeImpurity)
+  implicit val gbtClassificationLossTypeEnumTypeFormat = EnumFormat(GBTClassificationLossType)
+  implicit val bayesModelTypeEnumTypeFormat = EnumFormat(BayesModelType)
 
   def eitherFormat[T: Format] = {
     implicit val optionFormat = new OptionFormat[T]
@@ -28,7 +28,7 @@ object Classification {
 
   private implicit val treeCoreFormat = Json.format[TreeCore]
 
-  implicit val classificationFormat: Format[ClassificationModel] = new SubTypeFormat[ClassificationModel](
+  implicit val classifierFormat: Format[Classifier] = new SubTypeFormat[Classifier](
     Seq(
       ManifestedFormat(Json.format[LogisticRegression]),
       ManifestedFormat(Json.format[MultiLayerPerceptron]),
@@ -40,10 +40,10 @@ object Classification {
     )
   )
 
-  implicit object ClassificationIdentity extends BSONObjectIdentity[ClassificationModel] {
-    def of(entity: ClassificationModel): Option[BSONObjectID] = entity._id
+  implicit object ClassifierIdentity extends BSONObjectIdentity[Classifier] {
+    def of(entity: Classifier): Option[BSONObjectID] = entity._id
 
-    protected def set(entity: ClassificationModel, id: Option[BSONObjectID]) =
+    protected def set(entity: Classifier, id: Option[BSONObjectID]) =
       entity match {
         case x: LogisticRegression => x.copy(_id = id)
         case x: MultiLayerPerceptron => x.copy(_id = id)

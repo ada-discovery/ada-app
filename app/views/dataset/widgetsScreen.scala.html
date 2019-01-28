@@ -184,6 +184,7 @@
                             "callbackId": data.widgetsCallbackId
                         },
                         success: function(data) {
+                            console.log(data)
                             if (successMessage) showMessage(successMessage);
 
                             $("#spinnerDiv").html("");
@@ -208,6 +209,7 @@
                     });
                 },
                 error: function (data) {
+                    console.log(data)
                     $("#spinnerDiv").html("")
                     showErrorResponse(data);
                 }

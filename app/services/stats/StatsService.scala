@@ -4,7 +4,7 @@ import java.{util => ju}
 import javax.inject.{Inject, Singleton}
 
 import _root_.util.AkkaStreamUtil
-import _root_.util.FieldUtil.InfixFieldOps
+import _root_.util.FieldUtil.FieldOps
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.ActorMaterializer

@@ -10,7 +10,7 @@ import dataaccess.JsonCrudRepoExtra._
 import dataaccess.{JsonUtil, StreamSpec}
 import _root_.util.MessageLogger
 import _root_.util.FieldUtil.{fieldTypeOrdering, isNumeric}
-import _root_.util.FieldUtil.{InfixFieldOps, JsonFieldOps}
+import _root_.util.FieldUtil.{FieldOps, JsonFieldOps}
 import com.google.inject.ImplementedBy
 import models._
 import persistence.RepoTypes._

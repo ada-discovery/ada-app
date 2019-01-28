@@ -3,7 +3,7 @@ package runnables.core
 import javax.inject.Inject
 import field.FieldTypeHelper
 import models.DataSetFormattersAndIds.FieldIdentity
-import persistence.RepoTypes.RegressionRepo
+import persistence.RepoTypes.RegressorRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import reactivemongo.bson.BSONObjectID
 import services.ml.MachineLearningService
@@ -20,7 +20,7 @@ import scala.concurrent.Future
 class RunRowTimeSeriesDLRegression @Inject() (
     dsaf: DataSetAccessorFactory,
     mlService: MachineLearningService,
-    regressionRepo: RegressionRepo
+    regressionRepo: RegressorRepo
   ) extends InputFutureRunnable[RunRowTimeSeriesDLRegressionSpec] with TimeSeriesResultsHelper {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()

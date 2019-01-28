@@ -8,15 +8,15 @@ import reactivemongo.play.json.BSONFormats._
 import org.incal.spark_ml.models.regression._
 import org.incal.spark_ml.models.TreeCore
 
-object Regression {
+object Regressor {
 
-  implicit val regressionSolverEnumTypeFormat = EnumFormat.enumFormat(RegressionSolver)
-  implicit val generalizedLinearRegressionFamilyEnumTypeFormat = EnumFormat.enumFormat(GeneralizedLinearRegressionFamily)
-  implicit val generalizedLinearRegressionLinkTypeEnumTypeFormat = EnumFormat.enumFormat(GeneralizedLinearRegressionLinkType)
-  implicit val generalizedLinearRegressionSolverEnumTypeFormat = EnumFormat.enumFormat(GeneralizedLinearRegressionSolver)
-  implicit val featureSubsetStrategyEnumTypeFormat = EnumFormat.enumFormat(RandomRegressionForestFeatureSubsetStrategy)
-  implicit val regressionTreeImpurityEnumTypeFormat = EnumFormat.enumFormat(RegressionTreeImpurity)
-  implicit val gbtRegressionLossTypeEnumTypeFormat = EnumFormat.enumFormat(GBTRegressionLossType)
+  implicit val regressionSolverEnumTypeFormat = EnumFormat(RegressionSolver)
+  implicit val generalizedLinearRegressionFamilyEnumTypeFormat = EnumFormat(GeneralizedLinearRegressionFamily)
+  implicit val generalizedLinearRegressionLinkTypeEnumTypeFormat = EnumFormat(GeneralizedLinearRegressionLinkType)
+  implicit val generalizedLinearRegressionSolverEnumTypeFormat = EnumFormat(GeneralizedLinearRegressionSolver)
+  implicit val featureSubsetStrategyEnumTypeFormat = EnumFormat(RandomRegressionForestFeatureSubsetStrategy)
+  implicit val regressionTreeImpurityEnumTypeFormat = EnumFormat(RegressionTreeImpurity)
+  implicit val gbtRegressionLossTypeEnumTypeFormat = EnumFormat(GBTRegressionLossType)
 
   def eitherFormat[T: Format] = {
     implicit val optionFormat = new OptionFormat[T]
@@ -28,7 +28,7 @@ object Regression {
 
   private implicit val treeCoreFormat = Json.format[TreeCore]
 
-  implicit val regressionFormat: Format[RegressionModel] = new SubTypeFormat[RegressionModel](
+  implicit val regressorFormat: Format[Regressor] = new SubTypeFormat[Regressor](
     Seq(
       ManifestedFormat(Json.format[LinearRegression]),
       ManifestedFormat(Json.format[GeneralizedLinearRegression]),
@@ -38,10 +38,10 @@ object Regression {
     )
   )
 
-  implicit object RegressionIdentity extends BSONObjectIdentity[RegressionModel] {
-    def of(entity: RegressionModel): Option[BSONObjectID] = entity._id
+  implicit object RegressorIdentity extends BSONObjectIdentity[Regressor] {
+    def of(entity: Regressor): Option[BSONObjectID] = entity._id
 
-    protected def set(entity: RegressionModel, id: Option[BSONObjectID]) =
+    protected def set(entity: Regressor, id: Option[BSONObjectID]) =
       entity match {
         case x: LinearRegression => x.copy(_id = id)
         case x: GeneralizedLinearRegression => x.copy(_id = id)

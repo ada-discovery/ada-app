@@ -1,6 +1,6 @@
 package controllers
 
-import com.google.inject.AbstractModule
+import com.google.inject.{AbstractModule, Key, TypeLiteral}
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import controllers.dataset._
 
@@ -29,11 +29,19 @@ class ControllerModule extends AbstractModule {
       .build(classOf[DataViewControllerFactory]))
 
     install(new FactoryModuleBuilder()
-      .implement(classOf[ClassificationRunController], classOf[ClassificationRunControllerImpl])
-      .build(classOf[ClassificationRunControllerFactory]))
+      .implement(classOf[StandardClassificationRunController], classOf[StandardClassificationRunControllerImpl])
+      .build(classOf[StandardClassificationRunControllerFactory]))
 
     install(new FactoryModuleBuilder()
-      .implement(classOf[RegressionRunController], classOf[RegressionRunControllerImpl])
-      .build(classOf[RegressionRunControllerFactory]))
+      .implement(classOf[TemporalClassificationRunController], classOf[TemporalClassificationRunControllerImpl])
+      .build(classOf[TemporalClassificationRunControllerFactory]))
+
+    install(new FactoryModuleBuilder()
+      .implement(classOf[StandardRegressionRunController], classOf[StandardRegressionRunControllerImpl])
+      .build(classOf[StandardRegressionRunControllerFactory]))
+
+    install(new FactoryModuleBuilder()
+      .implement(classOf[TemporalRegressionRunController], classOf[TemporalRegressionRunControllerImpl])
+      .build(classOf[TemporalRegressionRunControllerFactory]))
   }
 }

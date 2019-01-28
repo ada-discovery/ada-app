@@ -1,9 +1,9 @@
 package runnables.core
 
 import javax.inject.Inject
-
 import play.api.Logger
 import org.incal.core.InputFutureRunnable
+import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassificationResult, TemporalClassificationResult}
 import persistence.dataset.ClassificationResultRepoFactory
 
 import scala.reflect.runtime.universe.typeOf
@@ -22,7 +22,10 @@ class RemoveClassificationBinCurves @Inject()(repoFactory: ClassificationResultR
 
       _ <- {
         val newResults = allResults.map { result =>
-          result.copy(trainingBinCurves = Nil, testBinCurves = Nil, replicationBinCurves = Nil)
+          result match {
+            case result: StandardClassificationResult => result.copy(trainingBinCurves = Nil, testBinCurves = Nil, replicationBinCurves = Nil)
+            case result: TemporalClassificationResult => result.copy(trainingBinCurves = Nil, testBinCurves = Nil, replicationBinCurves = Nil)
+          }
         }
         repo.update(newResults)
       }

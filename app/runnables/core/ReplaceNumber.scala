@@ -4,7 +4,7 @@ import dataaccess.RepoTypes.JsonCrudRepo
 import models.AdaException
 import play.api.libs.json._
 import runnables.DsaInputFutureRunnable
-import _root_.util.FieldUtil.InfixFieldOps
+import _root_.util.FieldUtil.FieldOps
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Flow

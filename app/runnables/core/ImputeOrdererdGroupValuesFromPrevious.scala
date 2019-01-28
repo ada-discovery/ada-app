@@ -17,7 +17,7 @@ import play.api.Logger
 import play.api.libs.json.{JsNull, JsObject}
 import services.DataSetService
 import services.stats.calc.JsonFieldUtil
-import util.FieldUtil.{InfixFieldOps, JsonFieldOps}
+import util.FieldUtil.{FieldOps, JsonFieldOps}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf

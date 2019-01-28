@@ -21,10 +21,10 @@ class DataSetWebContext(
   val filterJsRouter = new FilterJsRouter(dataSetId)
   val dataViewRouter = new DataViewRouter(dataSetId)
   val dataViewJsRouter = new DataViewJsRouter(dataSetId)
-  val classificationRunRouter = new ClassificationRunRouter(dataSetId)
-  val classificationRunJsRouter = new ClassificationRunJsRouter(dataSetId)
-  val regressionRunRouter = new RegressionRunRouter(dataSetId)
-  val regressionRunJsRouter = new RegressionRunJsRouter(dataSetId)
+  val classificationRunRouter = new StandardClassificationRunRouter(dataSetId)
+  val classificationRunJsRouter = new StandardClassificationRunJsRouter(dataSetId)
+  val regressionRunRouter = new StandardRegressionRunRouter(dataSetId)
+  val regressionRunJsRouter = new StandardRegressionRunJsRouter(dataSetId)
 }
 
 object DataSetWebContext {

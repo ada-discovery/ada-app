@@ -2,18 +2,13 @@ package controllers.dataset
 
 import org.incal.core.FilterCondition
 import org.incal.play.controllers.ReadonlyController
-import org.incal.spark_ml.models.setting.RegressionRunSpec
+import org.incal.spark_ml.models.setting.ClassificationRunSpec
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 
-trait RegressionRunController extends ReadonlyController[BSONObjectID]{
+trait MLRunController extends ReadonlyController[BSONObjectID]{
 
   def create: Action[AnyContent]
-
-  def regress(
-    setting: RegressionRunSpec,
-    saveResults: Boolean
-  ): Action[AnyContent]
 
   def delete(id: BSONObjectID): Action[AnyContent]
 

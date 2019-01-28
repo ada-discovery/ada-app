@@ -6,7 +6,7 @@ import javax.inject.Inject
 import controllers._
 import controllers.core.AdaCrudControllerImpl
 import models.DataSpaceMetaInfo
-import models.ml.classification.Classification._
+import models.ml.classification.Classifier._
 import persistence.RepoTypes._
 import play.api.data.Forms.{mapping, optional, _}
 import play.api.data.format.Formats._
@@ -32,14 +32,13 @@ import org.incal.spark_ml.models.classification._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ClassificationController @Inject()(
-    repo: ClassificationRepo,
+class ClassifierController @Inject()(
+    repo: ClassifierRepo,
     dataSpaceService: DataSpaceService
-
-  ) extends AdaCrudControllerImpl[ClassificationModel, BSONObjectID](repo)
+  ) extends AdaCrudControllerImpl[Classifier, BSONObjectID](repo)
     with AdminRestrictedCrudController[BSONObjectID]
-    with HasCreateEditSubTypeFormViews[ClassificationModel, BSONObjectID]
-    with HasFormShowEqualEditView[ClassificationModel, BSONObjectID] {
+    with HasCreateEditSubTypeFormViews[Classifier, BSONObjectID]
+    with HasFormShowEqualEditView[Classifier, BSONObjectID] {
 
   private implicit val logisticModelFamilyFormatter = EnumFormatter(LogisticModelFamily)
   private implicit val mlpSolverFormatter = EnumFormatter(MLPSolver)
@@ -156,7 +155,7 @@ class ClassificationController @Inject()(
       "timeCreated" -> ignored(new Date())
     )(LinearSupportVectorMachine.apply)(LinearSupportVectorMachine.unapply))
 
-  protected case class ClassificationCreateEditViews[E <: ClassificationModel](
+  protected case class ClassificationCreateEditViews[E <: Classifier](
     displayName: String,
     val form: Form[E],
     viewElements: (Form[E], Messages) => Html)(
@@ -175,8 +174,8 @@ class ClassificationController @Inject()(
           messagePrefix,
           form,
           viewElements(form, ctx.msg),
-          controllers.ml.routes.ClassificationController.save,
-          controllers.ml.routes.ClassificationController.listAll(),
+          controllers.ml.routes.ClassifierController.save,
+          controllers.ml.routes.ClassifierController.listAll(),
           'enctype -> "multipart/form-data"
         )
     }
@@ -188,9 +187,9 @@ class ClassificationController @Inject()(
           messagePrefix,
           data.form.errors,
           viewElements(data.form, ctx.msg),
-          controllers.ml.routes.ClassificationController.update(data.id),
-          controllers.ml.routes.ClassificationController.listAll(),
-          Some(controllers.ml.routes.ClassificationController.delete(data.id))
+          controllers.ml.routes.ClassifierController.update(data.id),
+          controllers.ml.routes.ClassifierController.listAll(),
+          Some(controllers.ml.routes.ClassifierController.delete(data.id))
         )
     }
   }
@@ -240,10 +239,10 @@ class ClassificationController @Inject()(
       )
     )
 
-  override protected val homeCall = routes.ClassificationController.find()
+  override protected val homeCall = routes.ClassifierController.find()
 
   // default form... unused
-  override protected[controllers] val form = logisticRegressionForm.asInstanceOf[Form[ClassificationModel]]
+  override protected[controllers] val form = logisticRegressionForm.asInstanceOf[Form[Classifier]]
 
   def create(concreteClassName: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
@@ -254,13 +253,13 @@ class ClassificationController @Inject()(
   }
 
   override protected type ListViewData = (
-    Page[ClassificationModel],
+    Page[Classifier],
     Seq[FilterCondition],
     Traversable[DataSpaceMetaInfo]
   )
 
   override protected def getListViewData(
-    page: Page[ClassificationModel],
+    page: Page[Classifier],
     conditions: Seq[FilterCondition]
   ) = { request =>
     for {

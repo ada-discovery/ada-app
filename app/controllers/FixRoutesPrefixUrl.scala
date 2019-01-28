@@ -9,7 +9,7 @@ import play.api.inject.{Binding, Module}
   * See: https://github.com/playframework/playframework/issues/4984
   * or https://github.com/playframework/playframework/issues/4977
   *
-  * If the core issue in Play framework is fixed, this class can be removed
+  * If the referenced issue in Play framework is fixed, this class can be removed
   */
 class FixRoutesPrefixUrl extends Module {
 

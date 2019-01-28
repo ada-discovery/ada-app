@@ -2,7 +2,7 @@
 @import views.html.table.paginatedTable
 @import views.html.dataset.datasetMenu
 @import views.html.filter.filterWithJs
-@import controllers.ml.routes.{RegressionController => regressionRoutes}
+@import controllers.ml.routes.{RegressorController => regressorRoutes}
 @import util.{formatTimeElement, toHumanReadableCamel, typeColumns}
 @import models.{DataSpaceMetaInfo, Field}
 @import org.incal.play.controllers.WebContext._
@@ -13,7 +13,7 @@
 @import org.incal.core.FilterCondition
 
 @(
-    page: Page[RegressionModel],
+    page: Page[Regressor],
     conditions: Seq[FilterCondition],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -22,7 +22,7 @@
 
 @importLink(clazz: Class[_], title: String) = {
     <li>
-        <a href="@regressionRoutes.create(clazz.getName)">
+        <a href="@regressorRoutes.create(clazz.getName)">
         @title
         </a>
     </li>
@@ -33,7 +33,7 @@
         <div class="col-md-10">
             @filterWithJs(
                 Filter(conditions),
-                regressionRoutes.find(),
+                regressorRoutes.find(),
                 Left(Seq(
                     Field("name", Some("Name"))
                 )),
@@ -60,13 +60,13 @@
 @table = @{
     paginatedTable(
         page,
-        regressionRoutes.find(_, _, conditions),
-        typeColumns[RegressionModel](
+        regressorRoutes.find(_, _, conditions),
+        typeColumns[Regressor](
             (Some("concreteClass"), "Type", {classification => toHumanReadableCamel(classification.getClass.getSimpleName)}),
             (Some("name"), "Name", _.name.getOrElse("")),
             (Some("timeCreated"), "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss"))
         ),
-        Some({ item : Any => regressionRoutes.get(item.asInstanceOf[RegressionModel]._id.get)})
+        Some({ item : Any => regressorRoutes.get(item.asInstanceOf[Regressor]._id.get)})
     )
 }
 

@@ -9,6 +9,7 @@
 @import controllers.mpower.VisEdge
 @import controllers.mpower.AggFunction
 @import views.html.mpowerchallenge.correlationSideBar
+@import org.incal.play.routes.CustomDirAssets
 
 @(
     domainName: String,
@@ -182,7 +183,7 @@
     </div>
 
     <script src="@routes.WebJarAssets.at(context.webJarAssets.locate("vis.min.js"))"></script>
-    <link rel="stylesheet" type="text/css" media="screen" href="@routes.CustomDirAssets.versioned("stylesheets/vis.min.css")">
+    <link rel="stylesheet" type="text/css" media="screen" href="@CustomDirAssets.versioned("stylesheets/vis.min.css")">
 
     <div class="row">
         <div class="col-md-10">

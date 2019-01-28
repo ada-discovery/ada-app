@@ -14,9 +14,9 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import org.incal.play.security.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
 import views.html.{layout, regression => view}
-import controllers.ml.routes.{RegressionController => regressionRoutes}
+import controllers.ml.routes.{RegressorController => regressorRoutes}
 import models.DataSpaceMetaInfo
-import models.ml.regression.Regression._
+import models.ml.regression.Regressor._
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.AscSort
 import org.incal.play.Page
@@ -31,14 +31,13 @@ import services.DataSpaceService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class RegressionController @Inject()(
-    repo: RegressionRepo,
+class RegressorController @Inject()(
+    repo: RegressorRepo,
     dataSpaceService: DataSpaceService
-
-  ) extends AdaCrudControllerImpl[RegressionModel, BSONObjectID](repo)
+  ) extends AdaCrudControllerImpl[Regressor, BSONObjectID](repo)
     with AdminRestrictedCrudController[BSONObjectID]
-    with HasCreateEditSubTypeFormViews[RegressionModel, BSONObjectID]
-    with HasFormShowEqualEditView[RegressionModel, BSONObjectID] {
+    with HasCreateEditSubTypeFormViews[Regressor, BSONObjectID]
+    with HasFormShowEqualEditView[Regressor, BSONObjectID] {
 
   private implicit val regressionSolverFormatter = EnumFormatter(RegressionSolver)
   private implicit val generalizedLinearRegressionLinkTypeFormatter = EnumFormatter(GeneralizedLinearRegressionLinkType)
@@ -129,7 +128,7 @@ class RegressionController @Inject()(
       "timeCreated" -> ignored(new Date())
     )(GradientBoostRegressionTree.apply)(GradientBoostRegressionTree.unapply))
 
-  protected case class RegressionCreateEditViews[E <: RegressionModel](
+  protected case class RegressionCreateEditViews[E <: Regressor](
     displayName: String,
     val form: Form[E],
     viewElements: (Form[E], Messages) => Html)(
@@ -148,8 +147,8 @@ class RegressionController @Inject()(
           messagePrefix,
           form,
           viewElements(form, ctx.msg),
-          controllers.ml.routes.RegressionController.save,
-          controllers.ml.routes.RegressionController.listAll(),
+          controllers.ml.routes.RegressorController.save,
+          controllers.ml.routes.RegressorController.listAll(),
           'enctype -> "multipart/form-data"
         )
     }
@@ -161,9 +160,9 @@ class RegressionController @Inject()(
           messagePrefix,
           data.form.errors,
           viewElements(data.form, ctx.msg),
-          regressionRoutes.update(data.id),
-          regressionRoutes.listAll(),
-          Some(regressionRoutes.delete(data.id))
+          regressorRoutes.update(data.id),
+          regressorRoutes.listAll(),
+          Some(regressorRoutes.delete(data.id))
         )
     }
   }
@@ -201,10 +200,10 @@ class RegressionController @Inject()(
       )
     )
 
-  override protected val homeCall = routes.RegressionController.find()
+  override protected val homeCall = routes.RegressorController.find()
 
   // default form... unused
-  override protected[controllers] val form = linearRegressionForm.asInstanceOf[Form[RegressionModel]]
+  override protected[controllers] val form = linearRegressionForm.asInstanceOf[Form[Regressor]]
 
   def create(concreteClassName: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
@@ -215,13 +214,13 @@ class RegressionController @Inject()(
   }
 
   override protected type ListViewData = (
-    Page[RegressionModel],
+    Page[Regressor],
     Seq[FilterCondition],
     Traversable[DataSpaceMetaInfo]
   )
 
   override protected def getListViewData(
-    page: Page[RegressionModel],
+    page: Page[Regressor],
     conditions: Seq[FilterCondition]
   ) = { request =>
     for {

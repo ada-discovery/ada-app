@@ -88,9 +88,9 @@
         page,
         regressionRunRouter.list(_, _, conditions),
         typeColumns[RegressionResult](
-            (Some("runSpec-mlModelId"), "ML Model", result => mlModelIdNameMap.get(result.runSpec.mlModelId).get),
-            (Some("runSpec-ioSpec-filterId"), "Filter", _.ioSpec.filterId.map(filterId => filterIdNameMap.get(filterId).get).getOrElse("")),
-            (Some("runSpec-ioSpec-outputFieldName"), "Output Field", result => fieldNameLabelMap.get(result.ioSpec.outputFieldName).get),
+            (Some("runSpec-mlModelId"), "ML Model", result => mlModelIdNameMap.get(result.mlModelId).get),
+            (Some("runSpec-ioSpec-filterId"), "Filter", _.filterId.map(filterId => filterIdNameMap.get(filterId).get).getOrElse("")),
+            (Some("runSpec-ioSpec-outputFieldName"), "Output Field", result => fieldNameLabelMap.get(result.outputFieldName).get),
             (Some("testStats-mae-mean"), "Test MAE Mean", _.testStats.map(stats => "%.3f".format(stats.mae.mean)).getOrElse("")),
             (Some("testStats-mse-mean"), "Test MSE Mean", _.testStats.map(stats => "%.3f".format(stats.mse.mean)).getOrElse("")),
             (Some("testStats-rmse-mean"), "Test RMSE Mean", _.testStats.map(stats => "%.3f".format(stats.rmse.mean)).getOrElse("")),

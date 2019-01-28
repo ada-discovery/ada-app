@@ -2,7 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 import models.ml.IOJsonTimeSeriesSpec
-import persistence.RepoTypes.RegressionRepo
+import persistence.RepoTypes.RegressorRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
@@ -18,7 +18,7 @@ import scala.concurrent.Future
 class RunTimeSeriesDLRegression @Inject() (
     dsaf: DataSetAccessorFactory,
     mlService: MachineLearningService,
-    regressionRepo: RegressionRepo
+    regressionRepo: RegressorRepo
   ) extends InputFutureRunnable[RunTimeSeriesDLRegressionSpec] with TimeSeriesResultsHelper {
 
   override def runAsFuture(

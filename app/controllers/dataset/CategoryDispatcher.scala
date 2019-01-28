@@ -2,29 +2,16 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import org.incal.play.controllers.SecureControllerDispatcher
 import org.incal.core.FilterCondition
-import org.incal.play.security.SecurityRole
 import reactivemongo.bson.BSONObjectID
-import models.security.DataSetPermission
 
-class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: CategoryControllerFactory)
-  extends SecureControllerDispatcher[CategoryController]("dataSet") with CategoryController {
+class CategoryDispatcher @Inject()(
+  val dscf: DataSetControllerFactory,
+  factory: CategoryControllerFactory
+) extends DataSetLikeDispatcher[CategoryController](ControllerName.category)
+    with CategoryController {
 
-  override protected def getController(id: String) =
-    dscf(id).map(_ => ccf(id)).getOrElse(
-      throw new IllegalArgumentException(s"Controller id '${id}' not recognized.")
-    )
-
-  override protected def getAllowedRoleGroups(
-    controllerId: String,
-    actionName: String
-  ) = List(Array(SecurityRole.admin))
-
-  override protected def getPermission(
-    controllerId: String,
-    actionName: String
-  ) = Some(DataSetPermission(controllerId, ControllerName.category, actionName))
+  override def controllerFactory = factory(_)
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 

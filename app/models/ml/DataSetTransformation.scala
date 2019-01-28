@@ -120,10 +120,10 @@ object SeriesProcessingType extends Enumeration {
 }
 
 object DataSetTransformation {
-  implicit val storageTypeFormat = EnumFormat.enumFormat(StorageType)
+  implicit val storageTypeFormat = EnumFormat(StorageType)
   implicit val coreFormat = Json.format[DerivedDataSetSpec]
-  implicit val seriesProcessingTypeFormat = EnumFormat.enumFormat(SeriesProcessingType)
+  implicit val seriesProcessingTypeFormat = EnumFormat(SeriesProcessingType)
   implicit val seriesProcessingSpecFormat = Json.format[SeriesProcessingSpec]
-  implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorScalerType)
+  implicit val vectorTransformTypeFormat = EnumFormat(VectorScalerType)
   implicit val seriesTransformationSpecFormat = Json.format[SeriesTransformationSpec]
 }

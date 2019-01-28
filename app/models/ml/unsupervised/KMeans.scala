@@ -79,8 +79,8 @@ case class GaussianMixture(
 ) extends UnsupervisedLearning
 
 object UnsupervisedLearning {
-  implicit val KMeansInitModeEnumTypeFormat = EnumFormat.enumFormat(KMeansInitMode)
-  implicit val LDAOptimizerEnumTypeFormat = EnumFormat.enumFormat(LDAOptimizer)
+  implicit val KMeansInitModeEnumTypeFormat = EnumFormat(KMeansInitMode)
+  implicit val LDAOptimizerEnumTypeFormat = EnumFormat(LDAOptimizer)
 
   implicit val unsupervisedLearningFormat: Format[UnsupervisedLearning] = new SubTypeFormat[UnsupervisedLearning](
     Seq(

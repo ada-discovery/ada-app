@@ -18,8 +18,10 @@ trait WidgetRepoController[E] {
   protected def repo: AsyncReadonlyRepo[E, _]
   protected def typeTag: TypeTag[E]
   protected def format: Format[E]
-  protected def excludedFieldNames: Traversable[String] = Nil
+
   protected def wgs: WidgetGenerationService
+
+  protected def excludedFieldNames: Traversable[String] = Nil
 
   protected lazy val fieldCaseClassRepo = CaseClassFieldRepo[E](excludedFieldNames, true)(typeTag)
   protected lazy val jsonCaseClassRepo = JsonFormatRepoAdapter.applyNoId(repo)(format)

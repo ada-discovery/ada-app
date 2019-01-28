@@ -8,24 +8,12 @@ import org.incal.play.security.SecurityRole
 import models.security.DataSetPermission
 
 class DictionaryDispatcher @Inject() (
-    dscf: DataSetControllerFactory,
-    dcf: DictionaryControllerFactory
-  ) extends SecureControllerDispatcher[DictionaryController]("dataSet") with DictionaryController {
+  val dscf: DataSetControllerFactory,
+  factory: DictionaryControllerFactory
+) extends DataSetLikeDispatcher[DictionaryController](ControllerName.field)
+    with DictionaryController {
 
-  override protected def getController(id: String) =
-    dscf(id).map(_ => dcf(id)).getOrElse(
-      throw new IllegalArgumentException(s"Controller id '${id}' not recognized.")
-    )
-
-  override protected def getAllowedRoleGroups(
-    controllerId: String,
-    actionName: String
-  ) = List(Array(SecurityRole.admin))
-
-  override protected def getPermission(
-    controllerId: String,
-    actionName: String
-  ) = Some(DataSetPermission(controllerId, ControllerName.field, actionName))
+  override def controllerFactory = factory(_)
 
   override def get(id: String) = dispatch(_.get(id))
 

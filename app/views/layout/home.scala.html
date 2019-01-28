@@ -1,6 +1,7 @@
 @import views.html.layout.carousel
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
+@import org.incal.play.routes.CustomDirAssets
 
 @(customHtml: Option[String])(implicit context: WebContext)
 
@@ -16,7 +17,7 @@
             </div>
             <div class="pull-right" style="padding-top: 10px">
                 <a target="_blank" href="@context.configuration.getString("project.url").get">
-                    <img src="@routes.CustomDirAssets.versioned(context.configuration.getString("project.logo").get)" />
+                    <img src="@CustomDirAssets.versioned(context.configuration.getString("project.logo").get)" />
                 </a>
             </div>
         </div>

@@ -48,8 +48,8 @@ class UserController @Inject() (
     getMethodNames[CategoryController],
     getMethodNames[FilterController],
     getMethodNames[DataViewController],
-    getMethodNames[ClassificationRunController],
-    getMethodNames[RegressionRunController]
+    getMethodNames[StandardClassificationRunController],
+    getMethodNames[StandardRegressionRunController]
   )
 
   // create view and data

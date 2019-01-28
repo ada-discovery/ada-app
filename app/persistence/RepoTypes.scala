@@ -7,9 +7,9 @@ import models.HtmlSnippet
 import models.ml.regression.RegressionResult
 import models.ml.unsupervised.UnsupervisedLearning
 import org.incal.core.dataaccess.{AsyncCrudRepo, AsyncStreamRepo}
-import org.incal.spark_ml.models.classification.ClassificationModel
-import org.incal.spark_ml.models.regression.RegressionModel
-import org.incal.spark_ml.models.result.{ClassificationResult, RegressionResult}
+import org.incal.spark_ml.models.classification.Classifier
+import org.incal.spark_ml.models.regression.Regressor
+import org.incal.spark_ml.models.result._
 
 /**
  * Common repo type shortcuts
@@ -23,12 +23,17 @@ object RepoTypes {
 
   type DataSetImportRepo = AsyncCrudRepo[DataSetImport, BSONObjectID]
 
-  type ClassificationRepo = AsyncCrudRepo[ClassificationModel, BSONObjectID]
-  type RegressionRepo = AsyncCrudRepo[RegressionModel, BSONObjectID]
+  type ClassifierRepo = AsyncCrudRepo[Classifier, BSONObjectID]
+  type RegressorRepo = AsyncCrudRepo[Regressor, BSONObjectID]
   type UnsupervisedLearningRepo = AsyncCrudRepo[UnsupervisedLearning, BSONObjectID]
 
   type ClassificationResultRepo = AsyncCrudRepo[ClassificationResult, BSONObjectID]
+  type StandardClassificationResultRepo = AsyncCrudRepo[StandardClassificationResult, BSONObjectID]
+  type TemporalClassificationResultRepo = AsyncCrudRepo[TemporalClassificationResult, BSONObjectID]
+
   type RegressionResultRepo = AsyncCrudRepo[RegressionResult, BSONObjectID]
+  type StandardRegressionResultRepo = AsyncCrudRepo[StandardRegressionResult, BSONObjectID]
+  type TemporalRegressionResultRepo = AsyncCrudRepo[TemporalRegressionResult, BSONObjectID]
 
   type HtmlSnippetRepo = AsyncCrudRepo[HtmlSnippet, BSONObjectID]
 

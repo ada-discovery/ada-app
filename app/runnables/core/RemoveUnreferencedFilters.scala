@@ -34,8 +34,8 @@ class RemoveUnreferencedFilters @Inject() (dsaf: DataSetAccessorFactory) extends
       // remove unreferenced filters
       _ <- {
         val refFilterIds1 = views.flatMap(_.filterOrIds.collect{ case Right(filterId) => filterId }).toSet
-        val refFilterIds2 = classificationResults.flatMap(result => Seq(result.ioSpec.filterId, result.ioSpec.replicationFilterId).flatten).toSet
-        val refFilterIds3 = regressionResults.flatMap(result => Seq(result.ioSpec.filterId, result.ioSpec.replicationFilterId).flatten).toSet
+        val refFilterIds2 = classificationResults.flatMap(result => Seq(result.filterId, result.ioSpec.replicationFilterId).flatten).toSet
+        val refFilterIds3 = regressionResults.flatMap(result => Seq(result.filterId, result.ioSpec.replicationFilterId).flatten).toSet
 
         val refFilterIds = refFilterIds1 ++ refFilterIds2 ++ refFilterIds3
 

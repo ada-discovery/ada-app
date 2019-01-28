@@ -5,6 +5,7 @@
 @import models.DataSpaceMetaInfo
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
+@import org.incal.play.routes.CustomDirAssets
 
 @(
     dataSetName: String,
@@ -28,7 +29,7 @@
 
 @bottomResources = {
 
-    <script src="@routes.CustomDirAssets.versioned("javascripts/ada-charts-bb9f81d.min.js")"></script>
+    <script src="@CustomDirAssets.versioned("javascripts/ada-charts-bb9f81d.min.js")"></script>
 
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.calcHeatmap,

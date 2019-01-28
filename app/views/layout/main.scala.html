@@ -1,6 +1,7 @@
 @import be.objectify.deadbolt.scala.views.html.subjectPresent
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
+@import org.incal.play.routes.CustomDirAssets
 
 @(
     title: String,
@@ -22,14 +23,14 @@
         <title>@title</title>
         <!-- Latest compiled and minified CSS -->
         <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(context.webJarAssets.locate("bootswatch-united", "bootstrap.min.css"))">
-        <link rel="stylesheet" type="text/css" media="screen" href="@routes.CustomDirAssets.versioned("stylesheets/mainX.min.css")">
+        <link rel="stylesheet" type="text/css" media="screen" href="@CustomDirAssets.versioned("stylesheets/mainX.min.css")">
 
         @* Optional theme *@
 		@* <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(WebJarAssets.locate("bootstrap", "bootstrap-theme.min.css"))"> *@
         
-        <link rel="shortcut icon" type="image/png" href="@routes.CustomDirAssets.versioned("images/favicon.png")">
+        <link rel="shortcut icon" type="image/png" href="@CustomDirAssets.versioned("images/favicon.png")">
         <script src="@routes.WebJarAssets.at(context.webJarAssets.locate("jquery.min.js"))"></script>
-        <script type="text/javascript" src="@routes.CustomDirAssets.versioned("javascripts/mainX.min.js")"></script>
+        <script type="text/javascript" src="@CustomDirAssets.versioned("javascripts/mainX.min.js")"></script>
 
         @if(topResources.isDefined) { @topResources.get }
 

@@ -7,7 +7,7 @@ import com.banda.math.domain.rand.RandomDistribution
 import com.banda.network.domain.ActivationFunctionType
 import field.FieldTypeHelper
 import models.DataSetFormattersAndIds.FieldIdentity
-import persistence.RepoTypes.RegressionRepo
+import persistence.RepoTypes.RegressorRepo
 import persistence.dataset.DataSetAccessorFactory
 import services.ml.MachineLearningService
 import reactivemongo.bson.BSONObjectID
@@ -26,7 +26,7 @@ import scala.concurrent.Future
 class RunRowTimeSeriesRCRegression @Inject() (
     dsaf: DataSetAccessorFactory,
     mlService: MachineLearningService,
-    regressionRepo: RegressionRepo
+    regressionRepo: RegressorRepo
   ) extends InputFutureRunnable[RunRowTimeSeriesRCRegressionSpec] with TimeSeriesResultsHelper {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()

@@ -8,7 +8,7 @@ import org.incal.core.util.seqFutures
 import play.api.libs.json.Json
 import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
-import util.FieldUtil.{InfixFieldOps, JsonFieldOps}
+import util.FieldUtil.{FieldOps, JsonFieldOps}
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global

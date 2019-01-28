@@ -1,6 +1,7 @@
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
 @import views.html.documentation.{core, section, imageSection, sectionNavigation}
+@import org.incal.play.routes.CustomDirAssets
 
 @()(implicit context: WebContext)
 
@@ -13,22 +14,22 @@
         </p>
 
         <p>
-            To create a new data set import, select a desired type in a drop down <img src="@routes.CustomDirAssets.versioned("images/documentation/new_dropdown_button.png")"/> located on the right side.
+            To create a new data set import, select a desired type in a drop down <img src="@CustomDirAssets.versioned("images/documentation/new_dropdown_button.png")"/> located on the right side.
         </p>
 
         <p>
-            If there is a data set import similar to the one you want to create, click <img src="@routes.CustomDirAssets.versioned("images/documentation/copy_button.png")"/> located on the right side
+            If there is a data set import similar to the one you want to create, click <img src="@CustomDirAssets.versioned("images/documentation/copy_button.png")"/> located on the right side
             and select the source import in an autocomplete textbox. Then edit it accordingly.
         </p>
 
         <p>
-            To execute a data set import click <img src="@routes.CustomDirAssets.versioned("images/documentation/run_data_set_import_button.png")"/> at the associated row in the list table. Note that you do not need to wait for the import to fully proceed and meanwhile (as it is being executed) you can continue working at different sections of Ada.
+            To execute a data set import click <img src="@CustomDirAssets.versioned("images/documentation/run_data_set_import_button.png")"/> at the associated row in the list table. Note that you do not need to wait for the import to fully proceed and meanwhile (as it is being executed) you can continue working at different sections of Ada.
             Depending on the data set size an import might take several seconds to minutes to finish.
         </p>
     } {
         <div class="row">
             <div class="col-md-5">
-                <img class="img-responsive" src="@routes.CustomDirAssets.versioned("images/documentation/data_set_imports.png")"/>
+                <img class="img-responsive" src="@CustomDirAssets.versioned("images/documentation/data_set_imports.png")"/>
             </div>
             <div class="col-md-7">
                 <div class="panel panel-warning">

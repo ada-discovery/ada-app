@@ -21,8 +21,8 @@ import services.stats.StatsService
 import org.incal.spark_ml.transformers._
 import org.incal.spark_ml.models.VectorScalerType
 import org.incal.spark_ml._
-import org.incal.spark_ml.models.classification.{ClassificationEvalMetric, ClassificationModel}
-import org.incal.spark_ml.models.regression.{RegressionEvalMetric, RegressionModel}
+import org.incal.spark_ml.models.classification.{ClassificationEvalMetric, Classifier}
+import org.incal.spark_ml.models.regression.{RegressionEvalMetric, Regressor}
 import org.incal.spark_ml.models.result.{ClassificationResultsHolder, RegressionResultsHolder}
 import org.incal.spark_ml.models.setting.{ClassificationLearningSetting, RegressionLearningSetting, TemporalClassificationLearningSetting, TemporalRegressionLearningSetting}
 
@@ -35,7 +35,7 @@ trait MachineLearningService {
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
-    mlModel: ClassificationModel,
+    mlModel: Classifier,
     setting: ClassificationLearningSetting = ClassificationLearningSetting(),
     replicationData: Traversable[JsObject] = Nil
   ): Future[ClassificationResultsHolder]
@@ -43,7 +43,7 @@ trait MachineLearningService {
   def classifyTemporalSeries(
     data: JsObject,
     ioSpec: IOJsonTimeSeriesSpec,
-    mlModel: ClassificationModel,
+    mlModel: Classifier,
     setting: TemporalClassificationLearningSetting,
     replicationData: Option[JsObject] = None
   ): Future[ClassificationResultsHolder]
@@ -56,7 +56,7 @@ trait MachineLearningService {
     orderFieldName: String,
     orderedValues: Seq[Any],
     groupIdFieldName: Option[String],
-    mlModel: ClassificationModel,
+    mlModel: Classifier,
     setting: TemporalClassificationLearningSetting,
     replicationData: Traversable[JsObject] = Nil
   ): Future[ClassificationResultsHolder]
@@ -65,7 +65,7 @@ trait MachineLearningService {
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
-    mlModel: RegressionModel,
+    mlModel: Regressor,
     setting: RegressionLearningSetting = RegressionLearningSetting(),
     replicationData: Traversable[JsObject] = Nil
   ): Future[RegressionResultsHolder]
@@ -73,7 +73,7 @@ trait MachineLearningService {
   def regressTemporalSeries(
     data: JsObject,
     ioSpec: IOJsonTimeSeriesSpec,
-    mlModel: RegressionModel,
+    mlModel: Regressor,
     setting: TemporalRegressionLearningSetting,
     replicationData: Option[JsObject] = None
   ): Future[RegressionResultsHolder]
@@ -86,7 +86,7 @@ trait MachineLearningService {
     orderFieldName: String,
     orderedValues: Seq[Any],
     groupIdFieldName: Option[String],
-    mlModel: RegressionModel,
+    mlModel: Regressor,
     setting: TemporalRegressionLearningSetting,
     replicationData: Traversable[JsObject] = Nil
   ): Future[RegressionResultsHolder]
@@ -146,7 +146,7 @@ private class MachineLearningServiceImpl @Inject() (
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
-    mlModel: ClassificationModel,
+    mlModel: Classifier,
     setting: ClassificationLearningSetting,
     replicationData: Traversable[JsObject]
   ): Future[ClassificationResultsHolder] = {
@@ -171,7 +171,7 @@ private class MachineLearningServiceImpl @Inject() (
   override def classifyTemporalSeries(
     data: JsObject,
     ioSpec: IOJsonTimeSeriesSpec,
-    mlModel: ClassificationModel,
+    mlModel: Classifier,
     setting: TemporalClassificationLearningSetting,
     replicationData: Option[JsObject]
   ): Future[ClassificationResultsHolder] = {
@@ -201,7 +201,7 @@ private class MachineLearningServiceImpl @Inject() (
     orderFieldName: String,
     orderedValues: Seq[Any],
     groupIdFieldName: Option[String],
-    mlModel: ClassificationModel,
+    mlModel: Classifier,
     setting: TemporalClassificationLearningSetting,
     replicationData: Traversable[JsObject]
   ): Future[ClassificationResultsHolder] = {
@@ -238,7 +238,7 @@ private class MachineLearningServiceImpl @Inject() (
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
-    mlModel: RegressionModel,
+    mlModel: Regressor,
     setting: RegressionLearningSetting,
     replicationData: Traversable[JsObject]
   ): Future[RegressionResultsHolder] = {
@@ -261,7 +261,7 @@ private class MachineLearningServiceImpl @Inject() (
   override def regressTemporalSeries(
     data: JsObject,
     ioSpec: IOJsonTimeSeriesSpec,
-    mlModel: RegressionModel,
+    mlModel: Regressor,
     setting: TemporalRegressionLearningSetting,
     replicationData: Option[JsObject]
   ): Future[RegressionResultsHolder] = {
@@ -288,7 +288,7 @@ private class MachineLearningServiceImpl @Inject() (
     orderFieldName: String,
     orderedValues: Seq[Any],
     groupIdFieldName: Option[String],
-    mlModel: RegressionModel,
+    mlModel: Regressor,
     setting: TemporalRegressionLearningSetting,
     replicationData: Traversable[JsObject]
   ): Future[RegressionResultsHolder] = {

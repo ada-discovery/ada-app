@@ -17,29 +17,16 @@ import org.incal.play.security.SecurityRole
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class FilterDispatcher @Inject()(
-    dscf: DataSetControllerFactory,
-    fcf: FilterControllerFactory,
-    dsaf: DataSetAccessorFactory,
-    val userManager: UserManager
-  ) extends SecureControllerDispatcher[FilterController]("dataSet")
-      with AdminOrOwnerControllerDispatcherExt[FilterController]
-      with FilterController
-      with AdaAuthConfig {
+  val dscf: DataSetControllerFactory,
+  factory: FilterControllerFactory,
+  dsaf: DataSetAccessorFactory,
+  val userManager: UserManager
+) extends DataSetLikeDispatcher[FilterController](ControllerName.filter)
+   with AdminOrOwnerControllerDispatcherExt[FilterController]
+   with FilterController
+   with AdaAuthConfig {
 
-  override protected def getController(id: String) =
-    dscf(id).map(_ => fcf(id)).getOrElse(
-      throw new IllegalArgumentException(s"Controller id '${id}' not recognized.")
-    )
-
-  override protected def getAllowedRoleGroups(
-    controllerId: String,
-    actionName: String
-  ) = List(Array(SecurityRole.admin))
-
-  override protected def getPermission(
-    controllerId: String,
-    actionName: String
-  ) = Some(DataSetPermission(controllerId, ControllerName.filter, actionName))
+  override def controllerFactory = factory(_)
 
   override def get(id: BSONObjectID) = dispatchIsAdminOrOwner(id, _.get(id))
 

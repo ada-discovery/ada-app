@@ -1,17 +1,17 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import dataaccess.FilterRepoFactory
+import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.ml.classification.ClassificationResult.classificationResultFormat
 import models.{AdaException, StorageType}
-import persistence.RepoTypes.ClassificationRepo
+import persistence.RepoTypes.ClassifierRepo
 import persistence.dataset.{ClassificationResultRepoFactory, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.json.{JsObject, Json}
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.seqFutures
-import org.incal.spark_ml.models.result.ClassificationResult
+import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassificationResult}
 import services.DataSetService
 import util.FieldUtil.caseClassToFlatFieldTypes
 
@@ -24,14 +24,14 @@ class MergeRCClassificationResults @Inject() (
     dataSetService: DataSetService,
     classificationResultRepoFactory: ClassificationResultRepoFactory,
     filterRepoFactory: FilterRepoFactory,
-    classificationRepo: ClassificationRepo
+    classificationRepo: ClassifierRepo
   ) extends InputFutureRunnable[MergeRCClassificationResultsSpec] {
 
   private val logger = Logger // (this.getClass())
 
   private val dataSetFieldName = "inputOutputSpec-resultDataSetId"
 
-  private val fields = caseClassToFlatFieldTypes[ClassificationResult]("-", Set("_id"))
+  private val fields = caseClassToFlatFieldTypes[StandardClassificationResult]("-", Set(JsObjectIdentity.name))
 
   private case class ClassificationResultExtra(dataSetId: String, mlModelName: Option[String], filterName: Option[String])
   private implicit val classificationResultExtraFormat = Json.format[ClassificationResultExtra]
@@ -94,7 +94,7 @@ class MergeRCClassificationResults @Inject() (
       // add some extra stuff for easier reference (model and filter name)
       resultsWithExtra <- Future.sequence(
         results.map { result =>
-          val classificationFuture = classificationRepo.get(result.runSpec.mlModelId)
+          val classificationFuture = classificationRepo.get(result.mlModelId)
           val filterFuture = result.ioSpec.filterId.map(filterRepo.get).getOrElse(Future(None))
 
           for {

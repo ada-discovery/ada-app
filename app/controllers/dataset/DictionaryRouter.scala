@@ -1,14 +1,14 @@
 package controllers.dataset
 
-import org.incal.play.controllers.{GenericJsRouter, GenericRouter}
-
+import org.incal.play.controllers.{GenericJsRouter, GenericRouter, ReadonlyRouter}
+import play.api.mvc.Call
 import scalaz.Scalaz._
 
 /**
   * Container for various calls from Controllers.
   * To be passed to other modules like views to simplify data access.
   */
-class DictionaryRouter(dataSetId: String) extends GenericRouter(routes.DictionaryDispatcher, "dataSet", dataSetId) {
+class DictionaryRouter(dataSetId: String) extends GenericRouter(routes.DictionaryDispatcher, "dataSet", dataSetId) with ReadonlyRouter[String] {
   val list = routes.find _ map route
   val plainList =  routeFun(_.find())
   val get = routes.get _ map route

@@ -1,7 +1,6 @@
 package runnables.core
 
 import javax.inject.Inject
-
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import dataaccess.StreamSpec
@@ -11,6 +10,7 @@ import models.{StorageType, _}
 import models.ml.{DerivedDataSetSpec, RenameFieldsSpec}
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.{hasNonAlphanumericUnderscore, nonAlphanumericToUnderscore}
+import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassificationResult, TemporalClassificationResult}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import services.{DataSetService, DataSpaceService}
@@ -137,20 +137,27 @@ class FixNonalphanumericFields @Inject() (
 
       classificationResults <- dsa.classificationResultRepo.find()
 
-      newClassificationRuns = classificationResults.map { classificationRun =>
-        val newInputFieldNames = classificationRun.ioSpec.inputFieldNames.map(fieldName => oldToNewFieldNameMap.getOrElse(fieldName, fieldName))
-        val outputFieldName = classificationRun.ioSpec.outputFieldName
+      newClassificationRuns = classificationResults.map { classificationResult =>
+        val newInputFieldNames = classificationResult.inputFieldNames.map(fieldName => oldToNewFieldNameMap.getOrElse(fieldName, fieldName))
+        val outputFieldName = classificationResult.outputFieldName
         val newOutputFieldName = oldToNewFieldNameMap.getOrElse(outputFieldName, outputFieldName)
 
-        val newIOSpec = classificationRun.ioSpec.copy(inputFieldNames = newInputFieldNames, outputFieldName = newOutputFieldName)
-        classificationRun.copy(runSpec = classificationRun.runSpec.copy(ioSpec = newIOSpec))
+        classificationResult match {
+          case result: StandardClassificationResult =>
+            val newIOSpec = result.ioSpec.copy(inputFieldNames = newInputFieldNames, outputFieldName = newOutputFieldName)
+            result.copy(runSpec = result.runSpec.copy(ioSpec = newIOSpec))
+
+          case result: TemporalClassificationResult =>
+            val newIOSpec = result.ioSpec.copy(inputFieldNames = newInputFieldNames, outputFieldName = newOutputFieldName)
+            result.copy(runSpec = result.runSpec.copy(ioSpec = newIOSpec))
+        }
       }
 
       _ <- dsa.classificationResultRepo.update(newClassificationRuns)
 
       // regression runs
 
-      regressionResults <- dsa.regressionResultRepo.find()
+      regressionResults <- dsa.standardRegressionResultRepo.find()
 
       newRegressionRuns = regressionResults.map { regressionRun =>
         val newInputFieldNames = regressionRun.ioSpec.inputFieldNames.map(fieldName => oldToNewFieldNameMap.getOrElse(fieldName, fieldName))

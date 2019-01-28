@@ -3,7 +3,7 @@ package services.widgetgen
 import models._
 import services.stats.{CalculatorTypePack, NoOptionsCalculatorTypePack}
 import services.stats.calc._
-import util.FieldUtil.InfixFieldOps
+import util.FieldUtil.FieldOps
 
 trait AbstractOneWayAnovaTestWidgetGenerator[C <: NoOptionsCalculatorTypePack] extends CalculatorWidgetGenerator[IndependenceTestWidgetSpec, IndependenceTestWidget, C]
   with NoOptionsCalculatorWidgetGenerator[IndependenceTestWidgetSpec] {

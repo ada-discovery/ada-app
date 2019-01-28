@@ -27,7 +27,7 @@
     @highchartsJsImport(true)
 
     @helper.javascriptRouter("classificationRunJsRoutes")(
-        classificationRunJsRouter.classify,
+        classificationRunJsRouter.launch,
         classificationRunJsRouter.selectFeaturesAsAnovaChiSquare
     )
 
@@ -41,7 +41,7 @@
             )
 
             $.ajax({
-                url: '@Html(controllers.ml.routes.ClassificationController.idAndNames.url)',
+                url: '@Html(controllers.ml.routes.ClassifierController.idAndNames.url)',
                 success: function (data) {
                     var typeaheadData = data.map(function (classification, index) {
                         return {name: classification._id.$oid, label: classification.name};
@@ -150,7 +150,7 @@
                 return
             }
 
-            classificationRunJsRoutes.controllers.dataset.ClassificationRunDispatcher.classify(settingJSON, saveResults, saveBinCurves).ajax({
+            classificationRunJsRoutes.controllers.dataset.StandardClassificationRunDispatcher.launch(settingJSON, saveResults, saveBinCurves).ajax({
                 success: function (data) {
                     showMessage("'" + mlModelName + "' classification finished.")
                     showMLOutput(data.results)

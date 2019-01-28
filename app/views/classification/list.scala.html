@@ -2,7 +2,7 @@
 @import views.html.table.paginatedTable
 @import views.html.dataset.datasetMenu
 @import views.html.filter.filterWithJs
-@import controllers.ml.routes.{ClassificationController => classificationRoutes}
+@import controllers.ml.routes.{ClassifierController => classifierRoutes}
 @import util.{formatTimeElement, toHumanReadableCamel, typeColumns}
 @import models.{DataSpaceMetaInfo, Field}
 @import org.incal.spark_ml.models.classification._
@@ -13,7 +13,7 @@
 @import org.incal.core.FilterCondition
 
 @(
-    page: Page[ClassificationModel],
+    page: Page[Classifier],
     conditions: Seq[FilterCondition],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -22,7 +22,7 @@
 
 @importLink(clazz: Class[_], title: String) = {
     <li>
-        <a href="@classificationRoutes.create(clazz.getName)">
+        <a href="@classifierRoutes.create(clazz.getName)">
         @title
         </a>
     </li>
@@ -33,7 +33,7 @@
         <div class="col-md-10">
             @filterWithJs(
                 Filter(conditions),
-                classificationRoutes.find(),
+                classifierRoutes.find(),
                 Left(Seq(
                     Field("name", Some("Name"))
                 )),
@@ -62,13 +62,13 @@
 @table = @{
     paginatedTable(
         page,
-        classificationRoutes.find(_, _, conditions),
-        typeColumns[ClassificationModel](
+        classifierRoutes.find(_, _, conditions),
+        typeColumns[Classifier](
             (Some("concreteClass"), "Type", {classification => toHumanReadableCamel(classification.getClass.getSimpleName)}),
             (Some("name"), "Name", _.name.getOrElse("")),
             (Some("timeCreated"), "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss"))
         ),
-        Some({ item : Any => classificationRoutes.get(item.asInstanceOf[ClassificationModel]._id.get)})
+        Some({ item : Any => classifierRoutes.get(item.asInstanceOf[Classifier]._id.get)})
     )
 }
 

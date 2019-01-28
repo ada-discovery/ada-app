@@ -2,6 +2,7 @@
 @import org.incal.play.controllers.WebContext._
 @import views.html.documentation.core
 @import views.html.documentation.section
+@import org.incal.play.routes.CustomDirAssets
 
 @()(implicit context: WebContext)
 
@@ -27,7 +28,7 @@
         </p>
     } {
         <div clas="row">
-            <img class="img-responsive" src="@routes.CustomDirAssets.versioned("images/documentation/spark.jpeg")"/>
+            <img class="img-responsive" src="@CustomDirAssets.versioned("images/documentation/spark.jpeg")"/>
         </div>
     }
 }

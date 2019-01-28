@@ -24,7 +24,7 @@
     )
 
     @helper.javascriptRouter("regressionRunJsRoutes")(
-        regressionRunJsRouter.regress
+        regressionRunJsRouter.launch
     )
 
     <script type="text/javascript">
@@ -37,7 +37,7 @@
             )
 
             $.ajax({
-                url: '@Html(controllers.ml.routes.RegressionController.idAndNames.url)',
+                url: '@Html(controllers.ml.routes.RegressorController.idAndNames.url)',
                 success: function (data) {
                     var typeaheadData = data.map(function (regression, index) {
                         return {name: regression._id.$oid, label: regression.name};
@@ -131,7 +131,7 @@
                     return
                 }
 
-                regressionRunJsRoutes.controllers.dataset.RegressionRunDispatcher.regress(settingJSON, saveResults).ajax( {
+                regressionRunJsRoutes.controllers.dataset.StandardRegressionRunDispatcher.launch(settingJSON, saveResults).ajax( {
                     success: function(results) {
                         showMessage("'" + mlModelName + "' regression finished.")
                         showMLOutput(results)

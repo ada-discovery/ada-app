@@ -16,6 +16,7 @@
 @import reactivemongo.bson.BSONObjectID
 @import org.incal.play.Page
 @import org.incal.core.FilterCondition
+@import org.incal.spark_ml.models.result.ClassificationResult
 
 @(
     domainName : String,
@@ -89,9 +90,9 @@
         page,
         classificationRunRouter.list(_, _, conditions),
         typeColumns[ClassificationResult](
-            (Some("runSpec-mlModelId"), "ML Model", result => mlModelIdNameMap.get(result.runSpec.mlModelId).get),
-            (Some("runSpec-ioSpec-filterId"), "Filter", _.ioSpec.filterId.map(filterId => filterIdNameMap.get(filterId).get).getOrElse("")),
-            (Some("runSpec-ioSpec-outputFieldName"), "Output Field", result => fieldNameLabelMap.get(result.ioSpec.outputFieldName).get),
+            (Some("runSpec-mlModelId"), "ML Model", result => mlModelIdNameMap.get(result.mlModelId).get),
+            (Some("runSpec-ioSpec-filterId"), "Filter", _.filterId.map(filterId => filterIdNameMap.get(filterId).get).getOrElse("")),
+            (Some("runSpec-ioSpec-outputFieldName"), "Output Field", result => fieldNameLabelMap.get(result.outputFieldName).get),
             (Some("testStats-accuracy-mean"), "Test Accuracy Mean", _.testStats.map(stats => "%.3f".format(stats.accuracy.mean)).getOrElse("")),
             (Some("testStats-weightedPrecision-mean"), "Test Weighted Precision Mean", _.testStats.map(stats => "%.3f".format(stats.weightedPrecision.mean)).getOrElse("")),
             (Some("testStats-weightedRecall-mean"), "Test Weighted Recall Mean", _.testStats.map(stats => "%.3f".format(stats.weightedRecall.mean)).getOrElse("")),

@@ -5,7 +5,7 @@ import java.{util => ju}
 import javax.inject.Inject
 
 import _root_.security.AdaAuthConfig
-import _root_.util.FieldUtil.InfixFieldOps
+import _root_.util.FieldUtil.FieldOps
 import com.google.inject.assistedinject.Assisted
 import dataaccess.RepoTypes.UserRepo
 import dataaccess._

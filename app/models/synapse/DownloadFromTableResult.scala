@@ -144,9 +144,9 @@ case class BulkFileDownloadResponse(
 )
 
 object JsonFormat {
-  implicit val AsyncJobStateFormat = EnumFormat.enumFormat(AsyncJobState)
+  implicit val AsyncJobStateFormat = EnumFormat(AsyncJobState)
   implicit val AsynchronousJobStatusFormat = Json.format[AsynchronousJobStatus]
-  implicit val ColumnTypeFormat = EnumFormat.enumFormat(ColumnType)
+  implicit val ColumnTypeFormat = EnumFormat(ColumnType)
   implicit val SelectColumnFormat = Json.format[SelectColumn]
   implicit val ColumnModelFormat = Json.format[ColumnModel]
   implicit val DownloadFromTableResultFormat = Json.format[DownloadFromTableResult]
@@ -157,7 +157,7 @@ object JsonFormat {
   implicit val FileHandleResultsFormat = Json.format[FileHandleResults]
   implicit val TableFileHandleResultsFormat = Json.format[TableFileHandleResults]
   implicit val PaginatedColumnModelsFormat = Json.format[PaginatedColumnModels]
-  implicit val FileHandleAssociateTypeFormat = EnumFormat.enumFormat(FileHandleAssociateType)
+  implicit val FileHandleAssociateTypeFormat = EnumFormat(FileHandleAssociateType)
   implicit val FileHandleAssociationFormat = Json.format[FileHandleAssociation]
   implicit val BulkFileDownloadRequestFormat = Json.format[BulkFileDownloadRequest]
   implicit val FileDownloadSummaryFormat = Json.format[FileDownloadSummary]

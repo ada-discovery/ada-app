@@ -4,43 +4,27 @@ import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltHandler
 import controllers.core.AdminOrOwnerControllerDispatcherExt
-import org.incal.play.controllers.SecureControllerDispatcher
 import models.security.UserManager
 import models.{AdaException, AggType, CorrelationType}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import security.AdaAuthConfig
-import models.security.DataSetPermission
 import org.incal.core.FilterCondition
-import org.incal.play.security.SecurityRole
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DataViewDispatcher @Inject()(
-    dscf: DataSetControllerFactory,
-    dvc: DataViewControllerFactory,
-    dsaf: DataSetAccessorFactory,
-    val userManager: UserManager
-  ) extends SecureControllerDispatcher[DataViewController]("dataSet")
-      with AdminOrOwnerControllerDispatcherExt[DataViewController]
-      with DataViewController
-      with AdaAuthConfig {
+  val dscf: DataSetControllerFactory,
+  factory: DataViewControllerFactory,
+  dsaf: DataSetAccessorFactory,
+  val userManager: UserManager
+) extends DataSetLikeDispatcher[DataViewController](ControllerName.dataview)
+  with AdminOrOwnerControllerDispatcherExt[DataViewController]
+  with DataViewController
+  with AdaAuthConfig {
 
-  override protected def getController(id: String) =
-    dscf(id).map(_ => dvc(id)).getOrElse(
-      throw new IllegalArgumentException(s"Controller id '${id}' not recognized.")
-    )
-
-  override protected def getAllowedRoleGroups(
-    controllerId: String,
-    actionName: String
-  ) = List(Array(SecurityRole.admin))
-
-  override protected def getPermission(
-    controllerId: String,
-    actionName: String
-  ) = Some(DataSetPermission(controllerId, ControllerName.dataview, actionName))
+  override def controllerFactory = factory(_)
 
   override def get(id: BSONObjectID) = dispatchIsAdminOrOwner(id, _.get(id))
 

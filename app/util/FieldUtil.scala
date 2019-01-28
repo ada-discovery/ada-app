@@ -102,7 +102,7 @@ object FieldUtil {
       fieldType == FieldTypeId.Enum ||
         fieldType == FieldTypeId.Boolean
 
-  implicit class InfixFieldOps(val field: Field) {
+  implicit class FieldOps(val field: Field) {
     def isNumeric = FieldUtil.isNumeric(field.fieldType)
 
     def isCategorical = FieldUtil.isCategorical(field.fieldType)
@@ -150,7 +150,7 @@ object FieldUtil {
     ) = namedFieldType._2.jsonToDisplayString(json \ namedFieldType._1)
   }
 
-  implicit class InfixOp(val typ: Type) {
+  private implicit class InfixOp(val typ: Type) {
 
     private val optionInnerType =
       if (typ <:< typeOf[Option[_]])
@@ -167,15 +167,11 @@ object FieldUtil {
         (optionInnerType.isDefined && types.exists(optionInnerType.get <:< _))
   }
 
-  private def getEnumValueNames(typ: Type): Traversable[String] = {
+  private def getEnumOrdinalValues(typ: Type): Map[Int, String] = {
     val enumValueType = unwrapIfOption(typ)
+    val enum = ReflectionUtil.enum(enumValueType)
 
-    enumValueType match {
-      case TypeRef(enumType, _, _) => {
-        val values = enumType.members.filter(sym => !sym.isMethod && sym.typeSignature.baseType(enumValueType.typeSymbol) =:= enumValueType)
-        values.map(_.fullName.split('.').last)
-      }
-    }
+    (0 until enum.maxId).map(ordinal => (ordinal, enum.apply(ordinal).toString)).toMap
   }
 
   private def getJavaEnumOrdinalValues[E <: Enum[E]](typ: Type): Map[Int, String] = {
@@ -211,8 +207,8 @@ object FieldUtil {
         if (treatEnumAsString)
           FieldTypeSpec(FieldTypeId.String)
         else {
-          val valueNames = getEnumValueNames(t).toSeq.sorted
-          val enumMap = valueNames.zipWithIndex.map(_.swap).toMap
+          // note that for Scala Enumerations we directly use ordinal values for encoding
+          val enumMap = getEnumOrdinalValues(t)
           FieldTypeSpec(FieldTypeId.Enum, false, Some(enumMap))
         }
 
@@ -221,6 +217,7 @@ object FieldUtil {
         if (treatEnumAsString)
           FieldTypeSpec(FieldTypeId.String)
         else {
+          // note that for Java Enumerations we directly use ordinal values for encoding
           val enumMap = getJavaEnumOrdinalValues(t)
           FieldTypeSpec(FieldTypeId.Enum, false, Some(enumMap))
         }

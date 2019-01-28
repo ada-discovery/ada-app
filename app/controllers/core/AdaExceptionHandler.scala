@@ -8,7 +8,7 @@ import models.AdaException
 import org.incal.play.controllers.ExceptionHandler
 import play.api.Logger
 import play.api.mvc.{Request, Result}
-import play.api.mvc.Results.Redirect
+import play.api.mvc.Results.{Redirect, Ok, InternalServerError}
 
 trait AdaExceptionHandler extends ExceptionHandler {
 
@@ -36,5 +36,20 @@ trait AdaExceptionHandler extends ExceptionHandler {
 
     case e: Throwable =>
       handleFatalException(functionName, extraMessage, e)
+  }
+}
+
+trait AdaJsonExceptionHandler {
+
+  protected def handleJsonExceptions(
+    functionName: String,
+    extraMessage: Option[String] = None)(
+    implicit request: Request[_]
+  ): PartialFunction[Throwable, Result] = {
+
+    case e: Throwable =>
+      val message = s"Fatal problem found while executing $functionName function${extraMessage.getOrElse("")}."
+      Logger.error(message, e)
+      InternalServerError(message)
   }
 }

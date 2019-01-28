@@ -7,7 +7,7 @@ import play.api.Logger
 import play.api.libs.json.{JsObject, _}
 import runnables.DsaInputFutureRunnable
 import org.incal.core.dataaccess.Criterion.Infix
-import _root_.util.FieldUtil.{InfixFieldOps, JsonFieldOps, NamedFieldType}
+import _root_.util.FieldUtil.{FieldOps, JsonFieldOps, NamedFieldType}
 import akka.actor.ActorSystem
 
 import scala.concurrent.ExecutionContext.Implicits.global

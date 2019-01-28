@@ -1,4 +1,5 @@
 @import play.api.Configuration
+@import org.incal.play.routes.CustomDirAssets
 
 @()(implicit msg: Messages, configuration: Configuration)
 
@@ -10,7 +11,7 @@
             @configObjects.map(_.toConfig).map { logoConfig =>
                 <li>
                     <a target="_blank" href="@{logoConfig.getString("url")}">
-                        <img @if(logoConfig.hasPath("height")) {height="@logoConfig.getInt("height") px" } src="@routes.CustomDirAssets.versioned(logoConfig.getString("logo"))"/>
+                        <img @if(logoConfig.hasPath("height")) {height="@logoConfig.getInt("height") px" } src="@CustomDirAssets.versioned(logoConfig.getString("logo"))"/>
                     </a>
                 </li>
             }

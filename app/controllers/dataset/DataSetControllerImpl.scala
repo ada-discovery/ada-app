@@ -2,15 +2,15 @@ package controllers.dataset
 
 import java.util.UUID
 import java.{util => ju}
-import javax.inject.Inject
 
+import javax.inject.Inject
 import security.AdaAuthConfig
 
 import scala.collection.mutable.{Map => MMap}
 import dataaccess.JsonUtil._
 import _root_.util.WebExportUtil._
 import _root_.util.shorten
-import _root_.util.FieldUtil.{InfixFieldOps, valueConverters}
+import _root_.util.FieldUtil.{FieldOps, valueConverters}
 import org.incal.core.util.{GroupMapList, seqFutures}
 import dataaccess._
 import dataaccess.FilterRepoExtra._
@@ -24,7 +24,7 @@ import models.Widget.WidgetWrites
 import models.json.{ManifestedFormat, OptionFormat, SubTypeFormat, TupleFormat}
 import models.ml._
 import controllers.dataset.IndependenceTestResult._
-import persistence.RepoTypes.{ClassificationRepo, RegressionRepo, UnsupervisedLearningRepo}
+import persistence.RepoTypes.{ClassifierRepo, RegressorRepo, UnsupervisedLearningRepo}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.data.{Form, Mapping}
@@ -46,8 +46,7 @@ import services.stats.StatsService
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import field.{FieldType, FieldTypeHelper}
 import controllers.FilterConditionExtraFormats.coreFilterConditionFormat
-import controllers.core.AdaReadonlyControllerImpl
-import controllers.core.{AdaExceptionHandler, ExportableAction}
+import controllers.core.{AdaExceptionHandler, AdaJsonExceptionHandler, AdaReadonlyControllerImpl, ExportableAction}
 import org.incal.core.{ConditionType, FilterCondition}
 import org.incal.core.ConditionType._
 import org.incal.core.FilterCondition.toCriterion
@@ -75,8 +74,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     statsService: StatsService,
     dataSetService: DataSetService,
     widgetService: WidgetGenerationService,
-    classificationRepo: ClassificationRepo,
-    regressionRepo: RegressionRepo,
+    classificationRepo: ClassifierRepo,
+    regressionRepo: RegressorRepo,
     unsupervisedLearningRepo: UnsupervisedLearningRepo,
     dataSpaceService: DataSpaceService,
     tranSMARTService: TranSMARTService,
@@ -86,7 +85,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     with DataSetController
     with ExportableAction[JsObject]
     with AdaAuthConfig
-    with DistributionWidgetGeneratorHelper {
+    with DistributionWidgetGeneratorHelper
+    with AdaJsonExceptionHandler {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
 
@@ -1133,7 +1133,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       } yield
         response
-    }.recover(handleExceptions("a distribution"))
+    }.recover(handleJsonExceptions("a distribution"))
   }
 
   override def getCumulativeCount(

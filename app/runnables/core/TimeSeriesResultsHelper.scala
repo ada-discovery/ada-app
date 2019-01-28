@@ -1,7 +1,7 @@
 package runnables.core
 
 import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
-import org.incal.spark_ml.MachineLearningUtil
+import org.incal.spark_ml.MLResultUtil
 import org.incal.spark_ml.models.regression.RegressionEvalMetric
 import org.incal.spark_ml.models.result.RegressionResultsHolder
 import org.incal.core.util.writeStringAsStream
@@ -14,7 +14,7 @@ trait TimeSeriesResultsHelper {
 
   protected def exportResults(resultsHolder: RegressionResultsHolder) = {
     // prepare the results stats
-    val metricStatsMap = MachineLearningUtil.calcMetricStats(resultsHolder.performanceResults)
+    val metricStatsMap = MLResultUtil.calcMetricStats(resultsHolder.performanceResults)
 
     val (rmseTrainingScore, rmseTestScore, _) = metricStatsMap.get(RegressionEvalMetric.rmse).get
     val (maeTrainingScore, maeTestScore, _) = metricStatsMap.get(RegressionEvalMetric.mae).get

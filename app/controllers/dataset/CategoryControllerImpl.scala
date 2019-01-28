@@ -36,7 +36,6 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
     dataSpaceService: DataSpaceService
-
   ) extends AdaCrudControllerImpl[Category, BSONObjectID](dsaf(dataSetId).get.categoryRepo)
     with CategoryController
     with HasFormShowEqualEditView[Category, BSONObjectID] {

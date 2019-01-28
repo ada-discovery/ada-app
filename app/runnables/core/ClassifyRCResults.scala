@@ -5,9 +5,9 @@ import org.incal.core.dataaccess.Criterion._
 import models.{AdaException, Filter}
 import org.incal.core.{FilterCondition, InputFutureRunnable}
 import org.incal.core.util.seqFutures
-import org.incal.spark_ml.MachineLearningUtil
+import org.incal.spark_ml.MLResultUtil
 import org.incal.spark_ml.models.setting.{ClassificationLearningSetting, ClassificationRunSpec, IOSpec}
-import persistence.RepoTypes.ClassificationRepo
+import persistence.RepoTypes.ClassifierRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
@@ -25,7 +25,7 @@ class ClassifyRCResults @Inject() (
     mlService: MachineLearningService,
     statsService: StatsService,
     dataSetService: DataSetService,
-    classificationRepo: ClassificationRepo
+    classificationRepo: ClassifierRepo
   ) extends InputFutureRunnable[ClassifyRCResultsSpec] {
 
   private val logger = Logger // (this.getClass())
@@ -128,7 +128,7 @@ class ClassifyRCResults @Inject() (
 
           val fieldNameAndSpecs = selectedFields.map(field => (field.name, field.fieldTypeSpec))
           mlService.classifyStatic(jsons, fieldNameAndSpecs, spec.outputFieldName, mlModel, runSpec.learningSetting).map { resultsHolder =>
-            val finalResult = MachineLearningUtil.createClassificationResult(runSpec, resultsHolder.performanceResults, Nil)
+            val finalResult = MLResultUtil.createStandardClassificationResult(runSpec, MLResultUtil.calcMetricStats(resultsHolder.performanceResults), Nil)
             dsa.classificationResultRepo.save(finalResult)
           }
 

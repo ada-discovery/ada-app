@@ -7,13 +7,13 @@ import controllers.FilterConditionExtraFormats.eitherFilterOrIdFormat
 import models.{AggType, CorrelationType, FieldTypeId, Filter}
 import models.ml._
 import models.DataSetFormattersAndIds.enumTypeFormat
-import models.ml.classification.ClassificationResult._
-import models.ml.regression.RegressionResult._
+import models.ml.classification.ClassificationResult.{standardClassificationRunSpecFormat, temporalClassificationRunSpecFormat}
+import models.ml.regression.RegressionResult.{standardRegressionRunSpecFormat, temporalRegressionRunSpecFormat}
 import org.incal.core.FilterCondition
 import org.incal.play.PageOrder
 import org.incal.spark_ml.models.classification.ClassificationEvalMetric
 import org.incal.spark_ml.models.regression.RegressionEvalMetric
-import org.incal.spark_ml.models.setting.{ClassificationRunSpec, RegressionRunSpec}
+import org.incal.spark_ml.models.setting._
 import org.incal.spark_ml.models.VectorScalerType
 import play.api.libs.json.{Format, Json}
 import play.api.mvc.QueryStringBindable
@@ -56,7 +56,9 @@ object QueryStringBinders {
   implicit val tablePageSeqBinder = new JsonQueryStringBinder[Seq[PageOrder]]
 
   implicit val classificationRunSpecBinder = new JsonQueryStringBinder[ClassificationRunSpec]
+  implicit val temporalClassificationRunSpecBinder = new JsonQueryStringBinder[TemporalClassificationRunSpec]
   implicit val regressionRunSpecBinder = new JsonQueryStringBinder[RegressionRunSpec]
+  implicit val temporalRegressionRunSpecBinder = new JsonQueryStringBinder[TemporalRegressionRunSpec]
 
   implicit val vectorScalerTypeQueryStringBinder = new EnumStringBindable(VectorScalerType)
   implicit val classificationEvalMetricQueryStringBinder = new EnumStringBindable(ClassificationEvalMetric)

@@ -9,7 +9,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
 object FilterConditionExtraFormats {
-  implicit val conditionTypeFormat = EnumFormat.enumFormat(ConditionType)
+  implicit val conditionTypeFormat = EnumFormat(ConditionType)
 
   // filter without value label
   implicit val coreFilterConditionFormat: Format[FilterCondition] = (

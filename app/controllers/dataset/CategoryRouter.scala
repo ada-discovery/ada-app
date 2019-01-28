@@ -1,14 +1,14 @@
 package controllers.dataset
 
-import org.incal.play.controllers.{GenericJsRouter, GenericRouter}
-
+import org.incal.play.controllers.{CrudRouter, GenericJsRouter, GenericRouter}
+import reactivemongo.bson.BSONObjectID
 import scalaz.Scalaz._
 
-final class CategoryRouter(dataSetId: String) extends GenericRouter(routes.CategoryDispatcher, "dataSet", dataSetId) {
+final class CategoryRouter(dataSetId: String) extends GenericRouter(routes.CategoryDispatcher, "dataSet", dataSetId) with CrudRouter[BSONObjectID] {
   val list = routes.find _ map route
   val plainList = routeFun(_.find())
-  val create = routeFun(_.create)
   val get = routes.get _ map route
+  val create = routeFun(_.create)
   val save = routeFun(_.save)
   val saveForName = routes.saveForName _ map route
   val update = routes.update _ map route

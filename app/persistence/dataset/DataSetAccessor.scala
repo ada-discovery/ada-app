@@ -11,7 +11,8 @@ import reactivemongo.bson.BSONObjectID
 import scala.concurrent.Future
 import scala.concurrent.Await.result
 import dataaccess.RepoTypes._
-import persistence.RepoTypes.{ClassificationResultRepo, RegressionResultRepo}
+import persistence.RepoTypes._
+import persistence.SubTypeBasedAsyncCrudRepo
 
 trait DataSetAccessor {
   def dataSetId: String
@@ -19,8 +20,16 @@ trait DataSetAccessor {
   def categoryRepo: CategoryRepo
   def filterRepo: FilterRepo
   def dataViewRepo: DataViewRepo
+
+  // ML
+
   def classificationResultRepo: ClassificationResultRepo
+  def standardClassificationRepo: StandardClassificationResultRepo
+  def temporalClassificationRepo: TemporalClassificationResultRepo
+
   def regressionResultRepo: RegressionResultRepo
+  def standardRegressionResultRepo: StandardRegressionResultRepo
+  def temporalRegressionResultRepo: TemporalRegressionResultRepo
 
   // following attributes are dynamically created, i.e., each time the respective function is called
 
@@ -108,4 +117,18 @@ protected class DataSetAccessorImpl(
     dataSetMetaInfoRepo = dataSetMetaInfoRepoCreate(metaInfo.dataSpaceId)
     dataSetMetaInfoRepo.update(metaInfo)
   }
+
+  // ML extra
+
+  override val standardClassificationRepo: StandardClassificationResultRepo =
+    SubTypeBasedAsyncCrudRepo(classificationResultRepo)
+
+  override val temporalClassificationRepo: TemporalClassificationResultRepo =
+    SubTypeBasedAsyncCrudRepo(classificationResultRepo)
+
+  override val standardRegressionResultRepo: StandardRegressionResultRepo =
+    SubTypeBasedAsyncCrudRepo(regressionResultRepo)
+
+  override val temporalRegressionResultRepo: TemporalRegressionResultRepo =
+    SubTypeBasedAsyncCrudRepo(regressionResultRepo)
 }

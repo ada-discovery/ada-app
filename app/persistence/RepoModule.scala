@@ -11,8 +11,8 @@ import dataaccess._
 import dataaccess.mongo._
 import models.DataSetFormattersAndIds._
 import models._
-import models.ml.regression.Regression._
-import models.ml.classification.Classification._
+import models.ml.regression.Regressor._
+import models.ml.classification.Classifier._
 import net.codingwell.scalaguice.ScalaModule
 import dataaccess.RepoTypes._
 import persistence.RepoTypes._
@@ -23,8 +23,8 @@ import persistence.dataset._
 import reactivemongo.bson.BSONObjectID
 import persistence.RepoDef.Repo
 import models.workspace.Workspace
-import org.incal.spark_ml.models.classification.ClassificationModel
-import org.incal.spark_ml.models.regression.RegressionModel
+import org.incal.spark_ml.models.classification.Classifier
+import org.incal.spark_ml.models.regression.Regressor
 
 private object RepoDef extends Enumeration {
   abstract class AbstractRepo[T: Manifest] extends super.Val {
@@ -51,11 +51,11 @@ private object RepoDef extends Enumeration {
   val UserSettingsRepo = Repo[UserSettingsRepo](
     new MongoAsyncCrudRepo[Workspace, BSONObjectID]("workspace"))
 
-  val ClassificationRepo = Repo[ClassificationRepo](
-    new MongoAsyncCrudRepo[ClassificationModel, BSONObjectID]("classifications"))
+  val ClassificationRepo = Repo[ClassifierRepo](
+    new MongoAsyncCrudRepo[Classifier, BSONObjectID]("classifications"))
 
-  val RegressionRepo = Repo[RegressionRepo](
-    new MongoAsyncCrudRepo[RegressionModel, BSONObjectID]("regressions"))
+  val RegressionRepo = Repo[RegressorRepo](
+    new MongoAsyncCrudRepo[Regressor, BSONObjectID]("regressions"))
 
   val UnsupervisedLearningRepo = Repo[UnsupervisedLearningRepo](
     new MongoAsyncCrudRepo[UnsupervisedLearning, BSONObjectID]("unsupervisedLearnings"))

@@ -38,7 +38,7 @@ package object redcap {
   )
 
   object JsonFormat {
-    implicit val FieldTypeFormat = EnumFormat.enumFormat(FieldType)
+    implicit val FieldTypeFormat = EnumFormat(FieldType)
     implicit val MetadataFormat = Json.format[Metadata]
     implicit val ExportFieldFormat = Json.format[ExportField]
   }

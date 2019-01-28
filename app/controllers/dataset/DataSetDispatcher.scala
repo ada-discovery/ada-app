@@ -13,7 +13,10 @@ import org.incal.spark_ml.models.VectorScalerType
 import org.incal.play.PageOrder
 import play.api.mvc.{Action, AnyContent}
 
-class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends SecureControllerDispatcher[DataSetController]("dataSet") with DataSetController {
+class DataSetDispatcher @Inject() (
+  dscf: DataSetControllerFactory
+) extends SecureControllerDispatcher[DataSetController]("dataSet")
+    with DataSetController {
 
   override protected def getController(id: String) =
     dscf(id).getOrElse(

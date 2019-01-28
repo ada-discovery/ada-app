@@ -124,7 +124,7 @@ case class Count[+T](
 
 object Widget {
 
-  implicit val chartTypeFormat = EnumFormat.enumFormat(ChartType)
+  implicit val chartTypeFormat = EnumFormat(ChartType)
   implicit val basicDisplayOptionsFormat = Json.format[BasicDisplayOptions]
   implicit val multiChartDisplayOptionsFormat = Json.format[MultiChartDisplayOptions]
 
