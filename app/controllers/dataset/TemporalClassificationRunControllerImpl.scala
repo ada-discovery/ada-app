@@ -44,6 +44,7 @@ class TemporalClassificationRunControllerImpl @Inject()(
 
   override protected val entityNameKey = "temporalClassificationRun"
   override protected val exportFileNamePrefix = "temporal_classification_results_"
+  override protected val excludedFieldNames = Seq("reservoirSetting")
 
   private val distributionDisplayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column), gridWidth = Some(3))
 
@@ -73,7 +74,7 @@ class TemporalClassificationRunControllerImpl @Inject()(
   ))
 
   override protected def createView = { implicit ctx =>
-    (view.create(_, _, _)).tupled
+    (view.createTemporal(_, _, _)).tupled
   }
 
   override def launch(
@@ -81,6 +82,8 @@ class TemporalClassificationRunControllerImpl @Inject()(
     saveResults: Boolean,
     saveBinCurves: Boolean
   ) = Action.async { implicit request => {
+    println(runSpec)
+
     val mlModelFuture = mlMethodRepo.get(runSpec.mlModelId)
     val criteriaFuture = loadCriteria(runSpec.ioSpec.filterId)
     val replicationCriteriaFuture = loadCriteria(runSpec.ioSpec.replicationFilterId)

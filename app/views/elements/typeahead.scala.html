@@ -8,5 +8,5 @@
     extraClass: Option[String] = None
 )
 
-<input id="@{typeaheadElementId}" class="typeahead @if(isLarge) { typeahead-large } @extraClass.getOrElse("")" type="text" placeholder="@placeholder" value="@typeahedValue.getOrElse("")">
+<input id="@{typeaheadElementId}" class="typeahead @if(isLarge) { typeahead-large typeahead-full-width } @extraClass.getOrElse("")" type="text" placeholder="@placeholder" value="@typeahedValue.getOrElse("")">
 <input id="@{valueElementId}" name="@{valueElementId}" type="hidden" value="@value.getOrElse("")">

@@ -42,6 +42,7 @@ protected[controllers] class TemporalRegressionRunControllerImpl @Inject()(
 
   override protected val entityNameKey = "temporalRegressionRun"
   override protected val exportFileNamePrefix = "regression_results_"
+  override protected val excludedFieldNames = Seq("reservoirSetting")
 
   private val distributionDisplayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column), gridWidth = Some(3))
 
@@ -67,13 +68,15 @@ protected[controllers] class TemporalRegressionRunControllerImpl @Inject()(
   ))
 
   override protected def createView = { implicit ctx =>
-    (view.create(_, _, _)).tupled
+    (view.createTemporal(_, _, _)).tupled
   }
 
   override def launch(
     runSpec: TemporalRegressionRunSpec,
     saveResults: Boolean
   ) = Action.async { implicit request => {
+    println(runSpec)
+
     val mlModelFuture = mlMethodRepo.get(runSpec.mlModelId)
     val criteriaFuture = loadCriteria(runSpec.ioSpec.filterId)
     val replicationCriteriaFuture = loadCriteria(runSpec.ioSpec.replicationFilterId)

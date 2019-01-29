@@ -6,9 +6,10 @@
 @import play.api.libs.json.Json
 @import play.api.libs.json.JsObject
 @import org.incal.spark_ml.models.result.ClassificationResult
-@import org.incal.spark_ml.models.result.ClassificationResult
+@import controllers.dataset.MLRunRouter
 
 @(
+    router: MLRunRouter)(
     title: String,
     item: ClassificationResult,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -19,8 +20,8 @@
 @jsonShow(
     title,
     Json.toJson(item).as[JsObject],
-    classificationRunRouter.plainList,
-    Some(classificationRunRouter.delete(item._id.get)),
+    router.plainList,
+    Some(router.delete(item._id.get)),
     false,
     Map(),
     Some(datasetMenu(dataSpaceMetaInfos)),

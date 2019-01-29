@@ -150,6 +150,7 @@ private class MachineLearningServiceImpl @Inject() (
     setting: ClassificationLearningSetting,
     replicationData: Traversable[JsObject]
   ): Future[ClassificationResultsHolder] = {
+
     // create training-test and replication data
 
     // aux function to create a data frame
@@ -206,16 +207,22 @@ private class MachineLearningServiceImpl @Inject() (
     replicationData: Traversable[JsObject]
   ): Future[ClassificationResultsHolder] = {
 
-    // mapping between an order value and index
-    val orderValueIndexFun = mapValuesUDF(orderedValues.zipWithIndex.toMap)
-
     // create training-test and replication data
 
+    // aux function to create a series (ordered) data frame
+    val createSeriesDf = createSeriesDataFrame(
+      fields,
+      inputFieldNames,
+      outputFieldName,
+      orderFieldName,
+      orderedValues,
+      groupIdFieldName
+    )
+
     // aux function to create a data frame
-    def crateDataFrame(jsons: Traversable[JsObject]) = {
-      val df = FeaturesDataFrameFactory(session, jsons, fields, Some(outputFieldName))
-      val df2 = BooleanLabelIndexer(Some("labelString")).transform(df)
-      df2.withColumn(seriesOrderCol, orderValueIndexFun(df2(orderFieldName)))
+    val crateDataFrame = (jsons: Traversable[JsObject]) => {
+      val seriesDf = createSeriesDf(jsons)
+      BooleanLabelIndexer(Some("labelString")).transform(seriesDf)
     }
 
     // create a training/test data frame with all the features
@@ -293,24 +300,17 @@ private class MachineLearningServiceImpl @Inject() (
     replicationData: Traversable[JsObject]
   ): Future[RegressionResultsHolder] = {
 
-    // mapping between an order value and index
-    val orderValueIndexFun = mapValuesUDF(orderedValues.zipWithIndex.toMap)
-
-    // transformer to filter groups with an insufficient count
-    val filterGroups = groupIdFieldName.map(FilterOrderedGroupsWithCount(_, orderedValues.size))
-
     // create training-test and replication data
 
     // aux function to create a data frame
-    def crateDataFrame(jsons: Traversable[JsObject]) = {
-      val df = FeaturesDataFrameFactory(session, jsons, fields)
-      val featuresDf = FeaturesDataFrameFactory.prepFeaturesDataFrame(inputFieldNames.toSet, Some(outputFieldName))(df)
-
-      val seriesDf = featuresDf.withColumn(seriesOrderCol, orderValueIndexFun(featuresDf(orderFieldName))).drop(orderFieldName)
-
-      // filter groups
-      filterGroups.map(_.transform(seriesDf)).getOrElse(seriesDf)
-    }
+    val crateDataFrame = createSeriesDataFrame(
+      fields,
+      inputFieldNames,
+      outputFieldName,
+      orderFieldName,
+      orderedValues,
+      groupIdFieldName
+    )
 
     // create a training/test data frame with all the features
     val df = crateDataFrame(data)
@@ -322,6 +322,31 @@ private class MachineLearningServiceImpl @Inject() (
 
     // run time-series regression with the newly created data frames
     regressTimeSeries(df, mlModel, setting, replicationDf)
+  }
+
+  // aux function to create a data frame
+  protected def createSeriesDataFrame(
+    fields: Seq[(String, FieldTypeSpec)],
+    inputFieldNames: Traversable[String],
+    outputFieldName: String,
+    orderFieldName: String,
+    orderedValues: Seq[Any],
+    groupIdFieldName: Option[String] = None
+  ): Traversable[JsObject] => DataFrame = {
+
+    // mapping between an order value and index
+    val orderValueIndexFun = mapValuesUDF(orderedValues.zipWithIndex.toMap)
+
+    // transformer to filter groups with an insufficient count
+    val filterGroups = groupIdFieldName.map(FilterOrderedGroupsWithCount(_, orderedValues.size))
+
+    (jsons: Traversable[JsObject]) =>
+      val df = FeaturesDataFrameFactory(session, jsons, fields)
+      val featuresDf = FeaturesDataFrameFactory.prepFeaturesDataFrame(inputFieldNames.toSet, Some(outputFieldName))(df)
+      val seriesDf = featuresDf.withColumn(seriesOrderCol, orderValueIndexFun(featuresDf(orderFieldName))).drop(orderFieldName)
+
+      // filter groups
+      filterGroups.map(_.transform(seriesDf)).getOrElse(seriesDf)
   }
 
   override def cluster(

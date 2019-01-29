@@ -88,7 +88,7 @@ case class RCPredictionSettingAndResults(
 
 object RCPredictionSettingAndResults {
   implicit val rcPredictionInputOutputSpecFormat = Json.format[RCPredictionInputOutputSpec]
-  implicit val vectorTransformTypeFormat = OrdinalSortedEnumFormat.enumFormat(VectorScalerType)
+  implicit val vectorTransformTypeFormat = OrdinalSortedEnumFormat(VectorScalerType)
   implicit val activationFunctionTypeFormat = JavaOrdinalEnumFormat[ActivationFunctionType]
   implicit val rcPredictionSettingFormat = Json.format[RCPredictionSetting]
   implicit val rcPredictionSettingAndResultsFormat = new FlattenFormat(Json.format[RCPredictionSettingAndResults], "-")

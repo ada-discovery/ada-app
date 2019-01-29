@@ -13,10 +13,10 @@ abstract class RegressionRunControllerImpl[E <: RegressionResult : Format : Type
   override protected val mlMethodName = (x: Regressor) => x.name.getOrElse("N/A")
 
   override protected def showView = { implicit ctx =>
-    (view.show(_, _, _)).tupled
+    (view.show(router)(_, _, _)).tupled
   }
 
   override protected def listView = { implicit ctx =>
-    (view.list(_, _, _, _, _, _, _, _, _, _)).tupled
+    (view.list(router)(_, _, _, _, _, _, _, _, _, _)).tupled
   }
 }

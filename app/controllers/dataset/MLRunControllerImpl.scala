@@ -60,16 +60,16 @@ protected[controllers] abstract class MLRunControllerImpl[R <: MLResult : Format
 
   override protected def format: Format[R] = implicitly[Format[R]]
 
-  protected val resultFields = caseClassToFlatFieldTypes[R]("-", Set(JsObjectIdentity.name))
-  protected val resultFieldNames = resultFields.map(_._1).toSeq
+  protected lazy val resultFields = caseClassToFlatFieldTypes[R]("-", Set(JsObjectIdentity.name) ++ excludedFieldNames)
+  protected lazy val resultFieldNames = resultFields.map(_._1).toSeq
 
   protected def widgetSpecs: Seq[WidgetSpec]
 
   // export stuff
+  protected val exportFileNamePrefix: String
   private val exportOrderByFieldName = "timeCreated"
-  protected def exportFileNamePrefix: String
-  private val csvFileName = exportFileNamePrefix + dsa.dataSetId.replace(" ", "-") + ".csv"
-  private val jsonFileName = exportFileNamePrefix + dsa.dataSetId.replace(" ", "-") + ".json"
+  private def csvFileName = exportFileNamePrefix + dsa.dataSetId.replace(" ", "-") + ".csv"
+  private def jsonFileName = exportFileNamePrefix + dsa.dataSetId.replace(" ", "-") + ".json"
 
   private val csvCharReplacements = Map("\n" -> " ", "\r" -> " ")
   private val csvEOL = "\n"
@@ -273,7 +273,11 @@ protected[controllers] abstract class MLRunControllerImpl[R <: MLResult : Format
 
   override protected def filterValueConverters(
     fieldNames: Traversable[String]
-  ) = FieldUtil.valueConverters(fieldCaseClassRepo, fieldNames)
+  ) =
+    if (fieldNames.nonEmpty)
+      FieldUtil.valueConverters(fieldCaseClassRepo, fieldNames)
+    else
+      Future(Map())
 
   override def delete(id: BSONObjectID) = Action.async { implicit request =>
     repo.delete(id).map { _ =>

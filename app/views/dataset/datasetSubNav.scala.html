@@ -42,8 +42,23 @@
             @listItemWithPermission(dataSetRouter.getIndependenceTest(Left(Nil)), "Independence Test", ControllerName.dataSet, "getIndependenceTest", Some(2))
             @listItemWithPermission(dataSetRouter.getTable(Left(Nil)), "Table / Export", ControllerName.dataSet, "getTable", Some(2))
             <li role="separator" class="divider"></li>
-            @listItemWithPermission(classificationRunRouter.plainList, "ML Classification", ControllerName.classificationRun, "find", Some(2))
-            @listItemWithPermission(regressionRunRouter.plainList, "ML Regression", ControllerName.regressionRun, "find", Some(2))
+
+            <li class="dropdown-submenu">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">ML Classification</a>
+                <ul class="dropdown-menu">
+                    @listItemWithPermission(standardClassificationRunRouter.plainList, "Standard", ControllerName.classificationRun, "find", Some(2))
+                    @listItemWithPermission(temporalClassificationRunRouter.plainList, "Temporal", ControllerName.temporalClassificationRun, "find", Some(2))
+                </ul>
+            </li>
+
+            <li class="dropdown-submenu">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">ML Regression</a>
+                <ul class="dropdown-menu">
+                    @listItemWithPermission(standardRegressionRunRouter.plainList, "Standard", ControllerName.regressionRun, "find", Some(2))
+                    @listItemWithPermission(temporalRegressionRunRouter.plainList, "Temporal", ControllerName.temporalRegressionRun, "find", Some(2))
+                </ul>
+            </li>
+
             @listItemWithPermission(dataSetRouter.getClusterization, "ML Clustering", ControllerName.dataSet, "getClusterization", Some(2))
             <li role="separator" class="divider"></li>
             @listItemWithPermission(dataSetRouter.getSeriesProcessingSpec, "Series Processing", ControllerName.dataSet, "getSeriesProcessingSpec", Some(2))
@@ -69,21 +84,28 @@
 </ul>
 
 <script type="text/javascript">
-    $("#dataSetSubMenu .dropdown:not(#viewsDiv)").each(function () {
-        var liCount = $(this).find("li").size()
-        var separatorCount = $(this).find("li.divider").size()
-        if (liCount - separatorCount == 0) {
-            $(this).remove()
-        } else {
-            $(this).find("li").each(function(index, item) {
-                if ($(item).hasClass("divider")) {
-                    var prev = $(item).prev()
-                    var next = $(item).next()
-                    if (next.size() == 0 || next.hasClass("divider")) {
-                        $(item).remove()
+    $(function () {
+        $("#dataSetSubMenu .dropdown:not(#viewsDiv)").each(function () {
+            var liCount = $(this).find("li").size()
+            var separatorCount = $(this).find("li.divider").size()
+            if (liCount - separatorCount == 0) {
+                $(this).remove()
+            } else {
+                $(this).find("li").each(function (index, item) {
+                    if ($(item).hasClass("divider")) {
+                        var prev = $(item).prev()
+                        var next = $(item).next()
+                        if (next.size() == 0 || next.hasClass("divider")) {
+                            $(item).remove()
+                        }
                     }
-                }
-            })
-        }
-    });
+                })
+            }
+        });
+
+        $("li.dropdown-submenu").each(function () {
+            if ($(this).find("li.active").size() > 0)
+                $(this).addClass("active")
+        });
+    })
 </script>

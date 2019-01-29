@@ -25,7 +25,7 @@
     )
 
     @helper.javascriptRouter("regressionRunJsRoutes")(
-        standardRegressionRunJsRouter.launch
+        temporalRegressionRunJsRouter.launch
     )
 
     <script type="text/javascript">
@@ -34,6 +34,20 @@
                 $('#outputFieldTypeahead'),
                 $('#outputFieldName'),
                 '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Integer, FieldTypeId.Double, FieldTypeId.Date)).url)',
+                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+            )
+
+            populateFieldTypeahedFromUrl(
+                $('#groupIdFieldTypeahead'),
+                $('#groupIdFieldName'),
+                '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Integer, FieldTypeId.Double, FieldTypeId.Date, FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
+                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+            )
+
+            populateFieldTypeahedFromUrl(
+                $('#orderFieldTypeahead'),
+                $('#orderFieldName'),
+                '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Integer, FieldTypeId.Double, FieldTypeId.Date, FieldTypeId.Enum, FieldTypeId.String)).url)',
                 @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
             )
 
@@ -69,6 +83,10 @@
                 var outputFieldName = $("#outputFieldName").val();
                 var outputFieldLabel = $("#outputFieldTypeahead").val();
 
+                var groupIdFieldName = $("#groupIdFieldName").val();
+                var orderFieldName = $("#orderFieldName").val();
+                var orderedStringValues = $("#orderedStringValues").val();
+
                 var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
                 var filterIdJson = (filterId) ? {'$oid': filterId} : null
 
@@ -78,6 +96,9 @@
                 const ioSpec = {
                     "inputFieldNames": inputFieldNames,
                     "outputFieldName": outputFieldName,
+                    "groupIdFieldName": groupIdFieldName,
+                    "orderFieldName": orderFieldName,
+                    "orderedStringValues": orderedStringValues,
                     "filterId": filterIdJson,
                     "replicationFilterId": replicationFilterIdJson
                 }
@@ -88,7 +109,7 @@
                 var mlModelIdJson = (mlModelId) ? {'$oid': mlModelId} : null
                 var mlModelName = $("#mlModelTypeahead").val();
 
-                // Learning Setting
+                // Core Learning Setting
 
                 var featuresNormalizationType = $("#featuresNormalizationType").val()
                 if (!featuresNormalizationType)
@@ -107,7 +128,7 @@
                 if (!crossValidationEvalMetric)
                     crossValidationEvalMetric = null
 
-                const learningSetting = {
+                const core = {
                     "featuresNormalizationType": featuresNormalizationType,
                     "outputNormalizationType": outputNormalizationType,
                     "pcaDims": intValue(pcaDims),
@@ -116,6 +137,23 @@
                     "crossValidationFolds": intValue(crossValidationFolds),
                     "crossValidationEvalMetric": crossValidationEvalMetric,
                     "collectOutputs": false
+                }
+
+
+                // Temporal Learning Setting
+
+                var predictAhead = $("#predictAhead").val()
+                var slidingWindowSize = $("#slidingWindowSize").val()
+                var minCrossValidationTrainingSizeRatio = $("#minCrossValidationTrainingSizeRatio").val()
+                var trainingTestSplitOrderValue = $("#trainingTestSplitOrderValue").val()
+
+                const learningSetting = {
+                    "core": core,
+                    "predictAhead": predictAhead,
+                    "slidingWindowSize": slidingWindowSize,
+                 // "reservoirSetting": reservoirSetting,
+                    "minCrossValidationTrainingSizeRatio": minCrossValidationTrainingSizeRatio,
+                    "trainingTestSplitOrderValue": trainingTestSplitOrderValue
                 }
 
                 // Save Options
@@ -147,7 +185,7 @@
                     return
                 }
 
-                regressionRunJsRoutes.controllers.dataset.StandardRegressionRunDispatcher.launch(runSpecJSON, saveResults).ajax( {
+                regressionRunJsRoutes.controllers.dataset.TemporalRegressionRunDispatcher.launch(runSpecJSON, saveResults).ajax( {
                     success: function(results) {
                         showMessage("'" + mlModelName + "' regression finished.")
                         showMLOutput(results)
@@ -193,25 +231,61 @@
 
 @extraFields = {
     @trainingSettingFields()
+
+    <hr/>
+
+    @labelValueAux("groupIdFieldName", "Group Id Field") {
+        @fieldTypeahead(None, "groupIdFieldName", "Field Name", true)
+    }
+
+    @labelValueAux("orderFieldName", "Order Field") {
+        @fieldTypeahead(None, "orderFieldName", "Field Name", true)
+    }
+
+    @labelValueAux("orderedStringValues", "Ordered String Values") {
+        <input id="orderedStringValues" type="text" class="input-lg-full" placeholder="" value="">
+    }
+
+    @labelValueAux("predictAhead", "Predict Ahead") {
+        <input id="predictAhead" type="text" class="input-lg-full" placeholder="" value="1">
+    }
+
+    @labelValueAux("slidingWindowSize", "Sliding Window Size") {
+        <input id="slidingWindowSize" type="text" class="input-lg-full" placeholder="" value="2">
+    }
+
+    @labelValueAux("minCrossValidationTrainingSizeRatio", "Min Cross Validation Training Size Ratio") {
+        <input id="minCrossValidationTrainingSizeRatio" type="text" class="input-lg-full" placeholder="" value="">
+    }
+
+    @labelValueAux("trainingTestSplitOrderValue", "Training Test Split Order Value") {
+        <input id="trainingTestSplitOrderValue" type="text" class="input-lg-full" placeholder="" value="">
+    }
+
+    <hr/>
+
     @labelValueAux("outputNormalizationType", "Output Normalization") {
         @selectEnum("outputNormalizationType", VectorScalerType, true, Some("input-lg-full"))
     }
+
     @labelValueAux("crossValidationEvalMetric", "Cross Validation Eval Metric") {
         @selectEnum("crossValidationEvalMetric", RegressionEvalMetric, true, Some("input-lg-full"))
     }
+
     @labelValueAux("replicationFilterId", "Replication Data") {
         @typeahead("replicationFilterNameTypeahead", "replicationFilterId", "Filter", true)
     }
+
     @labelValueAux("saveResults", "Save Results?") {
         <input id="saveResults" type="checkbox"/>
     }
 }
 
-@main(Messages("regression.title", dataSetName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
+@main(Messages("temporalRegression.title", dataSetName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
 
     <div class="page-header">
         <h3>
-            @Messages("regression.title", dataSetName)
+            @Messages("temporalRegression.title", dataSetName)
         </h3>
     </div>
 

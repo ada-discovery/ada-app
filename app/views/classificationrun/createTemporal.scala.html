@@ -5,13 +5,12 @@
 @import views.html.mlRun._
 @import views.html.mlRun.{create => mlRunCreate}
 @import views.html.classificationrun.samplingTable
-@import views.html.mlRun.inputFieldTable
-@import org.incal.spark_ml.models.VectorScalerType
 @import views.html.elements.{fieldTypeahead, typeahead}
 @import play.api.i18n.Messages
 @import models.{DataSpaceMetaInfo, FieldTypeId, FilterShowFieldStyle}
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
+@import org.incal.spark_ml.models.VectorScalerType
 @import org.incal.spark_ml.models.classification.ClassificationEvalMetric
 
 @(
@@ -25,13 +24,19 @@
 @bottomResources = {
 
     @helper.javascriptRouter("classificationRunJsRoutes")(
-        standardClassificationRunJsRouter.launch,
-        standardClassificationRunJsRouter.selectFeaturesAsAnovaChiSquare
+        temporalClassificationRunJsRouter.launch
     )
 
     <script type="text/javascript">
         $(function () {
             populateCategoricalTypeahead('outputField');
+
+            populateFullTypeahead('groupIdField');
+
+            populateCustomFieldTypeaheadFromUrl(
+                'orderField',
+                '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Integer, FieldTypeId.Double, FieldTypeId.Date, FieldTypeId.Enum, FieldTypeId.String)).url)'
+            )
 
             populateIdLabelTypeaheadFromUrl(
                 'mlModel',
@@ -39,20 +44,29 @@
             );
 
             $('#outputFieldTypeahead, #mlModelTypeahead, #filterNameTypeahead').keypress(function (e) {
-                if (e.which == 13) { launch(); }
+                if (e.which == 13) { launch();}
             });
 
-            $('#launchButton').on('click', launch);
+            $('#launchButton').on('click', launch)
         });
 
         function launch() {
-
             // IO
             $('#inputFieldNameDiv').dynamicTable('updateModelFromTable');
             var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
 
             var outputFieldName = $("#outputFieldName").val();
             var outputFieldLabel = $("#outputFieldTypeahead").val();
+
+            var groupIdFieldName = $("#groupIdFieldName").val();
+            var orderFieldName = $("#orderFieldName").val();
+
+            var orderedStringValues = $("#orderedStringValues").val();
+            if (!orderedStringValues) {
+                orderedStringValues = null;
+            } else {
+                orderedStringValues = orderedStringValues.split(",").map(function(item) { return item.trim(); })
+            }
 
             var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
             var filterIdJson = (filterId) ? {'$oid': filterId} : null
@@ -63,6 +77,9 @@
             const ioSpec = {
                 "inputFieldNames": inputFieldNames,
                 "outputFieldName": outputFieldName,
+                "groupIdFieldName": groupIdFieldName,
+                "orderFieldName": orderFieldName,
+                "orderedStringValues": orderedStringValues,
                 "filterId": filterIdJson,
                 "replicationFilterId": replicationFilterIdJson
             }
@@ -73,7 +90,7 @@
             var mlModelIdJson = (mlModelId) ? {'$oid': mlModelId} : null
             var mlModelName = $("#mlModelTypeahead").val();
 
-            // Learning Setting
+            // Core Learning Setting
 
             var featuresNormalizationType = $("#featuresNormalizationType").val()
             if (!featuresNormalizationType)
@@ -94,7 +111,7 @@
                 crossValidationEvalMetric = null
             var binCurvesNumBins = $("#binCurvesNumBins").val()
 
-            const learningSetting = {
+            const core = {
                 "featuresNormalizationType": featuresNormalizationType,
                 "featuresSelectionNum": intValue(featuresSelectionNum),
                 "pcaDims": intValue(pcaDims),
@@ -104,6 +121,21 @@
                 "crossValidationFolds": intValue(crossValidationFolds),
                 "crossValidationEvalMetric": crossValidationEvalMetric,
                 "binCurvesNumBins": intValue(binCurvesNumBins)
+            }
+
+            // Temporal Learning Setting
+
+            var predictAhead = $("#predictAhead").val()
+            var slidingWindowSize = $("#slidingWindowSize").val()
+            var minCrossValidationTrainingSizeRatio = $("#minCrossValidationTrainingSizeRatio").val()
+            var trainingTestSplitOrderValue = $("#trainingTestSplitOrderValue").val()
+
+            const learningSetting = {
+                "core": core,
+                "predictAhead": intValue(predictAhead),
+                "slidingWindowSize": intValue(slidingWindowSize),
+                "minCrossValidationTrainingSizeRatio": floatValue(minCrossValidationTrainingSizeRatio),
+                "trainingTestSplitOrderValue": intValue(trainingTestSplitOrderValue)
             }
 
             // Save Options
@@ -123,23 +155,23 @@
             $("#binCurvesPanelDiv").html("");
 
             if (!mlModelId) {
-                showError("Classification cannot be launched. No model selected.");
+                showError("Temporal classification cannot be launched. No model selected.");
                 return
             }
 
             if (!outputFieldName) {
-                showError("Classification cannot be launched. No output field selected.");
+                showError("Temporal classification cannot be launched. No output field selected.");
                 return
             }
 
             if (inputFieldNames.length == 0) {
-                showError("Classification cannot be launched. No input fields selected.");
+                showError("Temporal classification cannot be launched. No input fields selected.");
                 return
             }
 
-            classificationRunJsRoutes.controllers.dataset.StandardClassificationRunDispatcher.launch(runSpecJSON, saveResults, saveBinCurves).ajax({
+            classificationRunJsRoutes.controllers.dataset.TemporalClassificationRunDispatcher.launch(runSpecJSON, saveResults, saveBinCurves).ajax({
                 success: function (data) {
-                    showMessage("'" + mlModelName + "' classification finished.")
+                    showMessage("'" + mlModelName + "' temporal classification finished.")
                     showMLOutput(data.results)
 
                     if (data.trainingCurves.length > 0) {
@@ -157,7 +189,7 @@
                 }
             });
 
-            showMessage("Classification for the field '" + outputFieldLabel + "' using the ML model '" + mlModelName + "' launched.")
+            showMessage("Temporal classification for the field '" + outputFieldLabel + "' using the ML model '" + mlModelName + "' launched.")
             addSpinner($("#outputDiv"))
 
         }
@@ -179,66 +211,7 @@
             })
         }
 
-        function selectFeaturesAsAnovaChiSquare() {
-            var outputFieldName = $("#outputFieldName").val();
-            var outputFieldLabel = $("#outputFieldTypeahead").val();
-
-            $('#inputFieldNameDiv').dynamicTable('updateModelFromTable');
-            var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
-
-            var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
-
-            var featuresToSelectNum = $("#featuresToSelectNum").val();
-
-            if (!outputFieldName) {
-                showError("Feature selection cannot be performed. No output field selected.");
-                return
-            }
-
-            if (inputFieldNames.length == 0) {
-                showError("Feature selection cannot be performed. No input fields selected.");
-                return
-            }
-
-            classificationRunJsRoutes.controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsAnovaChiSquare(inputFieldNames, outputFieldName, filterId, featuresToSelectNum).ajax( {
-                success: function(selectedFieldNames) {
-                    showMessage("ANOVA/Chi-Square feature selection finished.")
-                    var tableBody = $("#inputFieldNameDiv").find("table tbody")
-                    tableBody.find('tr').each(function() {
-                        var fieldName = $(this).find("#fieldName").val();
-                        if (selectedFieldNames.indexOf(fieldName) == -1) {
-                            $(this).remove()
-                        }
-                    });
-                },
-                error: function(data){
-                    showError( data.responseText );
-                }
-            });
-
-            showMessage("ANOVA/Chi-Square feature selection for the field '" + outputFieldLabel + "' launched.")
-        }
     </script>
-}
-
-@anovaChiSquareModalBody(defaultFeaturesToSelectNum: Int) = {
-    <fieldset>
-    @labelValue("featuresToSelectNum", "Features Num", false, None, 4) {
-        <input id="featuresToSelectNum" name="featuresToSelectNum" value="@defaultFeaturesToSelectNum">
-        }
-    </fieldset>
-}
-
-@anovaChiSquareButtons = {
-    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="button" id="submitButton" class="btn btn-primary" data-dismiss="modal" onclick="selectFeaturesAsAnovaChiSquare(); return false;">OK</button>
-}
-
-@extraFieldButtons =  {
-    <a id="anovaChiSquareFieldSelectionButton" class="btn btn-info btn-sm" data-toggle="modal" data-target="#anovaChiSquareFeatureSelectionModal" title="ANOVA/Chi-Square Feature Selection">
-        <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>ANOVA/Chi-&#9724;
-    </a>
-    @modal("anovaChiSquareFeatureSelectionModal", "ANOVA/Chi-Square Feature Selection", anovaChiSquareModalBody(4), None, Some(anovaChiSquareButtons))
 }
 
 @labelValueAux(key: String, label: Any)(valueElement : Any) = @{
@@ -254,13 +227,29 @@
         @fieldTypeahead(None, "outputField", "Field Name", true)
     }
 
-    @inputFieldTable(Some(extraFieldButtons))
+    @inputFieldTable()
+
+    @labelValueAux("groupIdField", "Group Id Field") {
+        @fieldTypeahead(None, "groupIdField", "Field Name", true)
+    }
+
+    @labelValueAux("orderField", "Order Field") {
+        @fieldTypeahead(None, "orderField", "Field Name", true)
+    }
+
+    @labelValueAux("orderedStringValues", "Ordered String Values") {
+        <input id="orderedStringValues" type="text" class="input-lg-full" placeholder="" value="">
+    }
 
     @labelValueAux("filterId", "Input Data") {
         @typeahead("filterNameTypeahead", "filterId", "Filter", true)
     }
 
     <hr/>
+
+    @textField("predictAhead", "Predict Ahead", None, Some("1"))
+
+    @textField("slidingWindowSize", "Sliding Window Size", None, Some("2"))
 
     @enumField("featuresNormalizationType", "Feature Normalization", VectorScalerType)
 
@@ -272,7 +261,11 @@
 @secondColumn = {
     @trainingSettingFields()
 
+    @textField("trainingTestSplitOrderValue", "Training Test Split Order Value")
+
     @enumField("crossValidationEvalMetric", "Cross Validation Eval Metric", ClassificationEvalMetric)
+
+    @textField("minCrossValidationTrainingSizeRatio", "Min Cross Validation Training Size Ratio")
 
     @labelValueAux("replicationFilterId", "Replication Data") {
         @typeahead("replicationFilterNameTypeahead", "replicationFilterId", "Filter", true)
@@ -301,7 +294,7 @@
 }
 
 @mlRunCreate(
-    Messages("classification.title", displayName),
+    Messages("temporalClassification.title", displayName),
     filterShowFieldStyle,
     dataSpaceMetaInfos,
     firstColumn,

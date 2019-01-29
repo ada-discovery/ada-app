@@ -17,8 +17,10 @@
 @import org.incal.play.Page
 @import org.incal.core.FilterCondition
 @import org.incal.spark_ml.models.result.ClassificationResult
+@import controllers.dataset.MLRunRouter
 
 @(
+    router: MLRunRouter)(
     domainName : String,
     dataSetName: String,
     page: Page[ClassificationResult],
@@ -54,7 +56,7 @@
         <div class="col-md-10">
             @filterWithJs(
                 Filter(conditions),
-                classificationRunRouter.plainList,
+                router.plainList,
                 Left(allClassificationRunFields),
                 None,
                 Some(FilterShowFieldStyle.LabelsOnly)
@@ -63,7 +65,7 @@
         <div class="pull-right">
             <ul class="list-inline">
                 <li>
-                    <a class="btn btn-success btn-sm" href="@classificationRunRouter.create" data-toggle="tooltip" title="Launch New Classification">
+                    <a class="btn btn-success btn-sm" href="@router.create" data-toggle="tooltip" title="Launch New Classification">
                         <span class="glyphicon glyphicon-plus"></span>
                     </a>
                 </li>
@@ -74,21 +76,21 @@
                 </li>
                 <li>
                     @exportDropdown(
-                        classificationRunRouter.exportCsv(_, true, None, _, _),
-                        classificationRunRouter.exportJson,
+                        router.exportCsv(_, true, None, _, _),
+                        router.exportJson,
                         conditions
                     )()
                 </li>
             </ul>
         </div>
-        @modal("exportToDataSetModal", "Export to Data Set", modalBody, Some(classificationRunRouter.exportToDataSet(None, None)), Some(nodalButtons))
+        @modal("exportToDataSetModal", "Export to Data Set", modalBody, Some(router.exportToDataSet(None, None)), Some(nodalButtons))
     </div>
 }
 
 @table = {
     @paginatedTable(
         page,
-        classificationRunRouter.list(_, _, conditions),
+        router.list(_, _, conditions),
         typeColumns[ClassificationResult](
             (Some("runSpec-mlModelId"), "ML Model", result => mlModelIdNameMap.get(result.mlModelId).get),
             (Some("runSpec-ioSpec-filterId"), "Filter", _.filterId.map(filterId => filterIdNameMap.get(filterId).get).getOrElse("")),
@@ -101,7 +103,7 @@
             (Some("testStats-areaUnderPR-mean"), "Test Area Under PR Mean", _.testStats.flatMap(_.areaUnderPR.map(areaUnderPR => "%.3f".format(areaUnderPR.mean))).getOrElse("")),
             (Some("timeCreated"), "Time Created", _.timeCreated.toString)
         ),
-        Some({ item : Any => classificationRunRouter.get(item.asInstanceOf[ClassificationResult]._id.get)})
+        Some({ item : Any => router.get(item.asInstanceOf[ClassificationResult]._id.get)})
     )
 }
 

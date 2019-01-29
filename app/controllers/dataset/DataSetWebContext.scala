@@ -21,10 +21,17 @@ class DataSetWebContext(
   val filterJsRouter = new FilterJsRouter(dataSetId)
   val dataViewRouter = new DataViewRouter(dataSetId)
   val dataViewJsRouter = new DataViewJsRouter(dataSetId)
-  val classificationRunRouter = new StandardClassificationRunRouter(dataSetId)
-  val classificationRunJsRouter = new StandardClassificationRunJsRouter(dataSetId)
-  val regressionRunRouter = new StandardRegressionRunRouter(dataSetId)
-  val regressionRunJsRouter = new StandardRegressionRunJsRouter(dataSetId)
+
+  // ML routers
+
+  val standardClassificationRunRouter = new StandardClassificationRunRouter(dataSetId)
+  val standardClassificationRunJsRouter = new StandardClassificationRunJsRouter(dataSetId)
+  val temporalClassificationRunRouter = new TemporalClassificationRunRouter(dataSetId)
+  val temporalClassificationRunJsRouter = new TemporalClassificationRunJsRouter(dataSetId)
+  val standardRegressionRunRouter = new StandardRegressionRunRouter(dataSetId)
+  val standardRegressionRunJsRouter = new StandardRegressionRunJsRouter(dataSetId)
+  val temporalRegressionRunRouter = new TemporalRegressionRunRouter(dataSetId)
+  val temporalRegressionRunJsRouter = new TemporalRegressionRunJsRouter(dataSetId)
 }
 
 object DataSetWebContext {
@@ -98,19 +105,35 @@ object DataSetWebContext {
     implicit webContext: DataSetWebContext
   ) = webContext.dataViewJsRouter
 
-  def classificationRunRouter(
+  def standardClassificationRunRouter(
     implicit webContext: DataSetWebContext
-  ) = webContext.classificationRunRouter
+  ) = webContext.standardClassificationRunRouter
 
-  def classificationRunJsRouter(
+  def standardClassificationRunJsRouter(
     implicit webContext: DataSetWebContext
-  ) = webContext.classificationRunJsRouter
+  ) = webContext.standardClassificationRunJsRouter
 
-  def regressionRunRouter(
+  def temporalClassificationRunRouter(
     implicit webContext: DataSetWebContext
-  ) = webContext.regressionRunRouter
+  ) = webContext.temporalClassificationRunRouter
 
-  def regressionRunJsRouter(
+  def temporalClassificationRunJsRouter(
     implicit webContext: DataSetWebContext
-  ) = webContext.regressionRunJsRouter
+  ) = webContext.temporalClassificationRunJsRouter
+
+  def standardRegressionRunRouter(
+    implicit webContext: DataSetWebContext
+  ) = webContext.standardRegressionRunRouter
+
+  def standardRegressionRunJsRouter(
+    implicit webContext: DataSetWebContext
+  ) = webContext.standardRegressionRunJsRouter
+
+  def temporalRegressionRunRouter(
+    implicit webContext: DataSetWebContext
+  ) = webContext.temporalRegressionRunRouter
+
+  def temporalRegressionRunJsRouter(
+    implicit webContext: DataSetWebContext
+  ) = webContext.temporalRegressionRunJsRouter
 }
