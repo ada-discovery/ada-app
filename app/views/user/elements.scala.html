@@ -40,6 +40,8 @@
                 <option value="dataview">dataview</option>
                 <option value="classificationRun">classificationRun</option>
                 <option value="regressionRun">regressionRun</option>
+                <option value="temporalClassificationRun">temporalClassificationRun</option>
+                <option value="temporalRegressionRun">temporalRegressionRun</option>
             </select>
         }
 
@@ -136,6 +138,8 @@
     var dataViewActionNames = [@actionNamesAsString(controllerActionNames.dataViewActions)]
     var classificationRunActionNames = [@actionNamesAsString(controllerActionNames.classificationRunActions)]
     var regressionRunActionNames = [@actionNamesAsString(controllerActionNames.regressionRunActions)]
+    var temporalClassificationRunActionNames = [@actionNamesAsString(controllerActionNames.temporalClassificationRunActions)]
+    var temporalRegressionRunActionNames = [@actionNamesAsString(controllerActionNames.temporalRegressionRunActions)]
 
     function updateActionItems() {
         var permission_controller = $('#permission-controller').val()
@@ -162,6 +166,12 @@
                 break;
             case "regressionRun":
                 actions = regressionRunActionNames;
+                break;
+            case "temporalClassificationRun":
+                actions = temporalClassificationRunActionNames;
+                break;
+            case "temporalRegressionRun":
+                actions = temporalRegressionRunActionNames;
                 break;
         }
 

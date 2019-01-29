@@ -13,6 +13,7 @@ import org.incal.spark_ml.models.VectorScalerType
 import org.incal.spark_ml.models.regression.RegressionEvalMetric
 import org.incal.spark_ml.models.result.TemporalRegressionResult
 import org.incal.spark_ml.models.setting.{RegressionRunSpec, TemporalRegressionRunSpec}
+import util.FieldUtil.FieldOps
 import persistence.RepoTypes.RegressorRepo
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -75,7 +76,7 @@ protected[controllers] class TemporalRegressionRunControllerImpl @Inject()(
     runSpec: TemporalRegressionRunSpec,
     saveResults: Boolean
   ) = Action.async { implicit request => {
-    println(runSpec)
+    val ioSpec = runSpec.ioSpec
 
     val mlModelFuture = mlMethodRepo.get(runSpec.mlModelId)
     val criteriaFuture = loadCriteria(runSpec.ioSpec.filterId)
@@ -84,8 +85,14 @@ protected[controllers] class TemporalRegressionRunControllerImpl @Inject()(
     val fieldNames = runSpec.ioSpec.allFieldNames
     val fieldsFuture = dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
 
-    def find(criteria: Seq[Criterion[Any]]) =
-      dsa.dataSetRepo.find(criteria, projection = fieldNames)
+    def find(criteria: Seq[Criterion[Any]], orderedValues: Seq[Any]) = {
+      val orderedValuesOnly = if (orderedValues.nonEmpty)
+        Seq(ioSpec.orderFieldName #-> orderedValues)
+      else
+        Nil
+
+      dsa.dataSetRepo.find(criteria ++ orderedValuesOnly, projection = fieldNames)
+    }
 
     for {
       // load a ML model
@@ -97,22 +104,26 @@ protected[controllers] class TemporalRegressionRunControllerImpl @Inject()(
       // replication criteria
       replicationCriteria <- replicationCriteriaFuture
 
-      // main data
-      mainData <- find(criteria)
-
       // fields
       fields <- fieldsFuture
 
+      // order field
+      orderField = fields.find(_.name == ioSpec.orderFieldName).getOrElse(throw new AdaException(s"Order field ${ioSpec.outputFieldName} not found."))
+      orderFieldType = ftf(orderField.fieldTypeSpec).asValueOf[Any]
+      orderedValues = if (ioSpec.orderedStringValues.isEmpty && (orderField.isEnum || orderField.isString)) {
+        throw new AdaException(s"String (display) values in fixed order required for the ${orderField.fieldType} order field ${ioSpec.orderFieldName}.")
+      } else
+        ioSpec.orderedStringValues.map(x => orderFieldType.displayStringToValue(x).get)
+
+      // main data
+      mainData <- find(criteria, orderedValues)
+
       // replication data
-      replicationData <- if (replicationCriteria.nonEmpty) find(replicationCriteria) else Future(Nil)
+      replicationData <- if (replicationCriteria.nonEmpty) find(replicationCriteria, orderedValues) else Future(Nil)
 
       // run the selected classifier (ML model)
       resultsHolder <- mlModel.map { mlModel =>
         val fieldNameAndSpecs = fields.toSeq.map(field => (field.name, field.fieldTypeSpec))
-        val ioSpec = runSpec.ioSpec
-        val orderField = fields.find(_.name == ioSpec.orderFieldName).getOrElse(throw new AdaException(s"Order field ${ioSpec.outputFieldName} not found."))
-        val orderFieldType = ftf(orderField.fieldTypeSpec).asValueOf[Any]
-        val orderedValues = ioSpec.orderedStringValues.map(x => orderFieldType.displayStringToValue(x).get)
 
         val results = mlService.regressRowTemporalSeries(
           mainData, fieldNameAndSpecs, ioSpec.inputFieldNames, ioSpec.outputFieldName, ioSpec.orderFieldName, orderedValues, Some(ioSpec.groupIdFieldName),

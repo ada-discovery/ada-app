@@ -15,7 +15,7 @@
 @import org.incal.spark_ml.models.classification.ClassificationEvalMetric
 
 @(
-    displayName: String,
+    dataSetName: String,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -37,10 +37,6 @@
                 'mlModel',
                 '@Html(controllers.ml.routes.ClassifierController.idAndNames.url)'
             );
-
-            $('#outputFieldTypeahead, #mlModelTypeahead, #filterNameTypeahead').keypress(function (e) {
-                if (e.which == 13) { launch(); }
-            });
 
             $('#launchButton').on('click', launch);
         });
@@ -153,7 +149,9 @@
                     }
                 },
                 error: function (data) {
-                    showError(data.responseText);
+                    $("#outputDiv").html("")
+                    hideMessages();
+                    showErrorResponse(data);
                 }
             });
 
@@ -212,7 +210,9 @@
                     });
                 },
                 error: function(data){
-                    showError( data.responseText );
+                    $("#outputDiv").html("")
+                    hideMessages();
+                    showErrorResponse(data);
                 }
             });
 
@@ -223,8 +223,8 @@
 
 @anovaChiSquareModalBody(defaultFeaturesToSelectNum: Int) = {
     <fieldset>
-    @labelValue("featuresToSelectNum", "Features Num", false, None, 4) {
-        <input id="featuresToSelectNum" name="featuresToSelectNum" value="@defaultFeaturesToSelectNum">
+        @labelValue("featuresToSelectNum", "Features Num", false, None, 4) {
+            <input id="featuresToSelectNum" name="featuresToSelectNum" value="@defaultFeaturesToSelectNum">
         }
     </fieldset>
 }
@@ -301,7 +301,7 @@
 }
 
 @mlRunCreate(
-    Messages("classification.title", displayName),
+    Messages("classification.title", dataSetName),
     filterShowFieldStyle,
     dataSpaceMetaInfos,
     firstColumn,

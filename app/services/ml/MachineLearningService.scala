@@ -191,7 +191,7 @@ private class MachineLearningServiceImpl @Inject() (
     val replicationDf = replicationData.map(crateDataFrame)
 
     // run time-series classification with the newly created data frames
-    classifyTimeSeries(df, mlModel, setting, replicationDf)
+    classifyTimeSeries(df, mlModel, setting, None, replicationDf)
   }
 
   override def classifyRowTemporalSeries(
@@ -228,17 +228,23 @@ private class MachineLearningServiceImpl @Inject() (
     // create a training/test data frame with all the features
     val df = crateDataFrame(data)
 
+    df.show(truncate = false)
+
     // create a replication data frame with all the features
     val replicationDf = if (replicationData.nonEmpty) Some(crateDataFrame(replicationData)) else None
 
     // run time-series classification with the newly created data frames
-    classifyTimeSeries(df, mlModel, setting, replicationDf)
+    classifyTimeSeries(df, mlModel, setting, groupIdFieldName, replicationDf)
   }
 
   private def mapValuesUDF(map: Map[Any, Int]) = udf { value: Any =>
-    map.get(value).getOrElse(
-      throw new IllegalStateException(s"The map $map does not contain a value $value.")
-    )
+    if (map.isEmpty) {
+      value.asInstanceOf[Int]
+    } else {
+      map.get(value).getOrElse(
+        throw new IllegalStateException(s"The map $map does not contain a value $value.")
+      )
+    }
   }
 
   override def regressStatic(
@@ -284,7 +290,7 @@ private class MachineLearningServiceImpl @Inject() (
     val replicationDf = replicationData.map(crateDataFrame)
 
     // run time-series regression with the newly created data frames
-    regressTimeSeries(df, mlModel, setting, replicationDf)
+    regressTimeSeries(df, mlModel, setting, None, replicationDf)
   }
 
   override def regressRowTemporalSeries(
@@ -321,7 +327,7 @@ private class MachineLearningServiceImpl @Inject() (
     val replicationDf = if (replicationData.nonEmpty) Some(crateDataFrame(replicationData)) else None
 
     // run time-series regression with the newly created data frames
-    regressTimeSeries(df, mlModel, setting, replicationDf)
+    regressTimeSeries(df, mlModel, setting, groupIdFieldName, replicationDf)
   }
 
   // aux function to create a data frame
@@ -343,7 +349,14 @@ private class MachineLearningServiceImpl @Inject() (
     (jsons: Traversable[JsObject]) =>
       val df = FeaturesDataFrameFactory(session, jsons, fields)
       val featuresDf = FeaturesDataFrameFactory.prepFeaturesDataFrame(inputFieldNames.toSet, Some(outputFieldName))(df)
-      val seriesDf = featuresDf.withColumn(seriesOrderCol, orderValueIndexFun(featuresDf(orderFieldName))).drop(orderFieldName)
+
+      // if ordered values are defined use their position as index, otherwise we assume the given values are integers and can be used directly as index
+      val seriesDf =
+        if (orderedValues.nonEmpty) {
+          featuresDf.withColumn(seriesOrderCol, orderValueIndexFun(featuresDf(orderFieldName))).drop(orderFieldName)
+        } else {
+          featuresDf.withColumn(seriesOrderCol, featuresDf(orderFieldName).cast(IntegerType)).drop(orderFieldName)
+        }
 
       // filter groups
       filterGroups.map(_.transform(seriesDf)).getOrElse(seriesDf)

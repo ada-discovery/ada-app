@@ -82,8 +82,6 @@ class StandardClassificationRunControllerImpl @Inject()(
     saveResults: Boolean,
     saveBinCurves: Boolean
   ) = Action.async { implicit request => {
-    println(runSpec)
-
     val mlModelFuture = mlMethodRepo.get(runSpec.mlModelId)
     val criteriaFuture = loadCriteria(runSpec.ioSpec.filterId)
     val replicationCriteriaFuture = loadCriteria(runSpec.ioSpec.replicationFilterId)

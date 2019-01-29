@@ -85,23 +85,29 @@
 
 <script type="text/javascript">
     $(function () {
-        $("#dataSetSubMenu .dropdown:not(#viewsDiv)").each(function () {
-            var liCount = $(this).find("li").size()
-            var separatorCount = $(this).find("li.divider").size()
-            if (liCount - separatorCount == 0) {
-                $(this).remove()
-            } else {
-                $(this).find("li").each(function (index, item) {
-                    if ($(item).hasClass("divider")) {
-                        var prev = $(item).prev()
-                        var next = $(item).next()
-                        if (next.size() == 0 || next.hasClass("divider")) {
-                            $(item).remove()
+        removeEmpty(".dropdown-submenu");
+
+        removeEmpty(".dropdown:not(#viewsDiv)");
+
+        function removeEmpty(menuClass) {
+            $("#dataSetSubMenu " + menuClass).each(function () {
+                var liCount = $(this).find("li").size()
+                var separatorCount = $(this).find("li.divider").size()
+                if (liCount - separatorCount == 0) {
+                    $(this).remove()
+                } else {
+                    $(this).find("li").each(function (index, item) {
+                        if ($(item).hasClass("divider")) {
+                            var prev = $(item).prev()
+                            var next = $(item).next()
+                            if (next.size() == 0 || next.hasClass("divider")) {
+                                $(item).remove()
+                            }
                         }
-                    }
-                })
-            }
-        });
+                    })
+                }
+            });
+        }
 
         $("li.dropdown-submenu").each(function () {
             if ($(this).find("li.active").size() > 0)

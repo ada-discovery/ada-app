@@ -49,7 +49,9 @@ class UserController @Inject() (
     getMethodNames[FilterController],
     getMethodNames[DataViewController],
     getMethodNames[StandardClassificationRunController],
-    getMethodNames[StandardRegressionRunController]
+    getMethodNames[StandardRegressionRunController],
+    getMethodNames[TemporalClassificationRunController],
+    getMethodNames[TemporalRegressionRunController]
   )
 
   // create view and data
@@ -179,7 +181,9 @@ case class DataSetControllerActionNames(
   filterActions: Traversable[String],
   dataViewActions: Traversable[String],
   classificationRunActions: Traversable[String],
-  regressionRunActions: Traversable[String]
+  regressionRunActions: Traversable[String],
+  temporalClassificationRunActions: Traversable[String],
+  temporalRegressionRunActions: Traversable[String]
 )
 
 object UserDataSetPermissions {

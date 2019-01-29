@@ -35,17 +35,13 @@
 
             populateCustomFieldTypeaheadFromUrl(
                 'orderField',
-                '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Integer, FieldTypeId.Double, FieldTypeId.Date, FieldTypeId.Enum, FieldTypeId.String)).url)'
+                '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Integer, FieldTypeId.Date, FieldTypeId.Enum, FieldTypeId.String)).url)'
             )
 
             populateIdLabelTypeaheadFromUrl(
                 'mlModel',
                 '@Html(controllers.ml.routes.ClassifierController.idAndNames.url)'
             );
-
-            $('#outputFieldTypeahead, #mlModelTypeahead, #filterNameTypeahead').keypress(function (e) {
-                if (e.which == 13) { launch();}
-            });
 
             $('#launchButton').on('click', launch)
         });
@@ -63,7 +59,7 @@
 
             var orderedStringValues = $("#orderedStringValues").val();
             if (!orderedStringValues) {
-                orderedStringValues = null;
+                orderedStringValues = [];
             } else {
                 orderedStringValues = orderedStringValues.split(",").map(function(item) { return item.trim(); })
             }
@@ -169,6 +165,31 @@
                 return
             }
 
+            if (!groupIdFieldName) {
+                showError("Temporal classification cannot be launched. No group id field selected.");
+                return
+            }
+
+            if (!orderFieldName) {
+                showError("Temporal classification cannot be launched. No order field selected.");
+                return
+            }
+
+            if (!predictAhead) {
+                showError("Temporal classification cannot be launched. 'Predict ahead' is unspecified.");
+                return
+            }
+
+            if (!slidingWindowSize) {
+                showError("Temporal classification cannot be launched. 'Sliding window size' is unspecified.");
+                return
+            }
+
+            if (!trainingTestSplitRatio && !trainingTestSplitOrderValue) {
+                showError("Temporal classification cannot be launched. 'Training-test split ratio' or 'training-test split order value' must be specified.");
+                return
+            }
+
             classificationRunJsRoutes.controllers.dataset.TemporalClassificationRunDispatcher.launch(runSpecJSON, saveResults, saveBinCurves).ajax({
                 success: function (data) {
                     showMessage("'" + mlModelName + "' temporal classification finished.")
@@ -185,7 +206,9 @@
                     }
                 },
                 error: function (data) {
-                    showError(data.responseText);
+                    $("#outputDiv").html("")
+                    hideMessages();
+                    showErrorResponse(data);
                 }
             });
 
@@ -237,9 +260,7 @@
         @fieldTypeahead(None, "orderField", "Field Name", true)
     }
 
-    @labelValueAux("orderedStringValues", "Ordered String Values") {
-        <input id="orderedStringValues" type="text" class="input-lg-full" placeholder="" value="">
-    }
+    @textField("orderedStringValues", "Ordered String Values")
 
     @labelValueAux("filterId", "Input Data") {
         @typeahead("filterNameTypeahead", "filterId", "Filter", true)
@@ -261,7 +282,7 @@
 @secondColumn = {
     @trainingSettingFields()
 
-    @textField("trainingTestSplitOrderValue", "Training Test Split Order Value")
+    @textField("trainingTestSplitOrderValue", "Training-Test Split Order Value")
 
     @enumField("crossValidationEvalMetric", "Cross Validation Eval Metric", ClassificationEvalMetric)
 

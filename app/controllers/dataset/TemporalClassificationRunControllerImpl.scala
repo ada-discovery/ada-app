@@ -14,6 +14,7 @@ import org.incal.spark_ml.models.classification.ClassificationEvalMetric
 import org.incal.spark_ml.models.result.TemporalClassificationResult
 import org.incal.spark_ml.models.setting.{ClassificationRunSpec, TemporalClassificationRunSpec}
 import persistence.RepoTypes.ClassifierRepo
+import util.FieldUtil.FieldOps
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -82,7 +83,7 @@ class TemporalClassificationRunControllerImpl @Inject()(
     saveResults: Boolean,
     saveBinCurves: Boolean
   ) = Action.async { implicit request => {
-    println(runSpec)
+    val ioSpec = runSpec.ioSpec
 
     val mlModelFuture = mlMethodRepo.get(runSpec.mlModelId)
     val criteriaFuture = loadCriteria(runSpec.ioSpec.filterId)
@@ -91,8 +92,14 @@ class TemporalClassificationRunControllerImpl @Inject()(
     val fieldNames = runSpec.ioSpec.allFieldNames
     val fieldsFuture = dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
 
-    def find(criteria: Seq[Criterion[Any]]) =
-      dsa.dataSetRepo.find(criteria, projection = fieldNames)
+    def find(criteria: Seq[Criterion[Any]], orderedValues: Seq[Any]) = {
+      val orderedValuesOnly = if (orderedValues.nonEmpty)
+        Seq(ioSpec.orderFieldName #-> orderedValues)
+      else
+        Nil
+
+      dsa.dataSetRepo.find(criteria ++ orderedValuesOnly, projection = fieldNames)
+    }
 
     for {
       // load a ML model
@@ -104,38 +111,41 @@ class TemporalClassificationRunControllerImpl @Inject()(
       // replication criteria
       replicationCriteria <- replicationCriteriaFuture
 
-      // main data
-      mainData <- find(criteria)
-
       // fields
       fields <- fieldsFuture
 
+      // order field
+      orderField = fields.find(_.name == ioSpec.orderFieldName).getOrElse(throw new AdaException(s"Order field ${ioSpec.outputFieldName} not found."))
+      orderFieldType = ftf(orderField.fieldTypeSpec).asValueOf[Any]
+      orderedValues = if (ioSpec.orderedStringValues.isEmpty && (orderField.isEnum || orderField.isString)) {
+        throw new AdaException(s"String (display) values in fixed order required for the ${orderField.fieldType} order field ${ioSpec.orderFieldName}.")
+      } else
+        ioSpec.orderedStringValues.map(x => orderFieldType.displayStringToValue(x).get)
+
+      // main data
+      mainData <- find(criteria, orderedValues)
+
       // replication data
-      replicationData <- if (replicationCriteria.nonEmpty) find(replicationCriteria) else Future(Nil)
+      replicationData <- if (replicationCriteria.nonEmpty) find(replicationCriteria, orderedValues) else Future(Nil)
 
       // run the selected classifier (ML model)
       resultsHolder <- mlModel.map { mlModel =>
-        // TODO: feature selection
-//        val selectedFields = runSpec.learningSetting.featuresSelectionNum.map { featuresSelectionNum =>
-//          val inputFields = fields.filter(!_.name.equals(runSpec.ioSpec.outputFieldName))
-//          val outputField = fields.find(_.name.equals(runSpec.ioSpec.outputFieldName)).get
-//          val selectedInputFields = statsService.selectFeaturesAsAnovaChiSquare(mainData, inputFields.toSeq, outputField, featuresSelectionNum)
-//          selectedInputFields ++ Seq(outputField)
-//        }.getOrElse(
-//          fields
-//        )
 
-        val selectedFields = fields
+        val selectedInputFieldNames = runSpec.learningSetting.core.featuresSelectionNum.map { featuresSelectionNum =>
+          val inputFields = fields.filter(field => ioSpec.inputFieldNames.contains(field.name))
+          val outputField = fields.find(_.name == ioSpec.outputFieldName).getOrElse(throw new AdaException(s"Output field ${ioSpec.outputFieldName} not found."))
+          val selectedInputFields = statsService.selectFeaturesAsAnovaChiSquare(mainData, inputFields.toSeq, outputField, featuresSelectionNum)
+          selectedInputFields.map(_.name)
+        }.getOrElse(
+          ioSpec.inputFieldNames
+        )
 
-        val ioSpec = runSpec.ioSpec
+        val actualFieldNames = ioSpec.copy(inputFieldNames = selectedInputFieldNames).allFieldNames
 
-        val fieldNameAndSpecs = selectedFields.toSeq.map(field => (field.name, field.fieldTypeSpec))
-        val orderField = fields.find(_.name == ioSpec.orderFieldName).getOrElse(throw new AdaException(s"Order field ${ioSpec.outputFieldName} not found."))
-        val orderFieldType = ftf(orderField.fieldTypeSpec).asValueOf[Any]
-        val orderedValues = ioSpec.orderedStringValues.map(x => orderFieldType.displayStringToValue(x).get)
+        val fieldNameAndSpecs = fields.toSeq.filter(field => actualFieldNames.contains(field.name)).map(field => (field.name, field.fieldTypeSpec))
 
         val results = mlService.classifyRowTemporalSeries(
-          mainData, fieldNameAndSpecs, ioSpec.inputFieldNames, ioSpec.outputFieldName, ioSpec.orderFieldName, orderedValues, Some(ioSpec.groupIdFieldName),
+          mainData, fieldNameAndSpecs, selectedInputFieldNames, ioSpec.outputFieldName, ioSpec.orderFieldName, orderedValues, Some(ioSpec.groupIdFieldName),
           mlModel, runSpec.learningSetting, replicationData
         )
         results.map(Some(_))

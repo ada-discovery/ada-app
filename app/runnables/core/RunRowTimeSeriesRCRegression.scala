@@ -78,8 +78,7 @@ class RunRowTimeSeriesRCRegression @Inject() (
             slidingWindowSize = input.windowSize,
             reservoirSetting = Some(input.reservoirSpec),
             minCrossValidationTrainingSizeRatio = input.minCrossValidationTrainingSizeRatio,
-            trainingTestSplitOrderValue = input.trainingTestSplitOrderValue,
-            groupIdColumnName = None
+            trainingTestSplitOrderValue = input.trainingTestSplitOrderValue
           )
         )
         results.map(Some(_))
