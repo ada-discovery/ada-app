@@ -213,7 +213,7 @@ POST        /dataSets/metainfo/:id/delete                                       
 POST        /dataSets/metainfo/deleteDataSet/:id                                     controllers.dataset.DataSpaceMetaInfoController.deleteDataSet(id: BSONObjectID)
 
 # Standard Clasification Run
-GET         /dataSets/classificationRuns                                             controllers.dataset.StandardClassificationRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /dataSets/classificationRuns                                             controllers.dataset.StandardClassificationRunDispatcher.find(p: Int ?= 0, s: String ?= "-timeCreated", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /dataSets/classificationRuns/get/:id                                     controllers.dataset.StandardClassificationRunDispatcher.get(id: BSONObjectID)
 GET         /dataSets/classificationRuns/new                                         controllers.dataset.StandardClassificationRunDispatcher.create
 POST        /dataSets/classificationRuns/:id/delete                                  controllers.dataset.StandardClassificationRunDispatcher.delete(id: BSONObjectID)
@@ -224,7 +224,7 @@ GET         /dataSets/classificationRuns/exportAsJson                           
 POST        /dataSets/selectFeaturesAsAnovaChiSquare                                 controllers.dataset.StandardClassificationRunDispatcher.selectFeaturesAsAnovaChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresToSelectNum: Int)
 
 # Temporal Clasification Run
-GET         /dataSets/temporalClassificationRuns                                     controllers.dataset.TemporalClassificationRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /dataSets/temporalClassificationRuns                                     controllers.dataset.TemporalClassificationRunDispatcher.find(p: Int ?= 0, s: String ?= "-timeCreated", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /dataSets/temporalClassificationRuns/get/:id                             controllers.dataset.TemporalClassificationRunDispatcher.get(id: BSONObjectID)
 GET         /dataSets/temporalClassificationRuns/new                                 controllers.dataset.TemporalClassificationRunDispatcher.create
 POST        /dataSets/temporalClassificationRuns/:id/delete                          controllers.dataset.TemporalClassificationRunDispatcher.delete(id: BSONObjectID)
@@ -234,7 +234,7 @@ GET         /dataSets/temporalClassificationRuns/exportAsCsv                    
 GET         /dataSets/temporalClassificationRuns/exportAsJson                        controllers.dataset.TemporalClassificationRunDispatcher.exportRecordsAsJson(filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
 
 # Standard Regression Run
-GET         /dataSets/regressionRuns                                                 controllers.dataset.StandardRegressionRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /dataSets/regressionRuns                                                 controllers.dataset.StandardRegressionRunDispatcher.find(p: Int ?= 0, s: String ?= "-timeCreated", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /dataSets/regressionRuns/get/:id                                         controllers.dataset.StandardRegressionRunDispatcher.get(id: BSONObjectID)
 GET         /dataSets/regressionRuns/new                                             controllers.dataset.StandardRegressionRunDispatcher.create
 POST        /dataSets/regressionRuns/:id/delete                                      controllers.dataset.StandardRegressionRunDispatcher.delete(id: BSONObjectID)
@@ -244,7 +244,7 @@ GET         /dataSets/regressionRuns/exportAsCsv                                
 GET         /dataSets/regressionRuns/exportAsJson                                    controllers.dataset.StandardRegressionRunDispatcher.exportRecordsAsJson(filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
 
 # Temporal Regression Run
-GET         /dataSets/temporalRegressionRuns                                         controllers.dataset.TemporalRegressionRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /dataSets/temporalRegressionRuns                                         controllers.dataset.TemporalRegressionRunDispatcher.find(p: Int ?= 0, s: String ?= "-timeCreated", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /dataSets/temporalRegressionRuns/get/:id                                 controllers.dataset.TemporalRegressionRunDispatcher.get(id: BSONObjectID)
 GET         /dataSets/temporalRegressionRuns/new                                     controllers.dataset.TemporalRegressionRunDispatcher.create
 POST        /dataSets/temporalRegressionRuns/:id/delete                              controllers.dataset.TemporalRegressionRunDispatcher.delete(id: BSONObjectID)

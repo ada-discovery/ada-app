@@ -501,3 +501,12 @@ tr.vertical-divider > td:last-child {
     line-height: 1.428571429;
     border-radius: 15px;
 }
+
+.input-lg-full {
+    height: 54px;
+    line-height: 54px;
+    padding: 14px 16px;
+    font-size: 18px;
+    border-radius: 6px;
+    width: 100%
+}
