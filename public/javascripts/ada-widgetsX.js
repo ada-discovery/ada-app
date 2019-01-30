@@ -75,7 +75,7 @@ function categoricalCountWidget(elementId, widget, filterElement) {
     }
 }
 
-function numericalCountWidget(elementId, widget) {
+function numericalCountWidget(elementId, widget, filterElement) {
     var isDate = widget.fieldType == "Date"
     var isDouble = widget.fieldType == "Double"
     var dataType = (isDate) ? 'datetime' : null;
@@ -111,6 +111,26 @@ function numericalCountWidget(elementId, widget) {
     });
 
     plotNumericalChart(widget.displayOptions.chartType, datas, seriesSize, widget.title, widget.fieldLabel, yAxisCaption, elementId, height, pointFormat, dataType)
+
+    if (filterElement) {
+        function toTypedStringValue(value, ceiling) {
+            var intValue = (ceiling) ? Math.ceil(value) : Math.floor(value)
+
+            return (isDate) ? msToStandardDateString(intValue) : (isDouble) ? value.toString() : intValue.toString()
+        }
+
+        $('#' + elementId).on('intervalSelected', function (event, data) {
+            var xMin = toTypedStringValue(data.xMin, true);
+            var xMax = toTypedStringValue(data.xMax, false);
+
+            var conditions = [
+                {fieldName: widget.fieldName, conditionType: ">=", value: xMin},
+                {fieldName: widget.fieldName, conditionType: "<=", value: xMax}
+            ]
+
+            $(filterElement).multiFilter('addConditionsAndSubmit', conditions);
+        });
+    }
 }
 
 function lineWidget(elementId, widget) {
@@ -134,7 +154,7 @@ function lineWidget(elementId, widget) {
     //     plotNumericalChart(chartType, datas, seriesSize, widget.title, widget.xAxisCaption, yAxisCaption, elementId, height, pointFormat, dataType)
     // });
 
-    lineChart(widget.title, elementId, null, datas, widget.xAxisCaption, widget.yAxisCaption, showLegend, true, pointFormat, height, dataType, false, false, widget.xMin, widget.xMax, widget.yMin, widget.yMax);
+    lineChart(widget.title, elementId, null, datas, widget.xAxisCaption, widget.yAxisCaption, showLegend, true, pointFormat, height, dataType, false, false, false, widget.xMin, widget.xMax, widget.yMin, widget.yMax);
 }
 
 function boxWidget(elementId, widget) {
@@ -279,7 +299,7 @@ function genericWidgetForElement(widgetId, widget, filterElement) {
     else
         switch (widget.concreteClass) {
             case "models.CategoricalCountWidget": categoricalCountWidget(widgetId, widget, filterElement); break;
-            case "models.NumericalCountWidget": numericalCountWidget(widgetId, widget); break;
+            case "models.NumericalCountWidget": numericalCountWidget(widgetId, widget, filterElement); break;
             case "models.BoxWidget": boxWidget(widgetId, widget); break;
             case "models.ScatterWidget": scatterWidget(widgetId, widget, filterElement); break;
             case "models.ValueScatterWidget": valueScatterWidget(widgetId, widget, filterElement); break;

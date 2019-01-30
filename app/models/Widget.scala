@@ -32,6 +32,7 @@ case class CategoricalCountWidget(
 
 case class NumericalCountWidget[T](
   title: String,
+  fieldName: String,
   fieldLabel: String,
   useRelativeValues: Boolean,
   isCumulative: Boolean,
@@ -218,12 +219,13 @@ object Widget {
 
     (
       (__ \ "title").format[String] and
+      (__ \ "fieldName").format[String] and
       (__ \ "fieldLabel").format[String] and
       (__ \ "useRelativeValues").format[Boolean] and
       (__ \ "isCumulative").format[Boolean] and
       (__ \ "data").format[Seq[(String, Traversable[Count[T]])]] and
       (__ \ "displayOptions").format[MultiChartDisplayOptions]
-    )(NumericalCountWidget[T](_, _, _, _, _, _), {x => (x.title, x.fieldLabel, x.useRelativeValues, x.isCumulative, x.data, x.displayOptions)})
+    )(NumericalCountWidget[T](_, _, _, _, _, _, _), {x => (x.title, x.fieldName, x.fieldLabel, x.useRelativeValues, x.isCumulative, x.data, x.displayOptions)})
   }
 
   def lineWidgetFormat[T](fieldType: FieldType[T]): Format[LineWidget[T]] = {

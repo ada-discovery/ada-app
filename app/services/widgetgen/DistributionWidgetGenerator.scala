@@ -323,6 +323,7 @@ trait DistributionWidgetGeneratorHelper {
     // create a numeric widget
     NumericalCountWidget(
       title,
+      field.name,
       field.labelOrElseName,
       spec.relativeValues,
       false,

@@ -24,6 +24,6 @@
         var yMin = (@{widget.yMin.isDefined}) ? @{widget.yMin.get} : null
         var yMax = (@{widget.yMax.isDefined}) ? @{widget.yMax.get} : null
 
-        lineChart('@widget.title', '@{elementId}', null, datas, '@widget.xAxisCaption', '@widget.yAxisCaption', showLegend, true, pointFormat, height, dataType, false, false, xMin, xMax, yMin, yMax);
+        lineChart('@widget.title', '@{elementId}', null, datas, '@widget.xAxisCaption', '@widget.yAxisCaption', showLegend, true, pointFormat, height, dataType, false, false, false, xMin, xMax, yMin, yMax);
     })
 </script>

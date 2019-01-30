@@ -280,7 +280,7 @@ function showArrayFieldChart(id, fieldName, fieldLabel) {
             $('#lineChartArrayModal').modal("show");
 
             $('#lineChartArrayModal').on('shown.bs.modal', function (e) {
-                lineChart(fieldLabel, "lineChartDiv", null, series, 'Point', 'Value', true, false, pointFormat, null, null, false, false);
+                lineChart(fieldLabel, "lineChartDiv", null, series, 'Point', 'Value', true, false, pointFormat, null, null, false, false,  false);
             })
         },
         error: function(data){

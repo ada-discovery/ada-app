@@ -91,7 +91,8 @@
         pointFormat,
         height,
         dataType,
-        allowSelectionEvent,
+        allowPointSelectionEvent,
+        allowIntervalSelectionEvent,
         allowChartTypeChange
     ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
@@ -100,7 +101,7 @@
             exporting = chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
-        if (allowSelectionEvent)
+        if (allowPointSelectionEvent || allowIntervalSelectionEvent)
             cursor = 'pointer';
 
         var pointFormatter = null
@@ -109,13 +110,28 @@
             pointFormat = null
         }
 
+        function selectXAxisPointsByDrag(event) {
+            if (event.xAxis) {
+                var xMin = event.xAxis[0].min;
+                var xMax = event.xAxis[0].max;
+
+                $('#' + chartElementId).trigger("intervalSelected", {xMin: xMin, xMax: xMax});
+            }
+        }
+
+        var selectHandler = (allowIntervalSelectionEvent) ? selectXAxisPointsByDrag : null
+
         var chartType = 'column'
         if (inverted)
             chartType = 'bar'
         $('#' + chartElementId).highcharts({
             chart: {
                 type: chartType,
-                height: height
+                height: height,
+                events: {
+                    selection: selectHandler
+                },
+                zoomType: 'x'
             },
             title: {
                 text: title
@@ -162,12 +178,12 @@
                             return (value === parseInt(value, 10)) ? value : Highcharts.numberFormat(value, 1)
                         }
                     },
-                    allowPointSelect: allowSelectionEvent,
+                    allowPointSelect: allowPointSelectionEvent,
                     cursor: cursor,
                     point: {
                         events: {
                             click: function () {
-                                if (allowSelectionEvent)
+                                if (allowPointSelectionEvent)
                                     $('#' + chartElementId).trigger("pointSelected", this);
                             }
                         }
@@ -188,68 +204,6 @@
         })
     }
 
-    function timeLineChart(
-        title,
-        chartElementId,
-        xAxisCaption,
-        yAxisCaption,
-        series,
-        height
-    ) {
-        $('#' + chartElementId).highcharts({
-            chart: {
-                type: 'line', // 'spline'
-                height: height
-            },
-            title: {
-                text: title
-            },
-            xAxis: {
-                type: 'datetime',
-                //dateTimeLabelFormats: { // don't display the dummy year
-                //    month: '%e. %b',
-                //    year: '%b'
-                //},
-                title: {
-                    text: xAxisCaption
-                }
-            },
-            yAxis: {
-                title: {
-                    text: yAxisCaption
-                }
-            },
-            legend: {
-                layout: 'vertical',
-                align: 'right',
-                verticalAlign: 'middle',
-                borderWidth: 0,
-                itemStyle: {
-                    width:'80px',
-                    textOverflow: 'ellipsis',
-                    overflow: 'hidden'
-                }
-            },
-            credits: {
-                enabled: false
-            },
-            tooltip: {
-                headerFormat: '<b>{series.name}</b><br>',
-                pointFormat: '{point.x:%d.%m.%Y}: {point.y:.0f}'
-            },
-
-            plotOptions: {
-                line: {
-                    marker: {
-                        enabled: true
-                    }
-                }
-            },
-
-            series: series
-        });
-    }
-
     function lineChart(
         title,
         chartElementId,
@@ -262,7 +216,8 @@
         pointFormat,
         height,
         dataType,
-        allowSelectionEvent,
+        allowPointSelectionEvent,
+        allowIntervalSelectionEvent,
         allowChartTypeChange,
         xMin,
         xMax,
@@ -275,7 +230,7 @@
             exporting = chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
-        if (allowSelectionEvent)
+        if (allowPointSelectionEvent || allowIntervalSelectionEvent)
             cursor = 'pointer';
 
         var pointFormatter = null
@@ -284,9 +239,25 @@
             pointFormat = null
         }
 
+        function selectXAxisPointsByDrag(event) {
+            if (event.xAxis) {
+                var xMin = event.xAxis[0].min;
+                var xMax = event.xAxis[0].max;
+
+                $('#' + chartElementId).trigger("intervalSelected", {xMin: xMin, xMax: xMax});
+            }
+        }
+
+        var selectHandler = (allowIntervalSelectionEvent) ? selectXAxisPointsByDrag : null
+        var zoomType = (allowIntervalSelectionEvent) ? 'x' : null
+
         $('#' + chartElementId).highcharts({
             chart: {
-                height: height
+                height: height,
+                events: {
+                    selection: selectHandler
+                },
+                zoomType: zoomType
             },
             title: {
                 text: title
@@ -335,12 +306,12 @@
                         }
                     },
                     turboThreshold: 5000,
-                    allowPointSelect: allowSelectionEvent,
+                    allowPointSelect: allowPointSelectionEvent,
                     cursor: cursor,
                     point: {
                         events: {
                             click: function () {
-                                if (allowSelectionEvent)
+                                if (allowPointSelectionEvent)
                                     $('#' + chartElementId).trigger("pointSelected", this);
                             }
                         }
@@ -533,30 +504,6 @@
             var cornerPoints = findCornerPoints(series, event)
             if (cornerPoints)
                 $('#' + chartElementId).trigger("areaSelected", cornerPoints);
-        }
-
-        function findCornerPoints(series, event) {
-            var xMin, xMax, yMin, yMax;
-            Highcharts.each(series, function (series) {
-                Highcharts.each(series.points, function (point) {
-                    if (point.x >= event.xAxis[0].min && point.x <= event.xAxis[0].max &&
-                        point.y >= event.yAxis[0].min && point.y <= event.yAxis[0].max) {
-
-                        if (!xMin || point.x < xMin)
-                            xMin = point.x
-
-                        if (!xMax || point.x > xMax)
-                            xMax = point.x
-
-                        if (!yMin || point.y < yMin)
-                            yMin = point.y
-
-                        if (!yMax || point.y > yMax)
-                            yMax = point.y
-                    }
-                });
-            });
-            return (xMin) ? {xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax} : null
         }
 
         /**
@@ -868,7 +815,7 @@
                     return {name: data.name, data: data.data, colorByPoint: colorByPoint};
                 });
 
-                columnChart(title, elementId, categories, series, false, '', yAxisCaption, true, showLegendImpl, pointFormat, height, null, true, true);
+                columnChart(title, elementId, categories, series, false, '', yAxisCaption, true, showLegendImpl, pointFormat, height, null, true, false, true);
                 break;
             case 'Bar':
                 var colorByPoint = (seriesSize == 1)
@@ -876,19 +823,19 @@
                     return {name: data.name, data: data.data, colorByPoint: colorByPoint};
                 });
 
-                columnChart(title, elementId, categories, series, true, '', yAxisCaption, true, showLegendImpl, pointFormat, height, null, true, true);
+                columnChart(title, elementId, categories, series, true, '', yAxisCaption, true, showLegendImpl, pointFormat, height, null, true, false, true);
                 break;
             case 'Line':
                 var series = datas
 
-                lineChart(title, elementId, categories, series, '', yAxisCaption, showLegendImpl, true, pointFormat, height, null, true, true);
+                lineChart(title, elementId, categories, series, '', yAxisCaption, showLegendImpl, true, pointFormat, height, null, true, false, true);
                 break;
             case 'Spline':
                 var series = datas.map( function(data, index) {
                     return {name: data.name, data: data.data, type: 'spline'};
                 });
 
-                lineChart(title, elementId, categories, series, '', yAxisCaption, showLegendImpl, true, pointFormat, height, null, true, true);
+                lineChart(title, elementId, categories, series, '', yAxisCaption, showLegendImpl, true, pointFormat, height, null, true, false,true);
                 break;
             case 'Polar':
                 var series = datas.map( function(data, index) {
@@ -918,26 +865,26 @@
                     return {name: data.name, data: data.data, colorByPoint: false};
                 });
 
-                columnChart(title, elementId, null, series, false, xAxisCaption, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true);
+                columnChart(title, elementId, null, series, false, xAxisCaption, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true,true);
                 break;
             case 'Bar':
                 var series = datas.map( function(data, index) {
                     return {name: data.name, data: data.data, colorByPoint: false};
                 });
 
-                columnChart(title, elementId, null, series, true, xAxisCaption, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true);
+                columnChart(title, elementId, null, series, true, xAxisCaption, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true,true);
                 break;
             case 'Line':
                 var series = datas
 
-                lineChart(title, elementId, null, series, xAxisCaption, yAxisCaption, showLegend, true, pointFormat, height, dataType, false, true);
+                lineChart(title, elementId, null, series, xAxisCaption, yAxisCaption, showLegend, true, pointFormat, height, dataType, false, true,true);
                 break;
             case 'Spline':
                 var series = datas.map( function(data, index) {
                     return {name: data.name, data: data.data, type: 'spline'};
                 });
 
-                lineChart(title, elementId, null, series, xAxisCaption, yAxisCaption, showLegend, true, pointFormat, height, dataType, false, true);
+                lineChart(title, elementId, null, series, xAxisCaption, yAxisCaption, showLegend, true, pointFormat, height, dataType, false, true,true);
                 break;
             case 'Polar':
                 var series = datas.map( function(data, index) {
@@ -1052,4 +999,28 @@
         Highcharts.charts.forEach(function (chart) {
             if (chart) chart.reflow();
         });
+    }
+
+    function findCornerPoints(series, event) {
+        var xMin, xMax, yMin, yMax;
+        Highcharts.each(series, function (series) {
+            Highcharts.each(series.points, function (point) {
+                if (point.x >= event.xAxis[0].min && point.x <= event.xAxis[0].max &&
+                    point.y >= event.yAxis[0].min && point.y <= event.yAxis[0].max) {
+
+                    if (!xMin || point.x < xMin)
+                        xMin = point.x
+
+                    if (!xMax || point.x > xMax)
+                        xMax = point.x
+
+                    if (!yMin || point.y < yMin)
+                        yMin = point.y
+
+                    if (!yMax || point.y > yMax)
+                        yMax = point.y
+                }
+            });
+        });
+        return (xMin) ? {xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax} : null
     }
