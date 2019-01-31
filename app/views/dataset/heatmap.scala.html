@@ -30,6 +30,7 @@
 @bottomResources = {
 
     <script src="@CustomDirAssets.versioned("javascripts/ada-charts-bb9f81d.min.js")"></script>
+    <script src="@CustomDirAssets.versioned("javascripts/ada-charts-heatmap.min.js")"></script>
 
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.calcHeatmap,
@@ -42,9 +43,11 @@
     )
 
     <script type="text/javascript">
-        let heatmap = null;
-
         $(function () {
+            $("#widgetsDiv").html("<div id='spinnerDiv' class='row'></div><div id='heatmapDiv' class='chart-holder'></div>")
+
+            $("#heatmapDiv").ada_charts_heatmap()
+
             populateMultiNumericalTypeahead(["xField", "yField", "valueField"], true);
 
             $('#inputDiv #xFieldTypeahead').keypress(function (e) {
@@ -81,8 +84,6 @@
 
             $("#dataViewSelectionModal #submitButton").on("click", addHeatmapToView)
 
-            $("#widgetsDiv").html("<div id='spinnerDiv' class='row'></div><div id='heatmapDiv' class='row' style='margin-left: 30px;'></div>")
-
             activateAllFilters(function(filterOrId) {calcHeatmap()});
         });
 
@@ -108,7 +109,7 @@
             if (!xFieldName || !yFieldName) {
                 showError("Heatmap calculation cannot be launched. No x or y field specified.");
             } else {
-                var ajaxHandler = handleHeatmapResponse("Heatmap generation finished.")
+                var ajaxHandler = handleHeatmapResponse("Agg: ", "Heatmap generation finished.")
 
                 dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcHeatmap(xFieldName, yFieldName, valueFieldName, aggType, filterOrIdJson).ajax(ajaxHandler);
 
@@ -165,7 +166,7 @@
 
     <div class="col-md-12 aligned-container top-padded">
         <label for="aggType" style="margin-right: 40px;">Aggregation Type</label>
-        @selectEnum("aggType", AggType, true, Some("input-lg"))
+        @selectEnum("aggType", AggType, true, Some("input-lg-full"))
     </div>
 }
 

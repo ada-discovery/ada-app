@@ -31,6 +31,7 @@
 @bottomResources = {
 
     <script src="@CustomDirAssets.versioned("javascripts/ada-charts-bb9f81d.min.js")"></script>
+    <script src="@CustomDirAssets.versioned("javascripts/ada-charts-heatmap.min.js")"></script>
 
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.calcMatthewsCorrelations,
@@ -42,16 +43,16 @@
     )
 
     <script type="text/javascript">
-        let heatmap = null;
-
         $(function () {
+            $("#widgetsDiv").html("<div id='spinnerDiv' class='row'></div><div id='heatmapDiv' class='chart-holder'></div>")
+
+            $("#heatmapDiv").ada_charts_heatmap()
+
             populateBooleanTypeahead("field")
 
             $("#dataViewSelectionModal #submitButton").on("click", addCorrelationToView);
 
             $('#fieldNameDiv #addRowButton').focus();
-
-            $("#widgetsDiv").html("<div id='spinnerDiv' class='row'></div><div id='heatmapDiv' class='row' style='margin-left: 30px;'></div>")
 
             activateAllFilters(function(filterOrId) {calcCorrelations()});
         });
@@ -65,7 +66,7 @@
             if (inputFieldNames.length == 0) {
                 showError("Matthews correlation calculation cannot be launched. No fields specified.");
             } else {
-                var ajaxHandler = handleHeatmapResponse("Matthews correlation calculation finished.")
+                var ajaxHandler = handleHeatmapResponse("Correlation: ", "Matthews correlation calculation finished.")
                 ajaxHandler["data"] = {
                     "fieldNames": inputFieldNames
                 };
@@ -131,15 +132,18 @@
 
     @dynamicTableJsImport()
 
-    @dynamicFieldTable(
-        "fieldName",
-        Nil,
-        true,
-        12,
-        Some(fieldButtons),
-        Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
-        "categoryTree2"
-    )
+    <div style="margin-left: 20px;">
+
+        @dynamicFieldTable(
+            "fieldName",
+            Nil,
+            true,
+            12,
+            Some(fieldButtons),
+            Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
+            "categoryTree2"
+        )
+    </div>
 }
 
 @widgetsScreen(
