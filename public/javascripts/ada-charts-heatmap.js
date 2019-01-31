@@ -1,114 +1,41 @@
-$.widget( "custom.multiCategoryFilter", {
+$.widget( "custom.ada_charts_heatmap", {
     // default options
-    options: {
-        jsonConditions: null,
-        fieldNameAndLabels: null,
-        getFieldsUrl: null,
-        submitUrl: null,
-        submitAjaxFun: null,
-        listFiltersUrl: null,
-        saveFilterAjaxFun: null,
-        filterSubmitParamName: null,
-        filterId: null,
-        createSubmissionJson: null,
-        categoryTreeElementId: null
-    },
+    options: {},
 
     // the constructor
     _create: function() {
         var that = this;
 
-        this.categoryTreeFieldNodeDatas = [];
-
-        var fieldDisplayChoiceCallback = null;
-        var initFilterIfNeededTreeCallback = null;
-
-        this.categoryTreeElement = $("#" + that.options.categoryTreeElementId);
-
-        this.categoryTreeElement.on('open_node.jstree', function (event, data) {
-            data.instance.set_type(data.node,'category-open');
-        });
-
-        this.categoryTreeElement.on('close_node.jstree', function (event, data) {
-            data.instance.set_type(data.node,'category');
-        });
-
-        var fieldDisplayChoiceCallback = function(choiceVal) {
-            that._updateCategoryTreeForFieldDisplayChoice(choiceVal)
-        }
-
-        if (that.options.fieldNameAndLabels) {
-            this._initCategoryTree()
-        } else {
-            initFilterIfNeededTreeCallback = function() {
-                that._initCategoryTree()
-            }
-        }
-
-        this.element.multiFilter({
-            jsonConditions: this.options.jsonConditions,
-            fieldNameAndLabels: this.options.fieldNameAndLabels,
-            getFieldsUrl: this.options.getFieldsUrl,
-            submitUrl: this.options.submitUrl,
-            submitAjaxFun: this.options.submitAjaxFun,
-            listFiltersUrl: this.options.listFiltersUrl,
-            saveFilterAjaxFun: this.options.saveFilterAjaxFun,
-            filterSubmitParamName: this.options.filterSubmitParamName,
-            filterId: this.options.filterId,
-            createSubmissionJson: this.options.createSubmissionJson,
-            initFilterIfNeededCallback: initFilterIfNeededTreeCallback,
-            fieldDisplayChoiceCallback: fieldDisplayChoiceCallback
-        })
+        this.container = document.querySelector('#' + this.element.attr("id"));
+        this.heatmap = AdaCharts.chart({chartType: 'heatmap', container: this.container});
+        this._addExportButton();
     },
 
-    _initCategoryTreeFieldNodeDatas: function() {
-        var that = this;
-
-        that.categoryTreeFieldNodeDatas = Object.values(that.categoryTreeElement.jstree(true)._model.data).filter(
-            function(node) {
-                return node.type.startsWith("field-");
-            }
-        ).map(function (field, index) { return {id: field.id, label: field.data.label, nonNullCount: field.data.nonNullCount}; });
+    update: function(data) {
+      this.data = data;
+      this.refresh();
     },
 
-    _updateCategoryTreeForFieldDisplayChoice: function(choiceVal) {
-        var that = this;
-
-        if (that.categoryTreeFieldNodeDatas.length == 0) {
-            that._initCategoryTreeFieldNodeDatas();
+    refresh: function() {
+        if (this.data) {
+            this.heatmap.update(this.data);
+            this.exportButton.show();
         }
-
-        $.each(that.categoryTreeFieldNodeDatas, function( index, field ) {
-            var text;
-            var nonNullCount = field.nonNullCount;
-            switch (choiceVal) {
-                case 0: text = field.id; break;
-                case 1: text = field.label; break;
-                case 2: text = (field.label) ? field.label : field.id; break;
-                case 3: text = (field.label) ? field.label : field.id; break;
-            }
-            if (text) {
-                if (nonNullCount) {
-                    text = text + " (" + nonNullCount + ")"
-                }
-                that.categoryTreeElement.jstree('set_text', field.id, text);
-                that.categoryTreeElement.jstree(true).show_node(field.id);
-            } else {
-                that.categoryTreeElement.jstree(true).hide_node(field.id);
-            }
-        });
-        that.categoryTreeElement.jstree("deselect_all");
     },
 
-    _initCategoryTree: function() {
+    _addExportButton: function() {
         var that = this;
-        that.categoryTreeElement.jsTreeWidget('init');
-        that.categoryTreeElement.jstree("deselect_all");
-        that.categoryTreeElement.bind('ready.jstree', function(e, data) {
-            var rootNode = that.categoryTreeElement.jstree(true).get_node("#")
-            if(rootNode.children.length == 0) {
-                $("#showCategoryTreeButton").hide();
-            }
-        })
+
+        var exportButton = "<a id='heatmapExportButton' href='#' class='btn btn-default btn-sm' style='display:none; position: absolute; right: 15px; top: -15px;' title='Export to PNG'><span class='glyphicon glyphicon glyphicon-export'></span></a>"
+        this.element.prepend(exportButton)
+        this.exportButton = this.element.find("#heatmapExportButton")
+
+        this.exportButton.on('click', function () {
+            that.exportToImage();
+        });
+    },
+
+    exportToImage: function() {
+        this.heatmap.toPNG();
     }
 })
