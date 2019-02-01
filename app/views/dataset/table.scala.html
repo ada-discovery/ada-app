@@ -172,15 +172,18 @@
 
     @dynamicTableJsImport()
 
-    @dynamicFieldTable(
-        "fieldName",
-        Nil,
-        true,
-        12,
-        Some(fieldButtons),
-        Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
-        "categoryTree2"
-    )
+    <div style="margin-left: 20px;">
+
+        @dynamicFieldTable(
+            "fieldName",
+            Nil,
+            true,
+            12,
+            Some(fieldButtons),
+            Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
+            "categoryTree2"
+        )
+    </div>
 }
 
 @widgetsScreen(

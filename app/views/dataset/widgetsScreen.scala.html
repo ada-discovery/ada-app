@@ -63,7 +63,7 @@
 
                 // TODO: this is a hack, generalize
                 const heatmapDiv = $("#heatmapDiv")
-                if (heatmapDiv) {
+                if (heatmapDiv.length > 0) {
                     heatmapDiv.ada_charts_heatmap('refresh')
                 }
             })
@@ -77,7 +77,7 @@
 
                 // TODO: this is a hack, generalize
                 const heatmapDiv = $("#heatmapDiv")
-                if (heatmapDiv) {
+                if (heatmapDiv.length > 0) {
                     heatmapDiv.ada_charts_heatmap('refresh')
                 }
             })
