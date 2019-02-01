@@ -115,19 +115,16 @@ private class UserManagerImpl @Inject()(
 
   /**
     * Authenticate user.
- *
+    *
     * @param id ID (e.g. mail) for matching.
     * @param password Password which should match the password associated to the mail.
     * @return None, if password is wrong or not associated mail was found.
     */
-  override def authenticate(id: String, password: String): Future[Boolean] = {
-    val dn = "uid=" + id + "," + ldapSettings.dit
-
+  override def authenticate(id: String, password: String): Future[Boolean] =
     Future {
 //      val exists = ldapUserService.getAll.find(_.uid == id).nonEmpty
-      ldapService.canBind(dn, password)
+      ldapService.canBind(id, password)
     }
-  }
 
   private def addUserIfNotPresent(user: User) =
     userRepo.find(Seq("ldapDn" #== user.ldapDn)).map { users =>

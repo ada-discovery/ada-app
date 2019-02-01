@@ -28,6 +28,7 @@ class LdapSettings @Inject()(configuration: Configuration) extends Enumeration{
   // do not use remote mode unless you know the server you connect to!
   val encryption: String = configuration.getString("ldap.encryption").getOrElse("none").toLowerCase()
   val trustStore: Option[String] = configuration.getString("ldap.trustStore")
+  val recursiveDitAuthenticationSearch = configuration.getBoolean("ldap.recursiveDitAuthenticationSearch").getOrElse(false)
 
   def toList(): List[(String, ConfigValue)] = {
     val subconfig: Option[Configuration] = configuration.getConfig("ldap")

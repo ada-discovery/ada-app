@@ -108,11 +108,21 @@ protected class LdapServiceImpl @Inject()(
   /**
     * Establish connection and check if bind possible.
     * Useful for authentication.
-    * @param userDN DN for binding.
+    * @param id user id for binding.
     * @param password password for binding.
     * @return true, if bind successful.
     */
-  override def canBind(userDN: String, password: String): Boolean = {
+  override def canBind(uid: String, password: String): Boolean =
+    if (settings.recursiveDitAuthenticationSearch) {
+      listUserSubEntries(uid, settings.dit).headOption.map { userEntry =>
+        canBindAux(userEntry.getDN, password)
+      }.getOrElse(false)
+    } else {
+      val userDN = "uid=" + uid + "," + settings.dit
+      canBindAux(userDN, password)
+    }
+
+  private def canBindAux(userDN: String, password: String): Boolean = {
     logger.info(s"Checking the user credentials for $userDN in LDAP.")
     val (connection, _) = LDAPInterfaceFactory.createConnection(settings.host, settings.port, settings.encryption, settings.trustStore)
 
@@ -130,6 +140,15 @@ protected class LdapServiceImpl @Inject()(
     logger.info(s"The LDAP verification for $userDN is ${successfulWord.toUpperCase}.")
 
     result == ResultCode.SUCCESS
+  }
+
+  private def listUserSubEntries(uid: String, baseDN: String): Traversable[Entry] = {
+    val personFilter = Filter.createEqualityFilter("objectClass", "person")
+    val idFilter = Filter.createEqualityFilter("uid", uid)
+    val idPersonFilter = Filter.createANDFilter(idFilter, personFilter)
+
+    val request = new SearchRequest(baseDN, SearchScope.SUB, idPersonFilter)
+    search(request)
   }
 
   /**
