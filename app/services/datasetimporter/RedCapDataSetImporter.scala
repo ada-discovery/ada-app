@@ -1,8 +1,8 @@
 package services.datasetimporter
 
 import java.util.Date
-import javax.inject.Inject
 
+import javax.inject.Inject
 import dataaccess.RepoTypes.CategoryRepo
 import dataaccess.RepoTypes.FieldRepo
 import dataaccess._
@@ -11,9 +11,10 @@ import models.redcap.{Metadata, FieldType => RCFieldType}
 import models.{AdaException, AdaParseException, RedCapDataSetImport}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
+import _root_.util.FieldUtil.FieldOps
 import services.{RedCapService, RedCapServiceFactory}
 import org.incal.core.dataaccess.Criterion.Infix
-import org.incal.core.util.{seqFutures, hasNonAlphanumericUnderscore}
+import org.incal.core.util.{hasNonAlphanumericUnderscore, seqFutures}
 import field.FieldType
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -53,19 +54,11 @@ private class RedCapDataSetImporter @Inject() (
       fieldType.valueToJson(value)
     }
 
-    def displayJsonToJsonEnum(fieldType: FieldType[_], json: JsReadable) = {
-      val enumStringValue = stringFieldType.displayJsonToValue(json)
-      enumStringValue match {
-        case Some(string) =>
-          // TODO: this looks like a bug... investigate
-          if (ConversionUtil.isInt(string)) {
-            JsNumber(string.toInt)
-          } else {
-            displayJsonToJson(fieldType, json)
-          }
+    def displayJsonToJsonRedcapEnum(json: JsReadable) =
+      stringFieldType.displayJsonToValue(json) match {
+        case Some(string) => JsNumber(string.toInt)
         case None => JsNull
       }
-    }
 
     for {
       // get the data from a given red cap service
@@ -87,11 +80,15 @@ private class RedCapDataSetImporter @Inject() (
       categoryRepo = dsa.categoryRepo
 
       // import dictionary (if needed) otherwise use an existing one (should exist)
-      fields <- importOrGetDictionary(importInfo, redCapService, fieldRepo, categoryRepo, records)
+      fieldsWithEnumFlag <- importOrGetDictionary(importInfo, redCapService, fieldRepo, categoryRepo, records)
+      fields = fieldsWithEnumFlag.map(_._1)
 
-      // create a field-name-type map for a quick lookup
+      // create a name -> field type (+ redcap enum flag) map for a quick lookup
       fieldNameTypeMap = {
-        val map: Map[String, FieldType[_]] = fields.map(field => (field.name, ftf(field.fieldTypeSpec): FieldType[_])).toSeq.toMap
+        val map: Map[String, (FieldType[_], Boolean)] = fieldsWithEnumFlag.map { case (field, redcapEnumFlag) =>
+          (field.name, (ftf(field.fieldTypeSpec): FieldType[_], redcapEnumFlag))
+        }.toSeq.toMap
+
         map
       }
 
@@ -106,11 +103,9 @@ private class RedCapDataSetImporter @Inject() (
       fieldNamesToInherit = {
         val categoryIdsToInheritSet = categoryIdsToInherit.toSet
 
-        val fieldsToInherit = fields.filter { field =>
-          field.categoryId.map { categoryId =>
-            categoryIdsToInheritSet.contains(categoryId)
-          }.getOrElse(false)
-        }
+        val fieldsToInherit = fields.filter(
+          _.categoryId.map(categoryIdsToInheritSet.contains(_)).getOrElse(false)
+        )
 
         fieldsToInherit.map(_.name)
       }
@@ -131,14 +126,16 @@ private class RedCapDataSetImporter @Inject() (
       newRecords: Traversable[JsObject] = records.map { record =>
         val newJsValues = record.fields.map { case (fieldName, jsValue) =>
           val newJsValue = fieldNameTypeMap.get(fieldName) match {
-            case Some(fieldType) => try {
-              fieldType.spec.fieldType match {
-                case FieldTypeId.Enum => displayJsonToJsonEnum(fieldType, jsValue)
-                case _ => displayJsonToJson(fieldType, jsValue)
-              }
+
+            case Some((fieldType, redcapEnumType)) => try {
+              if (redcapEnumType)
+                displayJsonToJsonRedcapEnum(jsValue)
+              else
+                displayJsonToJson(fieldType, jsValue)
             } catch {
               case e: Exception => throw new AdaException(s"JSON value '$jsValue' of the field '$fieldName' cannot be processed.", e)
             }
+
             // TODO: this shouldn't be like that... if we don't have a field in the dictionary, we should discard it
             case None => jsValue
           }
@@ -174,7 +171,7 @@ private class RedCapDataSetImporter @Inject() (
     fieldRepo: FieldRepo,
     categoryRepo: CategoryRepo,
     records: Traversable[JsObject]
-  ): Future[Traversable[Field]] = {
+  ): Future[Traversable[(Field, Boolean)]] = {
     if (importInfo.importDictionaryFlag) {
       logger.info(s"RedCap dictionary inference and import for data set '${importInfo.dataSetId}' initiated.")
 
@@ -186,28 +183,49 @@ private class RedCapDataSetImporter @Inject() (
       }
     } else {
       logger.info(s"RedCap dictionary import disabled, using an existing dictionary.")
-      fieldRepo.find().map(fields =>
+
+      for {
+        // existing fields
+        fields <- fieldRepo.find()
+
+        // obtain the RedCAP metadata
+        metadatas <- redCapService.listMetadatas
+      } yield
         if (fields.nonEmpty) {
-          fields
+          val redCapFieldNameMap = metadatas.flatMap(metadata => getRedCapFixedType(metadata).map((metadata.field_name, _))).toMap
+
+          // fields with enum flag
+          fields.map { field =>
+            val redcapEnum = redCapFieldNameMap.get(field.name).map { case (fieldType, isRedCapEnum) =>
+              if (field.isEnum) {
+                // TODO: we should do some comparison / validation + enum values update
+                //                field.numValues.get.toSeq.sorted
+                isRedCapEnum
+              } else
+                false
+
+            }.getOrElse(false)
+
+            (field, redcapEnum)
+          }
         } else {
           val message = s"No dictionary found for the data set '${importInfo.dataSetId}'. Run the REDCap data set import again with the 'import dictionary' option."
           messageLogger.error(message)
           throw new AdaException(message)
         }
-      )
     }
   }
 
   private def inheritFieldValues(
     records: Traversable[JsObject],
     keyFieldName: String,
-    fieldNameTypeMap: Map[String, FieldType[_]],
+    fieldNameTypeMap: Map[String, (FieldType[_], Boolean)],
     fieldNamesToInherit: Traversable[String]
   ): Traversable[JsObject] = {
     logger.info("Inheriting fields from the first visit...")
 
     def getFieldType(fieldName: String) =
-      fieldNameTypeMap.get(fieldName).getOrElse(
+      fieldNameTypeMap.get(fieldName).map(_._1).getOrElse(
         throw new AdaException(s"Field $fieldName not found in the dictionary.")
       )
 
@@ -260,7 +278,7 @@ private class RedCapDataSetImporter @Inject() (
     fieldRepo: FieldRepo,
     categoryRepo: CategoryRepo,
     records: Traversable[JsObject]
-  ): Future[Traversable[Field]] = {
+  ): Future[Traversable[(Field, Boolean)]] = {
 
     def displayJsonToDisplayString[T](fieldType: FieldType[T], json: JsReadable): String = {
       val value = fieldType.displayJsonToValue(json)
@@ -281,7 +299,7 @@ private class RedCapDataSetImporter @Inject() (
     def inferDictionary(
       metadatas: Seq[Metadata],
       nameCategoryIdMap: Map[String, BSONObjectID]
-    ): Traversable[Field] = {
+    ): Traversable[(Field, Boolean)] = {
       val inferredFieldNames = inferredFieldNameTypeMap.keySet
       val inferredFieldNamePrefixes = inferredFieldNames.flatMap { name =>
         val index = name.indexOf("___")
@@ -310,46 +328,19 @@ private class RedCapDataSetImporter @Inject() (
         if (metadata.field_type != RCFieldType.checkbox) {
           def inferredType = {
             val inferredFieldType: FieldType[_] = inferredFieldNameTypeMap.get(fieldName).get
-            inferredFieldType.spec
+            (inferredFieldType.spec, false)
           }
 
-          def enumOrDoubleOrString: FieldTypeSpec = try {
-            FieldTypeSpec(FieldTypeId.Enum, false, getEnumValues(metadata))
-          } catch {
-            case e: AdaParseException =>
-              try {
-                getDoubles(metadata)
-                logger.warn(s"The field '$fieldName' has floating part(s) in the enum list and so will be treated as Double.")
-                FieldTypeSpec(FieldTypeId.Double)
-              } catch {
-                case e: AdaParseException => {
-                  logger.warn(s"The field '$fieldName' has strings in the enum list and so will be treated as String.")
-                  FieldTypeSpec(FieldTypeId.String)
-                }
-              }
-          }
-
-          val fieldTypeSpec = metadata.field_type match {
-            case RCFieldType.radio => enumOrDoubleOrString
-            case RCFieldType.dropdown => enumOrDoubleOrString
-            case RCFieldType.calc => inferredType
-            case RCFieldType.slider => inferredType
-            case RCFieldType.text => inferredType
-            case RCFieldType.descriptive => inferredType
-            case RCFieldType.yesno => FieldTypeSpec(FieldTypeId.Boolean)
-            case RCFieldType.truefalse => FieldTypeSpec(FieldTypeId.Boolean)
-            case RCFieldType.notes => inferredType
-            case RCFieldType.file => inferredType
-            case RCFieldType.sql => inferredType
-          }
+          val (fieldTypeSpec, isRedCapEnum) = getRedCapFixedType(metadata).getOrElse(inferredType)
 
           val stringEnumValues = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to) })
           val field = Field(fieldName, Some(metadata.field_label), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnumValues, None, None, None, Nil, categoryId)
-          Seq(field)
+          Seq((field, isRedCapEnum))
         } else {
           val choices = getEnumValues(metadata).getOrElse(Nil)
           choices.map { case (suffix, label) =>
-            Field(s"${fieldName}___$suffix", Some(metadata.field_label + " " + label), FieldTypeId.Boolean, categoryId = categoryId)
+            val field = Field(s"${fieldName}___$suffix", Some(metadata.field_label + " " + label), FieldTypeId.Boolean, categoryId = categoryId)
+            (field, false)
           }
         }
       }.toList
@@ -375,7 +366,7 @@ private class RedCapDataSetImporter @Inject() (
       }
 
       // fields
-      newFields = {
+      newFieldsWithEnumFlag = {
         val fields = inferDictionary(metadatas, categoryNameIds.toMap)
 
         // also add redcap_event_name
@@ -383,17 +374,51 @@ private class RedCapDataSetImporter @Inject() (
           case Some(visitFieldTypeSpec) =>
             val stringEnums = visitFieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to) })
             val visitField = Field(visitFieldName, Some(visitLabel), visitFieldTypeSpec.fieldType, visitFieldTypeSpec.isArray, stringEnums)
-            fields ++ Seq(visitField)
+            fields ++ Seq((visitField, false))
 
           case None => fields
         }
       }
 
+      newFields = newFieldsWithEnumFlag.map(_._1)
+
       // save the fields
       _ <- dataSetService.updateDictionaryFields(dataSetId, newFields, true, true)
     } yield
-      newFields
+      newFieldsWithEnumFlag
   }
+
+  private def getRedCapFixedType(
+    metadata: Metadata
+  ): Option[(FieldTypeSpec, Boolean)] = {
+    val fieldSpecType = metadata.field_type match {
+      case RCFieldType.radio => Some(enumOrDoubleOrString(metadata))
+      case RCFieldType.dropdown => Some(enumOrDoubleOrString(metadata))
+      case RCFieldType.yesno => Some(FieldTypeSpec(FieldTypeId.Boolean))
+      case RCFieldType.truefalse => Some(FieldTypeSpec(FieldTypeId.Boolean))
+      case _ => None
+    }
+
+    fieldSpecType.map(spec => (spec, spec.fieldType == FieldTypeId.Enum))
+  }
+
+  private def enumOrDoubleOrString(
+    metadata: Metadata
+  ): FieldTypeSpec =
+    try {
+      FieldTypeSpec(FieldTypeId.Enum, false, getEnumValues(metadata))
+    } catch {
+      case e: AdaParseException =>
+        try {
+          getDoubles(metadata)
+          logger.warn(s"The field '${metadata.field_name}' has floating part(s) in the enum list and so will be treated as Double.")
+          FieldTypeSpec(FieldTypeId.Double)
+        } catch {
+          case e: AdaParseException =>
+            logger.warn(s"The field '${metadata.field_name}' has strings in the enum list and so will be treated as String.")
+            FieldTypeSpec(FieldTypeId.String)
+        }
+    }
 
   private def getEnumValues(metadata: Metadata): Option[Map[Int, String]] = {
     val choices = metadata.select_choices_or_calculations.trim
