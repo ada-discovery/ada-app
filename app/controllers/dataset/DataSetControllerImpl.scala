@@ -202,7 +202,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def itemName(dataSetName: String, setting: DataSetSetting) =
-    setting.itemName.getOrElse(dataSetName + " Item")
+    setting.displayItemName.getOrElse(dataSetName + " Item")
 
   override protected[controllers] def listView = { implicit ctx =>
     (dataset.list(_, _, _, _, _)).tupled

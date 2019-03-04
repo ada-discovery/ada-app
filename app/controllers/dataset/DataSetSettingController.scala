@@ -59,7 +59,7 @@ class DataSetSettingController @Inject() (
       "defaultCumulativeCountFieldName" -> optional(text),
       "filterShowFieldStyle" -> optional(of[FilterShowFieldStyle.Value]),
       "filterShowNonNullCount" -> boolean,
-      "itemName" -> optional(text),
+      "displayItemName" -> optional(text),
       "storageType" -> of[StorageType.Value],
       "mongoAutoCreateIndexForProjection" -> boolean,
       "cacheDataSet" -> ignored(false)
