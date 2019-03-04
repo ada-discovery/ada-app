@@ -50,6 +50,7 @@ case class DataSetSetting(
   defaultCumulativeCountFieldName: Option[String] = None,
   filterShowFieldStyle: Option[FilterShowFieldStyle.Value] = None,
   filterShowNonNullCount: Boolean = false,
+  itemName: Option[String] = None,
   storageType: StorageType.Value,
   mongoAutoCreateIndexForProjection: Boolean = false,
   cacheDataSet: Boolean = false
@@ -58,7 +59,7 @@ case class DataSetSetting(
     dataSetId: String,
     storageType: StorageType.Value
   ) =
-    this(None, dataSetId, "_id", None, None, None, None, None, None, false, storageType)
+    this(_id = None, dataSetId = dataSetId, keyFieldName = "_id", storageType = storageType)
 
   def this(dataSetId: String) =
     this(dataSetId, StorageType.Mongo)

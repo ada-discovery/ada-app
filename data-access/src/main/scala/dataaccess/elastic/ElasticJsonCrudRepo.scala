@@ -5,6 +5,7 @@ import com.sksamuel.elastic4s._
 import com.sksamuel.elastic4s.mappings.FieldType._
 import com.sksamuel.elastic4s.mappings.{FieldType, StringFieldDefinition, TypedFieldDefinition}
 import com.sksamuel.elastic4s.source.JsonDocumentSource
+
 import dataaccess.ignite.BinaryJsonUtil
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.{FieldTypeId, FieldTypeSpec}

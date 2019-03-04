@@ -105,8 +105,8 @@ object ConversionUtil {
   ): T = try {
     fun(text.trim)
   } catch {
-    case t: NumberFormatException => typeExpectedException(text, tag.runtimeClass)
-    case t: IllegalArgumentException => typeExpectedException(text, tag.runtimeClass)
+    case _: NumberFormatException => typeExpectedException(text, tag.runtimeClass)
+    case _: IllegalArgumentException => typeExpectedException(text, tag.runtimeClass)
   }
 
   private def isConvertible[T](

@@ -1,32 +1,28 @@
 package dataaccess.mongo
 
-import java.util.concurrent.TimeoutException
 import javax.inject.Inject
-
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import dataaccess._
-import dataaccess.ignite.BinaryJsonUtil.toJson
+import dataaccess.AdaDataAccessException
 import play.api.Logger
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoApi
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.collection.JSONBatchCommands.JSONCountCommand.Count
-
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-import models._
-import org.incal.core.Identity
-import org.incal.core.dataaccess._
 import reactivemongo.akkastream.{AkkaStreamCursor, State}
 import reactivemongo.api._
 import reactivemongo.core.actors.Exceptions.PrimaryUnavailableException
 import reactivemongo.core.commands.RawCommand
 import reactivemongo.core.errors.ReactiveMongoException
+import dataaccess.ignite.BinaryJsonUtil.toJson
+
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+import org.incal.core.Identity
+import org.incal.core.dataaccess._
 
 import scala.util.Random
 

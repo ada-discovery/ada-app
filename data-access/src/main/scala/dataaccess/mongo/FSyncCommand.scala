@@ -1,6 +1,5 @@
 package dataaccess.mongo
 
-import play.api.libs.json.{JsObject, Json}
 import reactivemongo.api.commands.{CollectionCommand, Command, CommandWithResult, UnitBox}
 import reactivemongo.bson.BSONDocument
 

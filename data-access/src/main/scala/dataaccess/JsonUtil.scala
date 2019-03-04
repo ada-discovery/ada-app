@@ -29,7 +29,7 @@ object JsonUtil {
       }
 
       // create a header
-      def headerFieldName(fieldName: String) = JsonUtil.unescapeKey(replaceAll(replacements)(fieldName))
+      def headerFieldName(fieldName: String) = unescapeKey(replaceAll(replacements)(fieldName))
       val header = headerFieldNames.map(headerFieldName).mkString(delimiter)
       sb.append(header + eol)
 

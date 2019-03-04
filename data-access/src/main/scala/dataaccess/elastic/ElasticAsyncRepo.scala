@@ -2,8 +2,11 @@ package dataaccess.elastic
 
 import com.sksamuel.elastic4s._
 import org.elasticsearch.search.sort.SortOrder
+import org.elasticsearch.{ElasticsearchException, ElasticsearchTimeoutException}
+import com.sksamuel.elastic4s.streams.ReactiveElastic._
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.dataaccess._
+import org.incal.core.Identity
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -13,10 +16,7 @@ import java.util.Date
 
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.Source
-import com.sksamuel.elastic4s.streams.ReactiveElastic._
-import dataaccess._
-import org.elasticsearch.{ElasticsearchException, ElasticsearchTimeoutException}
-import org.incal.core.Identity
+import dataaccess.AdaDataAccessException
 import play.api.Logger
 
 abstract protected class ElasticAsyncReadonlyRepo[E, ID](
