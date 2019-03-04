@@ -50,7 +50,7 @@ case class DataSetSetting(
   defaultCumulativeCountFieldName: Option[String] = None,
   filterShowFieldStyle: Option[FilterShowFieldStyle.Value] = None,
   filterShowNonNullCount: Boolean = false,
-  itemName: Option[String] = None,
+  displayItemName: Option[String] = None,
   storageType: StorageType.Value,
   mongoAutoCreateIndexForProjection: Boolean = false,
   cacheDataSet: Boolean = false

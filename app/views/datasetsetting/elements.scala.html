@@ -21,7 +21,7 @@
 @inputFieldTypeahead("dataSetSetting", "defaultScatterXField", form)
 @inputFieldTypeahead("dataSetSetting", "defaultScatterYField", form)
 @inputFieldTypeahead("dataSetSetting", "defaultCumulativeCountField", form)
-@inputText("dataSetSetting", "itemName", form)
+@inputText("dataSetSetting", "displayItemName", form)
 
 @select("dataSetSetting", "filterShowFieldStyle", form,
     FilterShowFieldStyle.values.toSeq.sortBy(_.id).map(value => (value.toString, toHumanReadableCamel(value.toString))), true
