@@ -23,17 +23,17 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.Future
 
-class ImputeOrdererdGroupValuesFromPrevious @Inject() (
+class ImputeOrderedGroupValuesFromPrevious @Inject() (
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService
-  ) extends InputFutureRunnable[ImputeOrdererdGroupValuesFromPreviousSpec] {
+  ) extends InputFutureRunnable[ImputeOrderedGroupValuesFromPreviousSpec] {
 
   private val logger = Logger
 
   private implicit val ftf = FieldTypeHelper.fieldTypeFactory()
 
   override def runAsFuture(
-    input: ImputeOrdererdGroupValuesFromPreviousSpec
+    input: ImputeOrderedGroupValuesFromPreviousSpec
   ) = {
     val dsa = dsaf(input.sourceDataSetId).get
 
@@ -120,10 +120,10 @@ class ImputeOrdererdGroupValuesFromPrevious @Inject() (
       }
     }
 
-  override def inputType = typeOf[ImputeOrdererdGroupValuesFromPreviousSpec]
+  override def inputType = typeOf[ImputeOrderedGroupValuesFromPreviousSpec]
 }
 
-case class ImputeOrdererdGroupValuesFromPreviousSpec(
+case class ImputeOrderedGroupValuesFromPreviousSpec(
   sourceDataSetId: String,
   derivedDataSetSpec: DerivedDataSetSpec,
   groupIdFieldName: String,

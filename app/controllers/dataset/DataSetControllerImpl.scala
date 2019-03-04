@@ -191,13 +191,18 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ) = { request =>
     val dataSetNameFuture = dsa.dataSetName
     val fieldLabelMapFuture = getFieldLabelMap(listViewColumns.get)
+    val settingFuture = dsa.setting
 
     for {
       dataSetName <- dataSetNameFuture
       fieldLabelMap <- fieldLabelMapFuture
+      setting <- settingFuture
     } yield
-      (dataSetName + " Item", page, conditions, fieldLabelMap, listViewColumns.get)
+      (itemName(dataSetName, setting), page, conditions, fieldLabelMap, listViewColumns.get)
   }
+
+  private def itemName(dataSetName: String, setting: DataSetSetting) =
+    setting.itemName.getOrElse(dataSetName + " Item")
 
   override protected[controllers] def listView = { implicit ctx =>
     (dataset.list(_, _, _, _, _)).tupled
@@ -214,6 +219,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val dataSetNameFuture = dsa.dataSetName
     val dataSpaceTreeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val fieldsFuture = fieldRepo.find()
+    val settingFuture = dsa.setting
 
     for {
     // get the data set name
@@ -224,6 +230,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
       // get all the fields
       fields <- fieldsFuture
+
+      // setting
+      setting <- settingFuture
     } yield {
       // create a field name label / renderer map
       val fieldNameLabelAndRendererMap = fields.map { field =>
@@ -233,7 +242,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
       DataSetShowViewDataHolder(
         id,
-        dataSetName + " Item",
+        itemName(dataSetName, setting),
         item,
         router.getDefaultView,
         true,
@@ -553,6 +562,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             val response = Ok(
               dataset.view.showView(
                 dataSetName,
+                itemName(dataSetName, setting),
                 dataViewId,
                 dataView.map(_.name).getOrElse("N/A"),
                 viewParts,
@@ -657,12 +667,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filterOrId: FilterOrId,
     oldCountDiff: Option[Int]
   ) = Action.async { implicit request =>
-    val start = new ju.Date()
     val tablePage = 0
 
     val dataSetNameFuture = dsa.dataSetName
     val dataViewFuture = dataViewRepo.get(dataViewId)
     val resolvedFilterFuture = filterRepo.resolve(filterOrId)
+    val settingFuture = dsa.setting
 
     {
       for {
@@ -674,6 +684,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         // resolved filter
         resolvedFilter <- resolvedFilterFuture
+
+        // setting
+        setting <- settingFuture
 
         // criteria
         criteria <- toCriteria(resolvedFilter.conditions)
@@ -701,7 +714,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         val newPage = Page(viewResponse.tableItems, tablePage, tablePage * pageLimit, viewResponse.count, tableOrder)
 
-        val pageHeader = messagesApi.apply("list.count.title", oldCountDiff.getOrElse(0) + viewResponse.count, dataSetName + " Item")
+        val pageHeader = messagesApi.apply("list.count.title", oldCountDiff.getOrElse(0) + viewResponse.count, itemName(dataSetName, setting))
 
         val table = dataset.view.viewTable(newPage, Some(viewResponse.filter), viewResponse.tableFields, true)(request, router)
         val conditionPanel = views.html.filter.conditionPanel(Some(viewResponse.filter))
@@ -770,7 +783,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         val newPage = Page(viewResponse.tableItems, tablePage, tablePage * pageLimit, viewResponse.count, tableOrder)
 
-        val pageHeader = messagesApi.apply("list.count.title", totalCount + viewResponse.count, dataSetName + " Item")
+        val pageHeader = messagesApi.apply("list.count.title", totalCount + viewResponse.count, itemName(dataSetName, setting))
 
         val table = dataset.view.viewTable(newPage, None, viewResponse.tableFields, true)(request, router)
         val countFilter = dataset.view.viewCountFilter(None, viewResponse.count, setting.filterShowFieldStyle, false)

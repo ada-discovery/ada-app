@@ -13,7 +13,8 @@
 @import controllers.dataset.{DataSetWebContext, TableViewData}
 
 @(
-    dataSetName : String,
+    dataSetName: String,
+    itemName: String,
     dataViewId: BSONObjectID,
     dataViewName: String,
     tableViewParts: Seq[TableViewData],
@@ -219,7 +220,7 @@
 }
 
 @layout.list(
-    dataSetName + " Item",
+    itemName,
     Some(dataSetName + " ("+ dataViewName + ")"),
     tableViewParts.map(_.page.total).sum,
     Some(actions),

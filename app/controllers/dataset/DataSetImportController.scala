@@ -100,6 +100,7 @@ class DataSetImportController @Inject()(
     "defaultCumulativeCountFieldName" -> optional(text),
     "filterShowFieldStyle" -> optional(of[FilterShowFieldStyle.Value]),
     "filterShowNonNullCount" -> boolean,
+    "itemName" -> optional(text),
     "storageType" -> of[StorageType.Value],
     "mongoAutoCreateIndexForProjection" -> boolean,
     "cacheDataSet" -> ignored(false)
