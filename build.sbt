@@ -41,7 +41,7 @@ routesImport ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.ada" % "ada-dataaccess_2.11" % "0.7.2",
+  "org.ada" % "ada-dataaccess_2.11" % "0.7.3",
   "org.reactivemongo" %% "play2-reactivemongo" % "0.12.6-play25" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11") exclude("com.typesafe.play", "play-iteratees_2.11") exclude("com.typesafe.play", "play-server_2.11") exclude("com.typesafe.play", "play-netty-server_2.11"), // "0.11.14-play24", // "0.12.6-play24", // "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
   "org.reactivemongo" %% "reactivemongo-akkastream" % "0.12.6",
   "com.evojam" %% "play-elastic4s" % "0.3.1" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11"),
@@ -78,6 +78,11 @@ libraryDependencies ++= Seq(
   "org.scalanlp" %% "breeze" % "0.13.2",        // linear algebra and stuff
   "org.scalanlp" %% "breeze-natives" % "0.13.2",  // linear algebra and stuff (native)
 //  "org.scalanlp" %% "breeze-viz" % "0.13.2",    // breeze visualization
+  "org.deeplearning4j" %% "scalnet" % "1.0.0-beta3",
+// "org.deeplearning4j" % "deeplearning4j-core" % "1.0.0-beta3",  
+  "org.nd4j" % "nd4j-native-platform" % "1.0.0-beta3",
+  "org.deeplearning4j" % "deeplearning4j-nlp" % "1.0.0-beta3",
+//  "org.deeplearning4j" %% "deeplearning4j-ui" % "1.0.0-beta3",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 ).map(_.exclude("org.slf4j", "slf4j-log4j12"))
 
