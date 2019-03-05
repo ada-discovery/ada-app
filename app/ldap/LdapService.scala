@@ -100,7 +100,10 @@ protected class LdapServiceImpl @Inject()(
           throw new AdaException("Environmental variable 'ADA_LDAP_BIND_PASSWORD' or a conf entry 'ldap.bindPassword' not set but expected.")
         )
 
-        LDAPInterfaceFactory.remote(settings.host, settings.port, settings.encryption, settings.trustStore, settings.bindDN, password, applicationLifecycle)
+        LDAPInterfaceFactory.remote(
+          settings.host, settings.port, settings.encryption, settings.trustStore, settings.bindDN, password, applicationLifecycle,
+          settings.connectTimeout, settings.responseTimeout, settings.pooledSchemaTimeout, settings.abandonOnTimeout
+        )
 
       case _ => None
     }

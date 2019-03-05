@@ -18,9 +18,9 @@ class MaxNormalizeWISDM @Inject()(
 ) extends InputFutureRunnable[MaxNormalizeWISDMSpec] {
 
   private object FieldName {
-    val xAcceleration = "x-accel"
-    val yAcceleration = "y-accel"
-    val zAcceleration = "z-accel"
+    val xAcceleration = "x_accel"
+    val yAcceleration = "y_accel"
+    val zAcceleration = "z_accel"
     val timeStamp = "timestamp"
     val userId = "user"
     val activity = "activity"

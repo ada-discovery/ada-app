@@ -11,6 +11,7 @@ class LdapSettings @Inject()(configuration: Configuration) extends Enumeration{
   // groups defines which user groups are to be used for authentication
   val dit: String = configuration.getString("ldap.dit").getOrElse("cn=users,cn=accounts,dc=ada")
   val groups: Seq[String] = configuration.getStringSeq("ldap.groups").getOrElse(Seq())
+  val recursiveDitAuthenticationSearch = configuration.getBoolean("ldap.recursiveDitAuthenticationSearch").getOrElse(false)
   val addDebugUsers: Boolean = configuration.getBoolean("ldap.debugusers").getOrElse(false)
   // switch for local ldap server or connection to remote server
   // use "local" to set up local in-memory server
@@ -23,12 +24,18 @@ class LdapSettings @Inject()(configuration: Configuration) extends Enumeration{
   val timeout: Int = configuration.getInt("ldap.timeout").getOrElse(2000)
   val bindDN: String = configuration.getString("ldap.bindDN").getOrElse("cn=admin.user,dc=users," + dit)
   val bindPassword: Option[String] = configuration.getString("ldap.bindPassword")
+
   // encryption settings
   // be aware that by default, client certificates are disabled and server certificates are always trusted!
   // do not use remote mode unless you know the server you connect to!
   val encryption: String = configuration.getString("ldap.encryption").getOrElse("none").toLowerCase()
   val trustStore: Option[String] = configuration.getString("ldap.trustStore")
-  val recursiveDitAuthenticationSearch = configuration.getBoolean("ldap.recursiveDitAuthenticationSearch").getOrElse(false)
+
+  // time-out settings
+  val connectTimeout: Option[Int] = configuration.getInt("ldap.connectTimeout")
+  val responseTimeout: Option[Long] = configuration.getLong("ldap.responseTimeout")
+  val pooledSchemaTimeout : Option[Long] = configuration.getLong("ldap.pooledSchemaTimeout")
+  val abandonOnTimeout: Option[Boolean] = configuration.getBoolean("ldap.abandonOnTimeout")
 
   def toList(): List[(String, ConfigValue)] = {
     val subconfig: Option[Configuration] = configuration.getConfig("ldap")

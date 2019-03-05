@@ -37,7 +37,7 @@ class AddSessionIdToWISDM @Inject()(
 
     for {
       // user ids
-      userIds <- dsa.dataSetRepo.find(projection = Seq(FieldName.userId)).map(_.map(_.as[Int]))
+      userIds <- dsa.dataSetRepo.find(projection = Seq(FieldName.userId)).map(_.map(json => (json \ FieldName.userId).as[Int]).toSet)
 
       // activities
       activityField <- dsa.fieldRepo.get(FieldName.activity).map(_.get)
@@ -67,10 +67,10 @@ class AddSessionIdToWISDM @Inject()(
             for (i <- 0 until size) yield {
               val (timestamp, json) = sortedUserActivityItems(i)
 
-              if (i < size - 1) {
-                val (nextTimestamp, _) = sortedUserActivityItems(i + 1)
+              if (i > 0) {
+                val (prevTimestamp, _) = sortedUserActivityItems(i - 1)
 
-                if (nextTimestamp - timestamp > input.maxDiffBetweenSessions) {
+                if (timestamp - prevTimestamp > input.maxDiffBetweenSessions) {
                   sessionId += 1
                 }
               }
@@ -91,7 +91,7 @@ class AddSessionIdToWISDM @Inject()(
 
 case class AddSessionIdToWISDMSpec(
   sourceDataSetId: String,
-  maxDiffBetweenSessions: Int,
+  maxDiffBetweenSessions: Long,
   resultDataSetSpec: DerivedDataSetSpec,
   streamSpec: StreamSpec
 )

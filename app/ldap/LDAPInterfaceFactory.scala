@@ -1,15 +1,14 @@
 package ldap
 
 import javax.net.ssl.{SSLContext, SSLSocketFactory}
-
 import com.unboundid.ldap.listener.{InMemoryDirectoryServer, InMemoryDirectoryServerConfig, InMemoryListenerConfig}
 import com.unboundid.ldap.sdk.extensions.StartTLSExtendedRequest
-import com.unboundid.ldap.sdk._
+import com.unboundid.ldap.sdk.{LDAPConnectionOptions, _}
 import com.unboundid.util.ssl.{SSLUtil, TrustAllTrustManager, TrustStoreTrustManager}
 import play.api.Logger
 import play.api.inject.ApplicationLifecycle
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 object LDAPInterfaceFactory {
@@ -71,9 +70,14 @@ object LDAPInterfaceFactory {
     trustStore: Option[String],
     bindDN: String,
     password: String,
-    applicationLifecycle: ApplicationLifecycle
+    applicationLifecycle: ApplicationLifecycle,
+    connectTimeout: Option[Int],
+    responseTimeout: Option[Long],
+    pooledSchemaTimeout : Option[Long],
+    abandonOnTimeout: Option[Boolean]
   ): Option[LDAPConnectionPool] = {
-    val (connection, processor) = createConnection(host, port, encryption, trustStore)
+    val options = createConnectionOptions(connectTimeout, responseTimeout, pooledSchemaTimeout, abandonOnTimeout)
+    val (connection, processor) = createConnection(host, port, encryption, trustStore, options)
 
     val result: ResultCode = try {
       connection.bind(bindDN, password).getResultCode
@@ -100,6 +104,33 @@ object LDAPInterfaceFactory {
     }
   }
 
+  private def createConnectionOptions(
+    connectTimeout: Option[Int],
+    responseTimeout: Option[Long],
+    pooledSchemaTimeout : Option[Long],
+    abandonOnTimeout: Option[Boolean]
+  ) = {
+    val options = new LDAPConnectionOptions()
+
+    connectTimeout.foreach(
+      options.setConnectTimeoutMillis(_)
+    )
+
+    responseTimeout.foreach(
+      options.setResponseTimeoutMillis(_)
+    )
+
+    pooledSchemaTimeout.foreach(
+      options.setPooledSchemaTimeoutMillis(_)
+    )
+
+    abandonOnTimeout.foreach(
+      options.setAbandonOnTimeout(_)
+    )
+
+    options
+  }
+
   /**
     * Creates a connection to an existing LDAP server instance.
     * @return LDAPConnection object
@@ -108,7 +139,8 @@ object LDAPInterfaceFactory {
     host: String,
     port: Int,
     encryption: String,
-    trustStore: Option[String]
+    trustStore: Option[String],
+    options: LDAPConnectionOptions = new LDAPConnectionOptions()
   ): (LDAPConnection, Option[PostConnectProcessor]) = {
     val sslUtil: SSLUtil = setupSSLUtil(trustStore)
 
@@ -116,12 +148,12 @@ object LDAPInterfaceFactory {
       case "ssl" =>
         // connect to server with ssl encryption
         val sslSocketFactory: SSLSocketFactory = sslUtil.createSSLSocketFactory()
-        val connection = new LDAPConnection(sslSocketFactory, host, port)
+        val connection = new LDAPConnection(sslSocketFactory, options, host, port)
         (connection, None)
 
       case "starttls" =>
         // connect to server with starttls connection
-        val connection: LDAPConnection = new LDAPConnection(host, port)
+        val connection: LDAPConnection = new LDAPConnection(options, host, port)
 
         val sslContext: SSLContext = sslUtil.createSSLContext()
         connection.processExtendedOperation(new StartTLSExtendedRequest(sslContext))
@@ -130,7 +162,7 @@ object LDAPInterfaceFactory {
 
       case _ =>
         // create unsecured connection
-        val connection = new LDAPConnection(host, port)
+        val connection = new LDAPConnection(options, host, port)
         (connection, None)
     }
   }

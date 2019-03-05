@@ -13,6 +13,7 @@ import play.api.Logger
 import play.api.libs.json.{JsNumber, JsObject}
 import services.DataSetService
 import dataaccess.JsonReadonlyRepoExtra._
+import models.DataSetFormattersAndIds.JsObjectIdentity
 import util.FieldUtil._
 
 import scala.reflect.runtime.universe.typeOf
@@ -39,7 +40,7 @@ class SegmentWISDMSessions @Inject()(
 
     for {
       // user ids
-      userIds <- dsa.dataSetRepo.find(projection = Seq(FieldName.userId)).map(_.map(_.as[Int]))
+      userIds <- dsa.dataSetRepo.find(projection = Seq(FieldName.userId)).map(_.map(json => (json \ FieldName.userId).as[Int]).toSet)
 
       // activities
       activityField <- dsa.fieldRepo.get(FieldName.activity).map(_.get)
@@ -71,7 +72,9 @@ class SegmentWISDMSessions @Inject()(
 
             sortedSessionItems.sliding(input.segmentSize, input.segmentStep).toList.zipWithIndex.flatMap { case (jsons, index) =>
               if (input.allowLastShorterSegment || jsons.length == input.segmentSize) {
-                jsons.map(_.+(newSegmentIdField.name, JsNumber(index)))
+                jsons.map(
+                  _.+(newSegmentIdField.name, JsNumber(index)).-(JsObjectIdentity.name)
+                )
               } else
                 Nil
             }
