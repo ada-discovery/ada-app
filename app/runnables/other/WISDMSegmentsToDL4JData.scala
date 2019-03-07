@@ -64,10 +64,10 @@ class WISDMSegmentsToDL4JData @Inject()(
       // max segment id
       maxSegmentId <- dsa.dataSetRepo.max(FieldName.segmentId).map(_.get.as[Int])
 
-      segmentIds = for { x <- userIds; y <- activities; z <- 1 to maxSessionId; w <- 0 to maxSegmentId } yield (x, y, z, w)
+      segmentIds = for { x <- userIds.toSeq.sorted; y <- activities.toSeq.sorted; z <- 1 to maxSessionId; w <- 0 to maxSegmentId } yield (x, y, z, w)
 
       // user-id-activity-session as a source
-      segmentSource: Source[(Int, Int, Int, Int), NotUsed] = Source.fromIterator(() => segmentIds.toIterator)
+      segmentSource: Source[(Int, Int, Int, Int), NotUsed] = Source.fromIterator(() => segmentIds.sortBy(_._1).toIterator)
 
       // stream of new jsons updated in a given order
       newSource: Source[(Seq[Seq[Double]], Int, Int), NotUsed] = {
@@ -75,8 +75,6 @@ class WISDMSegmentsToDL4JData @Inject()(
           dsa.dataSetRepo.find(
             Seq(FieldName.userId #== userId, FieldName.activity #== activity, FieldName.sessionId #== sessionId, FieldName.segmentId #== segmentId)
           ).map { segmentJsons =>
-            logger.info(s"Processing ${segmentJsons.size} jsons for the user '$userId' and activity $activity and session $sessionId.")
-
             val features = segmentJsons.map { json =>
               val timeStamp = (json \ FieldName.timeStamp).as[Long]
 
@@ -90,17 +88,17 @@ class WISDMSegmentsToDL4JData @Inject()(
             (features, activity, userId)
           }
         }
-      }
+      }.filter(_._1.nonEmpty)
     } yield {
       var fileIndex = input.startingFileIndex.getOrElse(0)
 
-      newSource.runForeach { case (features, output, userId) =>
-        val seriesContent = Seq(header ++ features.map(_.mkString(input.delimiter))).mkString("\n")
+      newSource.runForeach { case (features, activity, userId) =>
+        logger.info(s"Processing ${features.size} features for the user '$userId' and activity $activity.")
 
-        println(fileIndex)
+        val seriesContent = (Seq(header) ++ features.map(_.mkString(input.delimiter))).mkString("\n")
 
         writeAux(input.outputFolderName, "features", fileIndex + ".csv", seriesContent)
-        writeAux(input.outputFolderName, FieldName.activity, fileIndex + ".csv", output.toString)
+        writeAux(input.outputFolderName, FieldName.activity, fileIndex + ".csv", activity.toString)
         writeAux(input.outputFolderName, FieldName.userId, fileIndex + ".csv", userId.toString)
         fileIndex += 1
       }
