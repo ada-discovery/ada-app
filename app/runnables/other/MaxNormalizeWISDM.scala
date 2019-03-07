@@ -1,11 +1,12 @@
 package runnables.other
 
+import akka.stream.scaladsl.Flow
 import dataaccess.StreamSpec
 import javax.inject.Inject
 import models.ml.DerivedDataSetSpec
 import org.incal.core.InputFutureRunnable
 import persistence.dataset.DataSetAccessorFactory
-import play.api.libs.json.{JsNumber, JsObject, Json}
+import play.api.libs.json.{JsNull, JsNumber, JsObject, Json}
 import services.DataSetService
 import dataaccess.JsonReadonlyRepoExtra._
 
@@ -26,6 +27,8 @@ class MaxNormalizeWISDM @Inject()(
     val activity = "activity"
   }
 
+  private val flatFlow = Flow[Option[JsObject]].collect{ case Some(a) => a }
+
   override def runAsFuture(input: MaxNormalizeWISDMSpec) = {
     val dsa = dsaf(input.sourceDataSetId).get
 
@@ -43,22 +46,36 @@ class MaxNormalizeWISDM @Inject()(
 
       // altered stream
       alteredStream = inputStream.map { json =>
-        val xAccel = (json \ FieldName.xAcceleration).as[Double]
-        val yAccel = (json \ FieldName.yAcceleration).as[Double]
-        val zAccel = (json \ FieldName.zAcceleration).as[Double]
+        val xAccel = asDouble(json, FieldName.xAcceleration)
+        val yAccel = asDouble(json, FieldName.yAcceleration)
+        val zAccel = asDouble(json, FieldName.zAcceleration)
 
-        json.++(Json.obj(
-          FieldName.xAcceleration -> xAccel / xAccelMax,
-          FieldName.yAcceleration -> yAccel / yAccelMax,
-          FieldName.zAcceleration -> zAccel / zAccelMax
-        ))
+        // save only those with defined x, y, and z acceleration
+        if (xAccel.isDefined && yAccel.isDefined && zAccel.isDefined) {
+          val newJson = json.++(Json.obj(
+            FieldName.xAcceleration -> xAccel.get / xAccelMax,
+            FieldName.yAcceleration -> yAccel.get / yAccelMax,
+            FieldName.zAcceleration -> zAccel.get / zAccelMax
+          ))
+
+          Some(newJson)
+        } else
+          None
       }
 
       // save the updated json stream as a new (derived) data set
-      _ <- dataSetService.saveDerivedDataSet(dsa, input.resultDataSetSpec, alteredStream, fields.toSeq, input.streamSpec, true)
+      _ <- dataSetService.saveDerivedDataSet(dsa, input.resultDataSetSpec, alteredStream.via(flatFlow), fields.toSeq, input.streamSpec, true)
     } yield
       ()
   }
+
+  private def asDouble(json: JsObject, fieldName: String) =
+    (json \ fieldName).toOption.flatMap(jsValue =>
+      jsValue match {
+        case JsNull => None
+        case _ => Some(jsValue.as[Double])
+      }
+    )
 
   override def inputType = typeOf[MaxNormalizeWISDMSpec]
 }
