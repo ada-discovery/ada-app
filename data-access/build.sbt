@@ -29,5 +29,5 @@ libraryDependencies ++= Seq(
   "org.apache.ignite" % "ignite-scalar" % "1.6.0",
   "org.scalactic" %% "scalactic" % "3.0.0",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
-  "org.in-cal" %% "incal-core" % "0.0.10"
+  "org.in-cal" %% "incal-core" % "0.1.0"
 )
