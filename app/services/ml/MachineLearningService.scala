@@ -348,7 +348,7 @@ private class MachineLearningServiceImpl @Inject() (
 
     (jsons: Traversable[JsObject]) =>
       val df = FeaturesDataFrameFactory(session, jsons, fields)
-      val featuresDf = FeaturesDataFrameFactory.prepFeaturesDataFrame(inputFieldNames.toSet, Some(outputFieldName))(df)
+      val featuresDf = SparkUtil.prepFeaturesDataFrame(inputFieldNames.toSet, Some(outputFieldName))(df)
 
       // if ordered values are defined use their position as index, otherwise we assume the given values are integers and can be used directly as index
       val seriesDf =
@@ -405,7 +405,7 @@ private class MachineLearningServiceImpl @Inject() (
   ): Traversable[(String, Int)] = {
     val featureNames = dataFrame.columns.filterNot(_.equals(idColumnName))
     val featureDf = dataFrame.transform(
-      FeaturesDataFrameFactory.prepFeaturesDataFrame(featureNames.toSet, None)
+      SparkUtil.prepFeaturesDataFrame(featureNames.toSet, None)
     )
 
     val (df, idClusters) = clusterAux2(featureDf, idColumnName, mlModel, featuresNormalizationType, pcaDim)

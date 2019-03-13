@@ -99,6 +99,20 @@
             return intValue;
         }
 
+        function intOrSeqValue(value) {
+            var result = null;
+            if (value && value.length > 0) {
+                if (!value.includes(",")) {
+                    result = intValue(value)
+                } else {
+                    result = value.split(",").map(function(item) {
+                        return intValue(item.trim());
+                    })
+                }
+            }
+            return result;
+        }
+
         function floatValue(value) {
             var floatValue = null;
             if (value && value.length > 0) {

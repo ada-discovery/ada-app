@@ -7,6 +7,7 @@ import org.incal.spark_ml.models.classification._
 import org.incal.spark_ml.models.result.{BinaryClassificationCurves, ClassificationMetricStats, ClassificationResult, MetricStatsValues, StandardClassificationResult, TemporalClassificationResult}
 import org.incal.spark_ml.models.setting._
 import models.ml.ReservoirSpec.reservoirSpecFormat
+import models.ml.classification.Classifier.eitherFormat
 import play.api.libs.json.{Json, _}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
@@ -117,6 +118,7 @@ object ClassificationResult {
   ) = {
     implicit val tupleFormat = TupleFormat[String, Double]
     implicit val learningSettingFormat = Json.format[ClassificationLearningSetting]
+    implicit val intEitherFormat = eitherFormat[Int]
     implicit val temporalLearningSettingFormat = Json.format[TemporalClassificationLearningSetting]
 
     implicit val ioSpecFormat = Json.format[TemporalGroupIOSpec]

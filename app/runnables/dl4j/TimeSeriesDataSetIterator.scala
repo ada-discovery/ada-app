@@ -1,7 +1,9 @@
-package runnables
+package runnables.dl4j
 
 import java.util
+import java.util.Collections
 
+import org.datavec.api.records.reader.impl.csv.{CSVRecordReader, CSVSequenceRecordReader}
 import org.datavec.api.records.reader.{RecordReader, SequenceRecordReader}
 import org.deeplearning4j.datasets.datavec.RecordReaderMultiDataSetIterator
 import org.deeplearning4j.datasets.datavec.RecordReaderMultiDataSetIterator.AlignmentMode
@@ -13,6 +15,7 @@ import org.nd4j.linalg.indexing.INDArrayIndex
 
 private class TimeSeriesDataSetIterator(
   batchSize: Int,
+  outputSize: Int,
   inputReader: SequenceRecordReader,
   labelReader: RecordReader
 ) extends DataSetIterator {
@@ -22,7 +25,7 @@ private class TimeSeriesDataSetIterator(
     .addSequenceReader("input", inputReader)
     .addReader("output", labelReader)
     .addInput("input")
-    .addOutputOneHot("output", 0, 2)
+    .addOutputOneHot("output", 0, outputSize)
     .build()
 
   private var preProcessor: DataSetPreProcessor = null
@@ -87,13 +90,14 @@ private class TimeSeriesDataSetIterator(
     var fm: INDArray = getOrNull(mds.getFeaturesMaskArrays, 0)
 
     // [minibatchSize, channels, time series length] -> [minibatchSize, layerInputDepth, inputHeight, inputWidth]
+
     // need [minibatchSize, 1, channels, time series length]
 
     val oldShape = f.shape()
-    println(util.Arrays.toString(oldShape))
+//    println(util.Arrays.toString(oldShape))
     val newF = f.reshape(oldShape(0), 1, oldShape(1), oldShape(2)).swapAxes(2, 3)
 
-    println(util.Arrays.toString(newF.shape()))
+//    println(util.Arrays.toString(newF.shape()))
 
     val l = getOrNull(mds.getLabels, 0)
     val lm = getOrNull(mds.getLabelsMaskArrays, 0)
@@ -108,7 +112,95 @@ object TimeSeriesDataSetIterator {
 
   def apply(
     batchSize: Int,
+    outputSize: Int,
     inputReader: SequenceRecordReader,
     labelReader: RecordReader
-  ): DataSetIterator = new TimeSeriesDataSetIterator(batchSize, inputReader, labelReader)
+  ): DataSetIterator = new TimeSeriesDataSetIterator(batchSize, outputSize, inputReader, labelReader)
+
+  def apply(
+    batchSize: Int,
+    outputSize: Int,
+    featureBaseDir: String,
+    outputBaseDir: String,
+    startIndex: Int,
+    endIndex: Int,
+    featuresSkipLines: Int
+  ): DataSetIterator = {
+    // create and shuffle indeces
+    val indeces = new util.ArrayList[Integer]
+    for (i <- startIndex to endIndex) indeces.add(i)
+    Collections.shuffle(indeces)
+
+    create(
+      batchSize,
+      outputSize,
+      featureBaseDir,
+      outputBaseDir,
+      indeces,
+      featuresSkipLines
+    )
+  }
+
+  def apply(
+    batchSize: Int,
+    outputSize: Int,
+    featureBaseDir: String,
+    outputBaseDir: String,
+    startIndex: Int,
+    endIndex: Int,
+    trainingValidationRatio: Double,
+    featuresSkipLines: Int
+  ): (DataSetIterator, DataSetIterator) = {
+    // create and shuffle indeces
+    val indeces = new util.ArrayList[Integer]
+    for (i <- startIndex to endIndex) indeces.add(i)
+    Collections.shuffle(indeces)
+
+    val trainingCount = (indeces.size() * trainingValidationRatio).toInt
+
+    val trainingIndeces = indeces.subList(0, trainingCount)
+    val validationIndeces = indeces.subList(trainingCount, indeces.size())
+
+    val trainingSet = create(
+      batchSize,
+      outputSize,
+      featureBaseDir,
+      outputBaseDir,
+      trainingIndeces,
+      featuresSkipLines
+    )
+
+    val validationSet = create(
+      batchSize,
+      outputSize,
+      featureBaseDir,
+      outputBaseDir,
+      validationIndeces,
+      featuresSkipLines
+    )
+
+    (trainingSet, validationSet)
+  }
+
+  private def create(
+    batchSize: Int,
+    outputSize: Int,
+    featureBaseDir: String,
+    outputBaseDir: String,
+    indeces: java.util.List[Integer],
+    featuresSkipLines: Int
+  ): DataSetIterator = {
+    // create a features reader
+    val features = new CSVSequenceRecordReader(featuresSkipLines, ",")
+    val featuresSplit = new IndexInputSplit(featureBaseDir + "/%d.csv", indeces)
+    features.initialize(featuresSplit)
+
+    // create a labels reader
+    val labels = new CSVRecordReader
+    val labelsSplit = new IndexInputSplit(outputBaseDir + "/%d.csv", indeces)
+    labels.initialize(labelsSplit)
+
+    // combine both readers and retrieve a time series data set iterator
+    apply(batchSize, outputSize, features, labels)
+  }
 }

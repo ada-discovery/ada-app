@@ -75,7 +75,7 @@ class RunRowTimeSeriesRCRegression @Inject() (
           TemporalRegressionLearningSetting(
             core = input.learningSetting,
             predictAhead = input.predictAhead,
-            slidingWindowSize = input.windowSize,
+            slidingWindowSize = Left(input.windowSize),
             reservoirSetting = Some(input.reservoirSpec),
             minCrossValidationTrainingSizeRatio = input.minCrossValidationTrainingSizeRatio,
             trainingTestSplitOrderValue = input.trainingTestSplitOrderValue

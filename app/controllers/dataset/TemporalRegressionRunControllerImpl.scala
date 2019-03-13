@@ -123,6 +123,7 @@ protected[controllers] class TemporalRegressionRunControllerImpl @Inject()(
 
       // run the selected classifier (ML model)
       resultsHolder <- mlModel.map { mlModel =>
+
         val fieldNameAndSpecs = fields.toSeq.map(field => (field.name, field.fieldTypeSpec))
 
         val results = mlService.regressRowTemporalSeries(

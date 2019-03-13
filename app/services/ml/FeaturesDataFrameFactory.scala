@@ -12,6 +12,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import play.api.libs.json.{JsArray, JsObject, JsString, Json}
 import org.incal.spark_ml.transformers.FixedOrderStringIndexer
+import org.incal.spark_ml.SparkUtil.{prepFeaturesDataFrame, indexStringCols}
 
 import scala.util.Random
 
@@ -142,41 +143,6 @@ object FeaturesDataFrameFactory {
       fields.map(_._1)
     ).toSet
 
-  def prepFeaturesDataFrame(
-    featureFieldNames: Set[String],
-    outputFieldName: Option[String],
-    dropFeatureCols: Boolean = true,
-    dropNaValues: Boolean = true)(
-    df: DataFrame
-  ): DataFrame = {
-    // drop null values
-    val nonNullDf = if (dropNaValues) df.na.drop else df
-
-    val existingFeatureCols = nonNullDf.columns.filter(featureFieldNames.contains)
-
-    val assembler = new VectorAssembler()
-      .setInputCols(existingFeatureCols)
-      .setOutputCol("features")
-
-    val featuresDf = assembler.transform(nonNullDf)
-
-    val finalDf = outputFieldName.map(
-      featuresDf.withColumnRenamed(_, "label")
-    ).getOrElse(
-      featuresDf
-    )
-
-    if (dropFeatureCols) {
-      val columnsToDrop = outputFieldName.map { outputFieldName =>
-        existingFeatureCols.filterNot(_.equals(outputFieldName))
-      }.getOrElse(
-        existingFeatureCols
-      )
-      finalDf.drop(columnsToDrop: _ *)
-    } else
-      finalDf
-  }
-
   private def jsonsToDataFrame(
     session: SparkSession)(
     jsons: Traversable[JsObject],
@@ -270,26 +236,11 @@ object FeaturesDataFrameFactory {
 
     // index string columns
     val filteredStringTypesWithEnumLabels = stringTypesWithEnumLabels.filter { case (stringType, _) => !stringFieldsNotToIndex.contains(stringType.name) }
-    val finalDf = indexStringCols(filteredStringTypesWithEnumLabels)(df)
+    val stringColumnNamesWithEnumLabels = filteredStringTypesWithEnumLabels.map { case (field, enumLabels) => (field.name, enumLabels) }
+    val finalDf = indexStringCols(stringColumnNamesWithEnumLabels)(df)
 
     (finalDf, valueBroadVar)
   }
-
-  private def indexStringCols(
-    stringTypesWithEnumLabels: Seq[(StructField, Seq[String])])(
-    df: DataFrame
-  ) =
-    stringTypesWithEnumLabels.foldLeft(df){ case (newDf, (stringType, enumLabels)) =>
-      val tempCol = stringType.name + Random.nextLong()
-
-      // if enum labels provided create an fixed-order string indexer, otherwise use a standard one, which index values based on their frequencies
-      val indexer = if (enumLabels.nonEmpty) {
-        new FixedOrderStringIndexer().setLabels(enumLabels.toArray).setInputCol(stringType.name).setOutputCol(tempCol).setHandleInvalid("skip")
-      } else
-        new StringIndexer().setInputCol(stringType.name).setOutputCol(tempCol).setHandleInvalid("skip")
-
-      indexer.fit(newDf).transform(newDf).drop(stringType.name).withColumnRenamed(tempCol, stringType.name)
-    }
 
   private def discretizeAsQuantiles(
     df: DataFrame,

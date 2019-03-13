@@ -247,6 +247,14 @@ object FieldUtil {
       case t if t subMatches (typeOf[Map[String, _]]) =>
         FieldTypeSpec(FieldTypeId.Json)
 
+      // either value or seq int
+      case t if t matches (typeOf[Either[Option[Int], Seq[Int]]], typeOf[Either[Option[Long], Seq[Long]]], typeOf[Either[Option[Byte], Seq[Byte]]]) =>
+        FieldTypeSpec(FieldTypeId.Integer, true)
+
+      // either value or seq double
+      case t if t matches (typeOf[Either[Option[Double], Seq[Double]]], typeOf[Either[Option[Float], Seq[Float]]], typeOf[Either[Option[BigDecimal], Seq[BigDecimal]]]) =>
+        FieldTypeSpec(FieldTypeId.Double, true)
+
       // otherwise
       case _ =>
         val typeName =

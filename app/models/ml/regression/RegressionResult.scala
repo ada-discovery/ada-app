@@ -4,6 +4,7 @@ import dataaccess.BSONObjectIdentity
 import models.json._
 import org.incal.spark_ml.models.VectorScalerType
 import models.ml.ReservoirSpec.reservoirSpecFormat
+import models.ml.regression.Regressor.eitherFormat
 import org.incal.spark_ml.models.regression.RegressionEvalMetric
 import org.incal.spark_ml.models.result._
 import org.incal.spark_ml.models.setting._
@@ -110,6 +111,7 @@ object RegressionResult {
   ) = {
     implicit val tupleFormat = TupleFormat[String, Double]
     implicit val learningSettingFormat = Json.format[RegressionLearningSetting]
+    implicit val intEitherFormat = eitherFormat[Int]
     implicit val temporalLearningSettingFormat = Json.format[TemporalRegressionLearningSetting]
     implicit val ioSpecFormat = Json.format[TemporalGroupIOSpec]
 

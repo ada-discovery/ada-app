@@ -1,7 +1,7 @@
 package runnables.ml
 
 import javax.inject.Inject
-
+import org.apache.spark.ml.{Pipeline, PipelineStage}
 import org.apache.spark.ml.linalg.Vectors
 import org.incal.play.GuiceRunnableApp
 import services.SparkApp
@@ -32,18 +32,18 @@ class SparkDL @Inject() (sparkApp: SparkApp) extends Runnable {
   private val windowSize = 3
   private val shift = 1
 
-  private val slidingWindow = SlidingWindow.applyInPlace("features", "time")(windowSize)
-  private val slidingWindowWithConsecutiveOrder = SlidingWindowWithConsecutiveOrder.applyInPlace("features", "time")(windowSize)
+  private val (slidingWindow, _) = SlidingWindow.applyInPlace("features", "time")(Left(Some(windowSize)))
+  private val (slidingWindowWithConsecutiveOrder, _) = SlidingWindowWithConsecutiveOrder.applyInPlace("features", "time")(Left(Some(windowSize)))
   private val seqShift = SeqShift("label", "time", "shiftLabel")(shift)
   private val seqShiftWithConsecutiveOrder = SeqShiftWithConsecutiveOrder("label", "time", "shiftLabel")(shift)
 
   override def run = {
     df.show()
 
-    val windowDf = slidingWindow.fit(df).transform(df)
+    val windowDf = asPipeline(slidingWindow).fit(df).transform(df)
     windowDf.show(20, false)
 
-    val windowDf2 = slidingWindowWithConsecutiveOrder.fit(df).transform(df)
+    val windowDf2 = asPipeline(slidingWindowWithConsecutiveOrder).fit(df).transform(df)
     windowDf2.show(20, false)
 
     val dlDf = seqShift.transform(windowDf)
@@ -54,6 +54,9 @@ class SparkDL @Inject() (sparkApp: SparkApp) extends Runnable {
 
     sparkApp.session.stop()
   }
+
+  private def asPipeline(stage: PipelineStage) =
+    new Pipeline().setStages(Array(stage))
 }
 
 object SparkDL extends GuiceRunnableApp[SparkDL]
