@@ -6,8 +6,10 @@ import org.deeplearning4j.nn.conf.inputs.InputType
 import org.deeplearning4j.nn.conf.layers._
 import org.deeplearning4j.nn.weights.WeightInit
 import org.nd4j.linalg.activations.Activation
+import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.learning.config.Adam
 import org.nd4j.linalg.lossfunctions.LossFunctions
+import org.nd4j.linalg.lossfunctions.impl.{LossBinaryXENT, LossMCXENT}
 
 object CNN1D {
 
@@ -19,7 +21,8 @@ object CNN1D {
     kernelSize: Int,
     poolingKernelSize: Int,
     convolutionFeaturesNums: Seq[Int],
-    dropOut: Double
+    dropOut: Double,
+    lossClassWeights: Seq[Double] = Nil
   ): ComputationGraphConfiguration = {
 
     def convolution(out: Int, channels: Int) =
@@ -73,7 +76,19 @@ object CNN1D {
 //        .build(), (3 * cnnLayersNum).toString)
 
     // final (dense) output layer + dropout
-    val lossFunction = if (outputNum == 2) LossFunctions.LossFunction.XENT else LossFunctions.LossFunction.MCXENT
+    val lossFunction = if (outputNum == 2)
+      if (lossClassWeights.nonEmpty)
+        new LossBinaryXENT(Nd4j.create(lossClassWeights.toArray))
+          else
+        new LossBinaryXENT()
+    else
+      if (lossClassWeights.nonEmpty)
+        new LossMCXENT(Nd4j.create(lossClassWeights.toArray))
+      else
+        new LossMCXENT()
+
+    LossFunctions.LossFunction.MCXENT
+
     val activation = if (outputNum == 2) Activation.SIGMOID else Activation.SOFTMAX
 
     conf

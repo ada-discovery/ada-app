@@ -22,10 +22,12 @@ class RunDL4JTimeSeriesClassification extends InputRunnable[RunDL4JTimeSeriesCla
 
     // build a CNN model
     log.info("Building a CNN model....")
-    val config = CNN1D(input.numRows, input.numColumns, input.outputNum, input.learningRate, input.kernelSize, input.poolingKernelSize, input.convolutionFeaturesNums, input.dropOut)
+    val config = CNN1D(
+      input.numRows, input.numColumns, input.outputNum, input.learningRate, input.kernelSize, input.poolingKernelSize, input.convolutionFeaturesNums, input.dropOut, input.lossClassWeights
+    )
 
     // launch and report the results
-    launchAndReportResults(config, trainingData, validationData, input.numEpochs, input.resultsExportDir, input)
+    launchAndReportResults(config, trainingData, validationData, input.numEpochs, input.outputNum, input.resultsExportDir, input)
   }
 
   override def inputType = typeOf[RunDL4JTimeSeriesClassificationSpec]
@@ -48,5 +50,6 @@ case class RunDL4JTimeSeriesClassificationSpec(
   kernelSize: Int,
   poolingKernelSize: Int,
   convolutionFeaturesNums: Seq[Int],
-  dropOut: Double
+  dropOut: Double,
+  lossClassWeights: Seq[Double]
 )
