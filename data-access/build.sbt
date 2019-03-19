@@ -15,10 +15,12 @@ resolvers ++= Seq(
   //  "Ivylocal" at "file://home/peter/.ivy2/local/" // " + Path.userHome.absolutePath + "
 )
 
+val playVersion = "2.5.19"
+
 libraryDependencies ++= Seq(
-  "com.typesafe.play" %% "play" % "2.5.6",
-  "com.typesafe.play" %% "play-json" % "2.5.6",
-  "com.typesafe.play" %% "play-iteratees" % "2.5.6",
+  "com.typesafe.play" %% "play" % playVersion,
+  "com.typesafe.play" %% "play-json" % playVersion,
+  "com.typesafe.play" %% "play-iteratees" % playVersion,
   "org.reactivemongo" %% "play2-reactivemongo" %  "0.12.6-play25" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11") exclude("com.typesafe.play", "play-iteratees_2.11") exclude("com.typesafe.play", "play-server_2.11") exclude("com.typesafe.play", "play-netty-server_2.11"), // "0.11.14-play24", // "0.12.6-play24", // "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
   "org.reactivemongo" %% "reactivemongo-akkastream" % "0.12.6",
   "com.evojam" %% "play-elastic4s" % "0.3.1" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11"),
@@ -29,5 +31,5 @@ libraryDependencies ++= Seq(
   "org.apache.ignite" % "ignite-scalar" % "1.6.0",
   "org.scalactic" %% "scalactic" % "3.0.0",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
-  "org.in-cal" %% "incal-core" % "0.1.0"
+  "org.in-cal" %% "incal-core" % "0.1.1"
 )

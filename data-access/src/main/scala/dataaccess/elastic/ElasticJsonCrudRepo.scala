@@ -81,9 +81,7 @@ class ElasticJsonCrudRepo @Inject()(
     )
 
   override protected def createSaveDef(entity: JsObject, id: BSONObjectID) = {
-//    val stringSource = Json.stringify(jsonIdRenameFormat.writes(entity))
-    // TODO: PlayJson should be fixed properly... report the issue
-    val stringSource = FixedJacksonJson.generateFromJsValue(jsonIdRenameFormat.writes(entity))
+    val stringSource = Json.stringify(jsonIdRenameFormat.writes(entity))
     index into indexAndType source stringSource id id
   }
 
