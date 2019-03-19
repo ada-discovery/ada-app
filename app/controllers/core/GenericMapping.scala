@@ -100,7 +100,7 @@ object GenericMapping {
   private def caseClassMapping(
     typ: Type
   ): Traversable[(String, Mapping[Any])] = {
-    val memberNamesAndTypes = ReflectionUtil.getCaseClassMemberNamesAndTypesInOrder(typ)
+    val memberNamesAndTypes = ReflectionUtil.getCaseClassMemberNamesAndTypes(typ)
 
     memberNamesAndTypes.map { case (fieldName, memberType) =>
       val mapping =

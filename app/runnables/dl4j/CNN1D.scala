@@ -38,8 +38,8 @@ object CNN1D {
         .stride(poolingKernelSize, 1)
         .build()
 
-    // Input shape: [batch,         1,  numRows, numColumns]
-    //              [batch, channels,    height,      width]
+    // Input shape: [batch,                1,   numRows, numColumns]
+    //              [batch, channels / depth,    height,      width]
 
     // basic learning setting
     val conf = new NeuralNetConfiguration.Builder()
@@ -86,8 +86,6 @@ object CNN1D {
         new LossMCXENT(Nd4j.create(lossClassWeights.toArray))
       else
         new LossMCXENT()
-
-    LossFunctions.LossFunction.MCXENT
 
     val activation = if (outputNum == 2) Activation.SIGMOID else Activation.SOFTMAX
 
