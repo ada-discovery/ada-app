@@ -15,7 +15,7 @@ resolvers ++= Seq(
   //  "Ivylocal" at "file://home/peter/.ivy2/local/" // " + Path.userHome.absolutePath + "
 )
 
-val playVersion = "2.5.19"
+val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play" % playVersion,
