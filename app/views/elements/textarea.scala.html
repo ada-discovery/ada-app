@@ -1,5 +1,5 @@
 @import helper.FieldConstructor
-@import elements.twitterBootstrapInput
+@import elements.bootstrapInput
 
 @(
     domainName: String,
@@ -11,7 +11,7 @@
     implicit msg: play.api.i18n.Messages
 )
 
-@implicitFieldConstructor = @{ FieldConstructor(twitterBootstrapInput.f(labelGridWidth)) }
+@implicitFieldConstructor = @{ FieldConstructor(bootstrapInput.f(labelGridWidth)) }
 
 <!--
     args = 'rows -> 3, 'cols -> 50

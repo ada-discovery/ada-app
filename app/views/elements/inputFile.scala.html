@@ -1,6 +1,6 @@
 @import helper.FieldConstructor
 @import play.api.data.Field
-@import elements.twitterBootstrapInput
+@import elements.bootstrapInput
 
 @(
     domainName: String,
@@ -11,6 +11,6 @@
     implicit msg: play.api.i18n.Messages
 )
 
-@implicitFieldConstructor = @{ FieldConstructor(twitterBootstrapInput.f(labelGridWidth)) }
+@implicitFieldConstructor = @{ FieldConstructor(bootstrapInput.f(labelGridWidth)) }
 
 @helper.inputFile(field, List('_label -> attributeLabel(domainName, field.name)) ++ args : _*)

@@ -1,7 +1,0 @@
-@(domainName: String, attribute : String)(implicit msg: play.api.i18n.Messages)
-
-@if(Messages.isDefinedAt(domainName + "." + attribute + ".label")) {
-    @Messages(domainName + "." + attribute + ".label")
-} else {
-    @attribute.replaceAll("([a-z])([A-Z])", "$1 $2").capitalize
-}
