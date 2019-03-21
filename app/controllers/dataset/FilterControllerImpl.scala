@@ -21,9 +21,9 @@ import java.util.Date
 
 import controllers.core.AdaCrudControllerImpl
 import reactivemongo.play.json.BSONFormats._
-import dataaccess.{AdaDataAccessException, FilterRepo}
+import dataaccess.FilterRepo
 import org.incal.core.FilterCondition
-import org.incal.core.dataaccess.{AscSort, Criterion}
+import org.incal.core.dataaccess.{AscSort, Criterion, InCalDataAccessException}
 import org.incal.play.Page
 import org.incal.play.controllers.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
 import org.incal.play.formatters.JsonFormatter
@@ -191,7 +191,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
       case t: TimeoutException =>
         Logger.error("Problem found while executing the save function")
         InternalServerError(t.getMessage)
-      case i: AdaDataAccessException =>
+      case i: InCalDataAccessException =>
         Logger.error("Problem found while executing the save function")
         InternalServerError(i.getMessage)
     }

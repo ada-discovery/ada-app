@@ -1,5 +1,6 @@
 package dataaccess.elastic
 
+import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.json.RenameFieldFormat
 import play.api.libs.json._
 
@@ -15,7 +16,7 @@ class ElasticIdRenameFormat[T](format: Format[T]) extends  Format[T] {
 }
 
 object ElasticIdRenameUtil {
-  val originalIdName = "_id"
+  val originalIdName = JsObjectIdentity.name
   val newIdName = "__id"
   val newIdNameSuffix = ".$oid"
   val newIdNameWithSuffix = newIdName + newIdNameSuffix

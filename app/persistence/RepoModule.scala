@@ -2,11 +2,11 @@ package persistence
 
 import javax.inject.Provider
 
-import com.google.inject.{Inject, Key, TypeLiteral}
+import com.google.inject.{Key, TypeLiteral}
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import com.sksamuel.elastic4s.ElasticClient
-import dataaccess.elastic.{ElasticClientProvider, ElasticFormatAsyncCrudRepo, ElasticJsonCrudRepo}
-import dataaccess.ignite.{CacheAsyncCrudRepoFactory, CacheAsyncCrudRepoProvider, JsonBinaryCacheAsyncCrudRepoFactory}
+import dataaccess.elastic.{ElasticClientProvider, ElasticJsonCrudRepo}
+import dataaccess.ignite.{CacheAsyncCrudRepoProvider, JsonBinaryCacheAsyncCrudRepoFactory}
 import dataaccess._
 import dataaccess.mongo._
 import models.DataSetFormattersAndIds._

@@ -2,7 +2,7 @@ package controllers
 
 import java.util.concurrent.TimeoutException
 
-import dataaccess.AdaDataAccessException
+import org.incal.core.dataaccess.InCalDataAccessException
 import persistence.RepoTypes.UserSettingsRepo
 import play.api.Logger
 import play.api.data.Form
@@ -84,7 +84,7 @@ class UserProfileController @Inject() (
               case t: TimeoutException =>
                 Logger.error("Problem found in the update process")
                 InternalServerError(t.getMessage)
-              case i: AdaDataAccessException =>
+              case i: InCalDataAccessException =>
                 Logger.error("Problem found in the update process")
                 InternalServerError(i.getMessage)
             }

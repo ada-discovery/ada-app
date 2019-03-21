@@ -3,12 +3,13 @@ package controllers.core
 import java.util.concurrent.TimeoutException
 
 import controllers.routes
-import dataaccess.{AdaConversionException, AdaDataAccessException}
+import dataaccess.AdaConversionException
 import models.AdaException
+import org.incal.core.dataaccess.InCalDataAccessException
 import org.incal.play.controllers.ExceptionHandler
 import play.api.Logger
 import play.api.mvc.{Request, Result}
-import play.api.mvc.Results.{Redirect, Ok, InternalServerError, BadRequest}
+import play.api.mvc.Results.{BadRequest, InternalServerError, Ok, Redirect}
 
 trait AdaExceptionHandler extends ExceptionHandler {
 
@@ -21,7 +22,7 @@ trait AdaExceptionHandler extends ExceptionHandler {
     case _: TimeoutException =>
       handleTimeoutException(functionName, extraMessage)
 
-    case e: AdaDataAccessException =>
+    case e: InCalDataAccessException =>
       val message = s"Repo/db problem found while executing $functionName function${extraMessage.getOrElse("")}."
       Logger.error(message, e)
       Redirect(routes.AppController.index()).flashing("errors" -> message)
@@ -49,7 +50,7 @@ trait AdaExceptionHandler extends ExceptionHandler {
       Logger.error(message, e)
       InternalServerError(message)
 
-    case e: AdaDataAccessException =>
+    case e: InCalDataAccessException =>
       val message = s"Repo/db problem found while executing $functionName function${extraMessage.getOrElse("")}."
       Logger.error(message, e)
       InternalServerError(message)
