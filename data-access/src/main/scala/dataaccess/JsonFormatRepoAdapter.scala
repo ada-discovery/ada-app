@@ -66,7 +66,7 @@ private[dataaccess] class NoIdJsonFormatReadonlyRepoAdapter[E: Format, ID](
   override type REPO = AsyncReadonlyRepo[E, ID]
 
   override def get(id: BSONObjectID) =
-    throw new AdaDataAccessException("This instance of JSON format readonly adapter does not support id-based operations such as \"get(id)\"")
+    throw new InCalDataAccessException("This instance of JSON format readonly adapter does not support id-based operations such as \"get(id)\"")
 }
 
 private[dataaccess] abstract class AbstractJsonFormatCrudRepoAdapter[E: Format, ID]
@@ -113,10 +113,10 @@ private[dataaccess] class NoIdJsonFormatCrudRepoAdapter[E: Format, ID](
   override type REPO = AsyncCrudRepo[E, ID]
 
   override def get(id: BSONObjectID) =
-    throw new AdaDataAccessException("This instance of JSON format crud adapter does not support id-based operations such as \"get(id)\"")
+    throw new InCalDataAccessException("This instance of JSON format crud adapter does not support id-based operations such as \"get(id)\"")
 
   override def delete(id: BSONObjectID) =
-    throw new AdaDataAccessException("This instance of JSON format crud adapter does not support id-based operations such as \"delete(id)\"")
+    throw new InCalDataAccessException("This instance of JSON format crud adapter does not support id-based operations such as \"delete(id)\"")
 
   // TODO: this should be returned with a warning since the BSON object id is generated randomly
   override protected def toOutputId(id: ID): BSONObjectID =

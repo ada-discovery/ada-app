@@ -41,7 +41,7 @@ private class TransientLocalFieldRepo(fields: Seq[Field]) extends FieldRepo {
       case "label" => field.label
       case "fieldType" => field.fieldType
       case "isArray" => field.isArray
-      case _ => throw new AdaDataAccessException(s"Filtering of field's field ${fieldName} unsupported.")
+      case _ => throw new InCalDataAccessException(s"Filtering of field's field ${fieldName} unsupported.")
     }
 
   // projection is ignored

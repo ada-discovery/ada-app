@@ -1,6 +1,7 @@
-package dataaccess.elastic
+package dataaccess.elastic.format
 
 import com.sksamuel.elastic4s.{ElasticClient, ElasticDsl}
+import dataaccess.elastic.{ElasticAsyncCrudRepo, ElasticSetting}
 import org.incal.core.Identity
 import play.api.libs.json.Format
 
@@ -19,5 +20,4 @@ class ElasticFormatAsyncCrudRepo[E, ID](
 
   override def createUpdateDef(entity: E, id: ID) =
     ElasticDsl.update id id in indexAndType source entity
-  }
 }

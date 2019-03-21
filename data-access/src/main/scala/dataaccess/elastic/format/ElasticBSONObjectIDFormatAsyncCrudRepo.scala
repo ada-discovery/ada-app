@@ -1,6 +1,7 @@
-package dataaccess.elastic
+package dataaccess.elastic.format
 
-import com.sksamuel.elastic4s.{ElasticClient, ElasticDsl}
+import com.sksamuel.elastic4s.ElasticClient
+import dataaccess.elastic.ElasticSetting
 import org.incal.core.Identity
 import play.api.libs.json.Format
 import reactivemongo.bson.BSONObjectID
@@ -10,8 +11,10 @@ class ElasticBSONObjectIDFormatAsyncCrudRepo[E, ID](
   typeName: String,
   client: ElasticClient,
   setting: ElasticSetting)(
-  implicit coreFormat: Format[E], override val manifest: Manifest[E], identity: Identity[E, ID]
-) extends ElasticFormatAsyncCrudRepo[E, ID](indexName, typeName, client, setting)(format = new ElasticIdRenameFormat(coreFormat)) {
+  implicit coreFormat: Format[E], manifest: Manifest[E], identity: Identity[E, ID]
+) extends ElasticFormatAsyncRepo[E, ID](
+  indexName, typeName, client, setting
+)(format = new ElasticIdRenameFormat(coreFormat), manifest, identity) {
 
   override protected def toDBValue(value: Any): Any =
     value match {

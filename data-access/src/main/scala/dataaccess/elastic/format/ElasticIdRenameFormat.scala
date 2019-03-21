@@ -1,4 +1,4 @@
-package dataaccess.elastic
+package dataaccess.elastic.format
 
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.json.RenameFieldFormat

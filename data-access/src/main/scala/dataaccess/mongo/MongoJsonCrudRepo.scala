@@ -1,7 +1,6 @@
 package dataaccess.mongo
 
 import javax.cache.configuration.Factory
-
 import com.google.inject.assistedinject.Assisted
 import models.FieldTypeSpec
 import play.api.libs.json.{JsObject, Json}
@@ -10,15 +9,13 @@ import play.api.inject.ApplicationLifecycle
 import play.modules.reactivemongo.{DefaultReactiveMongoApi, ReactiveMongoApi}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json._
-import org.incal.core.dataaccess.AsyncCrudRepo
+import org.incal.core.dataaccess.{AsyncCrudRepo, InCalDataAccessException}
 import dataaccess.RepoTypes.JsonCrudRepo
-import dataaccess.AdaDataAccessException
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 
 import scala.concurrent.Future
 import javax.inject.Inject
-
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import reactivemongo.core.commands.RawCommand
 
@@ -33,7 +30,7 @@ class MongoJsonCrudRepo @Inject()(
 
     collection.insert(entity).map {
       case le if le.ok => id
-      case le => throw new AdaDataAccessException(le.writeErrors.map(_.errmsg).mkString(". "))
+      case le => throw new InCalDataAccessException(le.writeErrors.map(_.errmsg).mkString(". "))
     }
   }
 
@@ -42,7 +39,7 @@ class MongoJsonCrudRepo @Inject()(
 
     collection.bulkInsert(docAndIds.map(_._1).toStream, ordered = false).map {
       case le if le.ok => docAndIds.map(_._2)
-      case le => throw new AdaDataAccessException(le.errmsg.getOrElse(""))
+      case le => throw new InCalDataAccessException(le.errmsg.getOrElse(""))
     }
   }
 
@@ -55,7 +52,7 @@ class MongoJsonCrudRepo @Inject()(
     val id = (entity \ identityName).as[BSONObjectID]
     collection.update(Json.obj(identityName -> id), entity) map {
       case le if le.ok => id
-      case le => throw new AdaDataAccessException(le.writeErrors.map(_.errmsg).mkString(". "))
+      case le => throw new InCalDataAccessException(le.writeErrors.map(_.errmsg).mkString(". "))
     }
   }
 

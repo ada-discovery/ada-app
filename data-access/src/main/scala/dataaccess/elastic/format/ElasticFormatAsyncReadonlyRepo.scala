@@ -1,8 +1,8 @@
-package dataaccess.elastic
+package dataaccess.elastic.format
 
 import com.sksamuel.elastic4s.ElasticClient
+import dataaccess.elastic.{ElasticAsyncReadonlyRepo, ElasticSetting}
 import play.api.libs.json.Format
-import reactivemongo.bson.BSONObjectID
 
 class ElasticFormatAsyncReadonlyRepo[E, ID](
   indexName: String,
@@ -10,14 +10,5 @@ class ElasticFormatAsyncReadonlyRepo[E, ID](
   identityName : String,
   client: ElasticClient,
   setting: ElasticSetting)(
-  implicit coreFormat: Format[E], val manifest: Manifest[E]
-) extends ElasticAsyncReadonlyRepo[E, ID](indexName, typeName, identityName, client, setting) with ElasticFormatSerializer[E] {
-
-  override protected implicit val format: Format[E] = new ElasticIdRenameFormat(coreFormat)
-
-  override protected def toDBValue(value: Any): Any =
-    value match {
-      case b: BSONObjectID => b.stringify
-      case _ => super.toDBValue(value)
-    }
-}
+  implicit val format: Format[E], val manifest: Manifest[E]
+) extends ElasticAsyncReadonlyRepo[E, ID](indexName, typeName, identityName, client, setting) with ElasticFormatSerializer[E]

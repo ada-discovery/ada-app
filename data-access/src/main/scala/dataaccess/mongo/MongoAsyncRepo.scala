@@ -4,7 +4,6 @@ import javax.inject.Inject
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import dataaccess.AdaDataAccessException
 import play.api.Logger
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
@@ -242,18 +241,18 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     count(Seq(EqualsCriterion(identityName, id))).map(_ > 0)
 
   protected def handleResult(result : WriteResult) =
-    if (!result.ok) throw new AdaDataAccessException(result.writeErrors.map(_.errmsg).mkString(". "))
+    if (!result.ok) throw new InCalDataAccessException(result.writeErrors.map(_.errmsg).mkString(". "))
 
   protected def handleExceptions[A]: PartialFunction[Throwable, A] = {
     case e: PrimaryUnavailableException =>
       val message = "Mongo node is not available."
       logger.error(message, e)
-      throw new AdaDataAccessException(message, e)
+      throw new InCalDataAccessException(message, e)
 
     case e: ReactiveMongoException =>
       val message = "Problem with Mongo DB detected."
       logger.error(message, e)
-      throw new AdaDataAccessException(message, e)
+      throw new InCalDataAccessException(message, e)
   }
 }
 
@@ -270,7 +269,7 @@ protected class MongoAsyncRepo[E: Format, ID: Format](
 
     collection.insert(doc).map {
       case le if le.ok => id
-      case le => throw new AdaDataAccessException(le.writeErrors.map(_.errmsg).mkString(". "))
+      case le => throw new InCalDataAccessException(le.writeErrors.map(_.errmsg).mkString(". "))
     }.recover(handleExceptions)
   }
 
@@ -279,7 +278,7 @@ protected class MongoAsyncRepo[E: Format, ID: Format](
 
     collection.bulkInsert(docAndIds.map(_._1).toStream, ordered = false).map { // bulkSize = 100, bulkByteSize = 16793600
       case le if le.ok => docAndIds.map(_._2)
-      case le => throw new AdaDataAccessException(le.errmsg.getOrElse(""))
+      case le => throw new InCalDataAccessException(le.errmsg.getOrElse(""))
     }.recover(handleExceptions)
   }
 
@@ -316,10 +315,10 @@ class MongoAsyncCrudRepo[E: Format, ID: Format](
     identity.of(entity).map{ id =>
       collection.update(Json.obj(identity.name -> id), doc) map {
         case le if le.ok => id
-        case le => throw new AdaDataAccessException(le.writeErrors.map(_.errmsg).mkString(". "))
+        case le => throw new InCalDataAccessException(le.writeErrors.map(_.errmsg).mkString(". "))
       }
     }.getOrElse(
-      throw new AdaDataAccessException("Id required for update.")
+      throw new InCalDataAccessException("Id required for update.")
     )
   }.recover(
     handleExceptions

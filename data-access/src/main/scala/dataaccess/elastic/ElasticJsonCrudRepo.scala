@@ -3,9 +3,8 @@ package dataaccess.elastic
 import com.google.inject.assistedinject.Assisted
 import com.sksamuel.elastic4s._
 import com.sksamuel.elastic4s.mappings.FieldType._
-import com.sksamuel.elastic4s.mappings.{FieldType, StringFieldDefinition, TypedFieldDefinition}
+import com.sksamuel.elastic4s.mappings.TypedFieldDefinition
 import com.sksamuel.elastic4s.source.JsonDocumentSource
-
 import dataaccess.ignite.BinaryJsonUtil
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.{FieldTypeId, FieldTypeSpec}
@@ -13,8 +12,8 @@ import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONObjectIDFormat
 import dataaccess.RepoTypes.JsonCrudRepo
+import dataaccess.elastic.format.ElasticIdRenameUtil
 import javax.inject.Inject
-
 import play.api.Configuration
 
 class ElasticJsonCrudRepo @Inject()(
@@ -36,13 +35,13 @@ class ElasticJsonCrudRepo @Inject()(
   // TODO: should be called as a post-init method, since all vals must be instantiated (i.e. the order matters)
   createIndexIfNeeded()
 
-  override protected def serializeGetResult(response: RichGetResponse) = {
-    Json.parse(response.sourceAsString) match {
+  override protected def serializeGetResult(response: RichGetResponse) =
+    // TODO: check performance of sourceAsBytes vs sourceAsString
+    Json.parse(response.sourceAsBytes) match {
       case JsNull => None
       case x: JsObject => jsonIdRenameFormat.reads(x).asOpt.map(_.asInstanceOf[JsObject])
       case _ => None
     }
-  }
 
   override protected def serializeSearchResult(response: RichSearchResponse) = {
     response.hits.flatMap(serializeSearchHitOptional).toIterable
@@ -62,7 +61,7 @@ class ElasticJsonCrudRepo @Inject()(
     serializeSearchHitOptional(result).getOrElse(Json.obj())
 
   private def serializeSearchHitOptional(result: RichSearchHit) =
-    Json.parse(result.sourceAsString) match {
+    Json.parse(result.source) match {
       case x: JsObject => jsonIdRenameFormat.reads(x).asOpt.map(_.asInstanceOf[JsObject])
       case _ => None
     }
@@ -74,18 +73,24 @@ class ElasticJsonCrudRepo @Inject()(
     JsObject(
       result.map { case (fieldName, value) =>
         if (fieldName.startsWith(ElasticIdRenameUtil.newIdName))
-          (ElasticIdRenameUtil.originalIdName, Json.toJson(BSONObjectID.apply(value.asInstanceOf[String])))
+          (ElasticIdRenameUtil.originalIdName, Json.toJson(BSONObjectID.parse(value.asInstanceOf[String]).get))
         else
           (fieldName, BinaryJsonUtil.toJson(value))
       }.toSeq
     )
 
-  override protected def createSaveDef(entity: JsObject, id: BSONObjectID) = {
+  override protected def createSaveDef(
+    entity: JsObject,
+    id: BSONObjectID
+  ) = {
     val stringSource = Json.stringify(jsonIdRenameFormat.writes(entity))
     index into indexAndType source stringSource id id
   }
 
-  override def createUpdateDef(entity: JsObject, id: BSONObjectID) = {
+  override def createUpdateDef(
+    entity: JsObject,
+    id: BSONObjectID
+  ) = {
     val stringSource = Json.stringify(jsonIdRenameFormat.writes(entity))
     ElasticDsl.update id id in indexAndType doc JsonDocumentSource(stringSource)
   }
@@ -115,4 +120,10 @@ class ElasticJsonCrudRepo @Inject()(
         case FieldTypeId.Json => fieldName typed NestedType
         case FieldTypeId.Null => fieldName typed ShortType includeInAll(includeInAll) // doesn't matter which type since it's always null
       }
+
+  override protected def toDBValue(value: Any): Any =
+    value match {
+      case b: BSONObjectID => b.stringify
+      case _ => super.toDBValue(value)
+    }
 }
