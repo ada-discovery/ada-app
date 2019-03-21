@@ -48,6 +48,7 @@ libraryDependencies ++= Seq(
   "org.reactivemongo" %% "reactivemongo-akkastream" % "0.12.6",
   "com.evojam" %% "play-elastic4s" % "0.3.1" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11"),
   "com.sksamuel.elastic4s" %% "elastic4s-streams" % "2.3.0",
+  "org.in-cal" %% "incal-access-elastic" % "0.1.2",
   "org.in-cal" %% "incal-play" % "0.1.4",
   "com.typesafe.play" %% "play-java-ws" % playVersion,
   "jp.t2v" %% "play2-auth" % "0.14.1",
