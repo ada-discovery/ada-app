@@ -7,6 +7,8 @@ import com.google.inject.assistedinject.FactoryModuleBuilder
 import com.sksamuel.elastic4s.ElasticClient
 import dataaccess.elastic.{ElasticClientProvider, ElasticJsonCrudRepo}
 import dataaccess.ignite.{CacheAsyncCrudRepoProvider, JsonBinaryCacheAsyncCrudRepoFactory}
+import org.incal.spark_ml.models.classification.Classifier
+import org.incal.spark_ml.models.regression.Regressor
 import dataaccess._
 import dataaccess.mongo._
 import models.DataSetFormattersAndIds._
@@ -23,8 +25,6 @@ import persistence.dataset._
 import reactivemongo.bson.BSONObjectID
 import persistence.RepoDef.Repo
 import models.workspace.Workspace
-import org.incal.spark_ml.models.classification.Classifier
-import org.incal.spark_ml.models.regression.Regressor
 
 private object RepoDef extends Enumeration {
   abstract class AbstractRepo[T: Manifest] extends super.Val {

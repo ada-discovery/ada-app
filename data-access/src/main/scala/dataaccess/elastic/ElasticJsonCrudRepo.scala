@@ -6,13 +6,14 @@ import com.sksamuel.elastic4s.mappings.FieldType._
 import com.sksamuel.elastic4s.mappings.TypedFieldDefinition
 import com.sksamuel.elastic4s.source.JsonDocumentSource
 import dataaccess.ignite.BinaryJsonUtil
+import dataaccess.RepoTypes.JsonCrudRepo
+import dataaccess.elastic.format.ElasticIdRenameUtil
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.{FieldTypeId, FieldTypeSpec}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONObjectIDFormat
-import dataaccess.RepoTypes.JsonCrudRepo
-import dataaccess.elastic.format.ElasticIdRenameUtil
+import org.incal.access_elastic.{CoerceDoubleFieldDefinition, ElasticAsyncCrudRepo, ElasticSetting}
 import javax.inject.Inject
 import play.api.Configuration
 
@@ -126,4 +127,7 @@ class ElasticJsonCrudRepo @Inject()(
       case b: BSONObjectID => b.stringify
       case _ => super.toDBValue(value)
     }
+
+  override protected def toDBFieldName(fieldName: String) =
+    ElasticIdRenameUtil.rename(fieldName, true)
 }
