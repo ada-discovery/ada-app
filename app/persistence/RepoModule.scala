@@ -1,11 +1,10 @@
 package persistence
 
 import javax.inject.Provider
-
 import com.google.inject.{Key, TypeLiteral}
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import com.sksamuel.elastic4s.ElasticClient
-import dataaccess.elastic.{ElasticClientProvider, ElasticJsonCrudRepo}
+import dataaccess.elastic.{ElasticJsonCrudRepo, PlayElasticClientProvider}
 import dataaccess.ignite.{CacheAsyncCrudRepoProvider, JsonBinaryCacheAsyncCrudRepoFactory}
 import org.incal.spark_ml.models.classification.Classifier
 import org.incal.spark_ml.models.regression.Regressor
@@ -25,6 +24,7 @@ import persistence.dataset._
 import reactivemongo.bson.BSONObjectID
 import persistence.RepoDef.Repo
 import models.workspace.Workspace
+import org.incal.access_elastic.ElasticClientProvider
 
 private object RepoDef extends Enumeration {
   abstract class AbstractRepo[T: Manifest] extends super.Val {
@@ -113,7 +113,7 @@ class RepoModule extends ScalaModule {
       new CacheAsyncCrudRepoProvider[HtmlSnippet, BSONObjectID]("html_snippets")
     ).asEagerSingleton
 
-    bind[ElasticClient].toProvider(new ElasticClientProvider).asEagerSingleton
+    bind[ElasticClient].toProvider(new PlayElasticClientProvider).asEagerSingleton
 
     // bind the repos defined above
     RepoDef.values.foreach(bindRepo(_))
