@@ -10,11 +10,11 @@ import reactivemongo.bson.BSONObjectID
 final class ElasticBSONObjectIDFormatAsyncRepo[E, ID](
   indexName: String,
   typeName: String,
-  client: ElasticClient,
+  val client: ElasticClient,
   setting: ElasticSetting)(
   implicit coreFormat: Format[E], manifest: Manifest[E], identity: Identity[E, ID]
 ) extends ElasticFormatAsyncCrudRepo[E, ID](
-  indexName, typeName, client, setting
+  indexName, typeName, setting
 )(format = new ElasticIdRenameFormat(coreFormat), manifest, identity) {
 
   override protected def toDBValue(value: Any): Any =

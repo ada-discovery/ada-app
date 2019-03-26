@@ -10,11 +10,11 @@ final class ElasticBSONObjectIDFormatAsyncReadonlyRepo[E, ID](
   indexName: String,
   typeName: String,
   identityName : String,
-  client: ElasticClient,
+  val client: ElasticClient,
   setting: ElasticSetting)(
   implicit coreFormat: Format[E], manifest: Manifest[E]
 ) extends ElasticFormatAsyncReadonlyRepo[E, ID](
-  indexName, typeName, identityName, client, setting
+  indexName, typeName, identityName, setting
 )(format = new ElasticIdRenameFormat(coreFormat), manifest) {
 
   override protected def toDBValue(value: Any): Any =

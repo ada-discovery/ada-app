@@ -20,13 +20,12 @@ import play.api.Configuration
 class ElasticJsonCrudRepo @Inject()(
     @Assisted collectionName : String,
     @Assisted fieldNamesAndTypes: Seq[(String, FieldTypeSpec)],
-    client: ElasticClient,
+    val client: ElasticClient,
     configuration: Configuration
   ) extends ElasticAsyncCrudRepo[JsObject, BSONObjectID](
     collectionName,
     collectionName,
-    client,
-    ElasticSetting(scrollBatchSize = configuration.getInt("elasticdb.scroll.batch.size").getOrElse(1000))
+    ElasticSetting(scrollBatchSize = configuration.getInt("elastic.scroll.batch.size").getOrElse(1000))
   ) with JsonCrudRepo {
 
   private implicit val jsonIdRenameFormat = ElasticIdRenameUtil.createFormat
@@ -96,15 +95,9 @@ class ElasticJsonCrudRepo @Inject()(
     ElasticDsl.update id id in indexAndType doc JsonDocumentSource(stringSource)
   }
 
-  override protected def createIndex() =
-    client execute {
-      create index collectionName replicas 0 mappings (
-        collectionName as (
-          fieldNamesAndTypeWithId.map { case (fieldName, fieldTypeSpec) =>
-            toElasticFieldType(fieldName, fieldTypeSpec)
-          }
-        )
-      ) indexSetting("max_result_window", unboundLimit) // indexSetting("_all", false) indexSetting("mapping.coerce", true)
+  override protected val fieldDefs: Iterable[TypedFieldDefinition] =
+    fieldNamesAndTypeWithId.map { case (fieldName, fieldTypeSpec) =>
+      toElasticFieldType(fieldName, fieldTypeSpec)
     }
 
   private def toElasticFieldType(fieldName: String, fieldTypeSpec: FieldTypeSpec): TypedFieldDefinition =
