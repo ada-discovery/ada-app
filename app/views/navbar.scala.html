@@ -4,6 +4,7 @@
 @import org.incal.play.security.SecurityRole
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
+@import org.incal.play.routes.CustomDirAssets
 
 @()(implicit webContext: WebContext)
 
@@ -29,7 +30,9 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="@routes.AppController.index()">Ada</a>
+            <a class="navbar-brand" href="@routes.AppController.index()">
+                <img height="35 px" src="@CustomDirAssets.versioned("images/logos/ada_logo_v3.png")"/>
+            </a>
         </div>
 
         <div id="navigation" class="collapse navbar-collapse">
