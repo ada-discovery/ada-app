@@ -12,13 +12,15 @@
 
     <div class="page-header">
         <div class="row">
-            <div class="col-md-9">
-                <h1>@Messages("homepage.title", context.configuration.getString("project.name").getOrElse(""))</h1>
+            <div class="col-md-12 aligned-container">
+            <div class="col-md-9 col-sm-12">
+                @Messages("homepage.title", context.configuration.getString("project.name").getOrElse(""))
             </div>
-            <div class="pull-right" style="padding-top: 10px">
+            <div class="col-md-3 col-sm-12">
                 <a target="_blank" href="@context.configuration.getString("project.url").get">
-                    <img src="@CustomDirAssets.versioned(context.configuration.getString("project.logo").get)" />
+                    <img class="img-responsive pull-right" src="@CustomDirAssets.versioned(context.configuration.getString("project.logo").get)" />
                 </a>
+            </div>
             </div>
         </div>
     </div>

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css?family=Oswald');
+@import url('https://fonts.googleapis.com/css?family=Merriweather');
 
 html {
   position: relative;
@@ -95,7 +95,7 @@ body {
 .navbar-brand {
     /*font-family: 'Oswald', sans-serif !important;*/
     /*font-weight: 700;*/
-    margin-left: -60px !important;
+    margin-left: -55px !important;
     padding: 8px 20px;
     /* padding: 8px 30px; */
 }
@@ -110,7 +110,11 @@ footer {
 }
 
 .page-header {
-    margin-top: 10px;
+    margin-top: 5px;
+    font-family: 'Merriweather', sans-serif !important; /* Merriweather  Lobster Roboto Condensed */
+    font-weight: 400;
+    font-size: 35px;
+    border-bottom: 3px solid #f8f8f8;
 }
 
 .container .text-muted {
@@ -318,26 +322,34 @@ tr.vertical-divider > td:last-child {
                                         translateX(-50%) and translateY(-50%) */
 }
 
+a.carousel-control.left{
+   /* background-image: linear-gradient(to right, #8e9eab 0, #eef2f3 100%); // 142 158 171       238 242 243 rgb(171,186,171) rgb(255,255,255) */
+   background-image: linear-gradient(to right, rgba(142, 158, 171, 0.8) 0%, rgba(238, 242, 243, 0) 100%);
+}
+a.carousel-control.right{
+     background-image: linear-gradient(to left, rgba(142, 158, 171, 0.8) 0%, rgba(238, 242, 243, 0) 100%);
+}
+
 .homepage-jumbotron {
-    background-color:whitesmoke !important;
+     background-color:whitesmoke !important;
 }
 
 .modal.in .modal-right {
-    -webkit-transform: translate(100%, 0);
-    -ms-transform: translate(100%, 0);
-    -o-transform: translate(100%, 0);
-    transform: translate(100%, 0);
+     -webkit-transform: translate(100%, 0);
+     -ms-transform: translate(100%, 0);
+     -o-transform: translate(100%, 0);
+     transform: translate(100%, 0);
 }
 
 .modal.in .modal-left {
-    -webkit-transform: translate(-100%, 0);
-    -ms-transform: translate(-100%, 0);
-    -o-transform: translate(-100%, 0);
-    transform: translate(-100%, 0);
+     -webkit-transform: translate(-100%, 0);
+     -ms-transform: translate(-100%, 0);
+     -o-transform: translate(-100%, 0);
+     transform: translate(-100%, 0);
 }
 
 .spinner {
-    border: 16px solid #f3f3f3; /* Light grey */
+     border: 16px solid #f3f3f3; /* Light grey */
     border-top: 16px solid #3498db; /* Blue */
     border-radius: 50%;
     width: 135px;
