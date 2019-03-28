@@ -93,8 +93,11 @@ body {
 }
 
 .navbar-brand {
-    font-family: 'Oswald', sans-serif !important;
-    font-weight: 700;
+    /*font-family: 'Oswald', sans-serif !important;*/
+    /*font-weight: 700;*/
+    margin-left: -60px !important;
+    padding: 8px 20px;
+    /* padding: 8px 30px; */
 }
 
 footer {
