@@ -29,8 +29,8 @@
 
 @bottomResources = {
 
-    <script src="@CustomDirAssets.versioned("javascripts/ada-charts-bb9f81d.min.js")"></script>
-    <script src="@CustomDirAssets.versioned("javascripts/ada-charts-heatmap.min.js")"></script>
+    <script type="text/javascript" src="@CustomDirAssets.versioned("javascripts/ada-charts-62349a9.min.js")"></script>
+    <script type="text/javascript" src="@CustomDirAssets.versioned("javascripts/ada-charts-wrapper.min.js")"></script>
 
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.calcHeatmap,
@@ -45,8 +45,6 @@
     <script type="text/javascript">
         $(function () {
             $("#widgetsDiv").html("<div id='spinnerDiv' class='row'></div><div id='heatmapDiv' class='chart-holder'></div>")
-
-            $("#heatmapDiv").ada_charts_heatmap()
 
             populateMultiNumericalTypeahead(["xField", "yField", "valueField"], true);
 
@@ -85,6 +83,8 @@
             $("#dataViewSelectionModal #submitButton").on("click", addHeatmapToView)
 
             activateAllFilters(function(filterOrId) {calcHeatmap()});
+
+            $("#heatmapDiv").ada_charts({chartType: 'heatmap'})
         });
 
         function calcHeatmap() {

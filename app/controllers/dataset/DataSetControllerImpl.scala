@@ -1459,7 +1459,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case Accepts.Json() => BadRequest("The function getHeatmap doesn't support JSON response.")
       }
 
-    }.recover(handleExceptions("a heatmap"))
+    }.recover(handleExceptions("a chart"))
   }
 
   override def calcHeatmap(
@@ -1512,7 +1512,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       } yield
         response
-    }.recover(handleExceptionsWithErrorCodes("a heatmap"))
+    }.recover(handleExceptionsWithErrorCodes("a chart"))
   }
 
   override def getTable(

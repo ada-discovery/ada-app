@@ -64,7 +64,7 @@
                 // TODO: this is a hack, generalize
                 const heatmapDiv = $("#heatmapDiv")
                 if (heatmapDiv.length > 0) {
-                    heatmapDiv.ada_charts_heatmap('refresh')
+                    heatmapDiv.ada_charts('refresh')
                 }
             })
 
@@ -78,7 +78,7 @@
                 // TODO: this is a hack, generalize
                 const heatmapDiv = $("#heatmapDiv")
                 if (heatmapDiv.length > 0) {
-                    heatmapDiv.ada_charts_heatmap('refresh')
+                    heatmapDiv.ada_charts('refresh')
                 }
             })
         })
@@ -209,10 +209,10 @@
 
                             var fullData = {
                                 values: values, rows: heatmapData.xCategories, cols: heatmapData.yCategories, valueRange: [heatmapData.min, heatmapData.max], sequential: heatmapData.twoColors, xLabel: heatmapData.yAxisCaption, yLabel: heatmapData.xAxisCaption,
-                                textToChartRatio: 0.14, colLabelPos: 'top', rowLabelPos: 'left', tooltipValuePrefix: valueLabel
+                                textToChartRatio: 0.18, colLabelPos: 'top', rowLabelPos: 'left', tooltipValuePrefix: valueLabel
                             }
 
-                            $("#heatmapDiv").ada_charts_heatmap('update', fullData)
+                            $("#heatmapDiv").ada_charts('update', fullData)
                         },
                         error: function(data) {
                             $("#spinnerDiv").html("")

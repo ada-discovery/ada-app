@@ -30,8 +30,8 @@
 
 @bottomResources = {
 
-    <script src="@CustomDirAssets.versioned("javascripts/ada-charts-bb9f81d.min.js")"></script>
-    <script src="@CustomDirAssets.versioned("javascripts/ada-charts-heatmap.min.js")"></script>
+    <script type="text/javascript" src="@CustomDirAssets.versioned("javascripts/ada-charts-62349a9.min.js")"></script>
+    <script type="text/javascript" src="@CustomDirAssets.versioned("javascripts/ada-charts-wrapper.min.js")"></script>
 
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.calcPearsonCorrelations,
@@ -46,8 +46,6 @@
         $(function () {
             $("#widgetsDiv").html("<div id='spinnerDiv' class='row'></div><div id='heatmapDiv' class='chart-holder'></div>")
 
-            $("#heatmapDiv").ada_charts_heatmap()
-
             populateNumericalTypeahead("field")
 
             $("#dataViewSelectionModal #submitButton").on("click", addCorrelationToView);
@@ -55,6 +53,8 @@
             $('#fieldNameDiv #addRowButton').focus();
 
             activateAllFilters(function(filterOrId) {calcCorrelations()});
+
+            $("#heatmapDiv").ada_charts({chartType: 'heatmap'})
         });
 
         function calcCorrelations() {
