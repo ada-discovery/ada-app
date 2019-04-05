@@ -7,8 +7,9 @@ import play.api.mvc._
 import _root_.util.WebExportUtil._
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import models.FieldTypeId
 import org.incal.core.FilterCondition
-import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion, Sort}
+import org.incal.core.dataaccess.Sort
 import org.incal.play.controllers.ReadonlyControllerImpl
 
 import scala.concurrent.Future
@@ -21,7 +22,8 @@ trait ExportableAction[E] {
     filename: String,
     delimiter: String = ",",
     eol: String = "\n",
-    replacements: Traversable[(String, String)] = Nil)(
+    replacements: Traversable[(String, String)] = Nil,
+    escapeStringValues: Boolean = false)(
     fieldNames: Traversable[String],
     orderBy: Option[String] = None,
     filter: Seq[FilterCondition] = Nil,
@@ -32,9 +34,9 @@ trait ExportableAction[E] {
     } yield {
       val finalJsonStream =
         if (nameFieldTypeMap.nonEmpty)
-          toDisplayJsonsStream(jsonStream, nameFieldTypeMap)
+          toDisplayJsonsStream(jsonStream, nameFieldTypeMap, escapeStringValues)
         else
-          jsonStream
+          if (escapeStringValues) escapeStrings(jsonStream) else jsonStream
 
       jsonStreamToCsvFile(finalJsonStream, fieldNames, filename, delimiter, eol, replacements)
     }
@@ -120,20 +122,52 @@ trait ExportableAction[E] {
 
   private def toDisplayJsonsStream(
     source: Source[JsObject, _],
-    nameFieldTypeMap: Map[String, FieldType[_]]
-  ): Source[JsObject, _] =
+    nameFieldTypeMap: Map[String, FieldType[_]],
+    escapeStringValues: Boolean = false
+  ): Source[JsObject, _] = {
+    val nameIsCategoricalMap = nameFieldTypeMap.map { case (fieldName, fieldType) =>
+      val fieldTypeId = fieldType.spec.fieldType
+      (fieldName, fieldTypeId == FieldTypeId.String || fieldTypeId == FieldTypeId.Enum || fieldTypeId == FieldTypeId.Boolean)
+    }
+
     source.map { item =>
-      val displayJsonFields = item.fields.map { case (fieldName, json) =>
-        val displayJson = json match {
+      val displayJsonFields = item.fields.map { case (fieldName, jsValue) =>
+        val isCategorical = nameIsCategoricalMap(fieldName)
+
+        val displayJson = jsValue match {
           case JsNull => JsNull
           case _ =>
             nameFieldTypeMap.get(fieldName).map { fieldType =>
-              JsString(fieldType.jsonToDisplayString(json))
-            }.getOrElse(json)
+              val stringValue = fieldType.jsonToDisplayString(jsValue)
+
+              if (isCategorical && escapeStringValues)
+                JsString("\"" + stringValue + "\"")
+              else
+                JsString(stringValue)
+
+            }.getOrElse(jsValue)
         }
 
         (fieldName, displayJson)
       }
       JsObject(displayJsonFields)
+    }
+  }
+
+  private def escapeStrings(
+    source: Source[JsObject, _]
+  ): Source[JsObject, _] =
+    source.map { item =>
+      val newFields = item.fields.map { case (fieldName, jsValue) =>
+
+        val newJsValue = jsValue match {
+          case JsString(value) => JsString("\"" + value + "\"")
+          case _ => jsValue
+        }
+
+        (fieldName, newJsValue)
+      }
+
+      JsObject(newFields)
     }
 }

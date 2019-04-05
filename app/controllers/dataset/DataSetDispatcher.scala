@@ -220,8 +220,9 @@ class DataSetDispatcher @Inject() (
     eol: Option[String],
     filter: Seq[FilterCondition],
     tableColumnsOnly: Boolean,
-    useDisplayValues: Boolean
-  ) = dispatch(_.exportViewRecordsAsCsv(dataViewId, delimiter, replaceEolWithSpace, eol, filter, tableColumnsOnly, useDisplayValues))
+    useDisplayValues: Boolean,
+    escapeStringValues: Boolean
+  ) = dispatch(_.exportViewRecordsAsCsv(dataViewId, delimiter, replaceEolWithSpace, eol, filter, tableColumnsOnly, useDisplayValues, escapeStringValues))
 
   override def exportTableRecordsAsCsv(
     tableColumnNames: Seq[String],
@@ -230,8 +231,9 @@ class DataSetDispatcher @Inject() (
     eol: Option[String],
     filter: Seq[FilterCondition],
     tableColumnsOnly: Boolean,
-    useDisplayValues: Boolean
-  ) = dispatch(_.exportTableRecordsAsCsv(tableColumnNames, delimiter, replaceEolWithSpace, eol, filter, tableColumnsOnly, useDisplayValues))
+    useDisplayValues: Boolean,
+    escapeStringValues: Boolean
+  ) = dispatch(_.exportTableRecordsAsCsv(tableColumnNames, delimiter, replaceEolWithSpace, eol, filter, tableColumnsOnly, useDisplayValues, escapeStringValues))
 
   override def exportViewRecordsAsJson(
     dataViewId: BSONObjectID,

@@ -47,6 +47,7 @@
 }
 
 @bottomResources = {
+
     @typeaheadJsImport()
 
     <script type="text/javascript">
@@ -65,7 +66,7 @@
                 success: function (data) {
                     $.each(data, function (index, field) {
                         var values = {};
-                        values["fieldName"] = field.name;
+                        values["fiel\dName"] = field.name;
                         values["fieldTypeahead"] = field.label ? field.label : field.name;
 
                         $('#preserveFieldNameDiv').dynamicTable('addTableRow', values)

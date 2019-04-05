@@ -25,7 +25,7 @@
             <li>
                 @dataSetExportDropdown(
                     dataSetName,
-                    dataSetRouter.exportTableAsCsv(Nil, _, true, None, _, _, true),
+                    dataSetRouter.exportTableAsCsv(Nil, _, true, None, _, _, true, true),
                     dataSetRouter.exportTableAsJson(Nil, _, _, true),
                     filterShowFieldStyle
                 )
@@ -73,7 +73,10 @@
             $('#' + modalId + ' form').submit(function(event) {
                 event.preventDefault();
 
+                $(this).find("input[name='tableColumnNames']").remove()
+
                 var params = {}
+
                 params["tableColumnNames"] = getFieldNames()
                 addParams($(this), params)
 

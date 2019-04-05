@@ -4,6 +4,7 @@
 @import models.DataSpaceMetaInfo
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
+@import org.incal.play.routes.CustomDirAssets
 
 @(
     dataSetName: String,
@@ -27,6 +28,9 @@
 
 @bottomResources = {
 
+    <script type="text/javascript" src="@CustomDirAssets.versioned("javascripts/ada-charts-62349a9.min.js")"></script>
+    <script type="text/javascript" src="@CustomDirAssets.versioned("javascripts/ada-charts-wrapper.min.js")"></script>
+
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.calcScatter,
         dataSetJsRouter.getWidgets
@@ -38,6 +42,8 @@
 
     <script type="text/javascript">
         $(function () {
+//            $("#widgetsDiv").html("<div id='spinnerDiv' class='row'></div><div id='scatterDiv' class='chart-holder'></div>")
+
             populateMultiNumericalTypeahead(["xField", "yField"], true);
             populateFullTypeahead("groupOrValueField");
 
@@ -69,6 +75,8 @@
             $("#dataViewSelectionModal #submitButton").on("click", addScatterToView)
 
             activateAllFilters(function(filterOrId) {calcScatter()});
+
+//            $("#scatterDiv").ada_charts({chartType: 'scatterplot'})
         });
 
         function calcScatter() {
@@ -91,6 +99,7 @@
             } else {
                 dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcScatter(xFieldName, yFieldName, groupOrValueFieldName, filterOrIdJson).ajax(
                     handleResponse("Scatter generation finished.")
+            // handleScatterResponse("Scatter generation finished.")
                 );
 
                 hideErrors();

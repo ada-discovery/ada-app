@@ -32,9 +32,17 @@
 }
 
 @displayChoiceElement = {
-    @labelValue("useDisplayValues", "Use Display Values", labelGridWidth = 3) {
+    @labelValue("useDisplayValues", "Display Values?", helpText = Some("If checked, dates will be exported e.g. as '2019-01-01 12:32:54' otherwise as 1546342374000."), labelGridWidth = 3) {
         <input type="checkbox" class="useDisplayValuesCheckbox">
         <input type="hidden" id="useDisplayValues" name="useDisplayValues" value="false">
+    }
+}
+
+@extraCsvElements = {
+    @displayChoiceElement
+    @labelValue("escapeStringValues", "Escape Strings?", labelGridWidth = 3) {
+        <input type="checkbox" class="escapeStringValuesCheckbox">
+        <input type="hidden" id="escapeStringValues" name="escapeStringValues" value="false">
     }
 }
 
@@ -64,7 +72,7 @@
     Nil)(
     tranSMARTDropdownItems,
     tranSMARTModals,
-    displayChoiceElement,
+    extraCsvElements,
     Some(displayChoiceElement)
 )
 
@@ -80,6 +88,11 @@
         $('.useDisplayValuesCheckbox').change( function(e) {
             var checked = $(this).is(":checked");
             $(this).parent().find('#useDisplayValues').val(checked)
+        });
+
+        $('.escapeStringValuesCheckbox').change( function(e) {
+            var checked = $(this).is(":checked");
+            $(this).parent().find('#escapeStringValues').val(checked)
         });
     })
 

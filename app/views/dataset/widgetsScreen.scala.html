@@ -208,11 +208,78 @@
                             const values = [].concat.apply([], heatmapData.data)
 
                             var fullData = {
-                                values: values, rows: heatmapData.xCategories, cols: heatmapData.yCategories, valueRange: [heatmapData.min, heatmapData.max], sequential: heatmapData.twoColors, xLabel: heatmapData.yAxisCaption, yLabel: heatmapData.xAxisCaption,
+                                values: values, rows: heatmapData.xCategories, cols: heatmapData.yCategories, valueRange: [heatmapData.min, heatmapData.max],
+                                sequential: heatmapData.twoColors, xLabel: heatmapData.yAxisCaption, yLabel: heatmapData.xAxisCaption,
                                 textToChartRatio: 0.18, colLabelPos: 'top', rowLabelPos: 'left', tooltipValuePrefix: valueLabel
                             }
 
                             $("#heatmapDiv").ada_charts('update', fullData)
+                        },
+                        error: function(data) {
+                            $("#spinnerDiv").html("")
+                            hideMessages();
+                            showErrorResponse(data)
+                        }
+                    });
+                },
+                error: function (data) {
+                    $("#spinnerDiv").html("")
+                    hideMessages();
+                    showErrorResponse(data);
+                }
+            }
+        }
+
+        function handleScatterResponse(successMessage) {
+            return {
+                success: function (data) {
+                    // filter
+                    var filterElement = $(".filter-div");
+                    filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
+
+                    $("#spinnerDiv").html("");
+                    addSpinner($("#spinnerDiv"), "margin-bottom: 20px;");
+                    $("#scatterDiv").hide();
+
+                    dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getWidgets().ajax({
+                        data: {
+                            "callbackId": data.widgetsCallbackId
+                        },
+                        success: function(data) {
+                            if (successMessage) showMessage(successMessage);
+
+                            $("#spinnerDiv").html("");
+                            $("#scatterDiv").show();
+
+                            const scatterData = data[0][0]
+
+                            console.log(scatterData)
+
+                            const values = scatterData.data.map(function (item, index) {
+                                return item[1].map(function (value, i) {
+                                    return [value[0], value[1], index];
+                                });
+                            });
+
+                            const categories = scatterData.data.map(function (item, index) {
+                                return {index: item[0]};
+                            });
+
+                            const valuesArray = [].concat.apply([], values)
+
+                            console.log(categories)
+                            console.log(valuesArray)
+
+                            var fullData = {
+                                values: valuesArray,
+                                categories: { name: 'Gender', 0: 'male', 1: 'female', 2: 'N/A'},
+                                title: scatterData.title,
+                                xAxisLabel: scatterData.xAxisCaption,
+                                yAxisLabel: scatterData.yAxisCaption,
+                                callback: d => console.log(d)
+                            }
+
+                            $("#scatterDiv").ada_charts('update', fullData)
                         },
                         error: function(data) {
                             $("#spinnerDiv").html("")

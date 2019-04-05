@@ -174,7 +174,8 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     eol: Option[String],
     filter: Seq[FilterCondition],
     tableColumnsOnly: Boolean,
-    useDisplayValues: Boolean
+    useDisplayValues: Boolean,
+    escapeStringValues: Boolean
   ): Action[AnyContent]
 
   def exportTableRecordsAsCsv(
@@ -184,7 +185,8 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     eol: Option[String],
     filter: Seq[FilterCondition],
     tableColumnsOnly: Boolean,
-    useDisplayValues: Boolean
+    useDisplayValues: Boolean,
+    escapeStringValues: Boolean
   ): Action[AnyContent]
 
   def exportViewRecordsAsJson(

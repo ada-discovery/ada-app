@@ -272,13 +272,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     eol: Option[String],
     filter: Seq[FilterCondition],
     tableColumnsOnly: Boolean,
-    useDisplayValues: Boolean
+    useDisplayValues: Boolean,
+    escapeStringValues: Boolean
   ) = Action.async { implicit request =>
     for {
       tableFieldNames <- if (tableColumnsOnly) dataViewTableColumnNames(dataViewId) else Future(Nil)
 
       result <- exportTableRecordsAsCsvAux(
-        tableFieldNames, delimiter, replaceEolWithSpace, eol, filter, useDisplayValues
+        tableFieldNames, delimiter, replaceEolWithSpace, eol, filter, useDisplayValues, escapeStringValues
       )
     } yield
       result
@@ -291,12 +292,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     eol: Option[String],
     filter: Seq[FilterCondition],
     tableColumnsOnly: Boolean,
-    useDisplayValues: Boolean
+    useDisplayValues: Boolean,
+    escapeStringValues: Boolean
   ) = Action.async { implicit request =>
     val exportFieldNames = if (tableColumnsOnly) tableColumnNames else Nil
 
     exportTableRecordsAsCsvAux(
-      exportFieldNames, delimiter, replaceEolWithSpace, eol, filter, useDisplayValues
+      exportFieldNames, delimiter, replaceEolWithSpace, eol, filter, useDisplayValues, escapeStringValues
     )
   }
 
@@ -306,7 +308,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     replaceEolWithSpace: Boolean,
     eol: Option[String],
     filter: Seq[FilterCondition],
-    useDisplayValues: Boolean = false)(
+    useDisplayValues: Boolean = false,
+    escapeStringValues: Boolean = false)(
     implicit request: Request[AnyContent]
   ): Future[Result] = {
     val eolToUse = eol match {
@@ -326,7 +329,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // get the result by calling exportToCsv core function
       result <- {
         // sort field names if use ALL otherwise use the original order
-        val headerFieldNames = if (tableFieldNames.nonEmpty) fields.map(_.name) else fields.map(_.name).toSeq.sorted
+        val headerFieldNames = if (tableFieldNames.nonEmpty) tableFieldNames else fields.map(_.name).toSeq.sorted
 
         val nameFieldTypeMap: Map[String, FieldType[_]] = if (useDisplayValues) fields.map(field => (field.name, ftf(field.fieldTypeSpec))).toMap else Map[String, FieldType[_]]()
 
@@ -334,7 +337,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           csvFileName,
           delimiter,
           eolToUse,
-          replacements)(
+          replacements,
+          escapeStringValues)(
           headerFieldNames,
           setting.exportOrderByFieldName,
           filter,
@@ -395,7 +399,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // get the result by calling exportToCsv core function
       result <- {
         // sort field names if use ALL otherwise use the original order
-        val headerFieldNames = if (tableFieldNames.nonEmpty) fields.map(_.name) else fields.map(_.name).toSeq.sorted
+        val headerFieldNames = if (tableFieldNames.nonEmpty) tableFieldNames else fields.map(_.name).toSeq.sorted
 
         // name -> field type map
         val nameFieldTypeMap: Map[String, FieldType[_]] = if (useDisplayValues) fields.map(field => (field.name, ftf(field.fieldTypeSpec))).toMap else Map[String, FieldType[_]]()
