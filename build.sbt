@@ -47,8 +47,8 @@ libraryDependencies ++= Seq(
   "org.reactivemongo" %% "play2-reactivemongo" % "0.12.6-play25" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11") exclude("com.typesafe.play", "play-iteratees_2.11") exclude("com.typesafe.play", "play-server_2.11") exclude("com.typesafe.play", "play-netty-server_2.11"), // "0.11.14-play24", // "0.12.6-play24", // "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
   "org.reactivemongo" %% "reactivemongo-akkastream" % "0.12.6",
   "com.evojam" %% "play-elastic4s" % "0.3.1" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11"),
-  "org.in-cal" %% "incal-access-elastic" % "0.1.6",
-  "org.in-cal" %% "incal-play" % "0.1.4",
+  "org.in-cal" %% "incal-access-elastic" % "0.1.8",
+  "org.in-cal" %% "incal-play" % "0.1.6",
   "com.typesafe.play" %% "play-java-ws" % playVersion,
   "jp.t2v" %% "play2-auth" % "0.14.1",
   "org.webjars" % "bootstrap" % "3.3.7",
@@ -70,7 +70,7 @@ libraryDependencies ++= Seq(
 //  "org.apache.spark" %% "spark-core" % "2.3.1", // exclude("io.netty", "netty-all"),  // uses netty 4.1.17.Final incompatible with Play's netty 4.0.39.Final (which was upgraded to 4.0.56.Final)
 //  "org.apache.spark" %% "spark-sql" % "2.3.1",
 //  "org.apache.spark" %% "spark-mllib" % "2.3.1",
-  "org.in-cal" %% "incal-spark_ml" % "0.1.1"  exclude("com.fasterxml.jackson.core", "jackson-databind"),
+  "org.in-cal" %% "incal-spark_ml" % "0.1.3"  exclude("com.fasterxml.jackson.core", "jackson-databind"),
   //  "io.netty" % "netty-all" % "4.0.56.Final",
   "commons-net" % "commons-net" % "3.5",   // for ftp access
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
