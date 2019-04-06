@@ -12,7 +12,7 @@ import org.apache.ignite.transactions.{TransactionConcurrency, TransactionIsolat
 import org.h2.value.Value
 import org.incal.core.Identity
 import play.api.Logger
-import play.api.libs.json.JsNull
+import play.api.libs.json.{JsNull, Json}
 import org.incal.core.dataaccess._
 
 import scala.collection.JavaConversions._
@@ -209,6 +209,9 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
       // TODO: we need to properly translate client's regex to an SQL version... we can perhaps drop '%' around
       case RegexEqualsCriterion(_, regexString) =>
         (s"$fieldName like ?", Seq(s"%$regexString%"))
+
+      case RegexNotEqualsCriterion(_, regexString) =>
+        (s"$fieldName not like ?", Seq(s"%$regexString%"))
 
       case NotEqualsCriterion(_, value) => {
 //        optionalValue match {

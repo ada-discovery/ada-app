@@ -194,6 +194,9 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
       case RegexEqualsCriterion(_, value) =>
         Json.obj("$regex" -> value, "$options" -> "i")
 
+      case RegexNotEqualsCriterion(_, value) =>
+        Json.obj("$regex" -> s"^(${value})", "$options" -> "i")
+
       case c: NotEqualsCriterion[T] => {
 //        val json = c.value match {
 //            case Some(value) => toJson(value)
