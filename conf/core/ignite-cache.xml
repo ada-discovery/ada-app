@@ -45,7 +45,7 @@
                         <bean class="org.apache.ignite.binary.BinaryTypeConfiguration">
                             <property name="typeName" value="reactivemongo.bson.BSONObjectID" />
                             <property name="serializer">
-                                <bean class="dataaccess.ignite.BSONObjectIDBinarySerializer"/>
+                                <bean class="org.ada.server.dataaccess.ignite.BSONObjectIDBinarySerializer"/>
                             </property>
                         </bean>
                     </list>
@@ -55,7 +55,7 @@
 
         <property name="lifecycleBeans">
             <list>
-                <bean class="dataaccess.ignite.IgniteLifecycleBean"/>
+                <bean class="org.ada.server.dataaccess.ignite.IgniteLifecycleBean"/>
             </list>
         </property>
 
