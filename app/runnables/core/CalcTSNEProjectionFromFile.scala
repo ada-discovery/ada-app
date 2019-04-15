@@ -5,7 +5,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.banda.core.plotter.Plotter
 import com.google.inject.Inject
-import models.AdaException
+import org.ada.server.AdaException
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger

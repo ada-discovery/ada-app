@@ -3,7 +3,7 @@ package runnables.mpower
 import javax.inject.Inject
 
 import org.ada.server.dataaccess.RepoTypes.JsonCrudRepo
-import models.AdaException
+import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger

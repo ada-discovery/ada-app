@@ -1,7 +1,8 @@
 package controllers.mpower
 
 import javax.inject.Inject
-import models.{AdaException, ScatterWidget}
+import models.ScatterWidget
+import org.ada.server.AdaException
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.models._
 import org.incal.core.dataaccess.Criterion._

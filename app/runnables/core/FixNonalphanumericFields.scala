@@ -3,12 +3,12 @@ package runnables.core
 import javax.inject.Inject
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import models.AdaException
+import org.ada.server.AdaException
 import org.ada.server.dataaccess.StreamSpec
 import org.ada.server.dataaccess.JsonCrudRepoExtra._
 import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.ada.server.models._
-import models.{DerivedDataSetSpec, RenameFieldsSpec}
+import org.ada.server.models.{DerivedDataSetSpec, RenameFieldsSpec}
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.{hasNonAlphanumericUnderscore, nonAlphanumericToUnderscore}
 import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassificationResult, TemporalClassificationResult}

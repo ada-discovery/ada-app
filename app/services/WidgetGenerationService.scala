@@ -6,10 +6,10 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink}
 import com.google.inject.ImplementedBy
-import models.{AdaException, HtmlWidget, Widget}
+import models.{HtmlWidget, Widget}
 import org.ada.server.dataaccess.RepoTypes.JsonReadonlyRepo
 import org.ada.server.models._
-import org.ada.server.models._
+import org.ada.server.AdaException
 import org.incal.core.dataaccess.Criterion
 import org.incal.core.util.GroupMapList
 import play.api.{Configuration, Logger}

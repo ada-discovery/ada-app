@@ -11,7 +11,7 @@ import services.DataSetService
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 import org.ada.server.field.FieldTypeHelper
-import models.AdaException
+import org.ada.server.AdaException
 
 import scala.io.Source
 

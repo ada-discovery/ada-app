@@ -1,6 +1,6 @@
 package services.ml
 
-import models.ml.unsupervised.{UnsupervisedLearning, BisectingKMeans => BisectingKMeansDef, GaussianMixture => GaussianMixtureDef, KMeans => KMeansDef, LDA => LDADef}
+import org.ada.server.models.ml.unsupervised.{UnsupervisedLearning, BisectingKMeans => BisectingKMeansDef, GaussianMixture => GaussianMixtureDef, KMeans => KMeansDef, LDA => LDADef}
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.clustering.{BisectingKMeans, GaussianMixture, KMeans, LDA}
 import org.incal.spark_ml.{ParamGrid, ParamSourceBinder, SparkMLEstimatorFactoryHelper}

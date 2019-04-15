@@ -5,7 +5,7 @@ import com.google.inject.assistedinject.Assisted
 import org.ada.server.models.{DistributionWidgetSpec, _}
 import org.ada.server.models.DataSetFormattersAndIds._
 import org.ada.server.dataaccess.FilterRepoExtra._
-import models.ml.regression.RegressionResult.standardRegressionResultFormat
+import org.ada.server.models.ml.regression.RegressionResult.standardRegressionResultFormat
 import models.Widget.WidgetWrites
 import persistence.RepoTypes.{ClassifierRepo, RegressorRepo}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -140,7 +140,7 @@ protected[controllers] class StandardRegressionRunControllerImpl @Inject()(
   }
 
   override protected def exportFormat=
-    models.ml.regression.RegressionResult.createStandardRegressionResultFormat(
+    org.ada.server.models.ml.regression.RegressionResult.createStandardRegressionResultFormat(
       OrdinalEnumFormat(VectorScalerType),
       OrdinalEnumFormat(RegressionEvalMetric)
     )

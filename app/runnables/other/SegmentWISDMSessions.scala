@@ -5,7 +5,7 @@ import akka.stream.scaladsl.Source
 import org.ada.server.dataaccess.StreamSpec
 import javax.inject.Inject
 import org.ada.server.models.{Field, FieldTypeId}
-import models.DerivedDataSetSpec
+import org.ada.server.models.DerivedDataSetSpec
 import org.incal.core.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion._
 import persistence.dataset.DataSetAccessorFactory

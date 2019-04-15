@@ -2,10 +2,10 @@ package controllers.dataset
 
 import com.google.inject.assistedinject.Assisted
 import javax.inject.Inject
-import models.AdaException
+import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds._
 import org.ada.server.json.OrdinalEnumFormat
-import models.ml.regression.RegressionResult.temporalRegressionResultFormat
+import org.ada.server.models.ml.regression.RegressionResult.temporalRegressionResultFormat
 import org.ada.server.models.{DistributionWidgetSpec, _}
 import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion._
@@ -157,7 +157,7 @@ protected[controllers] class TemporalRegressionRunControllerImpl @Inject()(
   }
 
   override protected def exportFormat=
-    models.ml.regression.RegressionResult.createTemporalRegressionResultFormat(
+    org.ada.server.models.ml.regression.RegressionResult.createTemporalRegressionResultFormat(
       OrdinalEnumFormat(VectorScalerType),
       OrdinalEnumFormat(RegressionEvalMetric)
     )

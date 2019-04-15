@@ -1,7 +1,7 @@
 package runnables.luxpark
 
 import javax.inject.Inject
-import models.AdaException
+import org.ada.server.AdaException
 import org.ada.server.field.FieldTypeHelper
 import org.incal.core.dataaccess.Criterion.Infix
 import org.ada.server.dataaccess.RepoTypes.FieldRepo

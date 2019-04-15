@@ -14,7 +14,8 @@ import services.datasetimporter.DataSetImporterCentral
 import collection.mutable.{Map => MMap}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable}
-import models.{AdaException, ScheduledTime}
+import org.ada.server.AdaException
+import org.ada.server.models.dataimport.ScheduledTime
 
 import scala.concurrent.duration._
 import Await.result

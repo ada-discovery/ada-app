@@ -7,7 +7,7 @@ import akka.stream.ActorMaterializer
 import akka.util.ByteString
 import com.google.inject.assistedinject.Assisted
 import org.ada.server.dataaccess.ConversionUtil
-import models.egait.{EGaitKineticData, SpatialPoint}
+import org.ada.server.models.egait.{EGaitKineticData, SpatialPoint}
 import play.api.libs.ws._
 import play.api.{Configuration, Logger}
 import org.apache.commons.codec.binary.{Base64, Hex}

@@ -6,9 +6,9 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import org.ada.server.dataaccess.StreamSpec
 import org.ada.server.field.FieldTypeHelper
-import models.AdaException
+import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
-import models.DerivedDataSetSpec
+import org.ada.server.models.DerivedDataSetSpec
 import persistence.dataset.DataSetAccessorFactory
 import org.incal.core.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion.Infix

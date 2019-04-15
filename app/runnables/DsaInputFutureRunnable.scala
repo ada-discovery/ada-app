@@ -2,7 +2,7 @@ package runnables
 
 import javax.inject.Inject
 
-import models.AdaException
+import org.ada.server.AdaException
 import org.incal.core.InputFutureRunnable
 import persistence.dataset.DataSetAccessorFactory
 

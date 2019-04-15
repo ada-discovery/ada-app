@@ -1,6 +1,6 @@
 package util
 
-import models.Message
+import org.ada.server.models.Message
 import play.api.{LoggerLike, Logger}
 import persistence.RepoTypes.MessageRepo
 

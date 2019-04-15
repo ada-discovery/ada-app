@@ -4,7 +4,7 @@ import java.io._
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
-import models.synapse._
+import org.ada.server.models.synapse._
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import play.api.{Configuration, Logger}
 import play.api.libs.json.{JsObject, Json}
@@ -13,7 +13,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
-import models.synapse.JsonFormat._
+import org.ada.server.models.synapse.JsonFormat._
 import org.incal.core.util.ZipFileIterator
 import org.incal.core.util.retry
 import akka.util.ByteString

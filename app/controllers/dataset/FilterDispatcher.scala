@@ -2,7 +2,7 @@ package controllers.dataset
 
 import javax.inject.Inject
 import controllers.core.AdminOrOwnerControllerDispatcherExt
-import models.AdaException
+import org.ada.server.AdaException
 import org.ada.server.models.Filter
 import persistence.dataset.DataSetAccessorFactory
 import play.api.mvc.{Action, AnyContent, Request}

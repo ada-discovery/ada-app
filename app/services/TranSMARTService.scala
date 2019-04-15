@@ -7,7 +7,7 @@ import com.google.inject.ImplementedBy
 import org.ada.server.models.{Category, Field}
 import org.ada.server.dataaccess.AdaConversionException
 import org.ada.server.field.{FieldType, FieldTypeHelper}
-import models.AdaException
+import org.ada.server.AdaException
 import play.api.libs.json._
 
 @ImplementedBy(classOf[TranSMARTServiceImpl])

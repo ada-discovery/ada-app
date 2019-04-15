@@ -4,7 +4,7 @@ import java.nio.file.Paths
 
 import com.banda.core.plotter.Plotter
 import com.google.inject.Inject
-import models.ml.unsupervised.{BisectingKMeans, KMeans, UnsupervisedLearning}
+import org.ada.server.models.ml.unsupervised.{BisectingKMeans, KMeans, UnsupervisedLearning}
 import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._

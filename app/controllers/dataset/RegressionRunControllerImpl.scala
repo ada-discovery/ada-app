@@ -1,6 +1,6 @@
 package controllers.dataset
 
-import models.ml.regression.Regressor.RegressorIdentity
+import org.ada.server.models.ml.regression.Regressor.RegressorIdentity
 import org.incal.spark_ml.models.regression.{RegressionEvalMetric, Regressor}
 import org.incal.spark_ml.models.result._
 import play.api.libs.json._

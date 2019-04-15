@@ -2,7 +2,7 @@ package runnables.denopa
 
 import javax.inject.{Inject, Named}
 
-import models.Translation
+import org.ada.server.models.Translation
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import persistence.RepoTypes._

@@ -3,7 +3,7 @@ package runnables.core
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.scaladsl.Sink
 import org.ada.server.models.FieldTypeId
-import models.AdaException
+import org.ada.server.AdaException
 import play.api.Logger
 import play.api.libs.json.{JsObject, _}
 import runnables.DsaInputFutureRunnable

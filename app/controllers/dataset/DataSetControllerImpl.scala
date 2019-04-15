@@ -22,7 +22,7 @@ import org.apache.commons.lang3.StringEscapeUtils
 import org.ada.server.models.Filter.FilterOrId
 import models.Widget.WidgetWrites
 import org.ada.server.json.{ManifestedFormat, OptionFormat, SubTypeFormat, TupleFormat}
-import models.ml._
+import org.ada.server.models.ml._
 import controllers.dataset.IndependenceTestResult._
 import persistence.RepoTypes.{ClassifierRepo, RegressorRepo, UnsupervisedLearningRepo}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -39,7 +39,7 @@ import play.api.mvc.{Filter => _, _}
 import reactivemongo.play.json.BSONFormats._
 import services.ml.MachineLearningService
 import views.html.dataset
-import models.DataSetTransformation._
+import org.ada.server.models.DataSetTransformation._
 import services.stats.calc.{ChiSquareResult, IndependenceTestResult, OneWayAnovaResult, Quartiles}
 import services.stats.StatsService
 import be.objectify.deadbolt.scala.AuthenticatedRequest

@@ -1,12 +1,13 @@
 package controllers.ml
 
 import java.{lang => jl}
-import javax.inject.Inject
 
+import javax.inject.Inject
 import com.banda.math.business.rand.RandomDistributionProviderFactory
 import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.ActivationFunctionType
-import models.ml._
+import org.ada.server.models.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec, RCPredictionSettings}
+import org.ada.server.models.ml._
 import org.incal.spark_ml.models.VectorScalerType
 import persistence.RepoTypes.MessageRepo
 import persistence.dataset.DataSetAccessorFactory

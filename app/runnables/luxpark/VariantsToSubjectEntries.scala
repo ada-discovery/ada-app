@@ -1,6 +1,6 @@
 package runnables.luxpark
 
-import models.{AdaException, AdaParseException}
+import org.ada.server.{AdaException, AdaParseException}
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputRunnable
 import org.incal.core.util.{GroupMapList, writeStringAsStream}

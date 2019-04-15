@@ -3,7 +3,7 @@ package runnables.luxpark
 import org.ada.server.dataaccess.StreamSpec
 import javax.inject.Inject
 import org.ada.server.models.{Field, FieldTypeId}
-import models.DerivedDataSetSpec
+import org.ada.server.models.DerivedDataSetSpec
 import org.incal.core.dataaccess.{Criterion, NotEqualsNullCriterion}
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.{FutureRunnable, InputFutureRunnable}

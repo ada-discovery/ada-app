@@ -3,7 +3,7 @@ package persistence.dataset
 import org.ada.server.dataaccess._
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.dataaccess.RepoTypes.FieldRepo
-import models.ml.RCPredictionSettingAndResults
+import org.ada.server.models.RCPredictionSettingAndResults
 import org.ada.server.models.{Field, FieldTypeId}
 import org.incal.core.dataaccess.AscSort
 import util.FieldUtil.caseClassToFlatFieldTypes

@@ -16,7 +16,7 @@ import org.incal.play.security.SecurityUtil.{restrictAdminAnyNoCaching, restrict
 import views.html.{layout, regression => view}
 import controllers.ml.routes.{RegressorController => regressorRoutes}
 import org.ada.server.models.DataSpaceMetaInfo
-import models.ml.regression.Regressor._
+import org.ada.server.models.ml.regression.Regressor._
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.AscSort
 import org.incal.play.Page

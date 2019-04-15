@@ -8,8 +8,9 @@ import org.ada.server.dataaccess.RepoTypes.FieldRepo
 import org.ada.server.dataaccess._
 import org.ada.server.models.{Category, Field, FieldTypeId, FieldTypeSpec}
 import org.ada.server.field.FieldType
-import models.redcap.{Metadata, FieldType => RCFieldType}
-import models.{AdaException, AdaParseException, RedCapDataSetImport}
+import org.ada.server.models.redcap.{Metadata, FieldType => RCFieldType}
+import org.ada.server.models.dataimport.RedCapDataSetImport
+import org.ada.server.{AdaException, AdaParseException}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import _root_.util.FieldUtil.FieldOps

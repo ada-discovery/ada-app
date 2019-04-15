@@ -1,10 +1,10 @@
 package persistence
 
-import models.{DataSetImport, Message, Translation}
-import org.ada.server.models._
 import reactivemongo.bson.BSONObjectID
 import org.ada.server.models.HtmlSnippet
-import models.ml.unsupervised.UnsupervisedLearning
+import org.ada.server.models.dataimport.DataSetImport
+import org.ada.server.models._
+import org.ada.server.models.ml.unsupervised.UnsupervisedLearning
 import org.incal.core.dataaccess.{AsyncCrudRepo, AsyncStreamRepo}
 import org.incal.spark_ml.models.classification.Classifier
 import org.incal.spark_ml.models.regression.Regressor

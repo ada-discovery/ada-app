@@ -1,16 +1,17 @@
 package runnables.mpower
 
 import java.{lang => jl, util => ju}
-import javax.inject.Inject
 
+import javax.inject.Inject
 import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import com.banda.math.business.rand.RandomDistributionProviderFactory
 import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.business.TopologyFactory
 import com.banda.network.business.learning.ReservoirTrainerFactory
 import com.banda.network.domain.ActivationFunctionType
+import org.ada.server.models.ExtendedReservoirLearningSetting
 import org.incal.core.dataaccess.Criterion.Infix
-import models.ml.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec}
+import org.ada.server.models.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec}
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import persistence.dataset.DataSetAccessorFactory

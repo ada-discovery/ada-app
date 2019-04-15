@@ -26,7 +26,7 @@ import reactivemongo.play.json.BSONFormats._
 import java.util.Date
 
 import controllers.core.AdaCrudControllerImpl
-import models.AdaException
+import org.ada.server.AdaException
 import org.ada.server.models.{DataView, WidgetGenerationMethod, WidgetSpec}
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion

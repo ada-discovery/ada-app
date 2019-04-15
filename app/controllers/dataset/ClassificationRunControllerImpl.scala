@@ -3,7 +3,7 @@ package controllers.dataset
 import models.{LineWidget, Widget}
 import models.Widget.WidgetWrites
 import org.ada.server.models._
-import models.ml.classification.Classifier.ClassifierIdentity
+import org.ada.server.models.ml.classification.Classifier.ClassifierIdentity
 import org.ada.server.models.{BasicDisplayOptions, FieldTypeId, FieldTypeSpec}
 import org.incal.spark_ml.models.classification.{ClassificationEvalMetric, Classifier}
 import org.incal.spark_ml.models.result._

@@ -2,7 +2,8 @@ package services.datasetimporter
 
 import java.util.Date
 
-import models.{AdaParseException, TranSmartDataSetImport}
+import org.ada.server.models.dataimport.TranSmartDataSetImport
+import org.ada.server.AdaParseException
 import org.ada.server.dataaccess.CategoryRepo._
 import org.ada.server.field.{FieldType, FieldTypeHelper, FieldTypeInferrerFactory}
 import org.ada.server.dataaccess.RepoTypes.{CategoryRepo, FieldRepo}

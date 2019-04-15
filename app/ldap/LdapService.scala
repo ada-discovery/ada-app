@@ -3,7 +3,7 @@ package ldap
 import javax.inject.{Inject, Singleton}
 import com.google.inject.ImplementedBy
 import com.unboundid.ldap.sdk._
-import models.AdaException
+import org.ada.server.AdaException
 import models.security.{LdapUser, UserGroup}
 import play.api.Logger
 import play.api.inject.ApplicationLifecycle

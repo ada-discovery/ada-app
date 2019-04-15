@@ -5,10 +5,11 @@ import java.util.Date
 import javax.inject.Inject
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
-import models.{AdaException, SynapseDataSetImport}
+import org.ada.server.models.dataimport.SynapseDataSetImport
+import org.ada.server.AdaException
 import org.ada.server.models._
 import org.ada.server.field.{FieldType, FieldTypeHelper}
-import models.synapse._
+import org.ada.server.models.synapse._
 import play.api.Configuration
 import play.api.libs.json.{JsArray, JsObject, Json}
 import services.{SynapseService, SynapseServiceFactory}

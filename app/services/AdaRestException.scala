@@ -1,6 +1,6 @@
 package services
 
-import models.AdaException
+import org.ada.server.AdaException
 
 class AdaRestException(message: String) extends AdaException(message)
 

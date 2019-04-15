@@ -4,7 +4,7 @@ import scala.reflect.runtime.universe._
 import play.api.libs.json.{JsObject, JsValue}
 import java.{util => ju}
 
-import models.AdaException
+import org.ada.server.AdaException
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.dataaccess.RepoTypes.FieldRepo
 import org.ada.server.field.{FieldType, FieldTypeHelper}

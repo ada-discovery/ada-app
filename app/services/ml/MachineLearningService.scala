@@ -4,9 +4,9 @@ import javax.inject.{Inject, Singleton}
 import com.google.inject.ImplementedBy
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.ada.server.models.{Field, FieldTypeId, FieldTypeSpec}
-import models.ml.IOJsonTimeSeriesSpec
-import models.ml.unsupervised.UnsupervisedLearning
-import models.AdaException
+import org.ada.server.models.ml.IOJsonTimeSeriesSpec
+import org.ada.server.models.ml.unsupervised.UnsupervisedLearning
+import org.ada.server.AdaException
 import org.apache.spark.ml.feature._
 import org.apache.spark.ml._
 import org.apache.spark.sql.types.{Metadata, MetadataBuilder, StructType, _}

@@ -4,7 +4,8 @@ import java.nio.charset.{Charset, MalformedInputException, UnsupportedCharsetExc
 import java.text.DecimalFormat
 
 import javax.inject.Inject
-import models.{AdaParseException, DataSetImport}
+import org.ada.server.models.dataimport.DataSetImport
+import org.ada.server.AdaParseException
 import org.ada.server.field.{FieldTypeHelper, FieldTypeInferrer}
 import org.ada.server.models._
 import persistence.RepoTypes._

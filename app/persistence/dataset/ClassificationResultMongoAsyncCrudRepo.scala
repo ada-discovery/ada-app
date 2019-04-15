@@ -5,7 +5,7 @@ import com.google.inject.assistedinject.Assisted
 import org.ada.server.dataaccess.RepoTypes.DictionaryRootRepo
 import org.ada.server.dataaccess.mongo.dataset.DictionarySubordinateMongoAsyncCrudRepo
 import org.incal.spark_ml.models.result.ClassificationResult
-import models.ml.classification.ClassificationResult.{ClassificationResultIdentity, classificationResultFormat}
+import org.ada.server.models.ml.classification.ClassificationResult.{ClassificationResultIdentity, classificationResultFormat}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 

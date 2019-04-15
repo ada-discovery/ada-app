@@ -1,6 +1,6 @@
 package runnables.singlecell
 
-import models.AdaException
+import org.ada.server.AdaException
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputRunnable
 import org.incal.core.util.{writeStringAsStream, listFiles}

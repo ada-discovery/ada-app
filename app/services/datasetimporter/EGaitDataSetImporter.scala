@@ -5,12 +5,13 @@ import java.util.Date
 import javax.inject.Inject
 import org.ada.server.field.FieldTypeHelper
 import org.ada.server.models._
-import models.egait.EGaitKineticData
 import play.api.Configuration
 import play.api.libs.json.{JsObject, Json}
 import services.{EGaitService, EGaitServiceFactory}
-import EGaitKineticData.eGaitSessionFormat
-import models.{AdaException, EGaitDataSetImport}
+import org.ada.server.models.egait.EGaitKineticData.eGaitSessionFormat
+import org.ada.server.models.egait.EGaitKineticData
+import org.ada.server.models.dataimport.EGaitDataSetImport
+import org.ada.server.AdaException
 import persistence.dataset.DataSetAccessor
 
 import scala.concurrent.Await._

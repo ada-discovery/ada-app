@@ -3,7 +3,7 @@ package services.ml
 import java.{util => ju}
 
 import org.ada.server.field.{FieldType, FieldTypeHelper}
-import models.ml.IOJsonTimeSeriesSpec
+import org.ada.server.models.ml.IOJsonTimeSeriesSpec
 import org.ada.server.models.{FieldTypeId, FieldTypeSpec}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml.feature.{QuantileDiscretizer, StringIndexer, VectorAssembler}

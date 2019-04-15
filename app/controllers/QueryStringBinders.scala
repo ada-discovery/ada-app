@@ -5,10 +5,10 @@ import controllers.mpower.AggFunction
 import org.ada.server.models.Filter._
 import controllers.FilterConditionExtraFormats.eitherFilterOrIdFormat
 import org.ada.server.models.{AggType, CorrelationType, FieldTypeId, Filter}
-import models.ml._
+import org.ada.server.models.ml._
 import org.ada.server.models.DataSetFormattersAndIds.enumTypeFormat
-import models.ml.classification.ClassificationResult.{standardClassificationRunSpecFormat, temporalClassificationRunSpecFormat}
-import models.ml.regression.RegressionResult.{standardRegressionRunSpecFormat, temporalRegressionRunSpecFormat}
+import org.ada.server.models.ml.classification.ClassificationResult.{standardClassificationRunSpecFormat, temporalClassificationRunSpecFormat}
+import org.ada.server.models.ml.regression.RegressionResult.{standardRegressionRunSpecFormat, temporalRegressionRunSpecFormat}
 import org.incal.core.FilterCondition
 import org.incal.play.PageOrder
 import org.incal.spark_ml.models.classification.ClassificationEvalMetric

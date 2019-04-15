@@ -5,7 +5,7 @@ import java.util.Date
 
 import org.ada.server.dataaccess._
 import org.ada.server.field.{FieldType, FieldTypeFactory, FieldTypeHelper, FieldTypeInferrerFactory}
-import models.JsonDataSetImport
+import org.ada.server.models.dataimport.JsonDataSetImport
 import play.api.libs.json._
 import _root_.util.FieldUtil.specToField
 

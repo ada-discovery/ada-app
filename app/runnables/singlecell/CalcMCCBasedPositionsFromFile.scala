@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.google.inject.Inject
 import org.ada.server.models.{Field, FieldTypeId}
-import models.AdaException
+import org.ada.server.AdaException
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.{writeStringAsStream, listFiles, seqFutures}

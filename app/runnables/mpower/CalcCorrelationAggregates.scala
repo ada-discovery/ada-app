@@ -3,7 +3,7 @@ package runnables.mpower
 import javax.inject.Inject
 
 import org.ada.server.models.{Field, FieldTypeId, StorageType}
-import models.AdaException
+import org.ada.server.AdaException
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json._
 import services.DataSetService

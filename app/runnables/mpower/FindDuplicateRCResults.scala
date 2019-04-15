@@ -2,7 +2,7 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import models.AdaException
+import org.ada.server.AdaException
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import org.incal.core.InputFutureRunnable

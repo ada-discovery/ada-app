@@ -17,7 +17,7 @@ import play.api.data.Form
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import controllers.dataset.routes.javascript.{DataSpaceMetaInfoController => dataSpaceMetaInfoJsRoutes}
-import models.AdaException
+import org.ada.server.AdaException
 import org.ada.server.dataaccess.DataSetMetaInfoRepoFactory
 import org.incal.play.controllers.{CrudControllerImpl, HasBasicFormCreateView, HasBasicListView, SubjectPresentRestrictedCrudController}
 import services.DataSpaceService

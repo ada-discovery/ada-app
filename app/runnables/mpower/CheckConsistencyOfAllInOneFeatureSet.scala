@@ -11,7 +11,7 @@ import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.util.seqFutures
 
-import models.AdaException
+import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.ada.server.dataaccess.ignite.BinaryJsonUtil.getValueFromJson
 

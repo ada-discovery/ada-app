@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import org.ada.server.dataaccess.JsonCrudRepoExtra._
 import org.ada.server.dataaccess.StreamSpec
-import models.AdaException
+import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.FutureRunnable

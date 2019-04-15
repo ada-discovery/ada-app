@@ -1,7 +1,7 @@
 package runnables.core
 
 import org.ada.server.dataaccess.RepoTypes.JsonCrudRepo
-import models.AdaException
+import org.ada.server.AdaException
 import play.api.libs.json._
 import runnables.DsaInputFutureRunnable
 import _root_.util.FieldUtil.FieldOps

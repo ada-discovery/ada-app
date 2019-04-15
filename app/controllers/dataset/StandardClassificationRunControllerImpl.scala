@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.ada.server.models._
 import org.incal.spark_ml.models.result.{BinaryClassificationCurves, ClassificationResult, MetricStatsValues, StandardClassificationResult}
-import models.ml.classification.ClassificationResult.standardClassificationResultFormat
+import org.ada.server.models.ml.classification.ClassificationResult.standardClassificationResultFormat
 import org.incal.core.dataaccess.{AsyncCrudRepo, Criterion}
 import org.incal.spark_ml.MLResultUtil
 import org.incal.spark_ml.models.setting.ClassificationRunSpec
@@ -184,7 +184,7 @@ class StandardClassificationRunControllerImpl @Inject()(
   }
 
   override protected def exportFormat=
-    models.ml.classification.ClassificationResult.createStandardClassificationResultFormat(
+    org.ada.server.models.ml.classification.ClassificationResult.createStandardClassificationResultFormat(
       OrdinalEnumFormat(VectorScalerType),
       OrdinalEnumFormat(ClassificationEvalMetric)
     )

@@ -2,11 +2,11 @@ package controllers.dataset
 
 import com.google.inject.assistedinject.Assisted
 import javax.inject.Inject
-import models.AdaException
+import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.ada.server.models._
 import org.ada.server.json.OrdinalEnumFormat
-import models.ml.classification.ClassificationResult.temporalClassificationResultFormat
+import org.ada.server.models.ml.classification.ClassificationResult.temporalClassificationResultFormat
 import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.spark_ml.MLResultUtil
@@ -187,7 +187,7 @@ class TemporalClassificationRunControllerImpl @Inject()(
   }
 
   override protected def exportFormat =
-    models.ml.classification.ClassificationResult.createTemporalClassificationResultFormat(
+    org.ada.server.models.ml.classification.ClassificationResult.createTemporalClassificationResultFormat(
       OrdinalEnumFormat(VectorScalerType),
       OrdinalEnumFormat(ClassificationEvalMetric)
     )

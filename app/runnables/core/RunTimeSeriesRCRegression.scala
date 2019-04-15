@@ -5,7 +5,7 @@ import java.{lang => jl}
 import javax.inject.Inject
 import com.banda.math.domain.rand.RandomDistribution
 import com.banda.network.domain.ActivationFunctionType
-import models.ml.IOJsonTimeSeriesSpec
+import org.ada.server.models.ml.IOJsonTimeSeriesSpec
 import persistence.RepoTypes.RegressorRepo
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID

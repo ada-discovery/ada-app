@@ -6,7 +6,7 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 import controllers.core.AdaCrudControllerImpl
 import org.incal.core.dataaccess.InCalDataAccessException
-import models.AdaException
+import org.ada.server.AdaException
 import org.ada.server.models.{Filter, HtmlSnippet, HtmlSnippetId}
 import org.ada.server.models.HtmlSnippet._
 import org.incal.core.dataaccess.Criterion._

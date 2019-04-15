@@ -5,7 +5,7 @@ import java.util.Date
 import javax.inject.Inject
 import controllers.core.AdaCrudControllerImpl
 import org.ada.server.models._
-import models.ml.unsupervised._
+import org.ada.server.models.ml.unsupervised._
 import persistence.RepoTypes._
 import play.api.data.Forms.{mapping, optional, _}
 import play.api.data.format.Formats._

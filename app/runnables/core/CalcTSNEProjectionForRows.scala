@@ -3,7 +3,7 @@ package runnables.core
 import com.banda.core.plotter.Plotter
 import com.google.inject.Inject
 import org.ada.server.field.FieldTypeHelper
-import models.AdaException
+import org.ada.server.AdaException
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import org.incal.core.InputFutureRunnable

@@ -12,15 +12,16 @@ import org.ada.server.dataaccess._
 import org.ada.server.dataaccess.mongo._
 import org.ada.server.models.DataSetFormattersAndIds._
 import org.ada.server.models._
-import models.ml.regression.Regressor._
-import models.ml.classification.Classifier._
+import org.ada.server.models.ml.regression.Regressor._
+import org.ada.server.models.ml.classification.Classifier._
 import net.codingwell.scalaguice.ScalaModule
 import org.ada.server.dataaccess.RepoTypes._
 import persistence.RepoTypes._
 import com.google.inject.name.Names
-import models.{DataSetImport, Message, Translation}
-import models.ml.unsupervised.UnsupervisedLearning
-import models.ml.unsupervised.UnsupervisedLearning.unsupervisedLearningFormat
+import org.ada.server.models.dataimport.DataSetImport
+import org.ada.server.models.{Message, Translation}
+import org.ada.server.models.ml.unsupervised.UnsupervisedLearning
+import org.ada.server.models.ml.unsupervised.UnsupervisedLearning.unsupervisedLearningFormat
 import persistence.dataset._
 import reactivemongo.bson.BSONObjectID
 import persistence.RepoDef.Repo
@@ -36,7 +37,7 @@ private object RepoDef extends Enumeration {
 
   implicit def valueToRepo[T](x: Value) = x.asInstanceOf[Repo[T]]
 
-  import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImportFormat}
+  import org.ada.server.models.dataimport.DataSetImport.{DataSetImportIdentity, dataSetImportFormat}
   import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
   import org.ada.server.models.DataSetFormattersAndIds.{dataSetSettingFormat, fieldFormat, dictionaryFormat, DataSpaceMetaInfoIdentity, DictionaryIdentity, FieldIdentity, DataSetSettingIdentity}
 

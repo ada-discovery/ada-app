@@ -13,8 +13,8 @@ import com.banda.network.domain._
 import com.google.inject.{ImplementedBy, Singleton}
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.models._
-import models.ml.RCPredictionSettingAndResults.rcPredictionSettingAndResultsFormat
-import models.ml._
+import org.ada.server.models.RCPredictionSettingAndResults.rcPredictionSettingAndResultsFormat
+import org.ada.server.models.ml._
 import org.ada.server.models.Field
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml.linalg.{Vector, Vectors}

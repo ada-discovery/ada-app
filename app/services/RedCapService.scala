@@ -11,8 +11,8 @@ import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import play.api.Configuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.ada.server.dataaccess.JsonUtil._
-import models.redcap.JsonFormat._
-import models.redcap._
+import org.ada.server.models.redcap.JsonFormat._
+import org.ada.server.models.redcap._
 import org.asynchttpclient.DefaultAsyncHttpClientConfig
 import play.api.libs.ws.ahc.AhcWSClient
 import scala.concurrent.duration._

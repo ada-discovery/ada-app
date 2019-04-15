@@ -19,7 +19,8 @@ import _root_.util.FieldUtil
 import _root_.util.FieldUtil.caseClassToFlatFieldTypes
 import controllers.core.AdaReadonlyControllerImpl
 import controllers.core.{ExportableAction, WidgetRepoController}
-import models.{AdaException, Widget}
+import models.Widget
+import org.ada.server.AdaException
 import org.ada.server.field.FieldTypeHelper
 import org.ada.server.json.OrdinalEnumFormat
 import org.incal.core.{FilterCondition, Identity}

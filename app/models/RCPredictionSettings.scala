@@ -1,6 +1,5 @@
-package models.ml
+package org.ada.server.models
 
-import org.ada.server.dataaccess._
 import org.incal.core.util.ReflectionUtil
 import org.ada.server.json.{EnumFormat, FlattenFormat, JavaOrdinalEnumFormat, OrdinalSortedEnumFormat}
 import reactivemongo.play.json.BSONFormats._
@@ -93,40 +92,4 @@ object RCPredictionSettingAndResults {
   implicit val activationFunctionTypeFormat = JavaOrdinalEnumFormat[ActivationFunctionType]
   implicit val rcPredictionSettingFormat = Json.format[RCPredictionSetting]
   implicit val rcPredictionSettingAndResultsFormat = new FlattenFormat(Json.format[RCPredictionSettingAndResults], "-")
-}
-
-object XXX extends App {
-
-  val setting = RCPredictionSetting(20, Some(20), None, ActivationFunctionType.Tanh, None, 0.1, 0.5, 10, Some(VectorScalerType.MinMaxPlusMinusOneScaler), 10, 1)
-
-  val ioSpec = RCPredictionInputOutputSpec(Seq("lla", "lll"), Seq("a", "bb"), Some(3), None, Some(100), "dataset1", "dataset2", "datasetname")
-
-  val settingAndResults = RCPredictionSettingAndResults(None, setting, ioSpec, 0.9, 0.87)
-
-  val json = Json.toJson(settingAndResults)
-
-  println(Json.prettyPrint(json))
-  println(json.as[RCPredictionSettingAndResults])
-
-  println("Case Fields:")
-  ReflectionUtil.getCaseClassMemberAndTypeNames[RCPredictionSetting].foreach(println(_))
-
-  println
-  println("Fields:")
-  FieldUtil.caseClassToFlatFieldTypes[RCPredictionSetting]().foreach(println(_))
-  println
-
-  println("Case Fields:")
-  ReflectionUtil.getCaseClassMemberAndTypeNames[RCPredictionInputOutputSpec].foreach(println(_))
-
-  println
-  println("Fields:")
-  FieldUtil.caseClassToFlatFieldTypes[RCPredictionInputOutputSpec]().foreach(println(_))
-
-  println("Case Fields:")
-  ReflectionUtil.getCaseClassMemberAndTypeNames[RCPredictionSettingAndResults].foreach(println(_))
-
-  println
-  println("Fields:")
-  FieldUtil.caseClassToFlatFieldTypes[RCPredictionSettingAndResults]("-").foreach(println(_))
 }

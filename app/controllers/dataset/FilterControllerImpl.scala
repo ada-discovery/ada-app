@@ -19,7 +19,7 @@ import reactivemongo.bson.BSONObjectID
 import java.util.Date
 
 import controllers.core.AdaCrudControllerImpl
-import models.AdaException
+import org.ada.server.AdaException
 import reactivemongo.play.json.BSONFormats._
 import org.ada.server.dataaccess.FilterRepo
 import org.incal.core.FilterCondition

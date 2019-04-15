@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import play.api.Logger
 import org.incal.core.InputFutureRunnable
-import models.AdaException
+import org.ada.server.AdaException
 import persistence.dataset.DataSetAccessorFactory
 
 import scala.reflect.runtime.universe.typeOf

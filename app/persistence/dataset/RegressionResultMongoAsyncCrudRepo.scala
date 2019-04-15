@@ -5,7 +5,7 @@ import com.google.inject.assistedinject.Assisted
 import org.ada.server.dataaccess.RepoTypes.DictionaryRootRepo
 import org.ada.server.dataaccess.mongo.dataset.DictionarySubordinateMongoAsyncCrudRepo
 import org.incal.spark_ml.models.result.RegressionResult
-import models.ml.regression.RegressionResult.{regressionResultFormat, RegressionResultIdentity}
+import org.ada.server.models.ml.regression.RegressionResult.{regressionResultFormat, RegressionResultIdentity}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 

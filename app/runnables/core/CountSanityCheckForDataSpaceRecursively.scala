@@ -8,7 +8,7 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.models.DataSpaceMetaInfo
-import models.AdaException
+import org.ada.server.AdaException
 import reactivemongo.bson.BSONObjectID
 import services.DataSpaceService
 

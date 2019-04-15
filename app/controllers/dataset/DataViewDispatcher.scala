@@ -3,7 +3,7 @@ package controllers.dataset
 import javax.inject.Inject
 import be.objectify.deadbolt.scala.DeadboltHandler
 import controllers.core.AdminOrOwnerControllerDispatcherExt
-import models.AdaException
+import org.ada.server.AdaException
 import org.ada.server.models.{AggType, CorrelationType}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.mvc.{Action, AnyContent, Request}

@@ -3,8 +3,8 @@ package controllers
 import javax.inject.Inject
 
 import controllers.core.AdaCrudControllerImpl
-import models.Translation
-import models.Translation._
+import org.ada.server.models.Translation
+import org.ada.server.models.Translation._
 import org.incal.play.controllers.{AdminRestrictedCrudController, CrudControllerImpl, HasBasicFormCrudViews}
 import persistence.RepoTypes._
 import play.api.data.Form

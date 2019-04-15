@@ -6,7 +6,7 @@ import javax.inject.Inject
 import controllers._
 import controllers.core.AdaCrudControllerImpl
 import org.ada.server.models.DataSpaceMetaInfo
-import models.ml.classification.Classifier._
+import org.ada.server.models.ml.classification.Classifier._
 import persistence.RepoTypes._
 import play.api.data.Forms.{mapping, optional, _}
 import play.api.data.format.Formats._

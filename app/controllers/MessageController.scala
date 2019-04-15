@@ -6,13 +6,13 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import akka.stream.scaladsl.Source
 import be.objectify.deadbolt.scala.DeadboltActions
-import models.Message
-import models.Message._
+import org.ada.server.models.Message
+import org.ada.server.models.Message._
 import persistence.RepoTypes.MessageRepo
 import play.api.libs.EventSource.EventIdExtractor
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, Controller, Results}
-import models.Message.MessageFormat
+import org.ada.server.models.Message.MessageFormat
 import play.api.libs.EventSource
 import reactivemongo.bson.BSONObjectID
 import security.AdaAuthConfig

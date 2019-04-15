@@ -3,7 +3,7 @@ package runnables.core
 import javax.inject.Inject
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.models.Filter
-import models.AdaException
+import org.ada.server.AdaException
 import org.incal.core.{FilterCondition, InputFutureRunnable}
 import org.incal.core.util.seqFutures
 import org.incal.spark_ml.MLResultUtil

@@ -2,7 +2,7 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import models.synapse._
+import org.ada.server.models.synapse._
 import org.incal.play.GuiceRunnableApp
 import play.api.Configuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
