@@ -1,10 +1,8 @@
-package models.workspace
+package models.security
 
 import org.ada.server.dataaccess.BSONObjectIdentity
 import play.api.libs.json._
-import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
-
 import reactivemongo.play.json.BSONFormats._
 
 /**

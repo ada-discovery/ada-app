@@ -12,6 +12,7 @@ import java.{util => ju}
 import com.banda.network.domain.{ActivationFunctionType, ReservoirLearningSetting}
 import org.incal.spark_ml.models.VectorScalerType
 
+@Deprecated
 case class RCPredictionSettings(
   reservoirNodeNums: Seq[Int],
   inputReservoirConnectivities: Seq[Double],

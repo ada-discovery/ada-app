@@ -23,6 +23,7 @@ import util.MessageLogger
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+@Deprecated
 class RCPredictionController @Inject()(
     dsaf: DataSetAccessorFactory,
     dataSpaceService: DataSpaceService,

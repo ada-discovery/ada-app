@@ -2,7 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 
-import models.ml.DerivedDataSetSpec
+import models.DerivedDataSetSpec
 import org.incal.core.InputFutureRunnable
 import org.incal.core.FilterCondition.toCriteria
 import persistence.dataset.DataSetAccessorFactory

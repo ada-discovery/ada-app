@@ -1,7 +1,6 @@
 package controllers
 
 import javax.inject.Inject
-
 import play.api.{Configuration, Logger}
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
@@ -9,7 +8,7 @@ import play.api.libs.json._
 import play.api.mvc._
 import play.api.data.Forms._
 import play.api.data._
-import services.MailClientProvider
+import services.{MailClientProvider, UserManager}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._

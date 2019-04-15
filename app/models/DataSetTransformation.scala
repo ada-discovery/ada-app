@@ -1,4 +1,4 @@
-package models.ml
+package models
 
 import org.ada.server.dataaccess.StreamSpec
 import org.ada.server.models.StorageType

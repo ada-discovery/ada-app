@@ -3,7 +3,6 @@ package controllers
 import java.util.concurrent.TimeoutException
 
 import org.incal.core.dataaccess.InCalDataAccessException
-import persistence.RepoTypes.UserSettingsRepo
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
@@ -14,17 +13,14 @@ import views.html.{userprofile => views}
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.{Await, Future}
 import javax.inject.Inject
-
-import models.security.{DeadboltUser, UserManager}
+import models.security.DeadboltUser
 import org.ada.server.models.User
 import org.incal.play.controllers.BaseController
 import reactivemongo.bson.BSONObjectID
 import org.incal.play.security.SecurityUtil.restrictSubjectPresentAnyNoCaching
+import services.UserManager
 
-class UserProfileController @Inject() (
-    workspaceRepo: UserSettingsRepo,
-    userManager: UserManager
-  ) extends BaseController {
+class UserProfileController @Inject() (userManager: UserManager) extends BaseController {
 
   protected val userUpdateForm = Form(
     mapping(

@@ -2,7 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 
-import models.ml.SelfLinkSpec
+import models.SelfLinkSpec
 import org.incal.core.InputFutureRunnable
 import services.DataSetService
 

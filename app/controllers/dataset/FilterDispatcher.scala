@@ -1,9 +1,7 @@
 package controllers.dataset
 
 import javax.inject.Inject
-
 import controllers.core.AdminOrOwnerControllerDispatcherExt
-import models.security.UserManager
 import models.AdaException
 import org.ada.server.models.Filter
 import persistence.dataset.DataSetAccessorFactory
@@ -11,6 +9,7 @@ import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import security.AdaAuthConfig
 import org.incal.core.FilterCondition
+import services.UserManager
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

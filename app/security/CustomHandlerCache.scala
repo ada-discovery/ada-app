@@ -1,12 +1,12 @@
 package security
 
 import javax.inject.{Inject, Singleton}
-
 import be.objectify.deadbolt.scala.{DeadboltHandler, HandlerKey}
 import be.objectify.deadbolt.scala.cache.HandlerCache
-import models.security.{DeadboltUser, UserManager}
+import models.security.DeadboltUser
 import org.incal.play.security.DeadboltHandlerKeys
 import play.api.mvc.Request
+import services.UserManager
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

@@ -24,8 +24,6 @@ import models.ml.unsupervised.UnsupervisedLearning.unsupervisedLearningFormat
 import persistence.dataset._
 import reactivemongo.bson.BSONObjectID
 import persistence.RepoDef.Repo
-import models.workspace.Workspace
-import org.incal.access_elastic.ElasticClientProvider
 
 private object RepoDef extends Enumeration {
   abstract class AbstractRepo[T: Manifest] extends super.Val {
@@ -40,7 +38,6 @@ private object RepoDef extends Enumeration {
 
   import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImportFormat}
   import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
-  import Workspace.WorkspaceFormat
   import org.ada.server.models.DataSetFormattersAndIds.{dataSetSettingFormat, fieldFormat, dictionaryFormat, DataSpaceMetaInfoIdentity, DictionaryIdentity, FieldIdentity, DataSetSettingIdentity}
 
   val TranslationRepo = Repo[TranslationRepo](
@@ -48,9 +45,6 @@ private object RepoDef extends Enumeration {
 
   val MessageRepo = Repo[MessageRepo](
     new MongoAsyncStreamRepo[Message, BSONObjectID]("messages", Some("timeCreated")))
-
-  val UserSettingsRepo = Repo[UserSettingsRepo](
-    new MongoAsyncCrudRepo[Workspace, BSONObjectID]("workspace"))
 
   val ClassificationRepo = Repo[ClassifierRepo](
     new MongoAsyncCrudRepo[Classifier, BSONObjectID]("classifications"))

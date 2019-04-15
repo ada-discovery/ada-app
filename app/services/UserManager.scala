@@ -1,17 +1,16 @@
-package models.security
+package services
 
-import javax.inject.{Singleton, Inject}
-
-import org.ada.server.models.User
 import com.google.inject.ImplementedBy
-import ldap.{LdapSettings, LdapService}
+import javax.inject.{Inject, Singleton}
+import ldap.{LdapService, LdapSettings}
+import models.security.LdapUser
 import org.ada.server.dataaccess.RepoTypes.UserRepo
-import org.incal.core.dataaccess.Criterion
+import org.ada.server.models.User
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.security.SecurityRole
 
 import scala.concurrent.ExecutionContext.Implicits._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import scala.concurrent.Future.sequence
 
 @ImplementedBy(classOf[UserManagerImpl])

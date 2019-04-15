@@ -1,10 +1,8 @@
 package controllers.dataset
 
 import javax.inject.Inject
-
 import be.objectify.deadbolt.scala.DeadboltHandler
 import controllers.core.AdminOrOwnerControllerDispatcherExt
-import models.security.UserManager
 import models.AdaException
 import org.ada.server.models.{AggType, CorrelationType}
 import persistence.dataset.DataSetAccessorFactory
@@ -12,6 +10,7 @@ import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import security.AdaAuthConfig
 import org.incal.core.FilterCondition
+import services.UserManager
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

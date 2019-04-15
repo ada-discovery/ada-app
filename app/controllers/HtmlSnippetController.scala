@@ -2,14 +2,13 @@ package controllers
 
 import java.util.Date
 import java.util.concurrent.TimeoutException
-import javax.inject.Inject
 
+import javax.inject.Inject
 import controllers.core.AdaCrudControllerImpl
 import org.incal.core.dataaccess.InCalDataAccessException
 import models.AdaException
 import org.ada.server.models.{Filter, HtmlSnippet, HtmlSnippetId}
 import org.ada.server.models.HtmlSnippet._
-import models.security.UserManager
 import org.incal.core.dataaccess.Criterion._
 import org.incal.play.controllers.{AdminRestrictedCrudController, HasBasicFormCrudViews}
 import org.incal.play.formatters.EnumFormatter
@@ -22,6 +21,7 @@ import play.api.libs.json.__
 import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import security.AdaAuthConfig
+import services.UserManager
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import views.html.{layout, htmlSnippet => view}

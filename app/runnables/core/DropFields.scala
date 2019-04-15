@@ -2,7 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 
-import models.ml.{DerivedDataSetSpec, DropFieldsSpec, RenameFieldsSpec}
+import models.{DerivedDataSetSpec, DropFieldsSpec, RenameFieldsSpec}
 import org.incal.core.InputFutureRunnable
 import services.DataSetService
 

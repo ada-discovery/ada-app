@@ -13,7 +13,6 @@ import org.ada.server.models._
 import org.ada.server.models.DataSetFormattersAndIds._
 import org.ada.server.json.EitherFormat
 import org.ada.server.models.Filter.{FilterIdentity, filterConditionFormat, filterFormat}
-import models.security.UserManager
 import org.incal.core.dataaccess.Criterion._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
@@ -36,7 +35,7 @@ import org.incal.play.controllers.{CrudControllerImpl, HasFormShowEqualEditView,
 import org.incal.play.formatters._
 import org.incal.play.security.AuthAction
 import org.incal.play.security.SecurityRole
-import services.DataSpaceService
+import services.{DataSpaceService, UserManager}
 import views.html.{dataview => view}
 
 import scala.concurrent.Future

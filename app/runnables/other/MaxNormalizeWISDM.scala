@@ -3,7 +3,7 @@ package runnables.other
 import akka.stream.scaladsl.Flow
 import org.ada.server.dataaccess.StreamSpec
 import javax.inject.Inject
-import models.ml.DerivedDataSetSpec
+import models.DerivedDataSetSpec
 import org.incal.core.InputFutureRunnable
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsNull, JsNumber, JsObject, Json}

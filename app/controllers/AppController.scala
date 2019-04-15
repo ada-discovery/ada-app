@@ -1,14 +1,12 @@
 package controllers
 
 import javax.inject.Inject
-
 import org.ada.server.models.{DataSpaceMetaInfo, HtmlSnippet, HtmlSnippetId}
-import models.security.UserManager
 import org.incal.core.dataaccess.Criterion._
 import play.api.{Configuration, Logger}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import security.AdaAuthConfig
-import services.DataSpaceService
+import services.{DataSpaceService, UserManager}
 import org.incal.play.controllers.BaseController
 import org.incal.play.security.{AuthAction, SecurityRole}
 import org.incal.play.security.SecurityUtil._

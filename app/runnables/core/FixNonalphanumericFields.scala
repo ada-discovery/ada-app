@@ -8,7 +8,7 @@ import org.ada.server.dataaccess.StreamSpec
 import org.ada.server.dataaccess.JsonCrudRepoExtra._
 import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.ada.server.models._
-import models.ml.{DerivedDataSetSpec, RenameFieldsSpec}
+import models.{DerivedDataSetSpec, RenameFieldsSpec}
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.{hasNonAlphanumericUnderscore, nonAlphanumericToUnderscore}
 import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassificationResult, TemporalClassificationResult}

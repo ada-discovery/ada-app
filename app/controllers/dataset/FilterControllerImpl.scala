@@ -8,7 +8,6 @@ import com.google.inject.assistedinject.Assisted
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.models._
 import org.ada.server.models.Filter.{FilterIdentity, filterConditionFormat, filterFormat}
-import models.security.UserManager
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -29,7 +28,7 @@ import org.incal.play.Page
 import org.incal.play.controllers.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
 import org.incal.play.formatters.JsonFormatter
 import org.incal.play.security.SecurityRole
-import services.DataSpaceService
+import services.{DataSpaceService, UserManager}
 import views.html.{dataview, filters => view}
 
 import scala.concurrent.Future

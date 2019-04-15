@@ -3,8 +3,6 @@ package models.egait
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 
-case class SpatialPoint(x: Int, y: Int, z: Int)
-
 case class EGaitKineticData(
   sessionId: String,
   personId: String,
@@ -23,6 +21,8 @@ case class EGaitKineticData(
   leftAccelerometerPoints: Seq[SpatialPoint],
   leftGyroscopePoints: Seq[SpatialPoint]
 )
+
+case class SpatialPoint(x: Int, y: Int, z: Int)
 
 object EGaitKineticData {
   implicit val spatialPointFormat = Json.format[SpatialPoint]

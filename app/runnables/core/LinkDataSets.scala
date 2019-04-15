@@ -3,7 +3,7 @@ package runnables.core
 import javax.inject.Inject
 
 import scala.reflect.runtime.universe.typeOf
-import models.ml.DataSetLinkSpec
+import models.DataSetLinkSpec
 import org.incal.core.InputFutureRunnable
 import services.DataSetService
 

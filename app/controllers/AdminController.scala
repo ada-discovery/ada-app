@@ -1,7 +1,6 @@
 package controllers
 
 import javax.inject.Inject
-
 import controllers.core.GenericMapping
 import persistence.RepoTypes.MessageRepo
 import play.api.{Configuration, Logger}
@@ -14,8 +13,8 @@ import org.incal.play.controllers.BaseController
 import views.html.{admin => adminviews}
 import java.{util => ju}
 
-import models.security.UserManager
 import org.incal.core.InputRunnable
+import services.UserManager
 
 import scala.reflect.ClassTag
 import scala.concurrent.ExecutionContext.Implicits.global

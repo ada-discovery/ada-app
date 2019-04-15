@@ -1,12 +1,10 @@
 package services
 
 import javax.inject.{Inject, Named, Singleton}
-
 import com.google.inject.ImplementedBy
 import org.ada.server.dataaccess.DataSetMetaInfoRepoFactory
 import org.ada.server.dataaccess.RepoTypes.{DataSetMetaInfoRepo, DataSpaceMetaInfoRepo}
 import org.ada.server.models.{DataSpaceMetaInfo, User}
-import models.security.UserManager
 import play.api.mvc.Request
 import security.AdaAuthConfig
 import org.incal.core.dataaccess.Criterion.Infix

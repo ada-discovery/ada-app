@@ -2,13 +2,12 @@ package controllers
 
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import javax.inject.Inject
 
+import javax.inject.Inject
 import akka.stream.scaladsl.Source
 import be.objectify.deadbolt.scala.DeadboltActions
 import models.Message
 import models.Message._
-import models.security.UserManager
 import persistence.RepoTypes.MessageRepo
 import play.api.libs.EventSource.EventIdExtractor
 import play.api.libs.json.{JsObject, JsValue, Json}
@@ -27,6 +26,7 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
+import services.UserManager
 
 class MessageController @Inject() (
     val userManager: UserManager,

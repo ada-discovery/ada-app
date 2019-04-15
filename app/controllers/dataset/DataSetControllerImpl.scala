@@ -33,14 +33,13 @@ import play.api.libs.json._
 import play.api.mvc.Results.{Redirect, _}
 import play.api.data.Forms.{mapping, _}
 import reactivemongo.bson.BSONObjectID
-import services._
+import services.{UserManager, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Filter => _, _}
 import reactivemongo.play.json.BSONFormats._
 import services.ml.MachineLearningService
 import views.html.dataset
-import models.ml.DataSetTransformation._
-import models.security.UserManager
+import models.DataSetTransformation._
 import services.stats.calc.{ChiSquareResult, IndependenceTestResult, OneWayAnovaResult, Quartiles}
 import services.stats.StatsService
 import be.objectify.deadbolt.scala.AuthenticatedRequest
