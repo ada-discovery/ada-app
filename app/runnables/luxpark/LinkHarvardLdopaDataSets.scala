@@ -3,7 +3,7 @@ package runnables.luxpark
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import models.StorageType
+import org.ada.server.models.StorageType
 import models.ml.{DataSetLinkSpec, DerivedDataSetSpec}
 import org.incal.core.FutureRunnable
 import services.DataSetService

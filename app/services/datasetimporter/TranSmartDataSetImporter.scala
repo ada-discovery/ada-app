@@ -2,13 +2,15 @@ package services.datasetimporter
 
 import java.util.Date
 
-import dataaccess.CategoryRepo._
-import field.{FieldTypeHelper, FieldTypeInferrerFactory, FieldType}
-import dataaccess.RepoTypes.{CategoryRepo, FieldRepo}
-import models._
+import models.{AdaParseException, TranSmartDataSetImport}
+import org.ada.server.dataaccess.CategoryRepo._
+import org.ada.server.field.{FieldType, FieldTypeHelper, FieldTypeInferrerFactory}
+import org.ada.server.dataaccess.RepoTypes.{CategoryRepo, FieldRepo}
+import org.ada.server.models.{Category, Field}
 import persistence.dataset.DataSetAccessor
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.util.seqFutures
+
 import collection.mutable.{Map => MMap}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global

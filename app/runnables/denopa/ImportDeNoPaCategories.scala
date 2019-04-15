@@ -2,18 +2,18 @@ package runnables.denopa
 
 import javax.inject.Inject
 
-import models._
+import org.ada.server.models._
 import org.incal.core.dataaccess.Criterion.Infix
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
-import services.{DataSetService, DeNoPaSetting}
+import services.DataSetService
 import DeNoPaBaselineTranSMARTMapping.{clinicalData, subjectsData}
 import DeNoPaBaselineTranSMARTMapping.{fieldCategoryMap => baselineFieldCategoryMap}
 import DeNoPaBaselineTranSMARTMapping.{fieldLabelMap => baselineFieldLabelMap}
 import runnables.denopa.DataSetId._
 import org.incal.play.GuiceRunnableApp
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import dataaccess.CategoryRepo.saveRecursively
+import org.ada.server.dataaccess.CategoryRepo.saveRecursively
 import org.incal.core.FutureRunnable
 import org.incal.core.util.nonAlphanumericToUnderscore
 

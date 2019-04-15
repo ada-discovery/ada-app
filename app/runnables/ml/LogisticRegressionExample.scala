@@ -2,8 +2,8 @@ package runnables.ml
 
 import javax.inject.Inject
 
-import field.{FieldType, FieldTypeHelper}
-import models.FieldTypeId
+import org.ada.server.field.{FieldType, FieldTypeHelper}
+import org.ada.server.models.FieldTypeId
 import org.apache.spark.ml._
 import org.apache.spark.ml.classification._
 import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, MulticlassClassificationEvaluator}

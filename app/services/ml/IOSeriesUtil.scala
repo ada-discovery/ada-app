@@ -1,7 +1,7 @@
 package services.ml
 
 import models.ml.IOJsonTimeSeriesSpec
-import dataaccess.JsonUtil
+import org.ada.server.dataaccess.JsonUtil
 import play.api.libs.json.JsObject
 
 object IOSeriesUtil {

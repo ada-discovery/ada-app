@@ -2,7 +2,7 @@ package models.ml
 
 import com.banda.math.domain.rand.RandomDistribution
 import com.banda.network.domain.ActivationFunctionType
-import models.json.{EitherFormat, JavaEnumFormat, OptionFormat}
+import org.ada.server.json.{EitherFormat, JavaEnumFormat, OptionFormat}
 import org.incal.spark_ml.models.{ReservoirSpec => ReservoirSpecModel}
 import org.incal.spark_ml.models.ValueOrSeq.ValueOrSeq
 import play.api.libs.json.{Format, __}

@@ -1,12 +1,13 @@
 package models
 
-import dataaccess.{AdaConversionException}
-import field.FieldType
-import models.DataSetFormattersAndIds.JsObjectIdentity
+import org.ada.server.dataaccess.AdaConversionException
+import org.ada.server.field.FieldType
+import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
+import org.ada.server.models.{BasicDisplayOptions, ChartType, DisplayOptions, MultiChartDisplayOptions}
 import play.api.libs.json._
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.functional.syntax._
-import models.json._
+import org.ada.server.json._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import services.stats.calc.{BasicStatsResult, IndependenceTestResult, Quartiles}

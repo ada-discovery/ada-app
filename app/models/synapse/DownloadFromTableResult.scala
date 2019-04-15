@@ -1,7 +1,7 @@
 package models.synapse
 
 import java.util.Date
-import models.json.EnumFormat
+import org.ada.server.json.EnumFormat
 import play.api.libs.json.Json
 
 // http://hud.rel.rest.doc.sagebase.org.s3-website-us-east-1.amazonaws.com/org/sagebionetworks/repo/model/asynch/AsynchJobState.html

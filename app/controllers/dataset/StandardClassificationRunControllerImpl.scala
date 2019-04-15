@@ -2,15 +2,15 @@ package controllers.dataset
 
 import com.google.inject.assistedinject.Assisted
 import javax.inject.Inject
-import models.DataSetFormattersAndIds.FieldIdentity
-import models._
+import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
+import org.ada.server.models._
 import org.incal.spark_ml.models.result.{BinaryClassificationCurves, ClassificationResult, MetricStatsValues, StandardClassificationResult}
 import models.ml.classification.ClassificationResult.standardClassificationResultFormat
 import org.incal.core.dataaccess.{AsyncCrudRepo, Criterion}
 import org.incal.spark_ml.MLResultUtil
 import org.incal.spark_ml.models.setting.ClassificationRunSpec
 import Criterion.Infix
-import models.json.OrdinalEnumFormat
+import org.ada.server.json.OrdinalEnumFormat
 import org.incal.spark_ml.models.VectorScalerType
 import org.incal.spark_ml.models.classification.ClassificationEvalMetric
 import persistence.RepoTypes.ClassifierRepo

@@ -2,11 +2,11 @@ package controllers
 
 import com.fasterxml.jackson.core.JsonParseException
 import controllers.mpower.AggFunction
-import models.Filter._
+import org.ada.server.models.Filter._
 import controllers.FilterConditionExtraFormats.eitherFilterOrIdFormat
-import models.{AggType, CorrelationType, FieldTypeId, Filter}
+import org.ada.server.models.{AggType, CorrelationType, FieldTypeId, Filter}
 import models.ml._
-import models.DataSetFormattersAndIds.enumTypeFormat
+import org.ada.server.models.DataSetFormattersAndIds.enumTypeFormat
 import models.ml.classification.ClassificationResult.{standardClassificationRunSpecFormat, temporalClassificationRunSpecFormat}
 import models.ml.regression.RegressionResult.{standardRegressionRunSpecFormat, temporalRegressionRunSpecFormat}
 import org.incal.core.FilterCondition

@@ -5,7 +5,7 @@ import akka.stream.ActorMaterializer
 import runnables.core.CalcUtil._
 import com.google.inject.Inject
 import org.incal.core.dataaccess.Criterion._
-import models.{Field, FieldTypeId}
+import org.ada.server.models.{Field, FieldTypeId}
 import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger

@@ -15,7 +15,7 @@ import reactivemongo.play.json.BSONFormats._
 import org.incal.play.security.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
 import views.html.{layout, regression => view}
 import controllers.ml.routes.{RegressorController => regressorRoutes}
-import models.DataSpaceMetaInfo
+import org.ada.server.models.DataSpaceMetaInfo
 import models.ml.regression.Regressor._
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.AscSort

@@ -1,8 +1,9 @@
 @import views.html.layout
 @import views.html.dataset.{datasetMenu, datasetSubNav, datasetSubNavJs}
 @import controllers.dataset.{DataSetWebContext, DataViewRouter}
-@import models.DataSpaceMetaInfo
-@import models.{DataView, Field}
+@import org.ada.server.models.DataSpaceMetaInfo
+@import org.ada.server.models.FilterShowFieldStyle
+@import org.ada.server.models.{DataView, Field}
 @import reactivemongo.bson.BSONObjectID
 @import views.html.dataview.elements
 @import views.html.dataview.activateTypeahead

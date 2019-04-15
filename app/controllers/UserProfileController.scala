@@ -16,7 +16,7 @@ import scala.concurrent.{Await, Future}
 import javax.inject.Inject
 
 import models.security.{DeadboltUser, UserManager}
-import models.User
+import org.ada.server.models.User
 import org.incal.play.controllers.BaseController
 import reactivemongo.bson.BSONObjectID
 import org.incal.play.security.SecurityUtil.restrictSubjectPresentAnyNoCaching

@@ -1,7 +1,7 @@
 package controllers.dataset
 
 import org.incal.play.Page
-import models._
+import org.ada.server.models._
 import play.api.libs.json.JsObject
 
 case class TableViewData(

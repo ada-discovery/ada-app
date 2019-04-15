@@ -4,20 +4,21 @@ import javax.inject.Provider
 import com.google.inject.{Key, TypeLiteral}
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import com.sksamuel.elastic4s.ElasticClient
-import dataaccess.elastic.{ElasticJsonCrudRepo, PlayElasticClientProvider}
-import dataaccess.ignite.{CacheAsyncCrudRepoProvider, JsonBinaryCacheAsyncCrudRepoFactory}
+import org.ada.server.dataaccess.elastic.{ElasticJsonCrudRepo, PlayElasticClientProvider}
+import org.ada.server.dataaccess.ignite.{CacheAsyncCrudRepoProvider, JsonBinaryCacheAsyncCrudRepoFactory}
 import org.incal.spark_ml.models.classification.Classifier
 import org.incal.spark_ml.models.regression.Regressor
-import dataaccess._
-import dataaccess.mongo._
-import models.DataSetFormattersAndIds._
-import models._
+import org.ada.server.dataaccess._
+import org.ada.server.dataaccess.mongo._
+import org.ada.server.models.DataSetFormattersAndIds._
+import org.ada.server.models._
 import models.ml.regression.Regressor._
 import models.ml.classification.Classifier._
 import net.codingwell.scalaguice.ScalaModule
-import dataaccess.RepoTypes._
+import org.ada.server.dataaccess.RepoTypes._
 import persistence.RepoTypes._
 import com.google.inject.name.Names
+import models.{DataSetImport, Message, Translation}
 import models.ml.unsupervised.UnsupervisedLearning
 import models.ml.unsupervised.UnsupervisedLearning.unsupervisedLearningFormat
 import persistence.dataset._
@@ -40,7 +41,7 @@ private object RepoDef extends Enumeration {
   import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImportFormat}
   import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
   import Workspace.WorkspaceFormat
-  import models.DataSetFormattersAndIds.{dataSetSettingFormat, fieldFormat, dictionaryFormat, DataSpaceMetaInfoIdentity, DictionaryIdentity, FieldIdentity, DataSetSettingIdentity}
+  import org.ada.server.models.DataSetFormattersAndIds.{dataSetSettingFormat, fieldFormat, dictionaryFormat, DataSpaceMetaInfoIdentity, DictionaryIdentity, FieldIdentity, DataSetSettingIdentity}
 
   val TranslationRepo = Repo[TranslationRepo](
     new MongoAsyncCrudRepo[Translation, BSONObjectID]("translations"))
@@ -89,9 +90,9 @@ private object RepoDef extends Enumeration {
 // repo module used to bind repo types/instances withing Guice IoC container
 class RepoModule extends ScalaModule {
 
-  import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, serializableDataSpaceMetaInfoFormat, serializableBSONObjectIDFormat, DataSetSettingIdentity}
-  import models.User.{serializableUserFormat, UserIdentity}
-  import models.HtmlSnippet.{serializableHtmlSnippetFormat, HtmlSnippetIdentity}
+  import org.ada.server.models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, serializableDataSpaceMetaInfoFormat, serializableBSONObjectIDFormat, DataSetSettingIdentity}
+  import org.ada.server.models.User.{serializableUserFormat, UserIdentity}
+  import org.ada.server.models.HtmlSnippet.{serializableHtmlSnippetFormat, HtmlSnippetIdentity}
 
   def configure = {
 

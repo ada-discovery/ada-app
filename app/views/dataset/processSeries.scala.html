@@ -1,7 +1,9 @@
 @import views.html.layout.main
 @import play.api.i18n.Messages
-@import models.DataSpaceMetaInfo
-@import models.FilterShowFieldStyle.NamesAndLabels
+@import org.ada.server.models.DataSpaceMetaInfo
+@import org.ada.server.models.FilterShowFieldStyle.NamesAndLabels
+@import org.ada.server.models.FilterShowFieldStyle
+@import org.ada.server.models.StorageType
 @import views.html.elements._
 @import views.html.layout
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs, seriesProcessingFieldTable}
@@ -9,7 +11,6 @@
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 @import models.ml.DataSetSeriesProcessingSpec
-@import models.StorageType
 @import views.html.dataset.dynamicFieldTable
 @import views.html.layout.formErrors
 

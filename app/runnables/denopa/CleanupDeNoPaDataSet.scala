@@ -2,7 +2,7 @@ package runnables.denopa
 
 import javax.inject.Inject
 
-import models.{DataSetSetting, StorageType}
+import org.ada.server.models.{DataSetSetting, StorageType}
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import runnables.denopa.DataSetId._

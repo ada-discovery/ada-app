@@ -3,7 +3,7 @@ package runnables.luxpark
 import javax.inject.Inject
 
 import org.incal.core.dataaccess.Criterion._
-import models.DataSetFormattersAndIds.JsObjectIdentity
+import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import org.incal.core.FutureRunnable

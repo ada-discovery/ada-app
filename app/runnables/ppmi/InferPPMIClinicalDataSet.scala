@@ -2,7 +2,7 @@ package runnables.ppmi
 
 import javax.inject.Inject
 
-import field.{FieldTypeHelper, FieldTypeInferrerFactory}
+import org.ada.server.field.{FieldTypeHelper, FieldTypeInferrerFactory}
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import services.DataSetService

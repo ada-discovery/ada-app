@@ -1,7 +1,7 @@
 package models.ml.regression
 
-import dataaccess.BSONObjectIdentity
-import models.json._
+import org.ada.server.dataaccess.BSONObjectIdentity
+import org.ada.server.json._
 import play.api.libs.json.{Format, Json}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._

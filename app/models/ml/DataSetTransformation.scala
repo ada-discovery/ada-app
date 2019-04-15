@@ -1,8 +1,8 @@
 package models.ml
 
-import dataaccess.StreamSpec
-import models.StorageType
-import models.json.EnumFormat
+import org.ada.server.dataaccess.StreamSpec
+import org.ada.server.models.StorageType
+import org.ada.server.json.EnumFormat
 import org.incal.spark_ml.models.VectorScalerType
 import play.api.libs.json.Json
 

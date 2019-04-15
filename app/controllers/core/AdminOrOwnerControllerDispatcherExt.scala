@@ -1,7 +1,7 @@
 package controllers.core
 
 import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltHandler}
-import models.User
+import org.ada.server.models.User
 import org.incal.play.controllers.SecureControllerDispatcher
 import org.incal.play.security.SecurityRole
 import org.incal.play.security.SecurityUtil.{AuthenticatedAction, restrictChainFuture2, toActionAny}

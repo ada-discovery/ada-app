@@ -1,6 +1,6 @@
 package controllers.dataset
 
-import models.Filter
+import org.ada.server.models.Filter
 import org.incal.play.controllers.CrudController
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID

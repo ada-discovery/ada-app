@@ -1,5 +1,5 @@
 @import models.Widget
-@import models.Field
+@import org.ada.server.models.{Filter,FilterShowFieldStyle,Field}
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.dataset.widgetsScreen
 @import views.html.dataset.filter.{dataSetFilter, dataSetFilterJs}
@@ -7,14 +7,14 @@
 @import play.api.libs.json.Json
 @import play.api.i18n.Messages
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
-@import models.DataSpaceMetaInfo
+@import org.ada.server.models.DataSpaceMetaInfo
 @import util.toJsonHtml
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 
 @(
     dataSetName: String,
-    filterSpec: models.Filter,
+    filterSpec: Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     field: Option[Field],
     groupField: Option[Field],

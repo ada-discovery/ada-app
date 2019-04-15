@@ -1,9 +1,9 @@
 package controllers.mpower
 
 import javax.inject.Inject
-
-import dataaccess.JsonReadonlyRepoExtra._
-import models._
+import models.{AdaException, ScatterWidget}
+import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
+import org.ada.server.models._
 import org.incal.core.dataaccess.Criterion._
 import org.incal.play.controllers._
 import org.incal.play.security.AuthAction
@@ -11,7 +11,6 @@ import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import services.WidgetGenerationService
 import views.html.mpowerchallenge.clustering
-
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 

@@ -1,9 +1,9 @@
 package util
 
-import models.{Field, FieldTypeId}
+import org.ada.server.models.{Field, FieldTypeId}
 import play.api.libs.json.JsValue
 import play.twirl.api.{Html, HtmlFormat}
-import field.FieldTypeHelper
+import org.ada.server.field.FieldTypeHelper
 import reactivemongo.bson.BSONObjectID
 import views.html.dataset.{renderers => rendererView}
 import scala.collection.immutable.{ Seq => ISeq }

@@ -1,15 +1,14 @@
-@import models.Field
-@import models.CorrelationType
 @import views.html.dataset.{widgetsScreen, dynamicFieldTable}
+@import org.ada.server.models._
 @import views.html.table.dynamicTableJsImport
-@import models.DataSpaceMetaInfo
+@import org.ada.server.models.DataSpaceMetaInfo
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 @import org.incal.play.routes.CustomDirAssets
 
 @(
     dataSetName: String,
-    filterSpec: models.Filter,
+    filterSpec: Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(

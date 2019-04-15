@@ -1,5 +1,6 @@
 package models
 
+import org.ada.server.models.{Category, Field}
 import play.api.libs.json.{JsObject, Json}
 
 case class JsTreeNode(

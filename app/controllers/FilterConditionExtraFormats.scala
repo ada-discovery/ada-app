@@ -1,8 +1,8 @@
 package controllers
 
-import models.Filter.FilterOrId
+import org.ada.server.models.Filter.FilterOrId
 import org.incal.core.{ConditionType, FilterCondition}
-import models.json.{EitherFormat, EnumFormat}
+import org.ada.server.json.{EitherFormat, EnumFormat}
 import play.api.libs.json.{Format, __}
 import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID

@@ -2,7 +2,7 @@ package services.stats.calc
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Source}
-import models.{Field, FieldTypeId}
+import org.ada.server.models.{Field, FieldTypeId}
 import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion}
 import play.api.libs.json.JsObject
 import services.stats._

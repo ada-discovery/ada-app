@@ -1,10 +1,10 @@
 package controllers.dataset
 
 import _root_.util.toHumanReadableCamel
-import models.{DistributionWidgetSpec, _}
-import models.Filter.{FilterIdentity, FilterOrId}
-import models.DataSetFormattersAndIds._
-import dataaccess.FilterRepoExtra._
+import org.ada.server.models.{DistributionWidgetSpec, _}
+import org.ada.server.models.Filter.{FilterIdentity, FilterOrId}
+import org.ada.server.models.DataSetFormattersAndIds._
+import org.ada.server.dataaccess.FilterRepoExtra._
 import models.Widget.{WidgetWrites, scatterWidgetFormat}
 import persistence.dataset.DataSetAccessor
 import play.api.Logger
@@ -19,8 +19,9 @@ import _root_.util.FieldUtil
 import _root_.util.FieldUtil.caseClassToFlatFieldTypes
 import controllers.core.AdaReadonlyControllerImpl
 import controllers.core.{ExportableAction, WidgetRepoController}
-import field.FieldTypeHelper
-import models.json.OrdinalEnumFormat
+import models.{AdaException, Widget}
+import org.ada.server.field.FieldTypeHelper
+import org.ada.server.json.OrdinalEnumFormat
 import org.incal.core.{FilterCondition, Identity}
 import org.incal.core.dataaccess.{AsyncCrudRepo, AsyncReadonlyRepo, Criterion}
 import org.incal.play.Page
@@ -30,8 +31,8 @@ import org.incal.play.security.AuthAction
 import org.incal.spark_ml.models.classification.ClassificationEvalMetric
 import org.incal.spark_ml.models.result._
 import play.twirl.api.Html
-import scala.reflect.runtime.universe.typeOf
 
+import scala.reflect.runtime.universe.typeOf
 import scala.reflect.runtime.universe.TypeTag
 import scala.concurrent.Future
 

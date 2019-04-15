@@ -1,8 +1,8 @@
 package runnables.core
 
 import javax.inject.Inject
-import field.FieldTypeHelper
-import models.DataSetFormattersAndIds.FieldIdentity
+import org.ada.server.field.FieldTypeHelper
+import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import persistence.RepoTypes.RegressorRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import reactivemongo.bson.BSONObjectID

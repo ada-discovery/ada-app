@@ -1,18 +1,18 @@
-@import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
+@import reactivemongo.play.json.BSONFormats._
 @import views.html.dataset.{widgetsScreen, datasetMenu, bootstrapSelectImport, datasetSubNavWithJs}
 @import views.html.table.dynamicTableJsImport
 @import views.html.dataset.dynamicFieldTable
 @import views.html.elements.fieldTypeahead
 @import play.api.i18n.Messages
-@import models.DataSpaceMetaInfo
+@import org.ada.server.models.{DataSpaceMetaInfo, Filter, FilterShowFieldStyle, FieldTypeId}
 @import views.html.elements._
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 
 @(
     dataSetName: String,
-    filterSpec: models.Filter,
+    filterSpec: Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(

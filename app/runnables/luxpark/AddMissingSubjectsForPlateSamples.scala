@@ -2,11 +2,11 @@ package runnables.luxpark
 
 import javax.inject.Inject
 
-import models.DataSetFormattersAndIds.JsObjectIdentity
+import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import play.api.Logger
 import org.incal.core.FutureRunnable
 import org.incal.core.dataaccess.Criterion._
-import field.FieldTypeHelper
+import org.ada.server.field.FieldTypeHelper
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID

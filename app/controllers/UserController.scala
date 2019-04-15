@@ -4,10 +4,10 @@ import javax.inject.Inject
 
 import controllers.core.AdaCrudControllerImpl
 import controllers.dataset._
-import dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
+import org.ada.server.dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
 import play.api.data.Form
 import play.api.data.Forms.{email, ignored, mapping, nonEmptyText, seq, text}
-import models.{DataSpaceMetaInfo, User}
+import org.ada.server.models.{DataSpaceMetaInfo, User}
 import org.incal.core.dataaccess.AscSort
 import reactivemongo.bson.BSONObjectID
 import services.MailClientProvider

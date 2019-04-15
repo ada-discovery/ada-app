@@ -1,7 +1,8 @@
 package controllers.core
 
 import controllers.BSONObjectIDStringFormatter
-import models.{AdaException, FieldTypeId, FieldTypeSpec, StorageType}
+import models.AdaException
+import org.ada.server.models.{FieldTypeId, FieldTypeSpec, StorageType}
 import play.api.data.Forms._
 import play.api.data.format.Formats._
 import play.api.data.validation.Constraint

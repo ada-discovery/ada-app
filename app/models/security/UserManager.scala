@@ -2,10 +2,10 @@ package models.security
 
 import javax.inject.{Singleton, Inject}
 
-import models.User
+import org.ada.server.models.User
 import com.google.inject.ImplementedBy
 import ldap.{LdapSettings, LdapService}
-import dataaccess.RepoTypes.UserRepo
+import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.security.SecurityRole

@@ -4,7 +4,7 @@ import be.objectify.deadbolt.scala.models.Role
 import controllers.routes
 import jp.t2v.lab.play2.auth.{AuthConfig, _}
 import models.security.UserManager
-import models.{User => AdaUser}
+import org.ada.server.models.{User => AdaUser}
 import play.api.mvc.Results._
 import play.api.mvc.{Request, RequestHeader, Result}
 

@@ -1,6 +1,7 @@
 package services.widgetgen
 
-import models._
+import models.ScatterWidget
+import org.ada.server.models._
 import services.stats.calc.{GroupTupleCalcTypePack, TupleCalcTypePack}
 import util.shorten
 

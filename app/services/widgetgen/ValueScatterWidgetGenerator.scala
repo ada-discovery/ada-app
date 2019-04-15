@@ -1,6 +1,7 @@
 package services.widgetgen
 
-import models._
+import models.ValueScatterWidget
+import org.ada.server.models._
 import services.stats.calc.Tuple3CalcTypePack
 import util.shorten
 

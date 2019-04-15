@@ -2,8 +2,8 @@ package runnables.core
 
 import javax.inject.Inject
 
-import dataaccess.DataSetMetaInfoRepoFactory
-import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
+import org.ada.server.dataaccess.DataSetMetaInfoRepoFactory
+import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.AdaException
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID

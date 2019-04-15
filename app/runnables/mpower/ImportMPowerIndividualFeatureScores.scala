@@ -5,7 +5,7 @@ import javax.inject.Inject
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.scaladsl.Sink
-import models.{Field, FieldTypeId, StorageType}
+import org.ada.server.models.{Field, FieldTypeId, StorageType}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsNumber, Json}
 import org.incal.core.InputFutureRunnable

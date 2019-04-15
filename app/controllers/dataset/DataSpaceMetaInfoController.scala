@@ -1,11 +1,10 @@
 package controllers.dataset
 
 import javax.inject.Inject
-
-import models._
-import DataSetFormattersAndIds._
+import org.ada.server.models.DataSetFormattersAndIds._
+import org.ada.server.models._
 import controllers.core.AdaCrudControllerImpl
-import dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInfoRepo}
+import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInfoRepo}
 import org.incal.core.dataaccess.Criterion.Infix
 import persistence.dataset.DataSetAccessorFactory
 import play.api.data.Forms._
@@ -18,8 +17,8 @@ import play.api.data.Form
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import controllers.dataset.routes.javascript.{DataSpaceMetaInfoController => dataSpaceMetaInfoJsRoutes}
-import dataaccess.DataSetMetaInfoRepoFactory
-import models.User
+import models.AdaException
+import org.ada.server.dataaccess.DataSetMetaInfoRepoFactory
 import org.incal.play.controllers.{CrudControllerImpl, HasBasicFormCreateView, HasBasicListView, SubjectPresentRestrictedCrudController}
 import services.DataSpaceService
 

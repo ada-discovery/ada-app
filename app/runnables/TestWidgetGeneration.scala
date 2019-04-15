@@ -1,8 +1,9 @@
 package runnables
+
 import javax.inject.Inject
 
-import dataaccess.RepoTypes.JsonReadonlyRepo
-import models.{DataView, Field, WidgetGenerationMethod}
+import org.ada.server.dataaccess.RepoTypes.JsonReadonlyRepo
+import org.ada.server.models.{DataView, Field, WidgetGenerationMethod}
 import org.incal.core.FutureRunnable
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import services.WidgetGenerationService

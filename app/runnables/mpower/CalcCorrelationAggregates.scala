@@ -2,12 +2,13 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import models.{AdaException, Field, FieldTypeId, StorageType}
+import org.ada.server.models.{Field, FieldTypeId, StorageType}
+import models.AdaException
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json._
 import services.DataSetService
 import controllers.mpower._
-import models.DataSetFormattersAndIds.FieldIdentity
+import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.incal.core.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.util.{seqFutures, GroupMapList}

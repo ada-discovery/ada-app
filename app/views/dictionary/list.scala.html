@@ -1,4 +1,7 @@
-@import models.Field
+@import org.ada.server.models.Field
+@import org.ada.server.models.Filter
+@import org.ada.server.models.CorrelationType
+@import org.ada.server.models.FilterShowFieldStyle
 @import views.html.layout
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs, filterWidgetPanel}
 @import views.html.table.paginatedTable
@@ -10,9 +13,8 @@
 @import views.html.category.categorySelectionModal
 @import views.html.filter.{filter, filterWithJs}
 @import util.typeColumns
-@import models.DataSpaceMetaInfo
-@import models.Filter
-@import dataaccess.JsonUtil
+@import org.ada.server.models.DataSpaceMetaInfo
+@import org.ada.server.dataaccess.JsonUtil
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 @import org.incal.play.Page

@@ -3,8 +3,8 @@ package runnables.core
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.google.inject.Inject
-import models.DataSetFormattersAndIds.FieldIdentity
-import models.FieldTypeId
+import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
+import org.ada.server.models.FieldTypeId
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputFutureRunnable
 import persistence.dataset.DataSetAccessorFactory

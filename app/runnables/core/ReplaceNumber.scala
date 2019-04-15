@@ -1,6 +1,6 @@
 package runnables.core
 
-import dataaccess.RepoTypes.JsonCrudRepo
+import org.ada.server.dataaccess.RepoTypes.JsonCrudRepo
 import models.AdaException
 import play.api.libs.json._
 import runnables.DsaInputFutureRunnable
@@ -8,8 +8,8 @@ import _root_.util.FieldUtil.FieldOps
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Flow
-import dataaccess.JsonCrudRepoExtra._
-import dataaccess.StreamSpec
+import org.ada.server.dataaccess.JsonCrudRepoExtra._
+import org.ada.server.dataaccess.StreamSpec
 import org.incal.core.dataaccess.NotEqualsNullCriterion
 
 import scala.concurrent.ExecutionContext.Implicits.global

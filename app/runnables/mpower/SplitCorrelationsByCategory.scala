@@ -10,7 +10,7 @@ import services.DataSetService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
-import field.FieldTypeHelper
+import org.ada.server.field.FieldTypeHelper
 import models.AdaException
 
 import scala.io.Source

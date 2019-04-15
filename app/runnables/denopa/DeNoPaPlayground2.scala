@@ -2,14 +2,14 @@ package runnables.denopa
 
 import javax.inject.Inject
 
-import models.FieldTypeId
+import org.ada.server.models.FieldTypeId
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.incal.core.dataaccess.Criterion.Infix
 import play.api.Configuration
 
 import scala.concurrent.Future
 import scala.io.Source
-import dataaccess.JsonUtil
+import org.ada.server.dataaccess.JsonUtil
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import persistence.RepoTypes.TranslationRepo

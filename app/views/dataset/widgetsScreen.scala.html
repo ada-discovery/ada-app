@@ -1,5 +1,5 @@
 @import models.Widget
-@import models.Field
+@import org.ada.server.models.Field
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
@@ -9,7 +9,7 @@
 @import views.html.dataset.fixedTableRow
 @import views.html.elements.fieldTypeahead
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
-@import models.DataSpaceMetaInfo
+@import org.ada.server.models.{DataSpaceMetaInfo, Filter, FilterShowFieldStyle, FieldTypeId}
 @import controllers.FilterConditionExtraFormats.coreFilterConditionFormat
 @import util.toJsonHtml
 @import controllers.dataset.DataSetWebContext._
@@ -17,7 +17,7 @@
 
 @(
     title: String,
-    filters: Seq[models.Filter],
+    filters: Seq[Filter],
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
     inputElements: Html,

@@ -1,14 +1,17 @@
 package controllers.dataset
 
+import models.{LineWidget, Widget}
 import models.Widget.WidgetWrites
-import models._
+import org.ada.server.models._
 import models.ml.classification.Classifier.ClassifierIdentity
+import org.ada.server.models.{BasicDisplayOptions, FieldTypeId, FieldTypeSpec}
 import org.incal.spark_ml.models.classification.{ClassificationEvalMetric, Classifier}
 import org.incal.spark_ml.models.result._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import services.stats.StatsService
 import views.html.{classificationrun => view}
+
 import scala.reflect.runtime.universe.TypeTag
 
 abstract class ClassificationRunControllerImpl[R <: ClassificationResult : Format : TypeTag] extends MLRunControllerImpl[R, Classifier] {

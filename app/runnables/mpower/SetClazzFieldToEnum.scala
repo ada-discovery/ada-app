@@ -2,8 +2,8 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
-import models.FieldTypeId
+import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
+import org.ada.server.models.FieldTypeId
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID

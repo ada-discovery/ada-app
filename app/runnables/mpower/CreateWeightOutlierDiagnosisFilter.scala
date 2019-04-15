@@ -2,7 +2,7 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import models.{Field, Filter}
+import org.ada.server.models.{Field, Filter}
 import org.incal.core.{ConditionType, FilterCondition}
 import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion, EqualsCriterion, NotEqualsNullCriterion}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}

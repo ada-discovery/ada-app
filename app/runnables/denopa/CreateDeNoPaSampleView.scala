@@ -2,7 +2,7 @@ package runnables.denopa
 
 import play.api.Logger
 import runnables.DsaInputFutureRunnable
-import models._
+import org.ada.server.models._
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global

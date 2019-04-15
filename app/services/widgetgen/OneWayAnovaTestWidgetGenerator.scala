@@ -1,6 +1,7 @@
 package services.widgetgen
 
-import models._
+import models.IndependenceTestWidget
+import org.ada.server.models._
 import services.stats.{CalculatorTypePack, NoOptionsCalculatorTypePack}
 import services.stats.calc._
 import util.FieldUtil.FieldOps

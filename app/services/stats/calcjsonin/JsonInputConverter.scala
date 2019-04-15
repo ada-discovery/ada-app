@@ -1,7 +1,7 @@
 package services.stats.calcjsonin
 
-import field.FieldTypeHelper
-import models.Field
+import org.ada.server.field.FieldTypeHelper
+import org.ada.server.models.Field
 import play.api.libs.json.JsObject
 
 import scala.reflect.runtime.universe._

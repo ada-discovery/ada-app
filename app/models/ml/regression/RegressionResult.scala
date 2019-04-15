@@ -1,7 +1,7 @@
 package models.ml.regression
 
-import dataaccess.BSONObjectIdentity
-import models.json._
+import org.ada.server.dataaccess.BSONObjectIdentity
+import org.ada.server.json._
 import org.incal.spark_ml.models.VectorScalerType
 import models.ml.ReservoirSpec.reservoirSpecFormat
 import models.ml.regression.Regressor.eitherFormat

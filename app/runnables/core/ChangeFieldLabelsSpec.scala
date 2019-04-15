@@ -2,7 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 
-import models.DataSetFormattersAndIds.FieldIdentity
+import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.incal.core.InputFutureRunnable
 import persistence.dataset.DataSetAccessorFactory
 import org.incal.core.dataaccess.Criterion.Infix

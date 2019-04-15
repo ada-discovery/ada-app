@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.google.inject.Inject
-import models.DataSetFormattersAndIds.JsObjectIdentity
+import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.incal.core.FutureRunnable
 import org.incal.core.dataaccess.AscSort
 import persistence.dataset.DataSetAccessorFactory

@@ -4,16 +4,18 @@ import scala.reflect.runtime.universe._
 import play.api.libs.json.{JsObject, JsValue}
 import java.{util => ju}
 
+import models.AdaException
 import org.incal.core.dataaccess.Criterion._
-import dataaccess.RepoTypes.FieldRepo
+import org.ada.server.dataaccess.RepoTypes.FieldRepo
+import org.ada.server.field.{FieldType, FieldTypeHelper}
+import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.incal.core.util.ReflectionUtil
-import field.{FieldType, FieldTypeHelper}
-import models.DataSetFormattersAndIds.FieldIdentity
-import models._
+import org.ada.server.models.FieldTypeSpec
 import org.incal.core.FilterCondition
 import org.incal.core.FilterCondition.toCriterion
 import org.incal.core.dataaccess.Criterion
 import reactivemongo.bson.BSONObjectID
+import org.ada.server.models._
 
 import scala.collection.Traversable
 import scala.concurrent.Future

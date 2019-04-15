@@ -2,7 +2,7 @@ package models
 
 import java.util.Date
 
-import dataaccess.BSONObjectIdentity
+import org.ada.server.dataaccess.BSONObjectIdentity
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat

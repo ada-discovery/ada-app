@@ -2,7 +2,7 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import models.{Field, FieldTypeId}
+import org.ada.server.models.{Field, FieldTypeId}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json._
 import org.incal.core.InputFutureRunnable

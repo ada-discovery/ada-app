@@ -1,13 +1,13 @@
 package controllers.core
 
-import field.FieldType
+import org.ada.server.field.FieldType
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc._
 import _root_.util.WebExportUtil._
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import models.FieldTypeId
+import org.ada.server.models.FieldTypeId
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Sort
 import org.incal.play.controllers.ReadonlyControllerImpl

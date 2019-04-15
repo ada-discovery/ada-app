@@ -1,7 +1,7 @@
 package runnables.core
 
 import models.AdaException
-import models.DataSetFormattersAndIds.JsObjectIdentity
+import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import reactivemongo.bson.BSONObjectID
 import runnables.DsaInputFutureRunnable
 

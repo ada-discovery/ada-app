@@ -2,7 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 
-import models.StorageType
+import org.ada.server.models.StorageType
 import org.incal.core.InputFutureRunnable
 import services.DataSetService
 

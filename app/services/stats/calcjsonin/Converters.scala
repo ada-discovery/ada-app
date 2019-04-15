@@ -1,6 +1,6 @@
 package services.stats.calcjsonin
 
-import models.{Field, FieldTypeId}
+import org.ada.server.models.{Field, FieldTypeId}
 import play.api.libs.json.JsObject
 import services.stats.calc.JsonFieldUtil._
 import services.stats.calc._

@@ -1,7 +1,7 @@
 package runnables.db
 
 import com.google.inject.Inject
-import models.DataSetFormattersAndIds.JsObjectIdentity
+import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.incal.core.FutureRunnable
 import org.incal.core.dataaccess.AscSort
 import org.incal.core.dataaccess.Criterion.Infix

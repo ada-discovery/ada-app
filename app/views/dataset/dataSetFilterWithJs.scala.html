@@ -1,10 +1,11 @@
 @import views.html.filter.{filter, filterWithJs, jsTreeImport}
 @import views.html.dataset.{bootstrapSelectImport, datasetJsImport}
+@import org.ada.server.models.{Filter, FilterShowFieldStyle}
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 
 @(
-    filterSpec: models.Filter,
+    filterSpec: Filter,
     submitCall: Call,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value]
 )(

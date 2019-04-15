@@ -1,6 +1,6 @@
 package models
 
-import dataaccess.BSONObjectIdentity
+import org.ada.server.dataaccess.BSONObjectIdentity
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat

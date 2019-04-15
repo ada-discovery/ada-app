@@ -1,8 +1,8 @@
 package models.workspace
 
 import org.incal.core.FilterCondition
-import models.Filter.filterConditionFormat
-import dataaccess.BSONObjectIdentity
+import org.ada.server.models.Filter.filterConditionFormat
+import org.ada.server.dataaccess.BSONObjectIdentity
 import org.incal.core.FilterCondition
 import play.api.libs.json._
 import play.api.libs.json.JsObject

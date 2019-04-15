@@ -3,7 +3,7 @@ package services.stats
 import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import models.Field
+import org.ada.server.models.Field
 import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion}
 import play.api.libs.json.JsObject
 import services.stats.calc.{ArrayCalc, ArrayCalculatorTypePack}

@@ -1,8 +1,8 @@
 package models.ml
 
-import dataaccess._
+import org.ada.server.dataaccess._
 import org.incal.core.util.ReflectionUtil
-import models.json.{EnumFormat, FlattenFormat, JavaOrdinalEnumFormat, OrdinalSortedEnumFormat}
+import org.ada.server.json.{EnumFormat, FlattenFormat, JavaOrdinalEnumFormat, OrdinalSortedEnumFormat}
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID

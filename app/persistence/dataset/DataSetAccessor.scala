@@ -1,7 +1,7 @@
 package persistence.dataset
 
-import dataaccess.JsonCrudRepoFactory
-import models.{DataSetMetaInfo, DataSetSetting, FieldTypeSpec}
+import org.ada.server.dataaccess.JsonCrudRepoFactory
+import org.ada.server.models.{DataSetMetaInfo, DataSetSetting, FieldTypeSpec}
 import org.incal.core.dataaccess.Criterion.Infix
 
 import scala.concurrent.duration._
@@ -10,7 +10,7 @@ import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
 import scala.concurrent.Await.result
-import dataaccess.RepoTypes._
+import org.ada.server.dataaccess.RepoTypes._
 import persistence.RepoTypes._
 import persistence.SubTypeBasedAsyncCrudRepo
 

@@ -2,7 +2,8 @@ package runnables.core
 
 import javax.inject.Inject
 
-import models.{CsvDataSetImport, DataSetSetting, StorageType}
+import org.ada.server.models.{DataSetSetting, StorageType}
+import models.CsvDataSetImport
 import persistence.RepoTypes.DataSetImportRepo
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.listFiles

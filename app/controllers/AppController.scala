@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import models.{DataSpaceMetaInfo, HtmlSnippet, HtmlSnippetId}
+import org.ada.server.models.{DataSpaceMetaInfo, HtmlSnippet, HtmlSnippetId}
 import models.security.UserManager
 import org.incal.core.dataaccess.Criterion._
 import play.api.{Configuration, Logger}

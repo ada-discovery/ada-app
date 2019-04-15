@@ -1,6 +1,6 @@
 package util
 
-import models.Dictionary
+import org.ada.server.models.Dictionary
 
 package object VennLayouter {
 

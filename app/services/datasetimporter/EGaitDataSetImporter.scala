@@ -1,15 +1,16 @@
 package services.datasetimporter
 
 import java.util.Date
-import javax.inject.Inject
 
-import field.{FieldTypeFactory, FieldTypeHelper, FieldTypeInferrerFactory}
-import models._
+import javax.inject.Inject
+import org.ada.server.field.FieldTypeHelper
+import org.ada.server.models._
 import models.egait.EGaitKineticData
 import play.api.Configuration
 import play.api.libs.json.{JsObject, Json}
 import services.{EGaitService, EGaitServiceFactory}
 import EGaitKineticData.eGaitSessionFormat
+import models.{AdaException, EGaitDataSetImport}
 import persistence.dataset.DataSetAccessor
 
 import scala.concurrent.Await._

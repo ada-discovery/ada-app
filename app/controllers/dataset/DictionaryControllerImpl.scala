@@ -1,20 +1,20 @@
 package controllers.dataset
 
 import javax.inject.Inject
-
-import models.DistributionWidgetSpec
+import org.ada.server.models.DistributionWidgetSpec
 
 import scala.reflect.runtime.universe.TypeTag
 import com.google.inject.assistedinject.Assisted
 import controllers._
 import controllers.core.AdaCrudControllerImpl
 import controllers.core.{ExportableAction, WidgetRepoController}
-import dataaccess.RepoTypes.CategoryRepo
-import models._
-import models.DataSetFormattersAndIds._
+import models.Widget
+import org.ada.server.dataaccess.RepoTypes.CategoryRepo
+import org.ada.server.models._
+import org.ada.server.models.DataSetFormattersAndIds._
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import dataaccess.FieldRepo._
+import org.ada.server.dataaccess.FieldRepo._
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.AscSort
@@ -29,7 +29,7 @@ import services._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import services.stats.StatsService
 import util.FieldUtil
-import dataaccess.JsonUtil.unescapeKey
+import org.ada.server.dataaccess.JsonUtil.unescapeKey
 import models.ml.classification.ClassificationResult
 import util.FieldUtil.caseClassToFlatFieldTypes
 import views.html.{dataview, dictionary => view}

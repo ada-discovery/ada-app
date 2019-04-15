@@ -2,7 +2,7 @@ package runnables.denopa
 
 import javax.inject.Inject
 
-import dataaccess.JsonUtil
+import org.ada.server.dataaccess.JsonUtil
 import persistence.dataset.DataSetAccessorFactory
 import org.incal.core.FutureRunnable
 import org.incal.core.util.nonAlphanumericToUnderscore

@@ -1,6 +1,7 @@
 package services.widgetgen
 
-import models._
+import models.HeatmapWidget
+import org.ada.server.models._
 import services.stats.CalculatorExecutor
 import services.stats.calc.{NumericDistributionFlowOptions, NumericDistributionOptions, SeqBinCalcTypePack}
 import util.shorten

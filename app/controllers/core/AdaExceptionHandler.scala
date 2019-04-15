@@ -3,7 +3,7 @@ package controllers.core
 import java.util.concurrent.TimeoutException
 
 import controllers.routes
-import dataaccess.AdaConversionException
+import org.ada.server.dataaccess.AdaConversionException
 import models.AdaException
 import org.incal.core.dataaccess.InCalDataAccessException
 import org.incal.play.controllers.ExceptionHandler

@@ -1,7 +1,7 @@
 package models.ml.classification
 
-import dataaccess.BSONObjectIdentity
-import models.json._
+import org.ada.server.dataaccess.BSONObjectIdentity
+import org.ada.server.json._
 import org.incal.spark_ml.models.VectorScalerType
 import org.incal.spark_ml.models.classification._
 import org.incal.spark_ml.models.result.{BinaryClassificationCurves, ClassificationMetricStats, ClassificationResult, MetricStatsValues, StandardClassificationResult, TemporalClassificationResult}

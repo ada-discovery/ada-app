@@ -2,8 +2,8 @@ package runnables.db
 
 import com.google.inject.Inject
 import org.incal.core.dataaccess.Criterion.Infix
-import dataaccess._
-import models.FieldTypeId
+import org.ada.server.dataaccess._
+import org.ada.server.models.FieldTypeId
 import org.apache.ignite.Ignite
 import org.incal.core.dataaccess.RepoSynchronizer
 import reactivemongo.bson.BSONObjectID

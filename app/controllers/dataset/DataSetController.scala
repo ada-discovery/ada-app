@@ -1,7 +1,7 @@
 package controllers.dataset
 
-import models.Filter.FilterOrId
-import models.{AggType, FieldTypeId}
+import org.ada.server.models.Filter.FilterOrId
+import org.ada.server.models.{AggType, FieldTypeId}
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.FilterCondition

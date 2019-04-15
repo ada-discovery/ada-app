@@ -4,9 +4,9 @@
 @import views.html.filter.filterWithJs
 @import controllers.ml.routes.{ClassifierController => classifierRoutes}
 @import util.{formatTimeElement, toHumanReadableCamel, typeColumns}
-@import models.{DataSpaceMetaInfo, Field}
+@import org.ada.server.models.{DataSpaceMetaInfo, Field, FilterShowFieldStyle}
 @import org.incal.spark_ml.models.classification._
-@import models.Filter
+@import org.ada.server.models.Filter
 @import org.incal.play.controllers.WebContext._
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.Page

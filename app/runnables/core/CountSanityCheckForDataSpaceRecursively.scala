@@ -6,8 +6,9 @@ import org.incal.core.InputFutureRunnable
 import org.incal.core.util.seqFutures
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
-import dataaccess.JsonReadonlyRepoExtra._
-import models.{AdaException, DataSpaceMetaInfo}
+import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
+import org.ada.server.models.DataSpaceMetaInfo
+import models.AdaException
 import reactivemongo.bson.BSONObjectID
 import services.DataSpaceService
 

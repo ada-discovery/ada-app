@@ -2,9 +2,9 @@ package controllers.dataset
 
 import javax.inject.Inject
 import com.google.inject.assistedinject.Assisted
-import models.{DistributionWidgetSpec, _}
-import models.DataSetFormattersAndIds._
-import dataaccess.FilterRepoExtra._
+import org.ada.server.models.{DistributionWidgetSpec, _}
+import org.ada.server.models.DataSetFormattersAndIds._
+import org.ada.server.dataaccess.FilterRepoExtra._
 import models.ml.regression.RegressionResult.standardRegressionResultFormat
 import models.Widget.WidgetWrites
 import persistence.RepoTypes.{ClassifierRepo, RegressorRepo}
@@ -16,7 +16,7 @@ import play.api.libs.json._
 import play.api.mvc.{Action, Request}
 import services.{DataSetService, DataSpaceService, WidgetGenerationService}
 import services.ml._
-import models.json.OrdinalEnumFormat
+import org.ada.server.json.OrdinalEnumFormat
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.dataaccess.Criterion
 import org.incal.spark_ml.MLResultUtil

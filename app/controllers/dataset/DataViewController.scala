@@ -1,6 +1,6 @@
 package controllers.dataset
 
-import models.{AggType, CorrelationType}
+import org.ada.server.models.{AggType, CorrelationType}
 import org.incal.core.FilterCondition
 import org.incal.play.controllers.CrudController
 import play.api.mvc.{Action, AnyContent}

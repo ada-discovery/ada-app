@@ -2,7 +2,7 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import models.StorageType
+import org.ada.server.models.StorageType
 import models.ml.{DataSetLinkSpec, DerivedDataSetSpec}
 import org.incal.core.InputFutureRunnable
 import services.DataSetService

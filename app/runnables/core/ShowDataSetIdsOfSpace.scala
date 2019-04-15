@@ -2,7 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 
-import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
+import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable

@@ -1,7 +1,7 @@
 @import views.html.elements.{inputText, inputTextReadonly, labelValue, checkbox, select, inputFieldTypeahead}
 @import views.html.elements.fieldTypeahead
 @import views.html.attributeLabel
-@import models.DataSetSetting
+@import org.ada.server.models.{DataSetSetting, StorageType, FilterShowFieldStyle}
 @import util.toHumanReadableCamel
 
 @(form: Form[DataSetSetting])(implicit msg: play.api.i18n.Messages)

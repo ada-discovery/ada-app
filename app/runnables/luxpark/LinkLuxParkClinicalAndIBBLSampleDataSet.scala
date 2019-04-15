@@ -3,8 +3,8 @@ package runnables.luxpark
 import java.{util => ju}
 import javax.inject.Inject
 
-import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
-import models._
+import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
+import org.ada.server.models._
 import org.incal.core.FutureRunnable
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json._

@@ -1,6 +1,6 @@
 package models
 
-import models.json.EnumFormat
+import org.ada.server.json.EnumFormat
 import play.api.libs.json.Json
 import play.modules.reactivemongo.json.BSONFormats._
 

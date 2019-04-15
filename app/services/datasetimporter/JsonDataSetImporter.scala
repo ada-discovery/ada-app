@@ -3,8 +3,8 @@ package services.datasetimporter
 import java.nio.charset.Charset
 import java.util.Date
 
-import dataaccess._
-import field.{FieldType, FieldTypeFactory, FieldTypeHelper, FieldTypeInferrerFactory}
+import org.ada.server.dataaccess._
+import org.ada.server.field.{FieldType, FieldTypeFactory, FieldTypeHelper, FieldTypeInferrerFactory}
 import models.JsonDataSetImport
 import play.api.libs.json._
 import _root_.util.FieldUtil.specToField

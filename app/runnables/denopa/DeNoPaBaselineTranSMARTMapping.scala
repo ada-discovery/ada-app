@@ -1,6 +1,6 @@
 package runnables.denopa
 
-import models.Category
+import org.ada.server.models.Category
 
 object DeNoPaBaselineTranSMARTMapping {
 

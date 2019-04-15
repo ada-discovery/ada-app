@@ -1,15 +1,14 @@
-@import models.Field
 @import views.html.dataset.widgetsScreen
 @import views.html.elements.fieldTypeaheadDiv
 @import views.html.elements.{selectEnum, labelValue}
-@import models.DataSpaceMetaInfo
+@import org.ada.server.models._
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 @import org.incal.play.routes.CustomDirAssets
 
 @(
     dataSetName: String,
-    filterSpec: models.Filter,
+    filterSpec: Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     xField: Option[Field],
     yField: Option[Field],

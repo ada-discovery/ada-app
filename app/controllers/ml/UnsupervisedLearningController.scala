@@ -1,10 +1,10 @@
 package controllers.ml
 
 import java.util.Date
-import javax.inject.Inject
 
+import javax.inject.Inject
 import controllers.core.AdaCrudControllerImpl
-import models._
+import org.ada.server.models._
 import models.ml.unsupervised._
 import persistence.RepoTypes._
 import play.api.data.Forms.{mapping, optional, _}
@@ -18,6 +18,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import services.DataSpaceService
 import controllers.ml.routes.{UnsupervisedLearningController => route}
+import org.ada.server.models.DataSpaceMetaInfo
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.AscSort
 import org.incal.core.util.firstCharToLowerCase

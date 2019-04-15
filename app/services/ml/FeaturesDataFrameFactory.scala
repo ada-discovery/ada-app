@@ -2,9 +2,9 @@ package services.ml
 
 import java.{util => ju}
 
-import field.{FieldType, FieldTypeHelper}
+import org.ada.server.field.{FieldType, FieldTypeHelper}
 import models.ml.IOJsonTimeSeriesSpec
-import models.{FieldTypeId, FieldTypeSpec}
+import org.ada.server.models.{FieldTypeId, FieldTypeSpec}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml.feature.{QuantileDiscretizer, StringIndexer, VectorAssembler}
 import org.apache.spark.rdd.RDD

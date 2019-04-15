@@ -11,17 +11,17 @@ import akka.stream.ActorMaterializer
 import com.google.inject.ImplementedBy
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.util.{GroupMapList, crossProduct}
-import models._
 import play.api.Logger
 import play.api.libs.json._
-import dataaccess.JsonReadonlyRepoExtra._
+import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import services.stats.calc._
 import breeze.linalg.{DenseMatrix, eig, eigSym}
 import breeze.linalg.eigSym.EigSym
 import com.jujutsu.tsne.TSneConfig
 import com.jujutsu.tsne.barneshut.{BHTSne, ParallelBHTsne}
-import dataaccess.RepoTypes.JsonReadonlyRepo
-import field.{FieldType, FieldTypeHelper}
+import org.ada.server.dataaccess.RepoTypes.JsonReadonlyRepo
+import org.ada.server.field.{FieldType, FieldTypeHelper}
+import org.ada.server.models._
 import org.apache.commons.math3.linear.{Array2DRowRealMatrix, EigenDecomposition}
 import org.incal.core.dataaccess.{AscSort, Criterion, DescSort, NotEqualsNullCriterion}
 

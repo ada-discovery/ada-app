@@ -5,8 +5,8 @@ import java.{lang => jl}
 import javax.inject.Inject
 import com.banda.math.domain.rand.RandomDistribution
 import com.banda.network.domain.ActivationFunctionType
-import field.FieldTypeHelper
-import models.DataSetFormattersAndIds.FieldIdentity
+import org.ada.server.field.FieldTypeHelper
+import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import persistence.RepoTypes.RegressorRepo
 import persistence.dataset.DataSetAccessorFactory
 import services.ml.MachineLearningService

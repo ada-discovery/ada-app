@@ -1,6 +1,6 @@
 package runnables.core
 
-import models.DataSetFormattersAndIds.FieldIdentity
+import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import play.api.Logger
 import runnables.DsaInputFutureRunnable
 import org.incal.core.dataaccess.Criterion._

@@ -2,7 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 
-import dataaccess.StreamSpec
+import org.ada.server.dataaccess.StreamSpec
 import models.ml.DerivedDataSetSpec
 import org.incal.core.InputFutureRunnable
 import services.DataSetService

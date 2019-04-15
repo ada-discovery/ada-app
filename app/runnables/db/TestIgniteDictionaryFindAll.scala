@@ -3,7 +3,7 @@ package runnables.db
 import java.util.Date
 import javax.inject.Inject
 
-import dataaccess.FieldRepoFactory
+import org.ada.server.dataaccess.FieldRepoFactory
 import org.incal.play.GuiceRunnableApp
 
 import scala.concurrent.ExecutionContext.Implicits.global

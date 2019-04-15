@@ -2,9 +2,9 @@ package runnables.other
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import dataaccess.StreamSpec
+import org.ada.server.dataaccess.StreamSpec
 import javax.inject.Inject
-import models.{Field, FieldTypeId}
+import org.ada.server.models.{Field, FieldTypeId}
 import models.ml.DerivedDataSetSpec
 import org.incal.core.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion._

@@ -1,4 +1,4 @@
-@import models.Field
+@import org.ada.server.models.{Field, Filter, FilterShowFieldStyle, DataSpaceMetaInfo}
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.dataset.widgetsScreen
@@ -7,7 +7,6 @@
 @import play.api.libs.json.Json
 @import play.api.i18n.Messages
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
-@import models.DataSpaceMetaInfo
 @import controllers.FilterConditionExtraFormats.coreFilterConditionFormat
 @import util.toJsonHtml
 @import controllers.dataset.DataSetWebContext._
@@ -15,7 +14,7 @@
 
 @(
     dataSetName: String,
-    filters: Seq[models.Filter],
+    filters: Seq[Filter],
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     field: Option[Field],
     groupField: Option[Field],

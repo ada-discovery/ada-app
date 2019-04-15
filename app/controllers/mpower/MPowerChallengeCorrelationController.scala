@@ -7,7 +7,7 @@ import org.incal.core.dataaccess.Criterion._
 import org.incal.core.util.{GroupMapList, seqFutures}
 import org.incal.play.controllers._
 import models.AdaException
-import models.DataSetFormattersAndIds.FieldIdentity
+import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.incal.play.security.AuthAction
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.{Configuration, Logger}

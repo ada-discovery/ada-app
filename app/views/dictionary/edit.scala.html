@@ -1,15 +1,16 @@
 @import views.html.layout
 @import views.html.elements.{inputText, select}
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
-@import models.DataSpaceMetaInfo
-@import models.Category
+@import org.ada.server.models.DataSpaceMetaInfo
+@import org.ada.server.models.Category
+@import org.ada.server.models.Field
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 
 @(
     displayName: String,
     fieldName: String,
-    form: Form[models.Field],
+    form: Form[Field],
     categories: Traversable[Category],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(

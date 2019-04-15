@@ -1,13 +1,15 @@
-@import models.Field
+@import org.ada.server.models.Field
+@import org.ada.server.models.Filter
+@import org.ada.server.models.FilterShowFieldStyle
+@import org.ada.server.models.DataSpaceMetaInfo
 @import views.html.dataset.{widgetsScreen, dynamicFieldTable, dataSetExportDropdown}
 @import views.html.table.dynamicTableJsImport
-@import models.DataSpaceMetaInfo
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 
 @(
     dataSetName: String,
-    filterSpec: models.Filter,
+    filterSpec: Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(

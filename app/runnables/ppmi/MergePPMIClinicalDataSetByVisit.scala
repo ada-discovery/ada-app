@@ -2,8 +2,8 @@ package runnables.ppmi
 
 import javax.inject.Inject
 
-import models.DataSetFormattersAndIds.JsObjectIdentity
-import models.StorageType
+import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
+import org.ada.server.models.StorageType
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.util.{GroupMapList, seqFutures}
 import org.incal.core.FutureRunnable

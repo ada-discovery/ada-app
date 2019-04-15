@@ -1,14 +1,16 @@
-@import models.Field
+@import org.ada.server.models.Field
+@import org.ada.server.models.Filter
+@import org.ada.server.models.FilterShowFieldStyle
 @import views.html.dataset.widgetsScreen
 @import views.html.elements.fieldTypeaheadDiv
-@import models.DataSpaceMetaInfo
+@import org.ada.server.models.DataSpaceMetaInfo
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 @import org.incal.play.routes.CustomDirAssets
 
 @(
     dataSetName: String,
-    filterSpec: models.Filter,
+    filterSpec: Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     xField: Option[Field],
     yField: Option[Field],

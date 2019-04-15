@@ -1,8 +1,9 @@
 package services.widgetgen
 
-import org.incal.core.dataaccess.Criterion
-import field.{FieldType, FieldTypeHelper}
-import models._
+import models.{CategoricalCountWidget, Count, NumericalCountWidget}
+import org.ada.server.field.{FieldType, FieldTypeHelper}
+import org.ada.server.models._
+import org.ada.server.models.DistributionWidgetSpec
 import services.stats.calc.UniqueDistributionCountsCalc.UniqueDistributionCountsCalcTypePack
 import services.stats.calc._
 import util.{fieldLabel, shorten}

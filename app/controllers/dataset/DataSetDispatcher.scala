@@ -3,8 +3,8 @@ package controllers.dataset
 import javax.inject.Inject
 
 import org.incal.play.controllers.SecureControllerDispatcher
-import models.Filter.FilterOrId
-import models.{AggType, FieldTypeId}
+import org.ada.server.models.Filter.FilterOrId
+import org.ada.server.models.{AggType, FieldTypeId}
 import reactivemongo.bson.BSONObjectID
 import org.incal.play.security.{AuthAction, SecurityRole}
 import models.security.DataSetPermission

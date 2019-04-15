@@ -1,7 +1,7 @@
 package models.security
 
 import be.objectify.deadbolt.scala.models.Subject
-import models.User
+import org.ada.server.models.User
 import org.incal.play.security.{SecurityPermission, SecurityRole}
 
 case class DeadboltUser(user: User) extends Subject {

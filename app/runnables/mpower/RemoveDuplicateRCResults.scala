@@ -2,9 +2,9 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import dataaccess.RepoTypes.JsonCrudRepo
+import org.ada.server.dataaccess.RepoTypes.JsonCrudRepo
 import models.AdaException
-import models.DataSetFormattersAndIds.JsObjectIdentity
+import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID

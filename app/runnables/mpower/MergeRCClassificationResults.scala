@@ -1,10 +1,11 @@
 package runnables.mpower
 
 import javax.inject.Inject
-import dataaccess.FilterRepoFactory
-import models.DataSetFormattersAndIds.JsObjectIdentity
+import org.ada.server.dataaccess.FilterRepoFactory
+import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import models.ml.classification.ClassificationResult.classificationResultFormat
-import models.{AdaException, StorageType}
+import org.ada.server.models.StorageType
+import models.AdaException
 import persistence.RepoTypes.ClassifierRepo
 import persistence.dataset.{ClassificationResultRepoFactory, DataSetAccessorFactory}
 import play.api.Logger
