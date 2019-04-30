@@ -1,7 +1,7 @@
 package scala
 
 import org.scalatest._
-import services.stats.StatsService
+import services.StatsService
 
 import scala.util.Random
 

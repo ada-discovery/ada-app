@@ -4,8 +4,8 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.stats.CalculatorHelper._
-import services.stats.calc.{OneWayAnovaTestCalc, OneWayAnovaResult}
+import org.ada.server.calc.CalculatorHelper._
+import org.ada.server.calc.impl.{OneWayAnovaTestCalc, OneWayAnovaResult}
 
 import scala.concurrent.Future
 import scala.util.Random

@@ -4,8 +4,8 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.stats.CalculatorHelper._
-import services.stats.calc.{AllDefinedSeqBinCountCalc, NumericDistributionFlowOptions, NumericDistributionOptions, SeqBinCountCalc}
+import org.ada.server.calc.CalculatorHelper._
+import org.ada.server.calc.impl.{AllDefinedSeqBinCountCalc, NumericDistributionFlowOptions, NumericDistributionOptions, SeqBinCountCalc}
 
 import scala.concurrent.Future
 import scala.util.Random

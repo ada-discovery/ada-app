@@ -4,8 +4,8 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import org.scalatest._
-import services.stats.CalculatorHelper._
-import services.stats.calc.{NullExcludedMultiChiSquareTestCalc, ChiSquareResult, MultiChiSquareTestCalc}
+import org.ada.server.calc.CalculatorHelper._
+import org.ada.server.calc.impl.{NullExcludedMultiChiSquareTestCalc, ChiSquareResult, MultiChiSquareTestCalc}
 
 import scala.concurrent.{Await, Future}
 import scala.util.Random

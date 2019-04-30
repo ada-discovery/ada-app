@@ -4,8 +4,8 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.stats.calc.{ArrayCalc, UniqueDistributionCountsCalc}
-import services.stats.CalculatorHelper._
+import org.ada.server.calc.impl.{ArrayCalc, UniqueDistributionCountsCalc}
+import org.ada.server.calc.CalculatorHelper._
 
 import scala.concurrent.Future
 import scala.util.Random

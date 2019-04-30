@@ -2,7 +2,7 @@ package scala
 
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.stats.StatsService
+import services.StatsService
 
 import scala.concurrent.Future
 import scala.util.Random
