@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.ada.server.models.{DataSetSetting, StorageType}
 import org.ada.server.models.dataimport.CsvDataSetImport
-import persistence.RepoTypes.DataSetImportRepo
+import org.ada.server.dataaccess.RepoTypes.DataSetImportRepo
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.listFiles
 

@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import org.incal.core.dataaccess.Criterion
 import org.ada.server.field.FieldTypeHelper
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.incal.play.GuiceRunnableApp
 import Criterion.Infix
 import org.ada.server.dataaccess.RepoTypes.{FieldRepo, JsonCrudRepo}

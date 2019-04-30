@@ -2,7 +2,7 @@ package util
 
 import org.ada.server.models.Message
 import play.api.{LoggerLike, Logger}
-import persistence.RepoTypes.MessageRepo
+import org.ada.server.dataaccess.RepoTypes.MessageRepo
 
 private class MessageLogger(_logger: LoggerLike, messageRepo: MessageRepo) extends LoggerLike {
 

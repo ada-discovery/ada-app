@@ -7,7 +7,7 @@ import org.ada.server.dataaccess._
 import org.ada.server.field.{FieldType, FieldTypeFactory, FieldTypeHelper, FieldTypeInferrerFactory}
 import org.ada.server.models.dataimport.JsonDataSetImport
 import play.api.libs.json._
-import _root_.util.FieldUtil.specToField
+import org.ada.server.field.FieldUtil.specToField
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

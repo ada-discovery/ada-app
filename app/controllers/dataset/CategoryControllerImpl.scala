@@ -7,7 +7,7 @@ import controllers.core.AdaCrudControllerImpl
 import models.D3Node
 import org.ada.server.models._
 import org.ada.server.models.DataSetFormattersAndIds._
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form

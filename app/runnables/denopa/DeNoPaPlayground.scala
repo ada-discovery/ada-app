@@ -4,7 +4,7 @@ import java.io.{File, PrintWriter}
 import javax.inject.Inject
 
 import org.ada.server.models.FieldTypeId
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.incal.core.dataaccess.Criterion.Infix
 import play.api.Configuration
 
@@ -13,7 +13,7 @@ import scala.io.Source
 import org.ada.server.dataaccess.JsonUtil
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
-import persistence.RepoTypes.TranslationRepo
+import org.ada.server.dataaccess.RepoTypes.TranslationRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

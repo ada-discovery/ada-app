@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.seqFutures
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.models.DataSpaceMetaInfo

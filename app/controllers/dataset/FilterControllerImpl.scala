@@ -8,7 +8,7 @@ import com.google.inject.assistedinject.Assisted
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.models._
 import org.ada.server.models.Filter.{FilterIdentity, filterConditionFormat, filterFormat}
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
@@ -21,7 +21,7 @@ import java.util.Date
 import controllers.core.AdaCrudControllerImpl
 import org.ada.server.AdaException
 import reactivemongo.play.json.BSONFormats._
-import org.ada.server.dataaccess.FilterRepo
+import org.ada.server.dataaccess.dataset.FilterRepo
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.{AscSort, Criterion, InCalDataAccessException}
 import org.incal.play.Page

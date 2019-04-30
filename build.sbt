@@ -41,11 +41,7 @@ routesImport ++= Seq(
 val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-server" % "0.7.3.RC.3",
-  "org.reactivemongo" %% "play2-reactivemongo" % "0.12.6-play25" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11") exclude("com.typesafe.play", "play-iteratees_2.11") exclude("com.typesafe.play", "play-server_2.11") exclude("com.typesafe.play", "play-netty-server_2.11"), // "0.11.14-play24", // "0.12.6-play24", // "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
-  "org.reactivemongo" %% "reactivemongo-akkastream" % "0.12.6",
-  "com.evojam" %% "play-elastic4s" % "0.3.1" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11"),
-  "org.in-cal" %% "incal-access-elastic" % "0.1.8",
+  "org.adada" %% "ada-server" % "0.7.3.RC.4",
   "org.in-cal" %% "incal-play" % "0.1.6",
   "com.typesafe.play" %% "play-java-ws" % playVersion,
   "jp.t2v" %% "play2-auth" % "0.14.1",
@@ -63,12 +59,12 @@ libraryDependencies ++= Seq(
 //  "org.webjars.bower" % "vis" % "4.19.1" exclude("org.webjars" % "jquery"),  // to create graphs visualizations
   "org.webjars" % "visjs" % "4.21.0", // to create graphs visualizations
   "org.webjars" % "jquery-ui" % "1.11.1",
-  "org.clapper" % "classutil_2.11" % "1.0.6",
+//  "org.clapper" % "classutil_2.11" % "1.0.6",
   "org.scalaz" % "scalaz-core_2.11" % "7.2.1",
 //  "org.apache.spark" %% "spark-core" % "2.3.1", // exclude("io.netty", "netty-all"),  // uses netty 4.1.17.Final incompatible with Play's netty 4.0.39.Final (which was upgraded to 4.0.56.Final)
 //  "org.apache.spark" %% "spark-sql" % "2.3.1",
 //  "org.apache.spark" %% "spark-mllib" % "2.3.1",
-  "org.in-cal" %% "incal-spark_ml" % "0.1.3"  exclude("com.fasterxml.jackson.core", "jackson-databind"),
+//  "org.in-cal" %% "incal-spark_ml" % "0.1.3"  exclude("com.fasterxml.jackson.core", "jackson-databind"),
   //  "io.netty" % "netty-all" % "4.0.56.Final",
   "commons-net" % "commons-net" % "3.5",   // for ftp access
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
@@ -86,10 +82,17 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 ).map(_.exclude("org.slf4j", "slf4j-log4j12"))
 
-libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
+// excludeDependencies += SbtExclusionRule(organization = "com.typesafe.akka") // "com.typesafe.akka" %% "akka-stream"
+
+libraryDependencies ++= Seq(
+  "ch.qos.logback" % "logback-classic" % "1.2.3"
+)
 
 dependencyOverrides ++= Set(
   "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.7.6"
+//  "com.typesafe.akka" %% "akka-actor" % "2.4.9",
+//  "com.typesafe.akka" %% "akka-stream" % "2.4.9",
+//  "com.typesafe.akka" %% "akka-slf4j" % "2.4.9"
 //  "io.netty" % "netty-transport-native-epoll" % "4.1.17.Final",
 //  "io.netty" % "netty-codec-http" % "4.1.17.Final", // 4.1.17.Final
 //  "io.netty" % "netty-handler" % "4.1.17.Final", // 4.0.56.Final

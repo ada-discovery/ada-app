@@ -9,7 +9,7 @@ import org.incal.spark_ml.models.classification.{ClassificationEvalMetric, Class
 import org.incal.spark_ml.models.result._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
-import services.stats.StatsService
+import services.StatsService
 import views.html.{classificationrun => view}
 
 import scala.reflect.runtime.universe.TypeTag

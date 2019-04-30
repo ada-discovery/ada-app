@@ -2,7 +2,7 @@ package services.widgetgen
 
 import models.BasicStatsWidget
 import org.ada.server.models._
-import services.stats.calc.BasicStatsCalcTypePack
+import org.ada.server.calc.impl.BasicStatsCalcTypePack
 
 object BasicStatsWidgetGenerator extends CalculatorWidgetGenerator[BasicStatsWidgetSpec, BasicStatsWidget, BasicStatsCalcTypePack]
   with NoOptionsCalculatorWidgetGenerator[BasicStatsWidgetSpec] {

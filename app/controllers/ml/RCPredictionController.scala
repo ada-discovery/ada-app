@@ -9,8 +9,8 @@ import com.banda.network.domain.ActivationFunctionType
 import org.ada.server.models.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec, RCPredictionSettings}
 import org.ada.server.models.ml._
 import org.incal.spark_ml.models.VectorScalerType
-import persistence.RepoTypes.MessageRepo
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.RepoTypes.MessageRepo
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.{Configuration, Logger}
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}

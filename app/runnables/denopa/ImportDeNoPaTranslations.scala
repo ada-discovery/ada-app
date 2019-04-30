@@ -5,7 +5,7 @@ import javax.inject.{Inject, Named}
 import org.ada.server.models.Translation
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
-import persistence.RepoTypes._
+import org.ada.server.dataaccess.RepoTypes._
 import play.api.Configuration
 
 import scala.io.Source

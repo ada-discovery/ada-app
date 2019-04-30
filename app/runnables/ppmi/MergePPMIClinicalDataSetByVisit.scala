@@ -7,7 +7,7 @@ import org.ada.server.models.StorageType
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.util.{GroupMapList, seqFutures}
 import org.incal.core.FutureRunnable
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.libs.json.{JsObject, _}
 import services.DataSetService

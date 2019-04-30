@@ -9,7 +9,7 @@ import org.incal.play.controllers._
 import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.incal.play.security.AuthAction
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.{Configuration, Logger}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{Json, _}

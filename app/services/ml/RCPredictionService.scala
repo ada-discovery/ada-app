@@ -19,9 +19,9 @@ import org.ada.server.models.Field
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
-import util.FieldUtil.caseClassToFlatFieldTypes
+import org.ada.server.field.FieldUtil.caseClassToFlatFieldTypes
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, SparkApp}

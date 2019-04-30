@@ -2,12 +2,12 @@ package controllers
 
 import javax.inject.Inject
 import controllers.core.GenericMapping
-import persistence.RepoTypes.MessageRepo
+import org.ada.server.dataaccess.RepoTypes.MessageRepo
 import play.api.{Configuration, Logger}
 import play.api.Play.current
 import play.api.data.Form
 import util.MessageLogger
-import util.ClassFinderUtil.findClasses
+import org.ada.server.util.ClassFinderUtil.findClasses
 import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
 import org.incal.play.controllers.BaseController
 import views.html.{admin => adminviews}

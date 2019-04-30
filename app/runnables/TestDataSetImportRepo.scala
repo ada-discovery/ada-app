@@ -3,7 +3,7 @@ package runnables
 import com.google.inject.Inject
 import org.ada.server.models.dataimport.{CsvDataSetImport, RedCapDataSetImport}
 import org.incal.core.FutureRunnable
-import persistence.RepoTypes._
+import org.ada.server.dataaccess.RepoTypes._
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.GuiceRunnableApp
 

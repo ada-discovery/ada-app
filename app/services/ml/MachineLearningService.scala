@@ -18,7 +18,7 @@ import org.apache.spark.sql.functions._
 import play.api.libs.json.{JsObject, Json}
 import services.SparkApp
 import play.api.{Configuration, Logger}
-import services.stats.StatsService
+import services.StatsService
 import org.incal.spark_ml.transformers._
 import org.incal.spark_ml.models.VectorScalerType
 import org.incal.spark_ml._

@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.models.FieldTypeId
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import org.incal.core.InputFutureRunnable
 import scala.reflect.runtime.universe.typeOf

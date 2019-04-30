@@ -5,16 +5,16 @@ import java.{util => ju}
 
 import javax.inject.Inject
 import _root_.security.AdaAuthConfig
-import _root_.util.FieldUtil.FieldOps
+import org.ada.server.field.FieldUtil.FieldOps
 import com.google.inject.assistedinject.Assisted
 import org.ada.server.dataaccess.RepoTypes.UserRepo
-import org.ada.server.dataaccess._
+import org.ada.server.dataaccess.dataset.DataViewRepo
 import org.ada.server.models._
 import org.ada.server.models.DataSetFormattersAndIds._
 import org.ada.server.json.EitherFormat
 import org.ada.server.models.Filter.{FilterIdentity, filterConditionFormat, filterFormat}
 import org.incal.core.dataaccess.Criterion._
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form

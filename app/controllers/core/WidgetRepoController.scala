@@ -4,10 +4,10 @@ import org.ada.server.dataaccess.JsonFormatRepoAdapter
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.ada.server.models.{WidgetGenerationMethod, WidgetSpec}
+import org.ada.server.dataaccess.CaseClassFieldRepo
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion}
 import models.Widget
-import persistence.dataset.CaseClassFieldRepo
 import play.api.libs.json.Format
 import services.WidgetGenerationService
 

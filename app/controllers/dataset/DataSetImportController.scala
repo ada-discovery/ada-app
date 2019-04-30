@@ -10,7 +10,7 @@ import controllers._
 import org.ada.server.models.dataimport.DataSetImport.{DataSetImportIdentity, copyWithoutTimestamps, dataSetImportFormat}
 import org.ada.server.models._
 import org.ada.server.models.dataimport._
-import persistence.RepoTypes.{DataSetImportRepo, MessageRepo}
+import org.ada.server.dataaccess.RepoTypes.{DataSetImportRepo, MessageRepo}
 import play.api.{Configuration, Logger}
 import play.api.data.{Form, FormError, Mapping}
 import play.api.data.Forms.{optional, _}

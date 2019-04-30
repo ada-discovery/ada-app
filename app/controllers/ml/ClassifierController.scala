@@ -7,7 +7,7 @@ import controllers._
 import controllers.core.AdaCrudControllerImpl
 import org.ada.server.models.DataSpaceMetaInfo
 import org.ada.server.models.ml.classification.Classifier._
-import persistence.RepoTypes._
+import org.ada.server.dataaccess.RepoTypes._
 import play.api.data.Forms.{mapping, optional, _}
 import play.api.data.format.Formats._
 import play.api.data.{Form, Mapping}

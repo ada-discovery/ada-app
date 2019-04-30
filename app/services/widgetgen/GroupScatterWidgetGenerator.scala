@@ -3,7 +3,7 @@ package services.widgetgen
 import org.incal.core.dataaccess.Criterion
 import org.ada.server.models.{Field, ScatterWidgetSpec}
 import models.ScatterWidget
-import services.stats.calc.GroupTupleCalcTypePack
+import org.ada.server.calc.impl.GroupTupleCalcTypePack
 import util.{fieldLabel, shorten}
 
 import scala.reflect.runtime.universe._

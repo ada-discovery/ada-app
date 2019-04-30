@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.ada.server.dataaccess.DataSetMetaInfoRepoFactory
 import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.ada.server.AdaException
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.seqFutures

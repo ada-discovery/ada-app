@@ -5,7 +5,7 @@ import org.ada.server.json.{EnumFormat, FlattenFormat, JavaOrdinalEnumFormat, Or
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import util.FieldUtil
+import org.ada.server.field.FieldUtil
 import java.{util => ju}
 
 import com.banda.network.domain.{ActivationFunctionType, ReservoirLearningSetting}

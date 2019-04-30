@@ -5,11 +5,11 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputFutureRunnable
-import services.stats.CalculatorExecutors
+import org.ada.server.calc.CalculatorExecutors
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
-import services.stats.CalculatorHelper._
+import org.ada.server.calc.CalculatorHelper._
 
 class CalcMeanAbsCorrelationsFromFile extends InputFutureRunnable[CalcMeanAbsCorrelationsFromFileSpec] with CalculatorExecutors {
 

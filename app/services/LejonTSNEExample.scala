@@ -1,12 +1,10 @@
-package services.stats
+package services
 
 import java.io.File
 
 import com.banda.core.plotter.Plotter
-import com.jujutsu.tsne.barneshut.BHTSne
-import com.jujutsu.tsne.barneshut.ParallelBHTsne
-import com.jujutsu.utils.MatrixUtils
-import com.jujutsu.utils.TSneUtils
+import com.jujutsu.tsne.barneshut.{BHTSne, ParallelBHTsne}
+import com.jujutsu.utils.{MatrixUtils, TSneUtils}
 import org.incal.core.util.writeStringAsStream
 
 object LejonTSNEExample extends App {

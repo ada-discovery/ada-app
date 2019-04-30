@@ -7,10 +7,10 @@ import org.ada.server.models.DerivedDataSetSpec
 import org.incal.core.dataaccess.{Criterion, NotEqualsNullCriterion}
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.{FutureRunnable, InputFutureRunnable}
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsBoolean, Json}
 import services.DataSetService
-import util.FieldUtil._
+import org.ada.server.field.FieldUtil._
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -10,6 +10,8 @@ class ServiceModule extends ScalaModule {
   override def configure = {
     bind[Ignite].toProvider(classOf[IgniteFactory]).asEagerSingleton
 
+    bind[DataSetImportScheduler].to(classOf[DataSetImportSchedulerImpl]).asEagerSingleton // a
+
     install(new FactoryModuleBuilder()
       .implement(classOf[SynapseService], classOf[SynapseServiceWSImpl])
       .build(classOf[SynapseServiceFactory]))

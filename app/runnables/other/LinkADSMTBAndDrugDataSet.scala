@@ -8,7 +8,7 @@ import org.ada.server.models._
 import org.incal.core.FutureRunnable
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.GuiceRunnableApp
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsNull, JsNumber}
 import services.DataSetService
 

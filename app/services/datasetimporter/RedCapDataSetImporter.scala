@@ -13,7 +13,7 @@ import org.ada.server.models.dataimport.RedCapDataSetImport
 import org.ada.server.{AdaException, AdaParseException}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import _root_.util.FieldUtil.FieldOps
+import org.ada.server.field.FieldUtil.FieldOps
 import services.{RedCapService, RedCapServiceFactory}
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.util.{hasNonAlphanumericUnderscore, seqFutures}

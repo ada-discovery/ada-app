@@ -6,7 +6,7 @@ import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Named, Singleton}
 import com.google.inject.ImplementedBy
 import org.ada.server.models._
-import persistence.RepoTypes.DataSetImportRepo
+import org.ada.server.dataaccess.RepoTypes.DataSetImportRepo
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import services.datasetimporter.DataSetImporterCentral
@@ -20,7 +20,6 @@ import org.ada.server.models.dataimport.ScheduledTime
 import scala.concurrent.duration._
 import Await.result
 
-@ImplementedBy(classOf[DataSetImportSchedulerImpl])
 trait DataSetImportScheduler {
 
   def schedule(
@@ -37,10 +36,9 @@ trait DataSetImportScheduler {
   def cancel(importId: BSONObjectID): Unit
 }
 
-@Singleton
 protected class DataSetImportSchedulerImpl @Inject() (
     val system: ActorSystem,
-    dataSetImportRepo: DataSetImportRepo,
+    val dataSetImportRepo: DataSetImportRepo,
     dataSetImporterCentral: DataSetImporterCentral)(
     implicit ec: ExecutionContext
   ) extends DataSetImportScheduler {

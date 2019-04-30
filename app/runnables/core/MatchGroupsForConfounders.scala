@@ -5,10 +5,10 @@ import javax.inject.Inject
 import org.ada.server.models.DerivedDataSetSpec
 import org.incal.core.InputFutureRunnable
 import org.incal.core.FilterCondition.toCriteria
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
 import services.DataSetService
-import util.FieldUtil.valueConverters
+import org.ada.server.field.FieldUtil.valueConverters
 
 import scala.concurrent.Future
 import scala.reflect.runtime.universe.typeOf

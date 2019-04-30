@@ -2,8 +2,8 @@ package runnables.core
 
 import javax.inject.Inject
 import org.ada.server.models.ml.IOJsonTimeSeriesSpec
-import persistence.RepoTypes.RegressorRepo
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.RepoTypes.RegressorRepo
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
 import org.incal.spark_ml.models.VectorScalerType

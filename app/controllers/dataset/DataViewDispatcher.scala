@@ -5,7 +5,7 @@ import be.objectify.deadbolt.scala.DeadboltHandler
 import controllers.core.AdminOrOwnerControllerDispatcherExt
 import org.ada.server.AdaException
 import org.ada.server.models.{AggType, CorrelationType}
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import security.AdaAuthConfig

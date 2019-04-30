@@ -10,7 +10,7 @@ import services.{DataSpaceService, UserManager}
 import org.incal.play.controllers.BaseController
 import org.incal.play.security.{AuthAction, SecurityRole}
 import org.incal.play.security.SecurityUtil._
-import persistence.RepoTypes.HtmlSnippetRepo
+import org.ada.server.dataaccess.RepoTypes.HtmlSnippetRepo
 import views.html.layout
 import play.api.cache.Cached
 import play.api.mvc.Action

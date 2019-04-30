@@ -8,7 +8,7 @@ import org.incal.core.util.GroupMapList
 import org.ada.server.field.{FieldType, FieldTypeHelper}
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import org.ada.server.models.StorageType
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.libs.json._
 import services.DataSetService

@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.ada.server.models._
 import org.incal.core.dataaccess.Criterion.Infix
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
 import services.DataSetService
 import DeNoPaBaselineTranSMARTMapping.{clinicalData, subjectsData}
@@ -13,7 +13,7 @@ import DeNoPaBaselineTranSMARTMapping.{fieldLabelMap => baselineFieldLabelMap}
 import runnables.denopa.DataSetId._
 import org.incal.play.GuiceRunnableApp
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import org.ada.server.dataaccess.CategoryRepo.saveRecursively
+import org.ada.server.dataaccess.dataset.CategoryRepo.saveRecursively
 import org.incal.core.FutureRunnable
 import org.incal.core.util.nonAlphanumericToUnderscore
 

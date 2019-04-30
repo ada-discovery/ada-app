@@ -10,7 +10,7 @@ import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.FutureRunnable
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsNumber
 
 import scala.concurrent.ExecutionContext.Implicits.global

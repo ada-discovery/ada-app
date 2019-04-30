@@ -3,7 +3,7 @@ package runnables.mpower
 import javax.inject.Inject
 
 import org.ada.server.AdaException
-import persistence.dataset.{ClassificationResultRepoFactory, DataSetAccessorFactory}
+import org.ada.server.dataaccess.dataset.{ClassificationResultRepoFactory, DataSetAccessorFactory}
 import play.api.Logger
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.seqFutures

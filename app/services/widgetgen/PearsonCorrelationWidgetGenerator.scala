@@ -2,7 +2,7 @@ package services.widgetgen
 
 import models.HeatmapWidget
 import org.ada.server.models._
-import services.stats.calc.PearsonCorrelationCalcTypePack
+import org.ada.server.calc.impl.PearsonCorrelationCalcTypePack
 
 private class PearsonCorrelationWidgetGenerator(flowParallelism: Option[Int]) extends CalculatorWidgetGenerator[CorrelationWidgetSpec, HeatmapWidget, PearsonCorrelationCalcTypePack] {
 

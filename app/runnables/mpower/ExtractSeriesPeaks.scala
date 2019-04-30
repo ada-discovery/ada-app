@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import org.incal.core.dataaccess.Criterion.Infix
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
 import services.DataSetService
 import org.ada.server.dataaccess.JsonUtil

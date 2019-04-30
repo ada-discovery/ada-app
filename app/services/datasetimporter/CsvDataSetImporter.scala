@@ -5,7 +5,7 @@ import java.util.Date
 import org.ada.server.dataaccess._
 import org.ada.server.field.{FieldTypeHelper, FieldTypeInferrerFactory}
 import org.ada.server.models.dataimport.CsvDataSetImport
-import persistence.dataset.DataSetAccessor
+import org.ada.server.dataaccess.dataset.DataSetAccessor
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global

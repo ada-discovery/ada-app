@@ -7,12 +7,12 @@ import com.google.inject.Inject
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.models.{Field, FieldTypeId}
 import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion}
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
-import services.stats.StatsService
+import services.StatsService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

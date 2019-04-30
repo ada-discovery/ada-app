@@ -2,7 +2,7 @@ package services.widgetgen
 
 import models.ValueScatterWidget
 import org.ada.server.models._
-import services.stats.calc.Tuple3CalcTypePack
+import org.ada.server.calc.impl.Tuple3CalcTypePack
 import util.shorten
 
 import scala.reflect.runtime.universe._

@@ -12,9 +12,9 @@ import models.Widget
 import org.ada.server.dataaccess.RepoTypes.CategoryRepo
 import org.ada.server.models._
 import org.ada.server.models.DataSetFormattersAndIds._
-import persistence.RepoTypes._
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import org.ada.server.dataaccess.FieldRepo._
+import org.ada.server.dataaccess.RepoTypes._
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.dataset.FieldRepo._
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.AscSort
@@ -27,11 +27,11 @@ import play.api.mvc.{Action, Request}
 import reactivemongo.bson.BSONObjectID
 import services._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import services.stats.StatsService
-import util.FieldUtil
+import services.StatsService
+import org.ada.server.field.FieldUtil
 import org.ada.server.dataaccess.JsonUtil.unescapeKey
 import org.ada.server.models.ml.classification.ClassificationResult
-import util.FieldUtil.caseClassToFlatFieldTypes
+import org.ada.server.field.FieldUtil.caseClassToFlatFieldTypes
 import views.html.{dataview, dictionary => view}
 import util.toHumanReadableCamel
 

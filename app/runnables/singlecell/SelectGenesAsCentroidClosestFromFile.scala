@@ -5,7 +5,7 @@ import akka.stream.ActorMaterializer
 import com.google.inject.Inject
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.{InputFutureRunnable, InputRunnable}
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 
 import collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}

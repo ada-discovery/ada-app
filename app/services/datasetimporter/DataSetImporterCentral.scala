@@ -7,7 +7,7 @@ import org.ada.server.models._
 import javax.inject.{Inject, Singleton}
 import org.ada.server.models._
 import org.ada.server.models.dataimport._
-import persistence.RepoTypes.DataSetImportRepo
+import org.ada.server.dataaccess.RepoTypes.DataSetImportRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

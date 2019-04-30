@@ -4,8 +4,8 @@ import models.{Count, NumericalCountWidget}
 import org.incal.core.dataaccess.Criterion
 import org.ada.server.field.{FieldType, FieldTypeHelper}
 import org.ada.server.models._
-import services.stats.calc.UniqueDistributionCountsCalc.UniqueDistributionCountsCalcTypePack
-import services.stats.calc.{GroupCumulativeOrderedCountsCalcTypePack, _}
+import org.ada.server.calc.impl.UniqueDistributionCountsCalc.UniqueDistributionCountsCalcTypePack
+import org.ada.server.calc.impl.{GroupCumulativeOrderedCountsCalcTypePack, _}
 import util.{fieldLabel, shorten}
 
 object CumulativeCountWidgetGenerator extends CalculatorWidgetGenerator[CumulativeCountWidgetSpec, NumericalCountWidget[Any], CumulativeOrderedCountsCalcTypePack[Any]]

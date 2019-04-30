@@ -4,13 +4,13 @@ import javax.inject.Inject
 
 import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.apache.commons.lang3.StringEscapeUtils
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.{seqFutures, writeStringAsStream}
-import services.stats.StatsService
-import services.stats.calc.{ChiSquareResult, OneWayAnovaResult}
+import services.StatsService
+import org.ada.server.calc.impl.{ChiSquareResult, OneWayAnovaResult}
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global

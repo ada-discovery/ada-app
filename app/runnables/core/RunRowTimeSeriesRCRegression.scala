@@ -7,8 +7,8 @@ import com.banda.math.domain.rand.RandomDistribution
 import com.banda.network.domain.ActivationFunctionType
 import org.ada.server.field.FieldTypeHelper
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
-import persistence.RepoTypes.RegressorRepo
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.RepoTypes.RegressorRepo
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import services.ml.MachineLearningService
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable

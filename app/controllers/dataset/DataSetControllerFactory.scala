@@ -1,8 +1,8 @@
 package controllers.dataset
 
 import com.google.inject.ImplementedBy
-import persistence.dataset.DataSetAccessorFactory
-import util.ClassFinderUtil.findClasses
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
+import org.ada.server.util.ClassFinderUtil.findClasses
 import util.toHumanReadableCamel
 import play.api.inject.Injector
 import javax.inject.{Inject, Singleton}
@@ -59,10 +59,6 @@ protected class DataSetControllerFactoryImpl @Inject()(
 
   private def findControllerClass[T : ClassTag](dataSetId: String): Option[Class[T]] = {
     val className = controllerClassName(dataSetId)
-    val classes = findClasses[T](libPrefix, Some("controllers"), false, Some(className), libPath)
-    if (classes.nonEmpty)
-      Some(classes.head)
-    else
-      None
+    findClasses[T](Some("controllers")).find(_.getSimpleName.equals(className))
   }
 }

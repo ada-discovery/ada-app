@@ -5,7 +5,7 @@ import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.incal.core.FutureRunnable
 import org.incal.core.dataaccess.AscSort
 import org.incal.core.dataaccess.Criterion.Infix
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsObject, Json}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONObjectIDFormat

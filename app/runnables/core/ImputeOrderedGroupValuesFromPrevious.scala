@@ -9,15 +9,15 @@ import org.ada.server.field.FieldTypeHelper
 import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.ada.server.models.DerivedDataSetSpec
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.incal.core.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.dataaccess.NotEqualsNullCriterion
 import play.api.Logger
 import play.api.libs.json.{JsNull, JsObject}
 import services.DataSetService
-import services.stats.calc.JsonFieldUtil
-import util.FieldUtil.{FieldOps, JsonFieldOps}
+import org.ada.server.calc.impl.JsonFieldUtil
+import org.ada.server.field.FieldUtil.{FieldOps, JsonFieldOps}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf

@@ -1,20 +1,20 @@
 package runnables.mpower
 
 import javax.inject.Inject
-import org.ada.server.dataaccess.FilterRepoFactory
+import org.ada.server.dataaccess.dataset.FilterRepoFactory
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.ada.server.models.ml.classification.ClassificationResult.classificationResultFormat
 import org.ada.server.models.StorageType
 import org.ada.server.AdaException
-import persistence.RepoTypes.ClassifierRepo
-import persistence.dataset.{ClassificationResultRepoFactory, DataSetAccessorFactory}
+import org.ada.server.dataaccess.RepoTypes.ClassifierRepo
+import org.ada.server.dataaccess.dataset.{ClassificationResultRepoFactory, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.json.{JsObject, Json}
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.seqFutures
 import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassificationResult}
 import services.DataSetService
-import util.FieldUtil.caseClassToFlatFieldTypes
+import org.ada.server.field.FieldUtil.caseClassToFlatFieldTypes
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

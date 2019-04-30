@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.ada.server.models.{Field, FieldTypeId, StorageType}
 import org.ada.server.AdaException
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json._
 import services.DataSetService
 import controllers.mpower._

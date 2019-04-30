@@ -13,7 +13,7 @@ import org.incal.core.dataaccess.Criterion._
 import org.incal.play.controllers.{AdminRestrictedCrudController, HasBasicFormCrudViews}
 import org.incal.play.formatters.EnumFormatter
 import org.incal.play.security.AuthAction
-import persistence.RepoTypes._
+import org.ada.server.dataaccess.RepoTypes._
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._

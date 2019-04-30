@@ -4,10 +4,10 @@ import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
 import org.ada.server.models.{Field, WidgetSpec}
+import org.ada.server.calc.{CalculatorExecutor, CalculatorExecutors, CalculatorTypePack}
 import models.Widget
 import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion, NotEqualsNullCriterion}
 import play.api.libs.json.JsObject
-import services.stats.{CalculatorExecutor, CalculatorExecutors, CalculatorTypePack}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

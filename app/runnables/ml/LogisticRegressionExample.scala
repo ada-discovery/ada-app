@@ -10,7 +10,7 @@ import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Multiclass
 import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}
 import org.apache.spark.sql._
 import org.apache.spark.sql.types._
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json.JsObject
 import org.incal.play.GuiceRunnableApp
 import services.SparkApp

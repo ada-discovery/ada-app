@@ -2,9 +2,9 @@ package services.widgetgen
 
 import models.IndependenceTestWidget
 import org.ada.server.models._
-import services.stats.{CalculatorTypePack, NoOptionsCalculatorTypePack}
-import services.stats.calc._
-import util.FieldUtil.FieldOps
+import org.ada.server.calc.{CalculatorTypePack, NoOptionsCalculatorTypePack}
+import org.ada.server.calc.impl._
+import org.ada.server.field.FieldUtil.FieldOps
 
 trait AbstractChiSquareTestWidget[C <: NoOptionsCalculatorTypePack] extends CalculatorWidgetGenerator[IndependenceTestWidgetSpec, IndependenceTestWidget, C]
   with NoOptionsCalculatorWidgetGenerator[IndependenceTestWidgetSpec] {

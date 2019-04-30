@@ -7,14 +7,14 @@ import javax.inject.Inject
 import security.AdaAuthConfig
 import _root_.util.WebExportUtil._
 import _root_.util.shorten
-import _root_.util.FieldUtil.{FieldOps, valueConverters}
 
 import scala.collection.mutable.{Map => MMap}
 import org.ada.server.dataaccess.JsonUtil._
 import org.incal.core.util.{GroupMapList, seqFutures}
 import org.ada.server.dataaccess._
-import org.ada.server.dataaccess.FilterRepoExtra._
+import org.ada.server.dataaccess.dataset.FilterRepoExtra._
 import org.ada.server.models.{MultiChartDisplayOptions, _}
+import org.ada.server.field.FieldUtil.{FieldOps, valueConverters}
 import com.google.inject.assistedinject.Assisted
 import controllers.{routes, _}
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
@@ -24,8 +24,8 @@ import models.Widget.WidgetWrites
 import org.ada.server.json.{ManifestedFormat, OptionFormat, SubTypeFormat, TupleFormat}
 import org.ada.server.models.ml._
 import controllers.dataset.IndependenceTestResult._
-import persistence.RepoTypes.{ClassifierRepo, RegressorRepo, UnsupervisedLearningRepo}
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.RepoTypes.{ClassifierRepo, RegressorRepo, UnsupervisedLearningRepo}
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.data.{Form, Mapping}
 import play.api.data.Forms.{mapping, number, of, optional}
@@ -40,8 +40,8 @@ import reactivemongo.play.json.BSONFormats._
 import services.ml.MachineLearningService
 import views.html.dataset
 import org.ada.server.models.DataSetTransformation._
-import services.stats.calc.{ChiSquareResult, IndependenceTestResult, OneWayAnovaResult, Quartiles}
-import services.stats.StatsService
+import org.ada.server.calc.impl.{ChiSquareResult, IndependenceTestResult, OneWayAnovaResult, Quartiles}
+import services.StatsService
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import org.ada.server.field.{FieldType, FieldTypeHelper}
 import controllers.FilterConditionExtraFormats.coreFilterConditionFormat

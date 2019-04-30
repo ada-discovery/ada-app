@@ -2,7 +2,7 @@ package services.widgetgen
 
 import models.HeatmapWidget
 import org.ada.server.models._
-import services.stats.calc.MatthewsBinaryClassCorrelationCalcTypePack
+import org.ada.server.calc.impl.MatthewsBinaryClassCorrelationCalcTypePack
 
 private class MatthewsCorrelationWidgetGenerator(flowParallelism: Option[Int]) extends CalculatorWidgetGenerator[CorrelationWidgetSpec, HeatmapWidget, MatthewsBinaryClassCorrelationCalcTypePack] {
 

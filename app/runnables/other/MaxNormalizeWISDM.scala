@@ -5,7 +5,7 @@ import org.ada.server.dataaccess.StreamSpec
 import javax.inject.Inject
 import org.ada.server.models.DerivedDataSetSpec
 import org.incal.core.InputFutureRunnable
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsNull, JsNumber, JsObject, Json}
 import services.DataSetService
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._

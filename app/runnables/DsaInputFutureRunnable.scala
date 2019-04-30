@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.ada.server.AdaException
 import org.incal.core.InputFutureRunnable
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 
 trait DsaInputFutureRunnable[I] extends InputFutureRunnable[I] {
 

@@ -4,9 +4,9 @@ import _root_.util.toHumanReadableCamel
 import org.ada.server.models.{DistributionWidgetSpec, _}
 import org.ada.server.models.Filter.{FilterIdentity, FilterOrId}
 import org.ada.server.models.DataSetFormattersAndIds._
-import org.ada.server.dataaccess.FilterRepoExtra._
+import org.ada.server.dataaccess.dataset.FilterRepoExtra._
 import models.Widget.{WidgetWrites, scatterWidgetFormat}
-import persistence.dataset.DataSetAccessor
+import org.ada.server.dataaccess.dataset.DataSetAccessor
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Forms._
@@ -15,8 +15,8 @@ import play.api.mvc.{Action, Request}
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, DataSpaceService}
 import services.ml._
-import _root_.util.FieldUtil
-import _root_.util.FieldUtil.caseClassToFlatFieldTypes
+import org.ada.server.field.FieldUtil
+import org.ada.server.field.FieldUtil.caseClassToFlatFieldTypes
 import controllers.core.AdaReadonlyControllerImpl
 import controllers.core.{ExportableAction, WidgetRepoController}
 import models.Widget

@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.ada.server.dataaccess.JsonUtil.jsonsToCsv
 import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.apache.commons.lang3.StringEscapeUtils
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable

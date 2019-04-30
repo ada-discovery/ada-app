@@ -3,7 +3,7 @@ package runnables.luxpark
 import javax.inject.Inject
 
 import org.incal.core.dataaccess.Criterion
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Configuration
 import org.incal.play.GuiceRunnableApp
 import Criterion.Infix

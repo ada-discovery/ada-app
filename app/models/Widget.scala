@@ -10,7 +10,7 @@ import play.api.libs.functional.syntax._
 import org.ada.server.json._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import services.stats.calc.{BasicStatsResult, IndependenceTestResult, Quartiles}
+import org.ada.server.calc.impl.{BasicStatsResult, IndependenceTestResult, Quartiles}
 import controllers.dataset.IndependenceTestResult.independenceTestResultFormat
 
 abstract class Widget {

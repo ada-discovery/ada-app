@@ -13,14 +13,14 @@ import Criterion.Infix
 import org.ada.server.json.OrdinalEnumFormat
 import org.incal.spark_ml.models.VectorScalerType
 import org.incal.spark_ml.models.classification.ClassificationEvalMetric
-import persistence.RepoTypes.ClassifierRepo
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.RepoTypes.ClassifierRepo
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, DataSpaceService, WidgetGenerationService}
 import services.ml.MachineLearningService
-import services.stats.StatsService
+import services.StatsService
 import views.html.{classificationrun => view}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 

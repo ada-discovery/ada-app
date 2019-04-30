@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.ada.server.dataaccess.RepoTypes.JsonCrudRepo
 import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._

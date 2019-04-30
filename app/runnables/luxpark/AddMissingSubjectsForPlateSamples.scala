@@ -7,7 +7,7 @@ import play.api.Logger
 import org.incal.core.FutureRunnable
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.field.FieldTypeHelper
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.ExecutionContext.Implicits.global

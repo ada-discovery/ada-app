@@ -12,7 +12,7 @@ import org.ada.server.models.egait.EGaitKineticData.eGaitSessionFormat
 import org.ada.server.models.egait.EGaitKineticData
 import org.ada.server.models.dataimport.EGaitDataSetImport
 import org.ada.server.AdaException
-import persistence.dataset.DataSetAccessor
+import org.ada.server.dataaccess.dataset.DataSetAccessor
 
 import scala.concurrent.Await._
 import scala.concurrent.ExecutionContext.Implicits.global

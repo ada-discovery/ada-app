@@ -2,7 +2,7 @@ package services.widgetgen
 
 import models.ScatterWidget
 import org.ada.server.models._
-import services.stats.calc.{GroupTupleCalcTypePack, TupleCalcTypePack}
+import org.ada.server.calc.impl.{GroupTupleCalcTypePack, TupleCalcTypePack}
 import util.shorten
 
 import scala.reflect.runtime.universe._

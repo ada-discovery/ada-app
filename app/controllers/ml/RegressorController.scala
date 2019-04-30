@@ -4,7 +4,7 @@ import java.util.Date
 import javax.inject.Inject
 
 import controllers.core.AdaCrudControllerImpl
-import persistence.RepoTypes._
+import org.ada.server.dataaccess.RepoTypes._
 import play.api.data.Forms.{mapping, optional, _}
 import play.api.data.format.Formats._
 import play.api.data.{Form, Mapping}

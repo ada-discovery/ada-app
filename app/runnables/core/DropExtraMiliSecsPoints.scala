@@ -10,7 +10,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import runnables.DsaInputFutureRunnable
 import org.incal.core.util.seqFutures
-import util.FieldUtil.{FieldOps, JsonFieldOps, NamedFieldType}
+import org.ada.server.field.FieldUtil.{FieldOps, JsonFieldOps, NamedFieldType}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

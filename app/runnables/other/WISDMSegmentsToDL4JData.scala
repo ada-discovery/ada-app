@@ -12,14 +12,14 @@ import org.ada.server.models.{Field, FieldTypeId}
 import org.ada.server.models.DerivedDataSetSpec
 import org.incal.core.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion._
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.libs.json.{JsNull, JsNumber, JsObject}
 import services.DataSetService
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.incal.core.util.writeStringAsStream
-import util.FieldUtil._
+import org.ada.server.field.FieldUtil._
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global

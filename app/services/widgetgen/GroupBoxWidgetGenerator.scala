@@ -4,7 +4,7 @@ import org.incal.core.dataaccess.Criterion
 import org.ada.server.field.FieldTypeHelper
 import models.BoxWidget
 import org.ada.server.models.{BoxWidgetSpec, Field}
-import services.stats.calc.GroupQuartilesCalcNoOptionsTypePack
+import org.ada.server.calc.impl.GroupQuartilesCalcNoOptionsTypePack
 
 object GroupBoxWidgetGenerator extends CalculatorWidgetGenerator[BoxWidgetSpec, BoxWidget[Any], GroupQuartilesCalcNoOptionsTypePack[Any, Any]]
   with NoOptionsCalculatorWidgetGenerator[BoxWidgetSpec] {

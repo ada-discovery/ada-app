@@ -3,7 +3,7 @@ package runnables.mpower
 import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.{GroupMapList, writeByteArrayStream}
 import services.DataSetService

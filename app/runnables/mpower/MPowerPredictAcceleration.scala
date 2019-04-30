@@ -14,7 +14,7 @@ import org.incal.core.dataaccess.Criterion.Infix
 import org.ada.server.models.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec}
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
 import services.ml.{RCPredictionResults, RCPredictionService}
 import org.incal.core.util.writeStringAsStream

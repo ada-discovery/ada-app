@@ -9,7 +9,7 @@ import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInf
 import org.ada.server.models.{ChartType, DataSetFormattersAndIds, DataSetSetting, StorageType, WidgetSpec, FilterShowFieldStyle}
 import org.ada.server.models.DataSetFormattersAndIds.{DataSetSettingIdentity, serializableDataSetSettingFormat, widgetSpecFormat}
 import org.ada.server.models._
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._

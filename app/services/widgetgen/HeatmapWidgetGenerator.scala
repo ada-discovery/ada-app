@@ -2,8 +2,8 @@ package services.widgetgen
 
 import models.HeatmapWidget
 import org.ada.server.models._
-import services.stats.CalculatorExecutor
-import services.stats.calc.{NumericDistributionFlowOptions, NumericDistributionOptions, SeqBinCalcTypePack}
+import org.ada.server.calc.CalculatorExecutor
+import org.ada.server.calc.impl.{NumericDistributionFlowOptions, NumericDistributionOptions, SeqBinCalcTypePack}
 import util.shorten
 
 private trait HeatmapWidgetGenerator[S <: WidgetSpec, ACCUM, AGG] extends CalculatorWidgetGenerator[S, HeatmapWidget, SeqBinCalcTypePack[ACCUM, AGG]] {

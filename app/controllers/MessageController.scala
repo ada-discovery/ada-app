@@ -8,7 +8,7 @@ import akka.stream.scaladsl.Source
 import be.objectify.deadbolt.scala.DeadboltActions
 import org.ada.server.models.Message
 import org.ada.server.models.Message._
-import persistence.RepoTypes.MessageRepo
+import org.ada.server.dataaccess.RepoTypes.MessageRepo
 import play.api.libs.EventSource.EventIdExtractor
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, Controller, Results}
@@ -30,7 +30,7 @@ import services.UserManager
 
 class MessageController @Inject() (
     val userManager: UserManager,
-    repo: MessageRepo,
+    val repo: MessageRepo,
     deadbolt: DeadboltActions
   ) extends Controller with AdaAuthConfig {
 

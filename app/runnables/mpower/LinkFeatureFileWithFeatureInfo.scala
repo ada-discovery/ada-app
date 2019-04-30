@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.ada.server.models.{Field, FieldTypeId, StorageType}
 import org.ada.server.AdaException
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.libs.json._
 import org.incal.core.InputFutureRunnable

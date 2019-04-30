@@ -4,10 +4,10 @@ import models.{CategoricalCountWidget, Count, NumericalCountWidget}
 import org.ada.server.field.{FieldType, FieldTypeHelper}
 import org.ada.server.models._
 import org.ada.server.models.DistributionWidgetSpec
-import services.stats.calc.UniqueDistributionCountsCalc.UniqueDistributionCountsCalcTypePack
-import services.stats.calc._
+import org.ada.server.calc.impl.UniqueDistributionCountsCalc.UniqueDistributionCountsCalcTypePack
+import org.ada.server.calc.impl._
 import util.{fieldLabel, shorten}
-import util.FieldUtil._
+import org.ada.server.field.FieldUtil._
 
 object CategoricalDistributionWidgetGenerator extends CalculatorWidgetGenerator[DistributionWidgetSpec, CategoricalCountWidget, UniqueDistributionCountsCalcTypePack[Any]]
   with DistributionWidgetGeneratorHelper

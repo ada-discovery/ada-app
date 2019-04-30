@@ -7,10 +7,10 @@ import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.apache.commons.lang3.StringEscapeUtils
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import org.incal.core.InputFutureRunnable
-import services.stats.StatsService
+import services.StatsService
 import org.incal.core.util.writeStringAsStream
 
 import scala.reflect.runtime.universe.typeOf

@@ -7,10 +7,10 @@ import com.banda.core.plotter.Plotter
 import com.google.inject.Inject
 import org.ada.server.AdaException
 import org.apache.commons.lang3.StringEscapeUtils
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import org.incal.core.InputFutureRunnable
-import services.stats.{StatsService, TSNESetting}
+import services.{StatsService, TSNESetting}
 import org.incal.core.util.writeStringAsStream
 
 import scala.concurrent.ExecutionContext.Implicits.global

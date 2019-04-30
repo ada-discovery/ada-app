@@ -9,12 +9,12 @@ import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.dataaccess.JsonCrudRepoExtra._
 import org.ada.server.dataaccess.{JsonUtil, StreamSpec}
 import _root_.util.MessageLogger
-import _root_.util.FieldUtil.{fieldTypeOrdering, isNumeric}
-import _root_.util.FieldUtil.{FieldOps, JsonFieldOps}
+import org.ada.server.field.FieldUtil.{fieldTypeOrdering, isNumeric}
+import org.ada.server.field.FieldUtil.{FieldOps, JsonFieldOps}
 import com.google.inject.ImplementedBy
 import org.ada.server.models._
-import persistence.RepoTypes._
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.RepoTypes._
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.json.{JsObject, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -39,8 +39,8 @@ import org.ada.server.models._
 import scala.collection.Set
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 import services.ml.{RCPredictionService, RCPredictionStaticHelper}
-import services.stats.StatsService
-import services.stats.calc.{BasicStatsResult, MultiBasicStatsCalc}
+import services.StatsService
+import org.ada.server.calc.impl.{BasicStatsResult, MultiBasicStatsCalc}
 
 import scala.util.Random
 

@@ -2,7 +2,7 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json._
 import org.incal.core.InputFutureRunnable
 import services.DataSetService

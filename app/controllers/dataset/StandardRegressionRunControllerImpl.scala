@@ -4,11 +4,11 @@ import javax.inject.Inject
 import com.google.inject.assistedinject.Assisted
 import org.ada.server.models.{DistributionWidgetSpec, _}
 import org.ada.server.models.DataSetFormattersAndIds._
-import org.ada.server.dataaccess.FilterRepoExtra._
+import org.ada.server.dataaccess.dataset.FilterRepoExtra._
 import org.ada.server.models.ml.regression.RegressionResult.standardRegressionResultFormat
 import models.Widget.WidgetWrites
-import persistence.RepoTypes.{ClassifierRepo, RegressorRepo}
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.RepoTypes.{ClassifierRepo, RegressorRepo}
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Forms._
@@ -24,7 +24,7 @@ import org.incal.spark_ml.models.regression.RegressionEvalMetric
 import org.incal.spark_ml.models.result.StandardRegressionResult
 import org.incal.spark_ml.models.setting.RegressionRunSpec
 import org.incal.spark_ml.models.VectorScalerType
-import services.stats.StatsService
+import services.StatsService
 import views.html.{regressionrun => view}
 
 import scala.concurrent.{Future, TimeoutException}

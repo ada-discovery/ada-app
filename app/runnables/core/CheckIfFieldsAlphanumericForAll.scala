@@ -2,7 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 
-import org.ada.server.dataaccess.FieldRepoFactory
+import org.ada.server.dataaccess.dataset.FieldRepoFactory
 import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.ada.server.models.DataSpaceMetaInfo
 import org.ada.server.AdaException

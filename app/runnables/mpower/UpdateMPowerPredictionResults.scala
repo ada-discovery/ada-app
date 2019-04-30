@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global

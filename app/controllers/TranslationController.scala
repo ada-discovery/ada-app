@@ -6,7 +6,7 @@ import controllers.core.AdaCrudControllerImpl
 import org.ada.server.models.Translation
 import org.ada.server.models.Translation._
 import org.incal.play.controllers.{AdminRestrictedCrudController, CrudControllerImpl, HasBasicFormCrudViews}
-import persistence.RepoTypes._
+import org.ada.server.dataaccess.RepoTypes._
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText}
 import play.api.mvc.{Request, Result}

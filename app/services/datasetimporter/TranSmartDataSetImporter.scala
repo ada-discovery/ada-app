@@ -4,11 +4,11 @@ import java.util.Date
 
 import org.ada.server.models.dataimport.TranSmartDataSetImport
 import org.ada.server.AdaParseException
-import org.ada.server.dataaccess.CategoryRepo._
+import org.ada.server.dataaccess.dataset.CategoryRepo._
 import org.ada.server.field.{FieldType, FieldTypeHelper, FieldTypeInferrerFactory}
 import org.ada.server.dataaccess.RepoTypes.{CategoryRepo, FieldRepo}
 import org.ada.server.models.{Category, Field}
-import persistence.dataset.DataSetAccessor
+import org.ada.server.dataaccess.dataset.DataSetAccessor
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.util.seqFutures
 

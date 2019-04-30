@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.ada.server.dataaccess.RepoTypes.JsonReadonlyRepo
 import org.ada.server.models.{DataView, Field, WidgetGenerationMethod}
 import org.incal.core.FutureRunnable
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import services.WidgetGenerationService
 import org.incal.core.util.seqFutures
 

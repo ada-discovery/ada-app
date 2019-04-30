@@ -6,7 +6,7 @@ import javax.inject.Inject
 import controllers.core.AdaCrudControllerImpl
 import org.ada.server.models._
 import org.ada.server.models.ml.unsupervised._
-import persistence.RepoTypes._
+import org.ada.server.dataaccess.RepoTypes._
 import play.api.data.Forms.{mapping, optional, _}
 import play.api.data.format.Formats._
 import play.api.data.{Form, Mapping}

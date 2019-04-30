@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.{listFiles, writeStringAsStream}
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.Json
 
 import scala.concurrent.Future

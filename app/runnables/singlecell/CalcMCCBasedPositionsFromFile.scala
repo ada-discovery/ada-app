@@ -9,11 +9,11 @@ import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.{writeStringAsStream, listFiles, seqFutures}
 
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 
 import collection.mutable.ArrayBuffer
-import services.stats.CalculatorExecutors
+import org.ada.server.calc.CalculatorExecutors
 import org.incal.core.dataaccess.Criterion._
 import play.api.libs.json.Json
 

@@ -4,7 +4,7 @@ import javax.inject.Inject
 import play.api.Logger
 import org.incal.core.InputFutureRunnable
 import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassificationResult, TemporalClassificationResult}
-import persistence.dataset.ClassificationResultRepoFactory
+import org.ada.server.dataaccess.dataset.ClassificationResultRepoFactory
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global

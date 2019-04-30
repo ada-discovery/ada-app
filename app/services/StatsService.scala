@@ -1,20 +1,15 @@
-package services.stats
+package services
 
 import java.{util => ju}
-import javax.inject.{Inject, Singleton}
 
-import _root_.util.AkkaStreamUtil
-import _root_.util.FieldUtil.FieldOps
+import javax.inject.{Inject, Singleton}
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.ActorMaterializer
 import com.google.inject.ImplementedBy
-import org.incal.core.dataaccess.Criterion.Infix
-import org.incal.core.util.{GroupMapList, crossProduct}
 import play.api.Logger
 import play.api.libs.json._
-import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
-import services.stats.calc._
+import org.ada.server.calc.impl._
 import breeze.linalg.{DenseMatrix, eig, eigSym}
 import breeze.linalg.eigSym.EigSym
 import com.jujutsu.tsne.TSneConfig
@@ -22,15 +17,21 @@ import com.jujutsu.tsne.barneshut.{BHTSne, ParallelBHTsne}
 import org.ada.server.dataaccess.RepoTypes.JsonReadonlyRepo
 import org.ada.server.field.{FieldType, FieldTypeHelper}
 import org.ada.server.models._
-import org.apache.commons.math3.linear.{Array2DRowRealMatrix, EigenDecomposition}
+import org.ada.server.akka.AkkaStreamUtil
+import org.ada.server.calc.CalculatorExecutors
+import org.ada.server.field.FieldUtil.FieldOps
+import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.incal.core.dataaccess.{AscSort, Criterion, DescSort, NotEqualsNullCriterion}
+import org.incal.core.dataaccess.Criterion.Infix
+import org.incal.core.util.{GroupMapList, crossProduct}
+import org.apache.commons.math3.linear.{Array2DRowRealMatrix, EigenDecomposition}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.collection.JavaConversions._
-import services.stats.CalculatorHelper._
-import services.stats.calc.SeqBinCountCalc.SeqBinCountCalcTypePack
-import services.stats.calc.UniqueDistributionCountsCalc.UniqueDistributionCountsCalcTypePack
+import org.ada.server.calc.CalculatorHelper._
+import org.ada.server.calc.impl.SeqBinCountCalc.SeqBinCountCalcTypePack
+import org.ada.server.calc.impl.UniqueDistributionCountsCalc.UniqueDistributionCountsCalcTypePack
 
 @ImplementedBy(classOf[StatsServiceImpl])
 trait StatsService extends CalculatorExecutors {

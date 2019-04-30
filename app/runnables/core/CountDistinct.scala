@@ -4,7 +4,7 @@ import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import play.api.Logger
 import runnables.DsaInputFutureRunnable
 import org.incal.core.dataaccess.Criterion._
-import util.FieldUtil.{FieldOps, JsonFieldOps}
+import org.ada.server.field.FieldUtil.{FieldOps, JsonFieldOps}
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global

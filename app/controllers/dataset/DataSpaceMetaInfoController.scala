@@ -6,7 +6,7 @@ import org.ada.server.models._
 import controllers.core.AdaCrudControllerImpl
 import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInfoRepo}
 import org.incal.core.dataaccess.Criterion.Infix
-import persistence.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.data.Forms._
 import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import reactivemongo.bson.BSONObjectID
