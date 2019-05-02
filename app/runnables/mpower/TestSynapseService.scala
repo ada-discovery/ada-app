@@ -6,7 +6,7 @@ import org.incal.play.GuiceRunnableApp
 import play.api.Configuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-import services.importers.SynapseServiceFactory
+import org.ada.server.services.importers.SynapseServiceFactory
 
 import scala.concurrent.Await.result
 import scala.concurrent.Future

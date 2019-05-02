@@ -5,10 +5,10 @@ import models.ScatterWidget
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.models._
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.incal.core.dataaccess.Criterion._
 import org.incal.play.controllers._
 import org.incal.play.security.AuthAction
-import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import services.WidgetGenerationService
 import views.html.mpowerchallenge.clustering

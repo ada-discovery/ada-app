@@ -6,7 +6,8 @@ import org.incal.core.dataaccess.Criterion._
 import play.api.{Configuration, Logger}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import security.AdaAuthConfig
-import services.{DataSpaceService, UserManager}
+import org.ada.server.services.UserManager
+import services.DataSpaceService
 import org.incal.play.controllers.BaseController
 import org.incal.play.security.{AuthAction, SecurityRole}
 import org.incal.play.security.SecurityUtil._

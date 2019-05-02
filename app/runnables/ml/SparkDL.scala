@@ -4,7 +4,7 @@ import javax.inject.Inject
 import org.apache.spark.ml.{Pipeline, PipelineStage}
 import org.apache.spark.ml.linalg.Vectors
 import org.incal.play.GuiceRunnableApp
-import services.SparkApp
+import org.ada.server.services.SparkApp
 import org.incal.spark_ml.transformers.{SeqShift, SeqShiftWithConsecutiveOrder, SlidingWindow, SlidingWindowWithConsecutiveOrder}
 
 class SparkDL @Inject() (sparkApp: SparkApp) extends Runnable {

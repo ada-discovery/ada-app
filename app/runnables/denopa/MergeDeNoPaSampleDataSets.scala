@@ -6,7 +6,7 @@ import org.ada.server.models.StorageType
 import org.ada.server.models.DerivedDataSetSpec
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
-import services.DataSetService
+import org.ada.server.services.DataSetService
 
 class MergeDeNoPaSampleDataSets @Inject() (dataSetService: DataSetService) extends FutureRunnable {
 

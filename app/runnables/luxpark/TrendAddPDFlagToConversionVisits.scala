@@ -9,7 +9,7 @@ import org.incal.core.dataaccess.Criterion._
 import org.incal.core.{FutureRunnable, InputFutureRunnable}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsBoolean, Json}
-import services.DataSetService
+import org.ada.server.services.DataSetService
 import org.ada.server.field.FieldUtil._
 
 import scala.reflect.runtime.universe.typeOf

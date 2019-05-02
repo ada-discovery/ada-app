@@ -11,8 +11,8 @@ import org.apache.spark.sql.types._
 import org.apache.hadoop.fs._
 import play.api.Logger
 import org.incal.core.InputRunnable
-import services.SparkApp
-import services.ml.MachineLearningService
+import org.ada.server.services.SparkApp
+import org.ada.server.services.ml.MachineLearningService
 
 import collection.JavaConverters._
 import scala.reflect.runtime.universe.typeOf

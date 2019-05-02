@@ -13,7 +13,7 @@ import play.api.Logger
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
-import services.StatsService
+import org.ada.server.services.StatsService
 import runnables.core.CalcUtil._
 
 import scala.concurrent.ExecutionContext.Implicits.global

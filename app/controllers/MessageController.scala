@@ -26,7 +26,7 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
-import services.UserManager
+import org.ada.server.services.UserManager
 
 class MessageController @Inject() (
     val userManager: UserManager,

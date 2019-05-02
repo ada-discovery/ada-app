@@ -12,9 +12,9 @@ import org.ada.server.dataaccess.RepoTypes.ClassifierRepo
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
-import services.DataSetService
-import services.ml.MachineLearningService
-import services.StatsService
+import org.ada.server.services.DataSetService
+import org.ada.server.services.ml.MachineLearningService
+import org.ada.server.services.StatsService
 import org.ada.server.field.FieldUtil
 
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -5,6 +5,7 @@ import com.google.inject.ImplementedBy
 import org.ada.server.dataaccess.DataSetMetaInfoRepoFactory
 import org.ada.server.dataaccess.RepoTypes.{DataSetMetaInfoRepo, DataSpaceMetaInfoRepo}
 import org.ada.server.models.{DataSpaceMetaInfo, User}
+import org.ada.server.services.UserManager
 import play.api.mvc.Request
 import security.AdaAuthConfig
 import org.incal.core.dataaccess.Criterion.Infix

@@ -18,9 +18,10 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
-import services.{DataSetService, DataSpaceService, WidgetGenerationService}
-import services.ml.MachineLearningService
-import services.StatsService
+import org.ada.server.services.DataSetService
+import services.{DataSpaceService, WidgetGenerationService}
+import org.ada.server.services.ml.MachineLearningService
+import org.ada.server.services.StatsService
 import views.html.{classificationrun => view}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 

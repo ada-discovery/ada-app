@@ -14,8 +14,9 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Forms._
 import play.api.libs.json._
 import play.api.mvc.{Action, Request}
-import services.{DataSetService, DataSpaceService, WidgetGenerationService}
-import services.ml._
+import org.ada.server.services.DataSetService
+import services.{DataSpaceService, WidgetGenerationService}
+import org.ada.server.services.ml._
 import org.ada.server.json.OrdinalEnumFormat
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.dataaccess.Criterion
@@ -24,7 +25,7 @@ import org.incal.spark_ml.models.regression.RegressionEvalMetric
 import org.incal.spark_ml.models.result.StandardRegressionResult
 import org.incal.spark_ml.models.setting.RegressionRunSpec
 import org.incal.spark_ml.models.VectorScalerType
-import services.StatsService
+import org.ada.server.services.StatsService
 import views.html.{regressionrun => view}
 
 import scala.concurrent.{Future, TimeoutException}

@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.ada.server.models.{DerivedDataSetSpec, DropFieldsSpec, RenameFieldsSpec}
 import org.incal.core.InputFutureRunnable
-import services.DataSetService
+import org.ada.server.services.DataSetService
 
 import scala.reflect.runtime.universe.typeOf
 

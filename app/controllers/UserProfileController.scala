@@ -18,7 +18,7 @@ import org.ada.server.models.User
 import org.incal.play.controllers.BaseController
 import reactivemongo.bson.BSONObjectID
 import org.incal.play.security.SecurityUtil.restrictSubjectPresentAnyNoCaching
-import services.UserManager
+import org.ada.server.services.UserManager
 
 class UserProfileController @Inject() (userManager: UserManager) extends BaseController {
 

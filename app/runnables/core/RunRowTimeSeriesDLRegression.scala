@@ -6,7 +6,7 @@ import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.ada.server.dataaccess.RepoTypes.RegressorRepo
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import reactivemongo.bson.BSONObjectID
-import services.ml.MachineLearningService
+import org.ada.server.services.ml.MachineLearningService
 import org.incal.core.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.dataaccess.NotEqualsNullCriterion

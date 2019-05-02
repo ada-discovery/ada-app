@@ -6,7 +6,7 @@ import jp.t2v.lab.play2.auth.{AuthConfig, _}
 import org.ada.server.models.{User => AdaUser}
 import play.api.mvc.Results._
 import play.api.mvc.{Request, RequestHeader, Result}
-import services.UserManager
+import org.ada.server.services.UserManager
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.duration._

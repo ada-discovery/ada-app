@@ -7,7 +7,7 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json._
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.seqFutures
-import services.DataSetService
+import org.ada.server.services.DataSetService
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global

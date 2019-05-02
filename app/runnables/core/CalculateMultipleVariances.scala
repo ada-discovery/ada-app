@@ -10,7 +10,7 @@ import org.incal.core.InputFutureRunnable
 import org.incal.core.util.writeStringAsStream
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.calc.CalculatorHelper._
-import services.StatsService
+import org.ada.server.services.StatsService
 import org.apache.commons.lang3.StringEscapeUtils
 
 import scala.reflect.runtime.universe.typeOf

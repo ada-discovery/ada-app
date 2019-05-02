@@ -20,8 +20,9 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
-import services.ml._
-import services.{DataSetService, DataSpaceService, WidgetGenerationService}
+import org.ada.server.services.ml._
+import org.ada.server.services.DataSetService
+import services.{DataSpaceService, WidgetGenerationService}
 import views.html.{regressionrun => view}
 
 import scala.concurrent.Future

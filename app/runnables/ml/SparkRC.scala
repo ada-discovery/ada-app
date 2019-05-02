@@ -6,7 +6,7 @@ import java.{lang => jl}
 import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.{ActivationFunctionType, ReservoirSetting}
 import org.apache.spark.ml.linalg.Vectors
-import services.SparkApp
+import org.ada.server.services.SparkApp
 
 import org.incal.play.GuiceRunnableApp
 import org.incal.spark_ml.models.ReservoirSpec

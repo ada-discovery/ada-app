@@ -9,7 +9,7 @@ import play.api.Logger
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.writeStringAsStream
 import runnables.core.CalcUtil._
-import services.{StatsService, TSNESetting}
+import org.ada.server.services.{StatsService, TSNESetting}
 import org.ada.server.calc.impl.JsonFieldUtil._
 
 import scala.concurrent.ExecutionContext.Implicits.global

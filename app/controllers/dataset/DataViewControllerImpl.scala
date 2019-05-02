@@ -35,7 +35,8 @@ import org.incal.play.controllers.{CrudControllerImpl, HasFormShowEqualEditView,
 import org.incal.play.formatters._
 import org.incal.play.security.AuthAction
 import org.incal.play.security.SecurityRole
-import services.{DataSpaceService, UserManager}
+import org.ada.server.services.UserManager
+import services.DataSpaceService
 import views.html.{dataview => view}
 
 import scala.concurrent.Future

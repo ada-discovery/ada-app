@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.incal.core.FutureRunnable
 import org.incal.core.util.seqFutures
-import services.DataSetService
+import org.ada.server.services.DataSetService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

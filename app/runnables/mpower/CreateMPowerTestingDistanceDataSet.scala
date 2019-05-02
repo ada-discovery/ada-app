@@ -10,7 +10,7 @@ import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactor
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import services.DataSetService
+import org.ada.server.services.DataSetService
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp

@@ -10,7 +10,7 @@ import org.apache.commons.lang3.StringEscapeUtils
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import org.incal.core.InputFutureRunnable
-import services.StatsService
+import org.ada.server.services.StatsService
 import org.incal.core.util.writeStringAsStream
 
 import scala.reflect.runtime.universe.typeOf

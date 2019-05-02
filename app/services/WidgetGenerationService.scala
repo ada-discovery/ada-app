@@ -15,9 +15,9 @@ import org.incal.core.util.GroupMapList
 import play.api.{Configuration, Logger}
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
-import org.ada.server.calc.CalculatorTypePack
 import services.widgetgen._
-import services.StatsService
+import org.ada.server.calc.CalculatorTypePack
+import org.ada.server.services.StatsService
 import org.ada.server.calc.CalculatorHelper._
 import org.ada.server.akka.AkkaStreamUtil
 import org.ada.server.field.FieldUtil._

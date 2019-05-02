@@ -7,7 +7,7 @@ import org.ada.server.models.DerivedDataSetSpec
 import org.incal.core.InputFutureRunnable
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsNull, JsNumber, JsObject, Json}
-import services.DataSetService
+import org.ada.server.services.DataSetService
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 
 import scala.reflect.runtime.universe.typeOf

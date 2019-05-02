@@ -6,9 +6,9 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.incal.play.GuiceRunnableApp
 import org.incal.spark_ml.models.TreeCore
 import org.incal.spark_ml.models.classification._
-import services.DataSetService
-import services.ml.MachineLearningService
-import services.StatsService
+import org.ada.server.services.DataSetService
+import org.ada.server.services.ml.MachineLearningService
+import org.ada.server.services.StatsService
 
 import scala.concurrent.Await.result
 import scala.concurrent.duration._

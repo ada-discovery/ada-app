@@ -16,7 +16,8 @@ import play.api.data.Forms._
 import play.api.mvc._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
-import services.{DataSetService, DataSpaceService}
+import org.ada.server.services.DataSetService
+import services.DataSpaceService
 import views.html.{category, datasetsetting => view}
 import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 import controllers.dataset.routes.javascript.{DataSetSettingController => dataSetSettingJsRoutes}

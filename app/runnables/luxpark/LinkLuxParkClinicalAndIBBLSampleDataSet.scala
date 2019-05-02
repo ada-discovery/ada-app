@@ -12,7 +12,7 @@ import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.dataaccess.NotEqualsNullCriterion
 import org.incal.play.GuiceRunnableApp
 import reactivemongo.play.json.BSONFormats._
-import services.DataSetService
+import org.ada.server.services.DataSetService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

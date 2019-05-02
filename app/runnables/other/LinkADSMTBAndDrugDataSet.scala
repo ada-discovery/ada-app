@@ -10,7 +10,7 @@ import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.GuiceRunnableApp
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsNull, JsNumber}
-import services.DataSetService
+import org.ada.server.services.DataSetService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

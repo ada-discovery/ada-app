@@ -13,7 +13,7 @@ import play.api.libs.json.{JsObject, Json}
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.seqFutures
 import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassificationResult}
-import services.DataSetService
+import org.ada.server.services.DataSetService
 import org.ada.server.field.FieldUtil.caseClassToFlatFieldTypes
 
 import scala.concurrent.ExecutionContext.Implicits.global

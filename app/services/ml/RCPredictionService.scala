@@ -22,9 +22,10 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import org.ada.server.field.FieldUtil.caseClassToFlatFieldTypes
+import org.ada.server.services.ml.IOSeriesUtil
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import services.{DataSetService, SparkApp}
+import org.ada.server.services.{DataSetService, SparkApp}
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.{ConditionType, FilterCondition}
 import org.incal.core.util.{retry, seqFutures}
@@ -342,7 +343,7 @@ class RCPredictionServiceImpl @Inject()(
             for {
               // transform input
               input <-
-                RCPredictionStaticHelper.scaleSeriesJava(sparkApp.session)(inputSeries, transformType)
+                IOSeriesUtil.scaleSeriesJava(sparkApp.session)(inputSeries, transformType)
 
               // transform output
               output <-
@@ -350,7 +351,7 @@ class RCPredictionServiceImpl @Inject()(
                   val output = input.map(seq => outputInputIndexes.map(seq(_)))
                   Future(output)
                 } else
-                  RCPredictionStaticHelper.scaleSeriesJava(sparkApp.session)(outputSeries.map(Seq(_)), transformType)
+                  IOSeriesUtil.scaleSeriesJava(sparkApp.session)(outputSeries.map(Seq(_)), transformType)
             } yield {
               (input, output.map(_.head))
             }
@@ -602,13 +603,13 @@ class RCPredictionServiceImpl @Inject()(
     series: Seq[Seq[jl.Double]],
     transformType: VectorScalerType.Value
   ): Future[Seq[Seq[jl.Double]]] =
-    RCPredictionStaticHelper.scaleSeriesJava(sparkApp.session)(series, transformType)
+    IOSeriesUtil.scaleSeriesJava(sparkApp.session)(series, transformType)
 
   override def transformSeries(
     series: Seq[Seq[Double]],
     transformType: VectorScalerType.Value
   ): Future[Seq[Seq[Double]]] =
-    RCPredictionStaticHelper.scaleSeries(sparkApp.session)(series, transformType)
+    IOSeriesUtil.scaleSeries(sparkApp.session)(series, transformType)
 }
 
 object RCPredictionStaticHelper extends Serializable {

@@ -5,7 +5,7 @@ import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import play.api.Configuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import services.importers.EGaitServiceFactory
+import org.ada.server.services.importers.EGaitServiceFactory
 
 import scala.concurrent.Future
 

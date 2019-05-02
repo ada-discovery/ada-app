@@ -2,10 +2,9 @@ package controllers
 
 import javax.inject.Inject
 
-import services.ldap.{LdapSettings, LdapService}
+import org.ada.server.services.ldap.{LdapSettings, LdapService}
 import org.incal.play.controllers.BaseController
 import views.html.ldapviews._
-import play.api.mvc._
 import org.incal.play.security.SecurityUtil._
 
 import scala.concurrent.ExecutionContext.Implicits.global

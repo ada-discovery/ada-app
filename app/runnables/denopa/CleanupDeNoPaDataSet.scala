@@ -6,7 +6,7 @@ import org.ada.server.models.{DataSetSetting, StorageType}
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import runnables.denopa.DataSetId._
-import services.DataSetService
+import org.ada.server.services.DataSetService
 
 class CleanupDeNoPaBaseline @Inject()(dataSetService: DataSetService) extends FutureRunnable {
   override def runAsFuture =

@@ -33,15 +33,15 @@ import play.api.libs.json._
 import play.api.mvc.Results.{Redirect, _}
 import play.api.data.Forms.{mapping, _}
 import reactivemongo.bson.BSONObjectID
-import services.{UserManager, _}
+import org.ada.server.services.{UserManager, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Filter => _, _}
 import reactivemongo.play.json.BSONFormats._
-import services.ml.MachineLearningService
+import org.ada.server.services.ml.MachineLearningService
 import views.html.dataset
 import org.ada.server.models.DataSetTransformation._
 import org.ada.server.calc.impl.{ChiSquareResult, IndependenceTestResult, OneWayAnovaResult, Quartiles}
-import services.StatsService
+import org.ada.server.services.StatsService
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import org.ada.server.field.{FieldType, FieldTypeHelper}
 import controllers.FilterConditionExtraFormats.coreFilterConditionFormat
@@ -59,7 +59,8 @@ import org.incal.play.formatters._
 import org.incal.play.security.AuthAction
 import org.incal.play.security.SecurityRole
 import org.incal.spark_ml.models.VectorScalerType
-import services.importers.TranSMARTService
+import org.ada.server.services.importers.TranSMARTService
+import services.{DataSpaceService, WidgetGenerationService}
 import services.widgetgen.DistributionWidgetGeneratorHelper
 
 import scala.math.Ordering.Implicits._

@@ -6,7 +6,7 @@ import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import org.incal.core.dataaccess.Criterion.Infix
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
-import services.DataSetService
+import org.ada.server.services.DataSetService
 import org.ada.server.dataaccess.JsonUtil
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.writeStringAsStream

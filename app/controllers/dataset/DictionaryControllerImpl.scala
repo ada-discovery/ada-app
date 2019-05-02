@@ -25,13 +25,14 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.mvc.{Action, Request}
 import reactivemongo.bson.BSONObjectID
-import services._
+import org.ada.server.services._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import services.StatsService
+import org.ada.server.services.StatsService
 import org.ada.server.field.FieldUtil
 import org.ada.server.dataaccess.JsonUtil.unescapeKey
 import org.ada.server.models.ml.classification.ClassificationResult
 import org.ada.server.field.FieldUtil.caseClassToFlatFieldTypes
+import services.{DataSpaceService, WidgetGenerationService}
 import views.html.{dataview, dictionary => view}
 import util.toHumanReadableCamel
 

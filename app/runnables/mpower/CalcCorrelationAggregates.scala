@@ -6,7 +6,7 @@ import org.ada.server.models.{Field, FieldTypeId, StorageType}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json._
-import services.DataSetService
+import org.ada.server.services.DataSetService
 import controllers.mpower._
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.incal.core.InputFutureRunnable

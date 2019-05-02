@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.ada.server.field.{FieldTypeHelper, FieldTypeInferrerFactory}
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
-import services.DataSetService
+import org.ada.server.services.DataSetService
 
 class InferPPMIClinicalDataSet @Inject()(dataSetService: DataSetService) extends FutureRunnable {
 

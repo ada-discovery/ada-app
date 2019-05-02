@@ -21,7 +21,7 @@ import play.api.libs.json.__
 import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import security.AdaAuthConfig
-import services.UserManager
+import org.ada.server.services.UserManager
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import views.html.{layout, htmlSnippet => view}

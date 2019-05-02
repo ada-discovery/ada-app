@@ -14,7 +14,8 @@ import org.incal.core.util.{hasNonAlphanumericUnderscore, nonAlphanumericToUnder
 import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassificationResult, TemporalClassificationResult}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
-import services.{DataSetService, DataSpaceService}
+import org.ada.server.services.DataSetService
+import services.DataSpaceService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

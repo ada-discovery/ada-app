@@ -6,7 +6,7 @@ import javax.inject.Inject
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.{GroupMapList, writeByteArrayStream}
-import services.DataSetService
+import org.ada.server.services.DataSetService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf

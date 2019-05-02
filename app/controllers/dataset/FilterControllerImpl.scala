@@ -28,7 +28,8 @@ import org.incal.play.Page
 import org.incal.play.controllers.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
 import org.incal.play.formatters.JsonFormatter
 import org.incal.play.security.SecurityRole
-import services.{DataSpaceService, UserManager}
+import org.ada.server.services.UserManager
+import services.DataSpaceService
 import views.html.{dataview, filters => view}
 
 import scala.concurrent.Future

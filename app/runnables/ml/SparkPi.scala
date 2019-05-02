@@ -3,7 +3,7 @@ package runnables.ml
 import javax.inject.Inject
 
 import org.incal.play.GuiceRunnableApp
-import services.SparkApp
+import org.ada.server.services.SparkApp
 
 import scala.math.random
 

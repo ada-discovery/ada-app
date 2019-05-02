@@ -6,7 +6,7 @@ import be.objectify.deadbolt.scala.cache.HandlerCache
 import models.security.DeadboltUser
 import org.incal.play.security.DeadboltHandlerKeys
 import play.api.mvc.Request
-import services.UserManager
+import org.ada.server.services.UserManager
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

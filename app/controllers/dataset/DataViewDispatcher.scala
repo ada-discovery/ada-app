@@ -10,7 +10,7 @@ import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import security.AdaAuthConfig
 import org.incal.core.FilterCondition
-import services.UserManager
+import org.ada.server.services.UserManager
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

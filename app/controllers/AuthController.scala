@@ -8,7 +8,8 @@ import play.api.libs.json._
 import play.api.mvc._
 import play.api.data.Forms._
 import play.api.data._
-import services.{MailClientProvider, UserManager}
+import org.ada.server.services.UserManager
+import services.MailClientProvider
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._

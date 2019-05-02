@@ -6,7 +6,7 @@ import org.ada.server.dataaccess.RepoTypes.MessageRepo
 import play.api.{Configuration, Logger}
 import play.api.Play.current
 import play.api.data.Form
-import util.MessageLogger
+import org.ada.server.util.MessageLogger
 import org.ada.server.util.ClassFinderUtil.findClasses
 import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
 import org.incal.play.controllers.BaseController
@@ -14,7 +14,7 @@ import views.html.{admin => adminviews}
 import java.{util => ju}
 
 import org.incal.core.InputRunnable
-import services.UserManager
+import org.ada.server.services.UserManager
 
 import scala.reflect.ClassTag
 import scala.concurrent.ExecutionContext.Implicits.global

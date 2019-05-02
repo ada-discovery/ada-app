@@ -9,7 +9,7 @@ import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
 import org.incal.core.util.{seqFutures, writeStringAsStream}
-import services.StatsService
+import org.ada.server.services.StatsService
 import org.ada.server.calc.impl.{ChiSquareResult, OneWayAnovaResult}
 
 import scala.reflect.runtime.universe.typeOf

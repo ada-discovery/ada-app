@@ -9,7 +9,7 @@ import org.ada.server.field.FieldTypeHelper
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.ada.server.dataaccess.RepoTypes.RegressorRepo
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
-import services.ml.MachineLearningService
+import org.ada.server.services.ml.MachineLearningService
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
 import org.incal.spark_ml.models.VectorScalerType

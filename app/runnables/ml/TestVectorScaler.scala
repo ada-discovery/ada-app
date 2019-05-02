@@ -8,7 +8,7 @@ import org.apache.spark.sql.DataFrame
 import org.incal.spark_ml.models.VectorScalerType
 import org.incal.play.GuiceRunnableApp
 import org.incal.spark_ml.transformers._
-import services.SparkApp
+import org.ada.server.services.SparkApp
 
 class TestVectorScaler @Inject()(sparkApp: SparkApp) extends Runnable {
 

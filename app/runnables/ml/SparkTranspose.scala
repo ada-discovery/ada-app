@@ -3,7 +3,7 @@ package runnables.ml
 import javax.inject.Inject
 
 import org.apache.spark.ml.linalg.Vectors
-import services.SparkApp
+import org.ada.server.services.SparkApp
 import org.incal.play.GuiceRunnableApp
 import org.incal.spark_ml.SparkUtil
 

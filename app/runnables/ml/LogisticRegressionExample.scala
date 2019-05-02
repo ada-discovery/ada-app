@@ -13,7 +13,7 @@ import org.apache.spark.sql.types._
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json.JsObject
 import org.incal.play.GuiceRunnableApp
-import services.SparkApp
+import org.ada.server.services.SparkApp
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global

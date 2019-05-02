@@ -7,7 +7,7 @@ import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactor
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
 import org.incal.spark_ml.models.VectorScalerType
-import services.ml.MachineLearningService
+import org.ada.server.services.ml.MachineLearningService
 import org.incal.spark_ml.models.regression.RegressionEvalMetric
 import org.incal.spark_ml.models.setting.{TemporalGroupIOSpec, TemporalRegressionLearningSetting}
 

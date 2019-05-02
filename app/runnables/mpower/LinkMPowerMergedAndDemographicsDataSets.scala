@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.ada.server.models.StorageType
 import org.ada.server.models.{DataSetLinkSpec, DerivedDataSetSpec}
 import org.incal.core.InputFutureRunnable
-import services.DataSetService
+import org.ada.server.services.DataSetService
 
 import scala.reflect.runtime.universe.typeOf
 

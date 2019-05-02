@@ -20,7 +20,7 @@ import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
 import org.incal.core.util.seqFutures
 import services.DataSpaceService
 import services.ml.RCPredictionService
-import util.MessageLogger
+import org.ada.server.util.MessageLogger
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

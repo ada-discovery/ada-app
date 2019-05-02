@@ -9,7 +9,7 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.libs.json._
 import org.incal.core.InputFutureRunnable
-import services.DataSetService
+import org.ada.server.services.DataSetService
 import org.incal.core.dataaccess.Criterion._
 
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -9,7 +9,7 @@ import org.ada.server.models.ml.IOJsonTimeSeriesSpec
 import org.ada.server.dataaccess.RepoTypes.RegressorRepo
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
-import services.ml.MachineLearningService
+import org.ada.server.services.ml.MachineLearningService
 import org.incal.core.InputFutureRunnable
 import org.incal.spark_ml.models.ValueOrSeq.ValueOrSeq
 import org.incal.spark_ml.models.ReservoirSpec
