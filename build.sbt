@@ -41,9 +41,9 @@ routesImport ++= Seq(
 val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-server" % "0.7.3.RC.4",
+  "org.adada" %% "ada-server" % "0.7.3.RC.4.1",
   "org.in-cal" %% "incal-play" % "0.1.6",
-  "com.typesafe.play" %% "play-java-ws" % playVersion,
+//  "com.typesafe.play" %% "play-java-ws" % playVersion,
   "jp.t2v" %% "play2-auth" % "0.14.1",
   "org.webjars" % "bootstrap" % "3.3.7",
   "org.webjars" % "bootswatch-united" % "3.3.4+1",
@@ -67,12 +67,12 @@ libraryDependencies ++= Seq(
 //  "org.in-cal" %% "incal-spark_ml" % "0.1.3"  exclude("com.fasterxml.jackson.core", "jackson-databind"),
   //  "io.netty" % "netty-all" % "4.0.56.Final",
   "commons-net" % "commons-net" % "3.5",   // for ftp access
-  "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
+//  "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
   "com.typesafe.play" %% "play-mailer" % "4.0.0",
   "org.apache.ignite" % "ignite-spark" % "1.6.0",
-  "com.github.lejon.T-SNE-Java" % "tsne" % "v2.5.0"	,// t-SNE Java
-  "org.scalanlp" %% "breeze" % "0.13.2",        // linear algebra and stuff
-  "org.scalanlp" %% "breeze-natives" % "0.13.2",  // linear algebra and stuff (native)
+//  "com.github.lejon.T-SNE-Java" % "tsne" % "v2.5.0"	,// t-SNE Java
+//  "org.scalanlp" %% "breeze" % "0.13.2",        // linear algebra and stuff
+//  "org.scalanlp" %% "breeze-natives" % "0.13.2",  // linear algebra and stuff (native)
 //  "org.scalanlp" %% "breeze-viz" % "0.13.2",    // breeze visualization
   "org.deeplearning4j" %% "scalnet" % "1.0.0-beta3",
 // "org.deeplearning4j" % "deeplearning4j-core" % "1.0.0-beta3",  
