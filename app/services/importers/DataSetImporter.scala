@@ -1,4 +1,4 @@
-package services.datasetimporter
+package services.importers
 
 import java.nio.charset.{Charset, MalformedInputException, UnsupportedCharsetException}
 import java.text.DecimalFormat

@@ -119,7 +119,7 @@
 }
 
 @concreteClassName(clazz: Class[_]) = @{
-    toHumanReadableCamel(clazz.getName.split("\\.")(1).replaceAll("WidgetSpec", ""))
+    toHumanReadableCamel(clazz.getSimpleName.replaceAll("WidgetSpec", ""))
 }
 
 @gridWidthElement(widgetSpec: WidgetSpec) = {

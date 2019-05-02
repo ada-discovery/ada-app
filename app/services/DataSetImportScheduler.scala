@@ -9,7 +9,7 @@ import org.ada.server.models._
 import org.ada.server.dataaccess.RepoTypes.DataSetImportRepo
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
-import services.datasetimporter.DataSetImporterCentral
+import services.importers.DataSetImporterCentral
 
 import collection.mutable.{Map => MMap}
 import scala.concurrent.{Await, ExecutionContext, Future}
