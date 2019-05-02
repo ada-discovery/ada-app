@@ -1,23 +1,23 @@
-package services
-
-import javax.inject.{Inject, Singleton}
+package services.importers
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.fasterxml.jackson.core.JsonParseException
 import com.google.inject.assistedinject.Assisted
-import play.api.libs.json.{JsArray, JsObject}
-import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
-import play.api.Configuration
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import javax.inject.Inject
 import org.ada.server.dataaccess.JsonUtil._
 import org.ada.server.models.redcap.JsonFormat._
 import org.ada.server.models.redcap._
 import org.asynchttpclient.DefaultAsyncHttpClientConfig
+import play.api.Configuration
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{JsArray, JsObject}
 import play.api.libs.ws.ahc.AhcWSClient
-import scala.concurrent.duration._
+import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
+import services.{AdaRestException, AdaUnauthorizedAccessRestException}
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 trait RedCapServiceFactory {
   def apply(@Assisted("url") url: String, @Assisted("token") token: String): RedCapService

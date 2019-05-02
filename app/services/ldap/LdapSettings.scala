@@ -1,4 +1,4 @@
-package ldap
+package services.ldap
 
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.config.ConfigValue
@@ -38,7 +38,7 @@ class LdapSettings @Inject()(configuration: Configuration) extends Enumeration{
   val abandonOnTimeout: Option[Boolean] = configuration.getBoolean("ldap.abandonOnTimeout")
 
   def toList(): List[(String, ConfigValue)] = {
-    val subconfig: Option[Configuration] = configuration.getConfig("ldap")
+    val subconfig: Option[Configuration] = configuration.getConfig("services/ldap")
     subconfig match{
       case Some(c) => c.entrySet.toList
       case None => List()

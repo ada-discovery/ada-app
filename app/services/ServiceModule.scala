@@ -4,6 +4,7 @@ import com.google.inject.assistedinject.FactoryModuleBuilder
 import org.ada.server.dataaccess.ignite.IgniteFactory
 import net.codingwell.scalaguice.ScalaModule
 import org.apache.ignite.Ignite
+import services.importers._
 
 class ServiceModule extends ScalaModule {
 

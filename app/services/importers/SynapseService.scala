@@ -1,22 +1,20 @@
-package services
+package services.importers
 
-import java.io._
-import javax.inject.Inject
-
+import akka.util.ByteString
 import com.google.inject.assistedinject.Assisted
+import javax.inject.Inject
+import org.ada.server.models.synapse.JsonFormat._
 import org.ada.server.models.synapse._
+import org.incal.core.util.{ZipFileIterator, retry}
+import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import play.api.{Configuration, Logger}
-import play.api.libs.json.{JsObject, Json}
+import services.{AdaRestException, AdaUnauthorizedAccessRestException}
 
-import scala.concurrent.{Await, Future}
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await.result
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import org.ada.server.models.synapse.JsonFormat._
-import org.incal.core.util.ZipFileIterator
-import org.incal.core.util.retry
-import akka.util.ByteString
 
 trait SynapseServiceFactory {
   def apply(@Assisted("username") username: String, @Assisted("password") password: String): SynapseService

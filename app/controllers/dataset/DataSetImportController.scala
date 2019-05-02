@@ -2,7 +2,7 @@ package controllers.dataset
 
 import java.util.{Date, UUID}
 
-import services.importers.DataSetImporterCentral
+import services.importers.{DataSetImportScheduler, DataSetImporterCentral}
 
 import scala.concurrent.duration._
 import javax.inject.Inject
@@ -24,7 +24,7 @@ import reactivemongo.play.json.BSONFormats._
 import java.io.{File, FileInputStream, FileOutputStream}
 import java.nio.file.{Files, Paths}
 
-import services.{DataSetImportScheduler, DataSetService, DataSpaceService}
+import services.{DataSetService, DataSpaceService}
 import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
 import views.html.{datasetimport => view}
 import views.html.layout

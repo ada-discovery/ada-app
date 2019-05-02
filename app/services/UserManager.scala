@@ -2,7 +2,7 @@ package services
 
 import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Singleton}
-import ldap.{LdapService, LdapSettings}
+import services.ldap.{LdapService, LdapSettings}
 import models.security.LdapUser
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.models.User

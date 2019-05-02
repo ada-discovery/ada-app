@@ -1,24 +1,19 @@
-package services
+package services.importers
 
-import java.util.{Calendar, Date}
+import java.util.Calendar
 
-import com.google.inject.ImplementedBy
-import javax.inject.{Inject, Named, Singleton}
-import com.google.inject.ImplementedBy
-import org.ada.server.models._
+import akka.actor.{ActorSystem, Cancellable}
+import javax.inject.Inject
+import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.DataSetImportRepo
+import org.ada.server.models.dataimport.ScheduledTime
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
-import services.importers.DataSetImporterCentral
 
-import collection.mutable.{Map => MMap}
-import scala.concurrent.{Await, ExecutionContext, Future}
-import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable}
-import org.ada.server.AdaException
-import org.ada.server.models.dataimport.ScheduledTime
-
+import scala.collection.mutable.{Map => MMap}
+import scala.concurrent.Await.result
 import scala.concurrent.duration._
-import Await.result
+import scala.concurrent.{ExecutionContext, Future}
 
 trait DataSetImportScheduler {
 

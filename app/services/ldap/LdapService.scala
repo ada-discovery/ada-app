@@ -1,4 +1,4 @@
-package ldap
+package services.ldap
 
 import javax.inject.{Inject, Singleton}
 import com.google.inject.ImplementedBy

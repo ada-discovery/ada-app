@@ -1,13 +1,12 @@
-package services
+package services.importers
 
-import javax.inject.{Inject, Singleton}
-
-import org.ada.server.dataaccess.JsonUtil.jsonsToCsv
 import com.google.inject.ImplementedBy
-import org.ada.server.models.{Category, Field}
-import org.ada.server.dataaccess.AdaConversionException
-import org.ada.server.field.{FieldType, FieldTypeHelper}
+import javax.inject.Singleton
 import org.ada.server.AdaException
+import org.ada.server.dataaccess.AdaConversionException
+import org.ada.server.dataaccess.JsonUtil.jsonsToCsv
+import org.ada.server.field.{FieldType, FieldTypeHelper}
+import org.ada.server.models.{Category, Field}
 import play.api.libs.json._
 
 @ImplementedBy(classOf[TranSMARTServiceImpl])

@@ -1,22 +1,21 @@
-package services
-
-import javax.inject.Inject
+package services.importers
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.util.ByteString
 import com.google.inject.assistedinject.Assisted
+import javax.inject.Inject
 import org.ada.server.dataaccess.ConversionUtil
 import org.ada.server.models.egait.{EGaitKineticData, SpatialPoint}
-import play.api.libs.ws._
-import play.api.{Configuration, Logger}
-import org.apache.commons.codec.binary.{Base64, Hex}
+import org.apache.commons.codec.binary.Base64
 import org.asynchttpclient.DefaultAsyncHttpClientConfig
-import play.api.libs.ws.ahc.AhcWSClient
 import org.incal.core.util.ZipFileIterator
+import play.api.libs.ws._
+import play.api.libs.ws.ahc.AhcWSClient
+import play.api.{Configuration, Logger}
 
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.xml.{Node, XML}
 

@@ -3,7 +3,7 @@ package controllers
 import com.google.inject.{AbstractModule, Key, TypeLiteral}
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import controllers.dataset._
-import services.{DataSetImportScheduler, DataSetImportSchedulerImpl}
+import services.DataSetImportSchedulerImpl
 
 class ControllerModule extends AbstractModule {
 

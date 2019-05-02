@@ -59,6 +59,7 @@ import org.incal.play.formatters._
 import org.incal.play.security.AuthAction
 import org.incal.play.security.SecurityRole
 import org.incal.spark_ml.models.VectorScalerType
+import services.importers.TranSMARTService
 import services.widgetgen.DistributionWidgetGeneratorHelper
 
 import scala.math.Ordering.Implicits._

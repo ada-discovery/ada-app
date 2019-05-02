@@ -12,7 +12,7 @@ import org.ada.server.field.{FieldType, FieldTypeHelper}
 import org.ada.server.models.synapse._
 import play.api.Configuration
 import play.api.libs.json.{JsArray, JsObject, Json}
-import services.{SynapseService, SynapseServiceFactory}
+import services.SynapseServiceFactory
 import org.ada.server.dataaccess.JsonUtil
 import org.ada.server.field.FieldUtil.specToField
 import org.incal.core.util.nonAlphanumericToUnderscore

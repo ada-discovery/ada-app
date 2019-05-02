@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import ldap.{LdapSettings, LdapService}
+import services.ldap.{LdapSettings, LdapService}
 import org.incal.play.controllers.BaseController
 import views.html.ldapviews._
 import play.api.mvc._

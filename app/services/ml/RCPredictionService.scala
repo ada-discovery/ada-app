@@ -665,43 +665,6 @@ object RCPredictionStaticHelper extends Serializable {
     val ioStream = createIOStream
     call(ioStream)
   }
-
-  def scaleSeriesJava(
-    session: SparkSession)(
-    series: Seq[Seq[jl.Double]],
-    transformType: VectorScalerType.Value
-  ): Future[Seq[Seq[jl.Double]]] = {
-    val javaSeries: Seq[Seq[Double]] = series.map(_.map(_.toDouble))
-
-    for {
-      outputSeries <- scaleSeries(session)(javaSeries, transformType)
-    } yield
-      outputSeries.map(_.map(jl.Double.valueOf(_)))
-  }
-
-  def scaleSeries(
-    session: SparkSession)(
-    inputSeries: Seq[Seq[Double]],
-    transformType: VectorScalerType.Value
-  ): Future[Seq[Seq[Double]]] = {
-    val rows = inputSeries.zipWithIndex.map { case (oneSeries, index) =>
-      (index, Vectors.dense(oneSeries.toArray))
-    }
-
-    val df = session.createDataFrame(rows).toDF("id", "features")
-    val newDf = VectorColumnScaler(transformType).fit(df).transform(df)
-
-    for {
-      rows <- newDf.select("scaledFeatures").rdd.collectAsync()
-    } yield {
-      newDf.unpersist()
-      df.unpersist()
-
-      rows.map(row =>
-        row.getAs[Vector](0).toArray: Seq[Double]
-      )
-    }
-  }
 }
 
 case class RCPredictionResults(

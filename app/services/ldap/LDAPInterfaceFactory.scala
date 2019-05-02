@@ -1,4 +1,4 @@
-package ldap
+package services.ldap
 
 import javax.net.ssl.{SSLContext, SSLSocketFactory}
 import com.unboundid.ldap.listener.{InMemoryDirectoryServer, InMemoryDirectoryServerConfig, InMemoryListenerConfig}
@@ -16,7 +16,7 @@ object LDAPInterfaceFactory {
   private val logger = Logger
 
   /**
-    * Creates an LDAP inmemory server for testing.
+    * Creates an LDAP in-memory server for testing.
     * Builds user permissions and roles from PermissionCache and RoleCache.
     * Feed users from user database into server.
     * @return dummy server
