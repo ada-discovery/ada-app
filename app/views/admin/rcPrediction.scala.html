@@ -9,6 +9,7 @@
 @import org.incal.play.controllers.WebContext._
 @import org.ada.server.models.RCPredictionSettings
 @import com.banda.network.domain.ActivationFunctionType
+@import org.ada.web.util.enumToValueString
 
 @(
     form: Form[RCPredictionSettings],
@@ -32,7 +33,7 @@
 }
 
 @selectEnumAux(fieldName: String, enum: Enumeration) = {
-    @select("rcPredictionSettings", fieldName, form, util.enumToValueString(enum), true, Nil, 3)
+    @select("rcPredictionSettings", fieldName, form, enumToValueString(enum), true, Nil, 3)
 }
 
 @selectJavaEnumAux(fieldName: String, clazz: Class[_]) = {

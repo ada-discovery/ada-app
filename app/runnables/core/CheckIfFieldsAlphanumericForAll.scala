@@ -10,7 +10,7 @@ import play.api.Logger
 import org.incal.core.{FutureRunnable, InputFutureRunnable}
 import org.incal.core.util.{seqFutures, hasNonAlphanumericUnderscore}
 import reactivemongo.bson.BSONObjectID
-import services.DataSpaceService
+import org.ada.web.services.DataSpaceService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

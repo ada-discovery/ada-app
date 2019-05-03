@@ -1,6 +1,6 @@
 package runnables.dl4j
 
-import controllers.core.GenericMapping
+import org.ada.web.controllers.core.GenericMapping
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration
 import org.deeplearning4j.nn.graph.ComputationGraph
 import org.incal.core.InputRunnable

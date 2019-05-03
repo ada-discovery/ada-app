@@ -10,7 +10,7 @@ import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.models.DataSpaceMetaInfo
 import org.ada.server.AdaException
 import reactivemongo.bson.BSONObjectID
-import services.DataSpaceService
+import org.ada.web.services.DataSpaceService
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global

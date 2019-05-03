@@ -18,7 +18,7 @@ import org.incal.play.controllers._
 import org.incal.play.formatters._
 import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
 import org.incal.core.util.seqFutures
-import services.DataSpaceService
+import org.ada.web.services.DataSpaceService
 import services.ml.RCPredictionService
 import org.ada.server.util.MessageLogger
 

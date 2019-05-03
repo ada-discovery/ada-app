@@ -15,7 +15,7 @@ import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassific
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import org.ada.server.services.DataSetService
-import services.DataSpaceService
+import org.ada.web.services.DataSpaceService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
