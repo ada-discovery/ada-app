@@ -5,7 +5,7 @@
 function activateDataSetFilter(filterElement, jsonConditions, filterId, submitAjaxFun, getFieldsUrl, listFiltersUrl) {
     var saveFilterAjaxFun = function(filter) {
         var filterJson = JSON.stringify(filter)
-        filterJsRoutes.controllers.dataset.FilterDispatcher.saveAjax(filterJson).ajax( {
+        filterJsRoutes.org.ada.web.controllers.dataset.FilterDispatcher.saveAjax(filterJson).ajax( {
             success: function(data) {
                 showMessage("Filter '" + filter.name + "' successfully saved.");
             },
@@ -36,7 +36,7 @@ function saveFilterToView(viewId) {
         return $(filterElement).multiFilter('getIdOrModel');
     });
 
-    dataViewJsRoutes.controllers.dataset.DataViewDispatcher.saveFilter(
+    dataViewJsRoutes.org.ada.web.controllers.dataset.DataViewDispatcher.saveFilter(
         viewId,
         JSON.stringify(filterOrIds)
     ).ajax( {
@@ -60,7 +60,7 @@ function refreshViewOnFilterUpdate(viewId, filterOrId, filterElement, widgetGrid
     var totalCount = counts.reduce(function (a, b) {return a + b;}, 0);
     var oldCountDiff = totalCount - counts[index];
 
-    dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getViewElementsAndWidgetsCallback(viewId, "", filterOrId, oldCountDiff).ajax( {
+    dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getViewElementsAndWidgetsCallback(viewId, "", filterOrId, oldCountDiff).ajax( {
         success: function(data) {
             // filter
             filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
@@ -94,7 +94,7 @@ function addNewViewColumn(viewId, widgetGridElementWidth, enforceWidth, activate
     // total count
     var totalCount = getViewTotalCount();
 
-    dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getNewFilterViewElementsAndWidgetsCallback(viewId, "", totalCount).ajax( {
+    dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getNewFilterViewElementsAndWidgetsCallback(viewId, "", totalCount).ajax( {
         success: function(data) {
             // filter
             var filterTd = $("<td style='padding-left: 10px; vertical-align:top'>")
@@ -140,7 +140,7 @@ function getViewTotalCount() {
 
 function addAllowedValuesUpdateForFilter(filterElement) {
     $(filterElement).find("#fieldNameTypeahead").on('typeahead:select', function (e, field) {
-        dataSetJsRoutes2.controllers.dataset.DataSetDispatcher.getFieldTypeWithAllowedValues(field.key).ajax({
+        dataSetJsRoutes2.org.ada.web.controllers.dataset.DataSetDispatcher.getFieldTypeWithAllowedValues(field.key).ajax({
             success: function (data) {
                 updateFilterValueElement($(filterElement), data)
             },
@@ -159,7 +159,7 @@ function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, defaul
     widgetsDiv.html("")
     addSpinner(widgetsDiv, "margin-bottom: 20px;")
 
-    dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getWidgets().ajax( {
+    dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getWidgets().ajax( {
         data: {
             "callbackId": callbackId
         },
@@ -191,7 +191,7 @@ function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, defaul
 }
 
 function updateAllWidgetsFromCallback(callbackId, defaultElementWidth) {
-    dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getWidgets().ajax( {
+    dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getWidgets().ajax( {
         data: {
             "callbackId": callbackId
         },
@@ -226,7 +226,7 @@ function updateAllWidgetsFromCallback(callbackId, defaultElementWidth) {
 ///////////
 
 function showJsonFieldValue(id, fieldName, fieldLabel, isArray) {
-    dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
+    dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
         success: function(data) {
             var title =  fieldLabel
             var size = 0
@@ -251,7 +251,7 @@ function showJsonFieldValue(id, fieldName, fieldLabel, isArray) {
 }
 
 function showArrayFieldChart(id, fieldName, fieldLabel) {
-    dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
+    dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
         success: function(data) {
             $("#lineChartDiv").html("")
 

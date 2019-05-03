@@ -291,23 +291,23 @@ function genericWidget(widget, filterElement) {
 function genericWidgetForElement(widgetId, widget, filterElement) {
     if(widget.displayOptions.isTextualForm)
         switch (widget.concreteClass) {
-            case "models.CategoricalCountWidget": categoricalTableWidget(widgetId, widget); break;
-            case "models.NumericalCountWidget": numericalTableWidget(widgetId, widget); break;
-            case "models.BasicStatsWidget": basicStatsWidget(widgetId, widget); break;
+            case "org.ada.web.models.CategoricalCountWidget": categoricalTableWidget(widgetId, widget); break;
+            case "org.ada.web.models.NumericalCountWidget": numericalTableWidget(widgetId, widget); break;
+            case "org.ada.web.models.BasicStatsWidget": basicStatsWidget(widgetId, widget); break;
             default: console.log(widget.concreteClass + " does not have a textual representation.")
         }
     else
         switch (widget.concreteClass) {
-            case "models.CategoricalCountWidget": categoricalCountWidget(widgetId, widget, filterElement); break;
-            case "models.NumericalCountWidget": numericalCountWidget(widgetId, widget, filterElement); break;
-            case "models.BoxWidget": boxWidget(widgetId, widget); break;
-            case "models.ScatterWidget": scatterWidget(widgetId, widget, filterElement); break;
-            case "models.ValueScatterWidget": valueScatterWidget(widgetId, widget, filterElement); break;
-            case "models.HeatmapWidget": heatmapWidget(widgetId, widget); break;
-            case "models.HtmlWidget": htmlWidget(widgetId, widget); break;
-            case 'models.LineWidget': lineWidget(widgetId, widget); break;
-            case "models.BasicStatsWidget": basicStatsWidget(widgetId, widget); break;
-            case "models.IndependenceTestWidget": independenceTestWidget(widgetId, widget); break;
+            case "org.ada.web.models.CategoricalCountWidget": categoricalCountWidget(widgetId, widget, filterElement); break;
+            case "org.ada.web.models.NumericalCountWidget": numericalCountWidget(widgetId, widget, filterElement); break;
+            case "org.ada.web.models.BoxWidget": boxWidget(widgetId, widget); break;
+            case "org.ada.web.models.ScatterWidget": scatterWidget(widgetId, widget, filterElement); break;
+            case "org.ada.web.models.ValueScatterWidget": valueScatterWidget(widgetId, widget, filterElement); break;
+            case "org.ada.web.models.HeatmapWidget": heatmapWidget(widgetId, widget); break;
+            case "org.ada.web.models.HtmlWidget": htmlWidget(widgetId, widget); break;
+            case 'org.ada.web.models.LineWidget': lineWidget(widgetId, widget); break;
+            case "org.ada.web.models.BasicStatsWidget": basicStatsWidget(widgetId, widget); break;
+            case "org.ada.web.models.IndependenceTestWidget": independenceTestWidget(widgetId, widget); break;
             default: console.log("Widget type" + widget.concreteClass + " unrecognized.")
         }
 }
