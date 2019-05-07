@@ -3,7 +3,7 @@ package runnables.dl4j
 import org.ada.web.controllers.core.GenericMapping
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration
 import org.deeplearning4j.nn.graph.ComputationGraph
-import org.incal.core.InputRunnable
+import org.incal.core.runnables.InputRunnable
 import org.incal.core.util.writeStringAsStream
 import org.nd4j.evaluation.EvaluationAveraging
 import org.nd4j.evaluation.classification.{Evaluation, ROC}

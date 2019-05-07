@@ -1,6 +1,6 @@
 package runnables.dl4j
 
-import org.incal.core.InputRunnable
+import org.incal.core.runnables.InputRunnable
 
 import scala.reflect.runtime.universe.typeOf
 

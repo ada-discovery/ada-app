@@ -6,7 +6,7 @@ import com.google.inject.Inject
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.ada.server.models.FieldTypeId
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import runnables.core.CalcUtil._

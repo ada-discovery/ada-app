@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import org.apache.commons.lang3.StringEscapeUtils
 import play.api.Logger
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.ada.server.services.StatsService
 
 import scala.concurrent.ExecutionContext.Implicits.global

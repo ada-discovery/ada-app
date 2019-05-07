@@ -7,7 +7,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.google.inject.Inject
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.incal.core.dataaccess.AscSort
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject

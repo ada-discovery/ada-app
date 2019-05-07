@@ -7,7 +7,7 @@ import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.ada.server.models.DataSpaceMetaInfo
 import org.ada.server.AdaException
 import play.api.Logger
-import org.incal.core.{FutureRunnable, InputFutureRunnable}
+import org.incal.core.runnables.{FutureRunnable, InputFutureRunnable}
 import org.incal.core.util.{seqFutures, hasNonAlphanumericUnderscore}
 import reactivemongo.bson.BSONObjectID
 import org.ada.web.services.DataSpaceService

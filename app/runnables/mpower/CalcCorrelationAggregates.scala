@@ -9,7 +9,7 @@ import play.api.libs.json._
 import org.ada.server.services.DataSetService
 import controllers.mpower._
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.util.{seqFutures, GroupMapList}
 import play.api.Logger

@@ -4,7 +4,7 @@ import javax.inject.Inject
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.models.FieldTypeId
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion.Infix
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.incal.core.dataaccess.EqualsCriterion

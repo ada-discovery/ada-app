@@ -3,7 +3,7 @@ package runnables.mpower
 import javax.inject.Inject
 
 import org.ada.server.models.{Field, FieldTypeId, StorageType}
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json._
 import org.ada.server.services.DataSetService

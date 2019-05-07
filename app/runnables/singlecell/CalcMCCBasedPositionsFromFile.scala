@@ -6,7 +6,7 @@ import com.google.inject.Inject
 import org.ada.server.models.{Field, FieldTypeId}
 import org.ada.server.AdaException
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.util.{writeStringAsStream, listFiles, seqFutures}
 
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}

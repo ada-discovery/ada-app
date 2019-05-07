@@ -11,7 +11,7 @@ import org.ada.server.dataaccess.RepoTypes.RegressorRepo
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.services.ml.MachineLearningService
 import reactivemongo.bson.BSONObjectID
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.spark_ml.models.VectorScalerType
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.spark_ml.models.ValueOrSeq.ValueOrSeq

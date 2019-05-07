@@ -5,7 +5,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import org.ada.server.calc.CalculatorExecutors
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.ada.server.services.StatsService
 
 import scala.concurrent.ExecutionContext.Implicits.global

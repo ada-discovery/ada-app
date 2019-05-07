@@ -10,7 +10,7 @@ import org.ada.server.dataaccess.RepoTypes.ClassifierRepo
 import org.ada.server.dataaccess.dataset.{ClassificationResultRepoFactory, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.json.{JsObject, Json}
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.util.seqFutures
 import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassificationResult}
 import org.ada.server.services.DataSetService

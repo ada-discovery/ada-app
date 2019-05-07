@@ -4,7 +4,6 @@ import javax.inject.Inject
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.models.Filter
 import org.ada.server.AdaException
-import org.incal.core.{FilterCondition, InputFutureRunnable}
 import org.incal.core.util.seqFutures
 import org.incal.spark_ml.MLResultUtil
 import org.incal.spark_ml.models.setting.{ClassificationLearningSetting, ClassificationRunSpec, IOSpec}
@@ -16,6 +15,7 @@ import org.ada.server.services.DataSetService
 import org.ada.server.services.ml.MachineLearningService
 import org.ada.server.services.StatsService
 import org.ada.server.field.FieldUtil
+import org.incal.core.runnables.InputFutureRunnable
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

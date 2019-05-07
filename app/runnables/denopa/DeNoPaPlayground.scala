@@ -11,7 +11,7 @@ import play.api.Configuration
 import scala.concurrent.Future
 import scala.io.Source
 import org.ada.server.dataaccess.JsonUtil
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import org.ada.server.dataaccess.RepoTypes.TranslationRepo
 

@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json._
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.util.listFiles
 import org.ada.server.services.DataSetService
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING

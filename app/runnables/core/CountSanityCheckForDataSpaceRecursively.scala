@@ -2,7 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.util.seqFutures
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger

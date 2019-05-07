@@ -12,7 +12,7 @@ import com.banda.network.domain.ActivationFunctionType
 import org.ada.server.models.ExtendedReservoirLearningSetting
 import org.incal.core.dataaccess.Criterion.Infix
 import org.ada.server.models.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec}
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject

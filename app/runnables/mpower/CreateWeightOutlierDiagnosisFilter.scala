@@ -8,7 +8,7 @@ import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion, EqualsCriterion,
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.util.seqFutures
 import org.ada.server.services.StatsService
 

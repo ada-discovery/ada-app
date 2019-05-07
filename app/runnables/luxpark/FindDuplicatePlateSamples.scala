@@ -2,7 +2,7 @@ package runnables.luxpark
 
 import javax.inject.Inject
 
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import runnables.core.{FindDuplicates, FindDuplicatesSpec}
 
 class FindDuplicatePlateSamples @Inject()(findDuplicates: FindDuplicates) extends FutureRunnable {

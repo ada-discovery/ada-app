@@ -1,6 +1,6 @@
 package runnables.mpower
 
-import org.incal.core.InputRunnable
+import org.incal.core.runnables.InputRunnable
 import org.incal.core.util.listFiles
 
 import scala.io.Source

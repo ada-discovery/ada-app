@@ -11,7 +11,7 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Configuration
 import play.api.libs.json.{JsNumber, JsObject, Json}
 import reactivemongo.bson.BSONObjectID
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 
 import scala.concurrent.duration._

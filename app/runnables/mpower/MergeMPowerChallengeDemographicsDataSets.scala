@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.ada.server.models.StorageType
 import org.ada.server.models.DerivedDataSetSpec
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import org.ada.server.services.DataSetService
 

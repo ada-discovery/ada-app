@@ -8,7 +8,7 @@ import org.ada.server.models.{Field, FieldTypeId, StorageType}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.libs.json.{JsObject, _}
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.incal.core.util.GroupMapList
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.services.DataSetService

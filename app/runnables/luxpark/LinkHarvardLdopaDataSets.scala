@@ -5,7 +5,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import org.ada.server.models.StorageType
 import org.ada.server.models.{DataSetLinkSpec, DerivedDataSetSpec}
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.ada.server.services.DataSetService
 
 class LinkHarvardLdopaDataSets @Inject() (dataSetService: DataSetService) extends FutureRunnable {

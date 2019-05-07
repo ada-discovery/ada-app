@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.ada.server.field.{FieldTypeHelper, FieldTypeInferrerFactory}
 import org.ada.server.models.StorageType
 import org.ada.server.models.DataSetSetting
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.ada.server.services.DataSetService
 
 import scala.reflect.runtime.universe.typeOf

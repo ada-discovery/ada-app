@@ -9,7 +9,7 @@ import org.apache.commons.lang3.StringEscapeUtils
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.ada.server.services.StatsService
 import org.ada.server.field.FieldUtil.JsonFieldOps
 import org.incal.core.dataaccess.NotEqualsNullCriterion

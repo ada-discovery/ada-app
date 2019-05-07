@@ -6,7 +6,7 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json._
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.ada.server.services.DataSetService
 import org.ada.server.dataaccess.ignite.BinaryJsonUtil.getValueFromJson
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}

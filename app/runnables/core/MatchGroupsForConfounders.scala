@@ -3,7 +3,7 @@ package runnables.core
 import javax.inject.Inject
 
 import org.ada.server.models.DerivedDataSetSpec
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.FilterCondition.toCriteria
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID

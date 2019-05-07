@@ -3,7 +3,7 @@ package runnables.core
 import javax.inject.Inject
 
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.util.seqFutures

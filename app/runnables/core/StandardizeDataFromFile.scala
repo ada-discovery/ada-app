@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.apache.commons.lang3.StringEscapeUtils
 import play.api.Logger
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.ada.server.services.StatsService
 
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -2,7 +2,7 @@ package runnables.singlecell
 
 import org.ada.server.AdaException
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.InputRunnable
+import org.incal.core.runnables.InputRunnable
 import org.incal.core.util.{writeStringAsStream, listFiles}
 
 import scala.io.Source

@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.ada.server.models.{Field, FieldTypeId}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json._
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.util.seqFutures
 import org.ada.server.services.DataSetService
 import play.api.Logger

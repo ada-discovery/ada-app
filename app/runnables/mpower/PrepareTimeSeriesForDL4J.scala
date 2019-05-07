@@ -4,7 +4,7 @@ import java.nio.file.{Files, Paths}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.util.writeStringAsStream
 import org.ada.server.akka.AkkaStreamUtil.fileHeaderAndContentSource
 

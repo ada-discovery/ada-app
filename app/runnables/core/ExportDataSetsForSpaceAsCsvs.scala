@@ -8,7 +8,7 @@ import org.apache.commons.lang3.StringEscapeUtils
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.util.{seqFutures, writeStringAsStream}
 
 import scala.reflect.runtime.universe.typeOf

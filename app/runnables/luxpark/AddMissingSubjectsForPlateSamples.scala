@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import play.api.Logger
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.field.FieldTypeHelper
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory

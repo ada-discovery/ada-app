@@ -8,7 +8,7 @@ import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.libs.json._
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.ada.server.services.DataSetService
 import org.incal.core.dataaccess.Criterion._
 

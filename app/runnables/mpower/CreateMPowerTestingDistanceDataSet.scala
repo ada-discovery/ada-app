@@ -12,7 +12,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import org.ada.server.services.DataSetService
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import org.incal.core.util.seqFutures
 

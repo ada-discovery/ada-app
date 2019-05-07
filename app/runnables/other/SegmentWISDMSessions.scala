@@ -6,7 +6,7 @@ import org.ada.server.dataaccess.StreamSpec
 import javax.inject.Inject
 import org.ada.server.models.{Field, FieldTypeId}
 import org.ada.server.models.DerivedDataSetSpec
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger

@@ -6,7 +6,7 @@ import org.ada.server.field.FieldTypeHelper
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.util.writeStringAsStream
 import runnables.core.CalcUtil._
 import org.ada.server.services.{StatsService, TSNESetting}

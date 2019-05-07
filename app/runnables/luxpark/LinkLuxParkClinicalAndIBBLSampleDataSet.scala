@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import org.ada.server.models._
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json._
 import org.incal.core.dataaccess.Criterion.Infix

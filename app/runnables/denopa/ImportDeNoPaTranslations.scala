@@ -3,7 +3,7 @@ package runnables.denopa
 import javax.inject.{Inject, Named}
 
 import org.ada.server.models.Translation
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import org.ada.server.dataaccess.RepoTypes._
 import play.api.Configuration

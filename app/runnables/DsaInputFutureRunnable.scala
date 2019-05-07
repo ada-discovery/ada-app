@@ -3,7 +3,7 @@ package runnables
 import javax.inject.Inject
 
 import org.ada.server.AdaException
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 
 trait DsaInputFutureRunnable[I] extends InputFutureRunnable[I] {

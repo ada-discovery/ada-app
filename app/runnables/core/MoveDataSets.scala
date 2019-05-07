@@ -7,7 +7,7 @@ import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global

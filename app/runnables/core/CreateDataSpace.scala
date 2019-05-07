@@ -5,7 +5,7 @@ import javax.inject.Inject
 import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.ada.server.models.DataSpaceMetaInfo
 import reactivemongo.bson.BSONObjectID
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf

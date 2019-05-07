@@ -9,7 +9,7 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -9,7 +9,7 @@ import org.ada.server.dataaccess.StreamSpec
 import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.incal.core.dataaccess.Criterion._
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsNumber
 

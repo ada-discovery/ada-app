@@ -8,7 +8,7 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
 import org.ada.server.services.DataSetService
 import org.ada.server.dataaccess.JsonUtil
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.util.writeStringAsStream
 
 import scala.reflect.runtime.universe.typeOf

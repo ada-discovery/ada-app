@@ -9,7 +9,7 @@ import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.apache.commons.lang3.StringEscapeUtils
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.ada.server.services.StatsService
 import org.incal.core.util.writeStringAsStream
 

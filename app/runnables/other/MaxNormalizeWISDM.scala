@@ -4,7 +4,7 @@ import akka.stream.scaladsl.Flow
 import org.ada.server.dataaccess.StreamSpec
 import javax.inject.Inject
 import org.ada.server.models.DerivedDataSetSpec
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsNull, JsNumber, JsObject, Json}
 import org.ada.server.services.DataSetService

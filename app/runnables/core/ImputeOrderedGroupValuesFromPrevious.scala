@@ -10,7 +10,7 @@ import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.ada.server.models.DerivedDataSetSpec
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.dataaccess.NotEqualsNullCriterion
 import play.api.Logger

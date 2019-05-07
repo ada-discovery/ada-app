@@ -3,7 +3,7 @@ package runnables.singlecell
 import javax.inject.Inject
 
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.incal.core.util.writeStringAsStream
 

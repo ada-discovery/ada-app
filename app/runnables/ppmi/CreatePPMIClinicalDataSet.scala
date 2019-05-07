@@ -3,7 +3,7 @@ package runnables.ppmi
 import javax.inject.Inject
 
 import org.incal.core.dataaccess.Criterion._
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.incal.core.util.GroupMapList
 import org.ada.server.field.{FieldType, FieldTypeHelper}
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}

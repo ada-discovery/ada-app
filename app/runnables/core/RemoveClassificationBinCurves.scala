@@ -2,7 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 import play.api.Logger
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassificationResult, TemporalClassificationResult}
 import org.ada.server.dataaccess.dataset.ClassificationResultRepoFactory
 

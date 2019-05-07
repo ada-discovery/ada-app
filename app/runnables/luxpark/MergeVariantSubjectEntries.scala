@@ -2,7 +2,7 @@ package runnables.luxpark
 
 import org.ada.server.{AdaException, AdaParseException}
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.InputRunnable
+import org.incal.core.runnables.InputRunnable
 import org.incal.core.util.writeStringAsStream
 
 import scala.io.Source

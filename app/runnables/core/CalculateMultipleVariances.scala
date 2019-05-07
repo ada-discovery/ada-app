@@ -6,7 +6,7 @@ import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 import org.incal.core.util.writeStringAsStream
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.calc.CalculatorHelper._

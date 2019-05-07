@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
-import org.incal.core.InputFutureRunnable
+import org.incal.core.runnables.InputFutureRunnable
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io.Source

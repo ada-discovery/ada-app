@@ -4,13 +4,13 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.google.inject.Inject
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.{InputFutureRunnable, InputRunnable}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 
 import collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}
 import org.incal.core.dataaccess.Criterion._
-import org.incal.core.util.{writeStringAsStream, listFiles}
+import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.util.{listFiles, writeStringAsStream}
 import org.incal.core.util.GroupMapList
 
 import scala.reflect.runtime.universe.typeOf

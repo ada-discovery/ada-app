@@ -14,7 +14,7 @@ import runnables.denopa.DataSetId._
 import org.incal.play.GuiceRunnableApp
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.ada.server.dataaccess.dataset.CategoryRepo.saveRecursively
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.incal.core.util.nonAlphanumericToUnderscore
 
 import scala.concurrent.duration._

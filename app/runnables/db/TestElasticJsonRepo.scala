@@ -2,7 +2,7 @@ package runnables.db
 
 import com.google.inject.Inject
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
-import org.incal.core.FutureRunnable
+import org.incal.core.runnables.FutureRunnable
 import org.incal.core.dataaccess.AscSort
 import org.incal.core.dataaccess.Criterion.Infix
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
