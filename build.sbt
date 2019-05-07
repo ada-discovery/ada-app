@@ -42,7 +42,7 @@ routesImport ++= Seq(
 val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-web" % "0.7.3.RC.5",
+  "org.adada" %% "ada-web" % "0.7.3.RC.5.3",
   "org.webjars" % "bootstrap" % "3.3.7",
   "org.webjars" % "bootswatch-united" % "3.3.4+1",
   "org.webjars" % "typeaheadjs" % "0.11.1",
