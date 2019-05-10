@@ -1,8 +1,7 @@
 package runnables.core
 
 import javax.inject.Inject
-
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, RunnableHtmlOutput}
 import org.incal.core.util.seqFutures
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
@@ -19,7 +18,7 @@ import scala.concurrent.Future
 class CountSanityCheckForDataSpaceRecursively @Inject() (
     val dsaf: DataSetAccessorFactory,
     dataSpaceService: DataSpaceService
-  ) extends InputFutureRunnable[CountSanityCheckForDataSpaceRecursivelySpec] with CountSanityCheckHelper {
+  ) extends InputFutureRunnable[CountSanityCheckForDataSpaceRecursivelySpec] with CountSanityCheckHelper with RunnableHtmlOutput {
 
   override def runAsFuture(input: CountSanityCheckForDataSpaceRecursivelySpec) =
     for {
@@ -32,12 +31,20 @@ class CountSanityCheckForDataSpaceRecursively @Inject() (
       ))
     } yield {
       val filteredCounts = results.filter { case (_, count1, count2) => count1 != count2 }
-      logger.info(s"Found ${filteredCounts.size} (out of ${results.size}) data sets with BAD counts:")
-
-      filteredCounts.foreach { case (dataSetId, count1, count2) =>
-        logger.info(s"Data set $dataSetId has a wrong count $count1 vs $count2 (# ids).")
+      if (filteredCounts.isEmpty) {
+        addParagraphAndLog(s"Data space ${input.dataSpaceId} passed a sanity count check.")
+      } else {
+        addParagraphAndLog(s"Found ${filteredCounts.size} (out of ${results.size}) data sets with inconsistent counts:")
+        filteredCounts.foreach { case (dataSetId, count1, count2) =>
+          addParagraphAndLog(s"Data set $dataSetId has an inconsistent count $count1 vs $count2 (# ids).")
+        }
       }
     }
+
+  private def addParagraphAndLog(message: String) = {
+    logger.info(message)
+    addParagraph(message)
+  }
 
   private def checkDataSpaceRecursively(
     dataSpace: DataSpaceMetaInfo
@@ -65,7 +72,7 @@ class CountSanityCheckForDataSet @Inject() (
       (_, count1, count2) <- checkDataSet(input.dataSetId)
     } yield
       if (count1 != count2) {
-        logger.warn(s"Data set ${input.dataSetId} has a wrong count $count1 vs $count2 (# ids).")
+        logger.warn(s"Data set ${input.dataSetId} has an inconsistent count $count1 vs $count2 (# ids).")
       } else {
         logger.info(s"Data set ${input.dataSetId} passed a sanity count check.")
       }

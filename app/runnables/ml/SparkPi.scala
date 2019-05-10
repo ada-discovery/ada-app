@@ -1,13 +1,13 @@
 package runnables.ml
 
 import javax.inject.Inject
-
 import org.incal.play.GuiceRunnableApp
 import org.ada.server.services.SparkApp
+import org.incal.core.runnables.RunnableHtmlOutput
 
 import scala.math.random
 
-class SparkPi @Inject() (sparkApp: SparkApp) extends Runnable {
+class SparkPi @Inject() (sparkApp: SparkApp) extends Runnable with RunnableHtmlOutput {
 
   override def run = {
     val slices = 5
@@ -18,8 +18,7 @@ class SparkPi @Inject() (sparkApp: SparkApp) extends Runnable {
       if (x*x + y*y < 1) 1 else 0
     }.reduce(_ + _)
 
-    println("Pi is roughly " + 4.0 * count / (n - 1))
-    sparkApp.session.stop()
+    addParagraph(s"Pi is roughly ${bold((4.0 * count / (n - 1)).toString)}")
   }
 }
 

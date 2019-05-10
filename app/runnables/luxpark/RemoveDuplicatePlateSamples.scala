@@ -3,7 +3,7 @@ package runnables.luxpark
 import javax.inject.Inject
 
 import org.incal.core.runnables.FutureRunnable
-import runnables.core.{RemoveDuplicates, RemoveDuplicatesSpec}
+import org.ada.server.runnables.core.{RemoveDuplicates, RemoveDuplicatesSpec}
 
 class RemoveDuplicatePlateSamples @Inject()(removeDuplicates: RemoveDuplicates) extends FutureRunnable {
 

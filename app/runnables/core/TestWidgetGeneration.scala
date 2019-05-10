@@ -1,12 +1,11 @@
-package runnables
+package runnables.core
 
 import javax.inject.Inject
-
 import org.ada.server.dataaccess.RepoTypes.JsonReadonlyRepo
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.models.{DataView, Field, WidgetGenerationMethod}
-import org.incal.core.runnables.FutureRunnable
-import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.ada.web.services.WidgetGenerationService
+import org.incal.core.runnables.FutureRunnable
 import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
