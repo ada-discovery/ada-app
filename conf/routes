@@ -1,29 +1,8 @@
 # Routes
 
-->          /                           core.Routes
-
-#Temporary for mpower challenge correlation
-GET         /pdChallenge/correlations                                               controllers.mpower.MPowerChallengeCorrelationController.index
-GET         /pdChallenge/mpowerTeam                                                 controllers.mpower.MPowerChallengeCorrelationController.mPowerTeamNetwork(aggOut: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.mean, aggIn: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.max, withDemographics: Boolean ?= false, corrThreshold: Option[Double] ?= None)
-GET         /pdChallenge/ldopaTremorTeam                                            controllers.mpower.MPowerChallengeCorrelationController.tremorTeamNetwork(aggOut: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.mean, aggIn: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.max, withDemographics: Boolean ?= false, corrThreshold: Option[Double] ?= None)
-GET         /pdChallenge/ldopaDyskinesiaTeam                                        controllers.mpower.MPowerChallengeCorrelationController.dyskinesiaTeamNetwork(aggOut: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.mean, aggIn: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.max, withDemographics: Boolean ?= false, corrThreshold: Option[Double] ?= None)
-GET         /pdChallenge/ldopaBradykinesiaTeam                                      controllers.mpower.MPowerChallengeCorrelationController.bradykinesiaTeamNetwork(aggOut: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.mean, aggIn: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.max, withDemographics: Boolean ?= false, corrThreshold: Option[Double] ?= None)
-GET         /pdChallenge/mpowerSubmission                                           controllers.mpower.MPowerChallengeCorrelationController.mPowerSubmissionNetwork(aggOut: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.mean, aggIn: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.max, withDemographics: Boolean ?= false, corrThreshold: Option[Double] ?= None)
-GET         /pdChallenge/ldopaTremorSubmission                                      controllers.mpower.MPowerChallengeCorrelationController.tremorSubmissionNetwork(aggOut: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.mean, aggIn: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.max, withDemographics: Boolean ?= false, corrThreshold: Option[Double] ?= None)
-GET         /pdChallenge/ldopaDyskinesiaSubmission                                  controllers.mpower.MPowerChallengeCorrelationController.dyskinesiaSubmissionNetwork(aggOut: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.mean, aggIn: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.max, withDemographics: Boolean ?= false, corrThreshold: Option[Double] ?= None)
-GET         /pdChallenge/ldopaBradykinesiaSubmission                                controllers.mpower.MPowerChallengeCorrelationController.bradykinesiaSubmissionNetwork(aggOut: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.mean, aggIn: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.max, withDemographics: Boolean ?= false, corrThreshold: Option[Double] ?= None)
-
-#Temporary for mpower challenge clustering
-GET         /pdChallenge/clusters                                                   controllers.mpower.MPowerChallengeClusteringController.index
-GET         /pdChallenge/mpowerMDS                                                  controllers.mpower.MPowerChallengeClusteringController.mPowerMDS(k: Int ?= 10, method: Int ?= 1, topRank: Option[Int] ?= None, leaveTopRank: Option[Int] ?= None)
-GET         /pdChallenge/ldopaTremorMDS                                             controllers.mpower.MPowerChallengeClusteringController.tremorMDS(k: Int ?= 10, method: Int ?= 1, topRank: Option[Int] ?= None, leaveTopRank: Option[Int] ?= None)
-GET         /pdChallenge/ldopaDyskinesiaMDS                                         controllers.mpower.MPowerChallengeClusteringController.dyskinesiaMDS(k: Int ?= 10, method: Int ?= 1, topRank: Option[Int] ?= None, leaveTopRank: Option[Int] ?= None)
-GET         /pdChallenge/ldopaBradykinesiaMDS                                       controllers.mpower.MPowerChallengeClusteringController.bradykinesiaMDS(k: Int ?= 10, method: Int ?= 1, topRank: Option[Int] ?= None, leaveTopRank: Option[Int] ?= None)
-GET         /pdChallenge/mpowerTSNE                                                 controllers.mpower.MPowerChallengeClusteringController.mPowerTSNE(k: Int ?= 10, method: Int ?= 1, pcaDims: Option[Int] ?= None, scaled: Boolean ?= true, topRank: Option[Int] ?= None, leaveTopRank: Option[Int] ?= None)
-GET         /pdChallenge/ldopaTremorTSNE                                            controllers.mpower.MPowerChallengeClusteringController.tremorTSNE(k: Int ?= 10, method: Int ?= 1, pcaDims: Option[Int] ?= None, scaled: Boolean ?= true, topRank: Option[Int] ?= None, leaveTopRank: Option[Int] ?= None)
-GET         /pdChallenge/ldopaDyskinesiaTSNE                                        controllers.mpower.MPowerChallengeClusteringController.dyskinesiaTSNE(k: Int ?= 10, method: Int ?= 1, pcaDims: Option[Int] ?= None, scaled: Boolean ?= true, topRank: Option[Int] ?= None, leaveTopRank: Option[Int] ?= None)
-GET         /pdChallenge/ldopaBradykinesiaTSNE                                      controllers.mpower.MPowerChallengeClusteringController.bradykinesiaTSNE(k: Int ?= 10, method: Int ?= 1, pcaDims: Option[Int] ?= None, scaled: Boolean ?= true, topRank: Option[Int] ?= None, leaveTopRank: Option[Int] ?= None)
+->          /                                 core.Routes
+->          /pdChallenge                      pdchallenge.Routes
 
 #RC predictions (to remove)
-GET         /admin/showRCPrediction                                                 controllers.ml.RCPredictionController.showRCPrediction
-POST        /admin/runRCPrediction                                                  controllers.ml.RCPredictionController.runRCPrediction
+GET         /admin/showRCPrediction           controllers.ml.RCPredictionController.showRCPrediction
+POST        /admin/runRCPrediction            controllers.ml.RCPredictionController.runRCPrediction

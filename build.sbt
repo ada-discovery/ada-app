@@ -2,9 +2,9 @@ import com.github.play2war.plugin._
 import PlayKeys._
 import com.typesafe.config._
 
-organization := "org.ada"
+organization := "org.adada"
 
-name := "ada-web"
+name := "ada-web-ncer"
 
 // load version from the app config
 val conf = ConfigFactory.parseFile(new java.io.File("conf/application.conf")).resolve()
@@ -23,11 +23,11 @@ libraryDependencies ++= Seq(cache, ws, filters)
 PlayKeys.devSettings := Seq("play.server.netty.maxInitialLineLength" -> "16384")
 
 resolvers ++= Seq(
-  "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
-  "JCenter" at "http://jcenter.bintray.com/",
-  "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases",
-  "jitpack.io" at "https://jitpack.io",   // for t-SNE (Java impl)
-  "Local Maven Repository" at "file:///"+ Path.userHome.absolutePath + "/.m2/repository",
+//  "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
+//  "JCenter" at "http://jcenter.bintray.com/",
+//  "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases",
+//  "jitpack.io" at "https://jitpack.io",   // for t-SNE (Java impl)
+//  "Local Maven Repository" at "file:///"+ Path.userHome.absolutePath + "/.m2/repository",
   "bnd libs" at "https://peterbanda.net/maven2"
 //  "Ivylocal" at "file:///"++Path.userHome.absolutePath+"/.ivy2/local/"
 )
@@ -36,33 +36,14 @@ routesImport ++= Seq(
   "reactivemongo.bson.BSONObjectID",
   "org.ada.web.controllers.PathBindables._",
   "org.ada.web.controllers.QueryStringBinders._",
-  "controllers.QueryStringBinders._"
+  "org.ada.web.controllers.pdchallenge.QueryStringBinders._"
 )
 
 val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-web" % "0.7.3.RC.5.3",
-  "org.webjars" % "bootstrap" % "3.3.7",
-  "org.webjars" % "bootswatch-united" % "3.3.4+1",
-  "org.webjars" % "typeaheadjs" % "0.11.1",
-  "org.webjars" % "html5shiv" % "3.7.0",
-  "org.webjars" % "respond" % "1.4.2",
-  "org.webjars" % "highcharts" % "5.0.14",  // "4.2.7",
-  "org.webjars.npm" % "bootstrap-select" % "1.13.2", // bootstrap select element
-//  "org.webjars.npm" % "fractalis" % "0.1.9",
-  "org.webjars.bower" % "plotly.js" % "1.5.1",
-  "org.webjars.bower" % "d3" % "3.5.16",
-  "org.webjars.bower" % "Autolinker.js" % "0.25.0", // to convert links to a-href elements
-//  "org.webjars.bower" % "vis" % "4.19.1" exclude("org.webjars" % "jquery"),  // to create graphs visualizations
-  "org.webjars" % "visjs" % "4.21.0", // to create graphs visualizations
-  "org.webjars" % "jquery-ui" % "1.11.1",
-//  "org.apache.spark" %% "spark-core" % "2.3.1", // exclude("io.netty", "netty-all"),  // uses netty 4.1.17.Final incompatible with Play's netty 4.0.39.Final (which was upgraded to 4.0.56.Final)
-//  "org.apache.spark" %% "spark-sql" % "2.3.1",
-//  "org.apache.spark" %% "spark-mllib" % "2.3.1",
-//  "org.in-cal" %% "incal-spark_ml" % "0.1.3"  exclude("com.fasterxml.jackson.core", "jackson-databind"),
-  //  "io.netty" % "netty-all" % "4.0.56.Final",
-//  "org.apache.ignite" % "ignite-spark" % "1.6.0",
+  "org.adada" %% "ada-web" % "0.7.3.RC.6",
+  "org.adada" %% "ada-dream-pd-challenge" % "0.0.2",
   "org.deeplearning4j" %% "scalnet" % "1.0.0-beta3",
 // "org.deeplearning4j" % "deeplearning4j-core" % "1.0.0-beta3",  
   "org.nd4j" % "nd4j-native-platform" % "1.0.0-beta3",
@@ -79,9 +60,6 @@ libraryDependencies ++= Seq(
 
 dependencyOverrides ++= Set(
   "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.7.6"
-//  "com.typesafe.akka" %% "akka-actor" % "2.4.9",
-//  "com.typesafe.akka" %% "akka-stream" % "2.4.9",
-//  "com.typesafe.akka" %% "akka-slf4j" % "2.4.9"
 //  "io.netty" % "netty-transport-native-epoll" % "4.1.17.Final",
 //  "io.netty" % "netty-codec-http" % "4.1.17.Final", // 4.1.17.Final
 //  "io.netty" % "netty-handler" % "4.1.17.Final", // 4.0.56.Final
