@@ -64,7 +64,6 @@ trait CheckIfFieldsAlphanumericHelper extends RunnableHtmlOutput {
   protected val escapedDotString = "u002e"
   val fieldRepoFactory: FieldRepoFactory
 
-
   protected def addParagraphAndLog(message: String) = {
     logger.info(message)
     addParagraph(message)
