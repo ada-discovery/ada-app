@@ -2,7 +2,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.StatsService
+import org.ada.server.services.StatsService
 import org.ada.server.calc.CalculatorHelper._
 import org.ada.server.calc.impl.{AllDefinedPearsonCorrelationCalc, PearsonCorrelationCalc}
 
