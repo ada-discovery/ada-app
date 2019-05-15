@@ -1,7 +1,7 @@
 package runnables.other
 
 import javax.inject.Inject
-import models.{ApprovalCommittee, BatchSampleRequest, BatchSampleRequestState}
+import models.{ApprovalCommittee, BatchRequest, BatchSampleRequestState}
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.models.FieldTypeId
@@ -11,12 +11,12 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.incal.core.dataaccess.EqualsCriterion
 import play.api.{Configuration, Logger}
 import reactivemongo.bson.BSONObjectID
-import services.BatchSampleRequestRepoTypes.{ApprovalCommitteeRepo, BatchSampleRequestRepo}
+import services.BatchRequestRepoTypes.{ApprovalCommitteeRepo, BatchRequestRepo}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 
-class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configuration, userRepo: UserRepo, committeeRepo: ApprovalCommitteeRepo, requestsRepo:BatchSampleRequestRepo) extends InputFutureRunnable[EmaRunRunSpec] {
+class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configuration, userRepo: UserRepo, committeeRepo: ApprovalCommitteeRepo, requestsRepo:BatchRequestRepo) extends InputFutureRunnable[EmaRunRunSpec] {
   private val logger = Logger
 
   override def runAsFuture(input: EmaRunRunSpec) = {
@@ -28,7 +28,7 @@ class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configurati
 
     val requestId = Some(BSONObjectID.parse("577e18c24500004800cdc557").get)
     val sampleId = BSONObjectID.parse("577e18c24500004800cdc558").get
-    val request = BatchSampleRequest(requestId,"dataSetId",Seq(sampleId),BatchSampleRequestState.Created)
+    val request = BatchRequest(requestId,"dataSetId",Seq(sampleId),BatchSampleRequestState.Created)
 
     requestsRepo.save(request)
 

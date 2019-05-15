@@ -1,19 +1,19 @@
 package services
 
 //import models.BatchSampleRequest
-import models.{ApprovalCommittee, BatchSampleRequest}
-import models.BatchSampleRequest.batchRequestFormat
+import models.{ApprovalCommittee, BatchRequest}
+import models.BatchRequest.batchRequestFormat
 import net.codingwell.scalaguice.ScalaModule
 import org.ada.server.dataaccess.mongo.MongoAsyncCrudRepo
 import org.incal.core.dataaccess.AsyncCrudRepo
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import services.BatchSampleRequestRepoTypes.{ApprovalCommitteeRepo, BatchSampleRequestRepo}
+import services.BatchRequestRepoTypes.{ApprovalCommitteeRepo, BatchRequestRepo}
 
-class BatchSampleRequestModule extends ScalaModule {
+class BatchRequestModule extends ScalaModule {
   override def configure = {
-    bind[BatchSampleRequestRepo].toInstance(
-      new MongoAsyncCrudRepo[BatchSampleRequest, BSONObjectID]("batch_sample_requests")
+    bind[BatchRequestRepo].toInstance(
+      new MongoAsyncCrudRepo[BatchRequest, BSONObjectID]("batch_sample_requests")
     )
 
     bind[ApprovalCommitteeRepo].toInstance(
@@ -22,7 +22,7 @@ class BatchSampleRequestModule extends ScalaModule {
   }
 }
 
-object BatchSampleRequestRepoTypes {
-  type BatchSampleRequestRepo = AsyncCrudRepo[BatchSampleRequest, BSONObjectID]
+object BatchRequestRepoTypes {
+  type BatchRequestRepo = AsyncCrudRepo[BatchRequest, BSONObjectID]
   type ApprovalCommitteeRepo = AsyncCrudRepo[ApprovalCommittee, BSONObjectID]
 }
