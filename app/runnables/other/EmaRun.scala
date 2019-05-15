@@ -1,7 +1,7 @@
 package runnables.other
 
 import javax.inject.Inject
-import models.{ApprovalCommittee, BatchRequest, BatchSampleRequestState}
+import models.{ApprovalCommittee, BatchRequest, BatchRequestState}
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.models.FieldTypeId
@@ -28,7 +28,7 @@ class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configurati
 
     val requestId = Some(BSONObjectID.parse("577e18c24500004800cdc557").get)
     val sampleId = BSONObjectID.parse("577e18c24500004800cdc558").get
-    val request = BatchRequest(requestId,"dataSetId",Seq(sampleId),BatchSampleRequestState.Created)
+    val request = BatchRequest(requestId,"dataSetId",Seq(sampleId),BatchRequestState.Created)
 
     requestsRepo.save(request)
 

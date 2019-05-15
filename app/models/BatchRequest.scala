@@ -9,20 +9,20 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 
 case class BatchRequest(
-  _id: Option[BSONObjectID] = None,
-  dataSetId: String,
-  itemIds: Seq[BSONObjectID],
-  state: BatchSampleRequestState.Value,
-  createdById: Option[BSONObjectID] = None,
-  timeCreated: Date = new Date()
+                         _id: Option[BSONObjectID] = None,
+                         dataSetId: String,
+                         itemIds: Seq[BSONObjectID],
+                         state: BatchRequestState.Value,
+                         createdById: Option[BSONObjectID] = None,
+                         timeCreated: Date = new Date()
 )
 
-object BatchSampleRequestState extends Enumeration {
-  val SentForApproval, Rejected, Created, Approved, BiobankAcknowledged, Unavailable, Sent, UserReceived,NotReceived = Value
+object BatchRequestState extends Enumeration {
+  val SentForApproval, Rejected, Created, Approved, OwnerAcknowledged, Unavailable, Sent, UserReceived, NotReceived = Value
 }
 
 object BatchRequest {
-  implicit val stateFormat = EnumFormat(BatchSampleRequestState)
+  implicit val stateFormat = EnumFormat(BatchRequestState)
   implicit val batchRequestFormat = Json.format[BatchRequest]
 
   implicit object BatchRequestIdentity extends BSONObjectIdentity[BatchRequest] {
