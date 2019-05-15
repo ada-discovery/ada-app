@@ -11,13 +11,14 @@ import reactivemongo.play.json.BSONFormats._
 case class BatchSampleRequest(
   _id: Option[BSONObjectID] = None,
   dataSetId: String,
+  itemIds: Seq[BSONObjectID],
   state: BatchSampleRequestState.Value,
   createdById: Option[BSONObjectID] = None,
   timeCreated: Date = new Date()
 )
 
 object BatchSampleRequestState extends Enumeration {
-  val SentForApproval, Rejected = Value // TODO: add more states
+  val SentForApproval, Rejected, Created, Approved, BiobankAcknowledged, Unavailable, Sent, UserReceived,NotReceived = Value
 }
 
 object BatchSampleRequest {
