@@ -16,7 +16,7 @@ Play2WarPlugin.play2WarSettings
 
 Play2WarKeys.servletVersion := "3.1"
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala,SbtWeb)
+lazy val root = (project in file(".")).enablePlugins(PlayScala, SbtWeb)
 
 libraryDependencies ++= Seq(cache, ws, filters)
 
@@ -42,8 +42,8 @@ routesImport ++= Seq(
 val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-web" % "0.7.3.RC.7.SNAPSHOT.6",
-  "org.adada" %% "ada-web" % "0.7.3.RC.7.SNAPSHOT.6" classifier "assets",
+  "org.adada" %% "ada-web" % "0.7.3.RC.7.SNAPSHOT.7",
+  "org.adada" %% "ada-web" % "0.7.3.RC.7.SNAPSHOT.7" classifier "assets",
   "org.adada" %% "ada-dream-pd-challenge" % "0.0.2",
   "org.deeplearning4j" %% "scalnet" % "1.0.0-beta3",
 // "org.deeplearning4j" % "deeplearning4j-core" % "1.0.0-beta3",  
@@ -82,9 +82,11 @@ pipelineStages in Assets := Seq(closure, cssCompress, digest, gzip)
 
 excludeFilter in gzip := (excludeFilter in gzip).value || new SimpleFileFilter(file => new File(file.getAbsolutePath + ".gz").exists)
 
-includeFilter in closure := (includeFilter in closure).value && new SimpleFileFilter(f => f.getPath.contains("javascripts"))
+includeFilter in digest := (includeFilter in digest).value && new SimpleFileFilter(f => f.getPath.contains("public/"))
 
-includeFilter in cssCompress := (includeFilter in cssCompress).value && new SimpleFileFilter(f => f.getPath.contains("stylesheets"))
+includeFilter in closure := (includeFilter in closure).value && new SimpleFileFilter(f => f.getPath.contains("public/javascripts"))
+
+includeFilter in cssCompress := (includeFilter in cssCompress).value && new SimpleFileFilter(f => f.getPath.contains("public/stylesheets"))
 
 //includeFilter in uglify := GlobFilter("javascripts/*.js")
 
