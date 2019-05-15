@@ -42,7 +42,8 @@ routesImport ++= Seq(
 val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-web" % "0.7.3.RC.7.SNAPSHOT.3",
+  "org.adada" %% "ada-web" % "0.7.3.RC.7.SNAPSHOT.6",
+  "org.adada" %% "ada-web" % "0.7.3.RC.7.SNAPSHOT.6" classifier "assets",
   "org.adada" %% "ada-dream-pd-challenge" % "0.0.2",
   "org.deeplearning4j" %% "scalnet" % "1.0.0-beta3",
 // "org.deeplearning4j" % "deeplearning4j-core" % "1.0.0-beta3",  

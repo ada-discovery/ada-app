@@ -5,12 +5,18 @@ import play.api.inject.guice.GuiceApplicationBuilder
 
 object TestApp {
 
-  val apply: Application = {
-    import scala.collection.JavaConversions.iterableAsScalaIterable
+  def apply(moduleNames: Seq[String] = Nil): Application = {
     val env = play.api.Environment.simple(mode = play.api.Mode.Test)
     val config = play.api.Configuration.load(env)
-    val modules = config.getStringList("play.modules.enabled").fold(
-      List.empty[String])(l => iterableAsScalaIterable(l).toList)
+
+    val modules =
+      if (moduleNames.nonEmpty) {
+        moduleNames
+      } else {
+        import scala.collection.JavaConversions.iterableAsScalaIterable
+        config.getStringList("play.modules.enabled").fold(
+          List.empty[String])(l => iterableAsScalaIterable(l).toList)
+      }
     new GuiceApplicationBuilder().configure("play.modules.enabled" -> modules).build
   }
 }

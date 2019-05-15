@@ -23,7 +23,7 @@ class EigenVectorsTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
   private val randomInputSize = 100
   private val precision = 0.0001
 
-  private val injector = TestApp.apply.injector
+  private val injector = TestApp().injector
   private val statsService = injector.instanceOf[StatsService]
 
   "Eigen vectors" should "match a static example" in {
