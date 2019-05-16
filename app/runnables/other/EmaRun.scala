@@ -4,22 +4,20 @@ import javax.inject.Inject
 import models.{ApprovalCommittee, BatchRequest, BatchRequestState}
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.dataaccess.RepoTypes.UserRepo
-import org.ada.server.models.FieldTypeId
-import org.incal.core.runnables.InputFutureRunnable
-import org.incal.core.dataaccess.Criterion.Infix
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
+import org.ada.server.models.FieldTypeId
+import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.dataaccess.EqualsCriterion
+import org.incal.core.runnables.{InputFutureRunnable, RunnableHtmlOutput}
 import play.api.{Configuration, Logger}
 import reactivemongo.bson.BSONObjectID
 import services.BatchRequestRepoTypes.{ApprovalCommitteeRepo, BatchRequestRepo}
 
-import scala.concurrent.{Await, duration}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.DurationInt
 import scala.reflect.runtime.universe.typeOf
-import scala.util.parsing.json.JSON
 
-class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configuration, userRepo: UserRepo, committeeRepo: ApprovalCommitteeRepo, requestsRepo:BatchRequestRepo) extends InputFutureRunnable[EmaRunRunSpec] {
+class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configuration, userRepo: UserRepo, committeeRepo: ApprovalCommitteeRepo, requestsRepo:BatchRequestRepo)
+  extends InputFutureRunnable[EmaRunRunSpec] with RunnableHtmlOutput {
   private val logger = Logger
 
   override def runAsFuture(input: EmaRunRunSpec) = {
@@ -39,15 +37,11 @@ class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configurati
     committeeRepo.delete(committeeId)
     committeeRepo.save(committee)
 
-    val commiteeRead = Await.result(committeeRepo.get(committeeId.get), DurationInt(10).seconds)
-    val repoRead = Await.result(requestsRepo.get(requestId.get), DurationInt(10).seconds)
-    logger.info("committee "+ commiteeRead.get.toString)
-    logger.info("request "+ repoRead.get.toString)
-
-
     val projectName = configuration.getString("project.name").getOrElse("N/A")
 
     for {
+      commiteeRead <- committeeRepo.get(committeeId.get)
+      repoRead <- requestsRepo.get(requestId.get)
       // total count
       count <- dsa.dataSetRepo.count()
 
@@ -67,6 +61,10 @@ class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configurati
       user <- userRepo.find(Seq("ldapDn" #== input.email)).map(_.headOption)
     } yield {
 
+      logger.info("committee "+ commiteeRead.get.toString)
+      logger.info("request "+ repoRead.get.toString)
+
+
       logger.info(s"Item/field count: $count/$fieldCount")
 
       val doubleFieldNamesString = doubleFields.map(_.name).mkString(", ")
@@ -75,6 +73,8 @@ class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configurati
       logger.info(s"Min/max value of ${input.fieldName}: $minValue/$maxValue.")
 
       logger.info("User's name (if found): " + user.map(_.ldapDn).getOrElse("N/A"))
+
+      addParagraph(bold("Hooray"))
     }
   }
 
