@@ -1,6 +1,5 @@
 package services
 
-//import models.BatchSampleRequest
 import models.{ApprovalCommittee, BatchRequest}
 import models.BatchRequest.batchRequestFormat
 import net.codingwell.scalaguice.ScalaModule
