@@ -12,7 +12,7 @@ import services.BatchRequestRepoTypes.{ApprovalCommitteeRepo, BatchRequestRepo}
 class BatchRequestModule extends ScalaModule {
   override def configure = {
     bind[BatchRequestRepo].toInstance(
-      new MongoAsyncCrudRepo[BatchRequest, BSONObjectID]("batch_sample_requests")
+      new MongoAsyncCrudRepo[BatchRequest, BSONObjectID]("batch_requests")
     )
 
     bind[ApprovalCommitteeRepo].toInstance(
