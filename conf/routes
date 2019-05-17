@@ -6,3 +6,6 @@
 #RC predictions (to remove)
 GET         /admin/showRCPrediction           controllers.ml.RCPredictionController.showRCPrediction
 POST        /admin/runRCPrediction            controllers.ml.RCPredictionController.runRCPrediction
+
+
+GET         /requests/:id                    controllers.requests.RequestsController.getItemsRequest(id: BSONObjectID)
