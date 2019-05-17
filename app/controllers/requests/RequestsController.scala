@@ -5,13 +5,13 @@ import org.incal.play.controllers._
 import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
-import services.BatchRequestRepoTypes.BatchRequestRepo
+import services.BatchOrderRequestRepoTypes.BatchOrderRequestRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @Deprecated
 class RequestsController @Inject()(
-    requestsRepo:BatchRequestRepo
+    requestsRepo:BatchOrderRequestRepo
   ) extends BaseController {
 
   private val logger = Logger

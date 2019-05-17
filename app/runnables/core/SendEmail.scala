@@ -1,7 +1,7 @@
 package runnables.core
 
 import javax.inject.Inject
-import org.incal.core.runnables.InputRunnable
+import org.incal.core.runnables.{InputRunnable, RunnableHtmlOutput}
 import play.api.libs.mailer.{Email, MailerClient}
 
 import scala.reflect.runtime.universe.typeOf
