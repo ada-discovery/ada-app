@@ -1,0 +1,39 @@
+@import org.incal.play.controllers.WebContext
+@import views.html.layout.main
+@import views.html.layout
+@import views.html.table.paginatedTable
+@import views.html.filter.{filter, filterWithJs}
+@import views.html.elements.labelValue
+@import org.incal.play.Page
+@import org.ada.web.util.typeColumns
+
+@import reactivemongo.bson.BSONObjectID
+@(
+        requests: Seq[BatchRequest]
+ )
+
+
+
+
+    <table>
+    <tbody>
+
+        @requests.map { request =>
+            <tr>
+
+               <td>
+                     <a href="@controllers.requests.routes.RequestsController.getItemsRequest(request._id.get)">
+                    @request._id.get
+                    </a>
+                </td>
+                <td>
+                    @request.timeCreated
+                </td>
+            </tr>
+        }
+
+
+    </tbody>
+    </table>
+
+

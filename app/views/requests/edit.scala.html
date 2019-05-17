@@ -1,0 +1,55 @@
+@import org.incal.play.controllers.WebContext
+@import views.html.layout.main
+@import views.html.layout
+@import views.html.table.paginatedTable
+@import views.html.filter.{filter, filterWithJs}
+@import views.html.elements.labelValue
+@import org.incal.play.Page
+@import org.ada.web.util.typeColumns
+
+@import reactivemongo.bson.BSONObjectID
+@(
+        request: Option[BatchRequest]
+ )(
+        implicit context: WebContext
+)
+
+
+    @main("Request for items") {
+
+    <div class="page-header">
+        <h3>
+        Request for items
+        </h3>
+    </div>
+
+    <p>
+    Dataset id: @request.get.dataSetId
+    </p>
+    <p>
+    Created by: @request.get.createdById
+    </p>
+    <p>
+    Time created: @request.get.timeCreated
+    </p>
+    <p>
+    Status: @request.get.state
+    </p>
+
+
+    <table>
+        <tbody>
+         @request.get.itemIds.map { item =>
+            <tr>
+                <td>
+                    @item
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+
+
+    }
+
