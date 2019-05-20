@@ -1,55 +1,31 @@
-@import org.incal.play.controllers.WebContext
-@import views.html.layout.main
 @import views.html.layout
-@import views.html.table.paginatedTable
-@import views.html.filter.{filter, filterWithJs}
-@import views.html.elements.labelValue
-@import org.incal.play.Page
-@import org.ada.web.util.typeColumns
-
+@import views.html.elements.editableTextElements
 @import reactivemongo.bson.BSONObjectID
+@import org.ada.server.models.Translation
+@import org.incal.play.controllers.{WebContext, IdForm}
+@import org.incal.play.controllers.WebContext._
+@import org.ada.web.controllers.routes
+@import views.html.elements._
+
 @(
-        request: Option[BatchOrderRequest]
- )(
+        data: IdForm[BSONObjectID, BatchOrderRequest]
+)(
         implicit context: WebContext
 )
 
+@elements = {
+    @inputText("request", "dataSetId", data.form)
+    @inputText("request", "itemIds", data.form)
+}
 
-    @main("Request for items") {
-
-    <div class="page-header">
-        <h3>
-        Request for items
-        </h3>
-    </div>
-
-    <p>
-    Dataset id: @request.get.dataSetId
-    </p>
-    <p>
-    Created by: @request.get.createdById
-    </p>
-    <p>
-    Time created: @request.get.timeCreated
-    </p>
-    <p>
-    Status: @request.get.state
-    </p>
-
-
-    <table>
-        <tbody>
-         @request.get.itemIds.map { item =>
-            <tr>
-                <td>
-                    @item
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
-
-
-
-    }
-
+@layout.edit(
+    "Translation",
+    "translation",
+    errors = data.form.errors,
+    elements = elements,
+    updateCall = controllers.requests.routes.BatchOrderRequestsController.update(data.id),
+    cancelCall = controllers.requests.routes.BatchOrderRequestsController.listAll(),
+    deleteCall = Some(controllers.requests.routes.BatchOrderRequestsController.delete(data.id)),
+    None,
+    None
+)

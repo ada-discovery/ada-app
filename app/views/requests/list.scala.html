@@ -8,32 +8,32 @@
 @import org.ada.web.util.typeColumns
 
 @import reactivemongo.bson.BSONObjectID
+@import org.incal.core.FilterCondition
 @(
-        requests: Seq[BatchOrderRequest]
- )
+        page: Page[BatchOrderRequest],
+        conditions: Seq[FilterCondition]
+ )(
+        implicit context: WebContext
+)
+
+@table = @{
+    paginatedTable(
+        page,
+        controllers.requests.routes.BatchOrderRequestsController.find(_, _, conditions),
+        typeColumns[BatchOrderRequest](
+            (Some("original"), "Original", _._id),
+            (Some("translated"), "Translated", _.createdById)
+        ),
+        Some({ item : Any => controllers.requests.routes.BatchOrderRequestsController.get(item.asInstanceOf[BatchOrderRequest]._id.get)})
+    )
+}
 
 
-
-
-    <table>
-    <tbody>
-
-        @requests.map { request =>
-            <tr>
-
-               <td>
-                     <a href="@controllers.requests.routes.RequestsController.getItemsRequest(request._id.get)">
-                    @request._id.get
-                    </a>
-                </td>
-                <td>
-                    @request.timeCreated
-                </td>
-            </tr>
-        }
-
-
-    </tbody>
-    </table>
-
-
+@layout.list(
+    "translation",
+    None,
+    page.total,
+    None,
+    Some(table),
+    None
+)

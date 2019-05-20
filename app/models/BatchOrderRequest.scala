@@ -4,15 +4,15 @@ import java.util.Date
 
 import org.ada.server.dataaccess.BSONObjectIdentity
 import org.ada.server.json.EnumFormat
-import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
+import play.api.libs.json.Json
+
 
 case class BatchOrderRequest(
   _id: Option[BSONObjectID] = None,
   dataSetId: String,
-  itemIds: Seq[BSONObjectID],
-  state: BatchRequestState.Value,
+  itemIds: String,
+  state: BatchRequestState.Value = BatchRequestState.Created,
   createdById: Option[BSONObjectID] = None,
   timeCreated: Date = new Date()
 )
@@ -23,7 +23,12 @@ object BatchRequestState extends Enumeration {
 
 object BatchOrderRequest {
   implicit val stateFormat = EnumFormat(BatchRequestState)
-  implicit val batchRequestFormat = Json.format[BatchOrderRequest]
+implicit val objectIdFormat = Json.format[BSONObjectID]
+  //implicit val objectIdOptionFormat = Json.format[ Option[BSONObjectID]]
+//  implicit val objectIdsFormat = Json.format[ Seq[BSONObjectID]]
+implicit val batchRequestFormat = Json.format[BatchOrderRequest]
+
+
 
   implicit object BatchRequestIdentity extends BSONObjectIdentity[BatchOrderRequest] {
     def of(entity: BatchOrderRequest): Option[BSONObjectID] = entity._id

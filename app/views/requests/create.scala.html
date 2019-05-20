@@ -1,0 +1,27 @@
+@import views.html.layout
+@import views.html.elements.editableTextElements
+@import org.ada.server.models.Translation
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
+@import org.ada.web.controllers.routes
+@import views.html.elements._
+
+@(
+	form: Form[BatchOrderRequest]
+)(
+    implicit context: WebContext
+)
+
+@elements = {
+@inputText("request", "dataSetId", form)
+@inputText("request", "itemIds", form)
+}
+
+@layout.create(
+    "Translation",
+	"translation",
+	form = form,
+	elements = elements,
+	saveCall = controllers.requests.routes.BatchOrderRequestsController.save(),
+	listCall = controllers.requests.routes.BatchOrderRequestsController.listAll()
+)

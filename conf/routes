@@ -7,5 +7,13 @@
 GET         /admin/showRCPrediction           controllers.ml.RCPredictionController.showRCPrediction
 POST        /admin/runRCPrediction            controllers.ml.RCPredictionController.runRCPrediction
 
+# Item requests
+GET         /requests                          controllers.requests.BatchOrderRequestsController.find(p: Int ?= 0, s: String ?= "dataSetId", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /requests/all                      controllers.requests.BatchOrderRequestsController.listAll(s: String ?= "original")
+GET         /requests/new                      controllers.requests.BatchOrderRequestsController.create
+POST        /requests/save                     controllers.requests.BatchOrderRequestsController.save
+GET         /requests/:id/get                  controllers.requests.BatchOrderRequestsController.get(id: BSONObjectID)
+GET         /requests/:id                      controllers.requests.BatchOrderRequestsController.edit(id: BSONObjectID)
+POST        /requests/:id                      controllers.requests.BatchOrderRequestsController.update(id: BSONObjectID)
+POST        /requests/:id/delete               controllers.requests.BatchOrderRequestsController.delete(id: BSONObjectID)
 
-GET         /requests/:id                    controllers.requests.RequestsController.getItemsRequest(id: BSONObjectID)
