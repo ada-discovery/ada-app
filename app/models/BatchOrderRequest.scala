@@ -8,13 +8,13 @@ import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 
-
 case class BatchOrderRequest(
                               _id: Option[BSONObjectID] = None,
                               dataSetId: String,
                               itemIds: String,
                               state: BatchRequestState.Value = BatchRequestState.Created,
                               createdById: Option[BSONObjectID] = None,
+                              createdByName: Option[String] = None,
                               timeCreated: Date = new Date()
                             )
 

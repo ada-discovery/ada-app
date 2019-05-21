@@ -21,7 +21,7 @@
         page,
         controllers.requests.routes.BatchOrderRequestsController.find(_, _, conditions),
         typeColumns[BatchOrderRequest](
-            (Some("createdby"), "Requester", _.createdById.getOrElse("None")),
+            (Some("createdby"), "Requester name", _.createdByName.getOrElse("None")),
             (Some("timecreated"), "Date", _.timeCreated),
             (Some("state"), "Status", _.state)
         ),
