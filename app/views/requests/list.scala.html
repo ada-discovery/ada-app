@@ -21,8 +21,9 @@
         page,
         controllers.requests.routes.BatchOrderRequestsController.find(_, _, conditions),
         typeColumns[BatchOrderRequest](
-            (Some("original"), "Original", _._id),
-            (Some("translated"), "Translated", _.createdById)
+            (Some("createdby"), "Requester", _.createdById.getOrElse("None")),
+            (Some("timecreated"), "Date", _.timeCreated),
+            (Some("state"), "Status", _.state)
         ),
         Some({ item : Any => controllers.requests.routes.BatchOrderRequestsController.get(item.asInstanceOf[BatchOrderRequest]._id.get)})
     )
@@ -30,7 +31,7 @@
 
 
 @layout.list(
-    "translation",
+    "request",
     None,
     page.total,
     None,

@@ -5,7 +5,9 @@
 @import org.incal.play.controllers.WebContext
 @import org.ada.web.controllers.routes
 @import views.html.elements._
+@import org.ada.web.security.AdaAuthConfig
 
+@import views.html.helper.input
 @(
 	form: Form[BatchOrderRequest]
 )(
@@ -15,7 +17,7 @@
 @elements = {
 @inputText("request", "dataSetId", form)
 @inputText("request", "itemIds", form)
-@select("request", "state", form, BatchRequestState.values.map(state=>(state.toString,state.toString)).toSeq, true)
+<input type="hidden" name="state" value="@BatchRequestState.Created" />
 }
 
 @layout.create(

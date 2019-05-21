@@ -4,18 +4,19 @@ import java.util.Date
 
 import org.ada.server.dataaccess.BSONObjectIdentity
 import org.ada.server.json.EnumFormat
-import reactivemongo.bson.BSONObjectID
 import play.api.libs.json.Json
+import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 
 
 case class BatchOrderRequest(
-  _id: Option[BSONObjectID] = None,
-  dataSetId: String,
-  itemIds: String,
-  state: BatchRequestState.Value = BatchRequestState.Created,
-  createdById: Option[BSONObjectID] = None,
-  timeCreated: Date = new Date()
-)
+                              _id: Option[BSONObjectID] = None,
+                              dataSetId: String,
+                              itemIds: String,
+                              state: BatchRequestState.Value = BatchRequestState.Created,
+                              createdById: Option[BSONObjectID] = None,
+                              timeCreated: Date = new Date()
+                            )
 
 object BatchRequestState extends Enumeration {
   val SentForApproval, Rejected, Created, Approved, OwnerAcknowledged, Unavailable, Sent, UserReceived, NotReceived = Value
@@ -23,15 +24,15 @@ object BatchRequestState extends Enumeration {
 
 object BatchOrderRequest {
   implicit val stateFormat = EnumFormat(BatchRequestState)
-implicit val objectIdFormat = Json.format[BSONObjectID]
-  //implicit val objectIdOptionFormat = Json.format[ Option[BSONObjectID]]
-//  implicit val objectIdsFormat = Json.format[ Seq[BSONObjectID]]
-implicit val batchRequestFormat = Json.format[BatchOrderRequest]
-
+  //  implicit val objectIdOptionFormat = Json.format[Option[BSONObjectID]]
+  //  implicit val objectIdsFormat = Json.format[ Seq[BSONObjectID]]
+  implicit val batchRequestFormat = Json.format[BatchOrderRequest]
 
 
   implicit object BatchRequestIdentity extends BSONObjectIdentity[BatchOrderRequest] {
     def of(entity: BatchOrderRequest): Option[BSONObjectID] = entity._id
+
     protected def set(entity: BatchOrderRequest, id: Option[BSONObjectID]) = entity.copy(_id = id)
   }
+
 }
