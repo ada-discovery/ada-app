@@ -1,5 +1,7 @@
 package controllers.requests
 
+import java.util.Date
+
 import javax.inject.Inject
 import models.{BatchOrderRequest, BatchRequestState}
 import org.ada.server.models.Translation
@@ -22,6 +24,7 @@ import org.incal.spark_ml.models.VectorScalerType
 import play.api.data.Forms.{mapping, _}
 import play.api.libs.json.Json
 import views.html.{translation => view}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @Deprecated
@@ -40,7 +43,7 @@ class BatchOrderRequestsController @Inject()(
       "itemIds" -> nonEmptyText,
       "state"-> of[BatchRequestState.Value],
       "created by" -> ignored(Option.empty[BSONObjectID]),
-      "date" -> date
+  "date" -> ignored(new Date())
     )(BatchOrderRequest.apply)(BatchOrderRequest.unapply))
 
 

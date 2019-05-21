@@ -15,6 +15,7 @@
 @elements = {
 @inputText("request", "dataSetId", form)
 @inputText("request", "itemIds", form)
+@select("request", "state", form, BatchRequestState.values.map(state=>(state.toString,state.toString)).toSeq, true)
 }
 
 @layout.create(
