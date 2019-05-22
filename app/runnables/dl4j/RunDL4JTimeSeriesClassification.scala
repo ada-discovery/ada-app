@@ -1,55 +1,11 @@
 package runnables.dl4j
 
 import org.incal.core.runnables.InputRunnable
+import org.incal.dl4j.{DL4JHelper, TimeSeriesClassificationSpec}
 
 import scala.reflect.runtime.universe.typeOf
 
-class RunDL4JTimeSeriesClassification extends InputRunnable[RunDL4JTimeSeriesClassificationSpec] with DL4JHelper {
+class RunDL4JTimeSeriesClassification extends InputRunnable[TimeSeriesClassificationSpec] with DL4JHelper {
 
-  override def run(input: RunDL4JTimeSeriesClassificationSpec) = {
-    val featuresDir = "file:////" + input.featuresBaseDir
-    val expectedOutputDir = "file:////" + input.expectedOutputBaseDir
-
-    // training data set
-    val trainingData = TimeSeriesDataSetIterator(
-      input.batchSize, input.outputNum, featuresDir, expectedOutputDir, input.trainingStartIndex, input.trainingEndIndex, 1
-    )
-
-    // validation data set
-    val validationData = TimeSeriesDataSetIterator(
-      input.batchSize, input.outputNum, featuresDir, expectedOutputDir, input.validationStartIndex, input.validationEndIndex, 1
-    )
-
-    // build a CNN model
-    log.info("Building a CNN model....")
-    val config = CNN1D(
-      input.numRows, input.numColumns, input.outputNum, input.learningRate, input.kernelSize, input.poolingKernelSize, input.convolutionFeaturesNums, input.dropOut, input.lossClassWeights
-    )
-
-    // launch and report the results
-    launchAndReportResults(config, trainingData, validationData, input.numEpochs, input.outputNum, input.resultsExportDir, input)
-  }
-
-  override def inputType = typeOf[RunDL4JTimeSeriesClassificationSpec]
+  override def inputType = typeOf[TimeSeriesClassificationSpec]
 }
-
-case class RunDL4JTimeSeriesClassificationSpec(
-  featuresBaseDir: String,
-  expectedOutputBaseDir: String,
-  resultsExportDir: String,
-  trainingStartIndex: Int,
-  trainingEndIndex: Int,
-  validationStartIndex: Int,
-  validationEndIndex: Int,
-  numRows: Int,
-  numColumns: Int,
-  outputNum: Int,
-  batchSize: Int,
-  numEpochs: Int,
-  learningRate: Double,
-  kernelSize: Int,
-  poolingKernelSize: Int,
-  convolutionFeaturesNums: Seq[Int],
-  dropOut: Double,
-  lossClassWeights: Seq[Double]
-)
