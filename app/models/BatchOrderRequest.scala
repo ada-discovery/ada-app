@@ -28,11 +28,9 @@ object BatchOrderRequest {
   //  implicit val objectIdsFormat = Json.format[ Seq[BSONObjectID]]
   implicit val batchRequestFormat = Json.format[BatchOrderRequest]
 
-
   implicit object BatchRequestIdentity extends BSONObjectIdentity[BatchOrderRequest] {
     def of(entity: BatchOrderRequest): Option[BSONObjectID] = entity._id
 
     protected def set(entity: BatchOrderRequest, id: Option[BSONObjectID]) = entity.copy(_id = id)
   }
-
 }

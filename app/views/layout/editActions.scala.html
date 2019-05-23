@@ -1,0 +1,45 @@
+@import views.html.layout.formErrors
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
+
+@(
+    displayName: String,
+    messagePrefix: String,
+    validNextStates: Seq[(String,String)],
+    errors: Seq[FormError],
+    elements: Html,
+    updateCall: Call,
+    cancelCall: Call,
+    sideBar: Option[Html] = None,
+    topContentBar: Option[Html] = None,
+    bottomResources: Option[Html] = None,
+    formArgs: Seq[(Symbol, String)] = Nil
+)(
+    implicit context: WebContext
+)
+
+@main(Messages("edit.title", displayName), sideBar, topContentBar, None, bottomResources, Some(formErrors(messagePrefix, errors))) {
+
+    <div class="page-header">
+        <h3>@Messages("edit.title", displayName)</h3>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+        @helper.form(action = updateCall) {
+            <fieldset>
+            @elements
+            </fieldset>
+            <hr/>
+            <div class="actions pull-right">
+
+                @validNextStates.map{ state =>
+                    <button onclick="this.form.elements['state'].value = '@state._1'; submit()" class="btn btn-primary">@state._1</button>
+                }
+
+                <a href="@cancelCall" class="btn btn-default">Cancel</a>
+            </div>
+        }
+        </div>
+    </div>
+}

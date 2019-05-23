@@ -7,25 +7,22 @@ import models.BatchOrderRequest.batchRequestFormat
 import models.{BatchOrderRequest, BatchRequestState}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.UserRepo
-import org.ada.server.dataaccess.dataset.DataViewRepo
-import org.ada.server.models.User.UserIdentity
-import org.ada.server.models.{DataSpaceMetaInfo, DataView, User}
 import org.ada.server.services.UserManager
-import org.ada.web.controllers.DataSetControllerActionNames
 import org.ada.web.controllers.core.AdaCrudControllerImpl
 import org.ada.web.security.AdaAuthConfig
 import org.incal.core.FilterCondition
+import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters.EnumFormatter
+import org.incal.play.security.SecurityRole
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.BatchOrderRequestRepo
-import reactivemongo.bson.BSONObjectID
-import org.incal.core.dataaccess.Criterion.Infix
+import services.request.RequestStatusService
 
 import scala.concurrent.Future
 
@@ -33,7 +30,8 @@ import scala.concurrent.Future
 class BatchOrderRequestsController @Inject()(
                                               requestsRepo: BatchOrderRequestRepo,
                                               userRepo: UserRepo,
-                                              val userManager: UserManager
+                                              val userManager: UserManager,
+                                              val statusService: RequestStatusService
                                             ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
   with AdminRestrictedCrudController[BSONObjectID]
   with HasBasicFormCrudViews[BatchOrderRequest, BSONObjectID]
@@ -72,6 +70,41 @@ class BatchOrderRequestsController @Inject()(
       id
 }
 
+  override def updateCall(
+                         batchRequest: BatchOrderRequest)(
+                         implicit request: Request[AnyContent]
+                       ): Future[BSONObjectID] =
+  {
+    for {
+      existingRequest <- repo.get(batchRequest._id.get)
+      user <- currentUser(request)
+      id <- {
+        val batchRequestWithUser = user match {
+          case Some(user) =>
+            batchRequest.copy(state = getState(existingRequest.get.state,batchRequest.state),createdById = existingRequest.get.createdById)
+          case None => throw new AdaException("No logged user found")
+        }
+        repo.update(batchRequestWithUser)
+      }
+
+    } yield
+      id
+  }
+
+
+  def getState(currentState: BatchRequestState.Value, updatedState: BatchRequestState.Value):BatchRequestState.Value={
+    if(currentState==updatedState){
+      currentState
+    } else
+    {
+      statusService.getNextStates(currentState).contains((updatedState.toString,updatedState.toString)) match {
+        case true =>
+          updatedState
+        case false => throw new AdaException("Status provided "+updatedState+" not allowed for current status " + currentState)
+      }
+    }
+  }
+
   override protected def getListViewData(page: Page[BatchOrderRequest], conditions: Seq[FilterCondition]) = { request =>
     for {
      users<-getUsers(page.items)
@@ -95,11 +128,25 @@ class BatchOrderRequestsController @Inject()(
     request.copy(createdByName = Some(user.get.ldapDn))
   }
 
-  override protected def createView = { implicit ctx => views.html.requests.create(_) }
+  def isAdmin(context: WebContext)={
+    for {
+      user <- currentUser(context.request)
+    } yield {
+      user.get.roles.contains(SecurityRole.admin)
+    }
+  }
 
+
+  override protected def createView = { implicit ctx => views.html.requests.create(_) }
   override protected def showView = editView
 
-  override protected def editView = { implicit ctx => views.html.requests.edit(_) }
+  override protected def editView = { implicit ctx =>
+    if(true==true){
+      views.html.requests.actions(_,statusService)
+    } else {
+      views.html.requests.edit(_)
+    }
+    }
 
   override protected def listView = { implicit ctx =>
     (views.html.requests.list(_, _)).tupled }
