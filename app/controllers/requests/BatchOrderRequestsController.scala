@@ -4,7 +4,10 @@ import java.util.Date
 
 import javax.inject.Inject
 import models.BatchOrderRequest.batchRequestFormat
-import models.{BatchOrderRequest, BatchRequestState}
+import models.BatchOrderRequest.historyFormat
+import models.BatchOrderRequest.actionInfoFormat
+import models.BatchOrderRequest.requestActionFormat
+import models.{ActionInfo, BatchOrderRequest, BatchRequestAction, BatchRequestState, TrackingHistory}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.services.UserManager
@@ -14,7 +17,7 @@ import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.Page
 import org.incal.play.controllers._
-import org.incal.play.formatters.EnumFormatter
+import org.incal.play.formatters.{EnumFormatter, JsonFormatter}
 import org.incal.play.security.SecurityRole
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
@@ -25,6 +28,7 @@ import services.BatchOrderRequestRepoTypes.BatchOrderRequestRepo
 import services.request.RequestStatusService
 
 import scala.concurrent.Future
+import scala.util.parsing.json.JSONFormat
 
 @Deprecated
 class BatchOrderRequestsController @Inject()(
@@ -37,7 +41,9 @@ class BatchOrderRequestsController @Inject()(
   with HasBasicFormCrudViews[BatchOrderRequest, BSONObjectID]
   with AdaAuthConfig {
 
-  private implicit val requiestStateFormatter = EnumFormatter(BatchRequestState)
+  private implicit val hostoryFormatter = JsonFormatter[TrackingHistory]
+  private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
+
 
   override protected[controllers] val form = Form(
     mapping(
@@ -47,7 +53,8 @@ class BatchOrderRequestsController @Inject()(
       "state" -> of[BatchRequestState.Value],
       "created by id" -> ignored(Option.empty[BSONObjectID]),
       "created by name" -> ignored(Option.empty[String]),
-      "date" -> ignored(new Date())
+      "date" -> ignored(new Date()),
+      "history"->ignored(Option.empty[TrackingHistory])
     )(BatchOrderRequest.apply)(BatchOrderRequest.unapply))
   override protected val homeCall = routes.BatchOrderRequestsController.find()
 
@@ -61,13 +68,36 @@ class BatchOrderRequestsController @Inject()(
       id <- {
         val batchRequestWithUser = user match {
           case Some(user) =>
-            batchRequest.copy(timeCreated = new Date(), createdById = user._id, state = BatchRequestState.Created)
+            val date = new Date()
+            val newState = BatchRequestState.Created
+            val requestAction = buildBatchRequestAction(user._id,newState,newState)
+            val actionInfo = buildActionInfo(date,requestAction)
+            val newHistory = buildHistory(None, date, user._id, actionInfo)
+            batchRequest.copy(timeCreated = date, createdById = user._id, state = newState, history = newHistory)
+            //batchRequest.copy(timeCreated = new Date(), createdById = user._id, state = BatchRequestState.Created)
           case None => throw new AdaException("No logged user found")
         }
         repo.save(batchRequestWithUser)
       }
     } yield
       id
+}
+
+  def buildHistory(currentHistory: Option[TrackingHistory], date: Date, userId: Option[BSONObjectID], actionInfo:ActionInfo):Option[TrackingHistory] ={
+    currentHistory match {
+    case Some(currentHistory) => {
+      Some(currentHistory.copy(actionInfo=actionInfo::currentHistory.actionInfo))
+    }
+    case None => Some(TrackingHistory(List(actionInfo)))
+  }
+  }
+
+  def buildActionInfo(date: Date,requestAction:BatchRequestAction):ActionInfo={
+    ActionInfo(date, requestAction, None)
+  }
+
+  def buildBatchRequestAction(userId: Option[BSONObjectID],fromState:BatchRequestState.Value, toState: BatchRequestState.Value)={
+  BatchRequestAction(userId.get,fromState,toState)
 }
 
   override def updateCall(
@@ -81,7 +111,11 @@ class BatchOrderRequestsController @Inject()(
       id <- {
         val batchRequestWithUser = user match {
           case Some(user) =>
-            batchRequest.copy(state = getState(existingRequest.get.state,batchRequest.state),createdById = existingRequest.get.createdById)
+            val newState = getState(existingRequest.get.state,batchRequest.state)
+            val requestAction = buildBatchRequestAction(user._id,existingRequest.get.state,newState)
+            var actionInfo = buildActionInfo(new Date(),requestAction)
+
+            batchRequest.copy(state = newState,createdById = existingRequest.get.createdById, history = buildHistory(existingRequest.get.history,new Date(),user._id,actionInfo))
           case None => throw new AdaException("No logged user found")
         }
         repo.update(batchRequestWithUser)
@@ -142,7 +176,7 @@ class BatchOrderRequestsController @Inject()(
 
   override protected def editView = { implicit ctx =>
     if(true==true){
-      views.html.requests.actions(_,statusService)
+      views.html.requests.actions(_, statusService)
     } else {
       views.html.requests.edit(_)
     }
