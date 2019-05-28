@@ -16,4 +16,4 @@ GET         /requests/:id/get                  controllers.requests.BatchOrderRe
 GET         /requests/:id                      controllers.requests.BatchOrderRequestsController.edit(id: BSONObjectID)
 POST        /requests/:id                      controllers.requests.BatchOrderRequestsController.update(id: BSONObjectID)
 POST        /requests/:id/delete               controllers.requests.BatchOrderRequestsController.delete(id: BSONObjectID)
-
+POST        /requests/:id/requestAction        controllers.requests.BatchOrderRequestsController.requestAction(id: BSONObjectID, action: models.RequestAction.Value, desc: String)

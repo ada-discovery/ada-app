@@ -2,16 +2,18 @@ package controllers.requests
 
 import java.util.Date
 
+import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
 import models.BatchOrderRequest.batchRequestFormat
 import models.BatchOrderRequest.historyFormat
 import models.BatchOrderRequest.actionInfoFormat
 import models.BatchOrderRequest.requestActionFormat
-import models.{ActionInfo, BatchOrderRequest, BatchRequestAction, BatchRequestState, TrackingHistory}
+import models.{ActionInfo, BatchOrderRequest, BatchOrderRequestAction, BatchRequestState, RequestAction, TrackingHistory}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.services.UserManager
 import org.ada.web.controllers.core.AdaCrudControllerImpl
+import org.ada.web.controllers.routes
 import org.ada.web.security.AdaAuthConfig
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion.Infix
@@ -19,10 +21,12 @@ import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters.{EnumFormatter, JsonFormatter}
 import org.incal.play.security.SecurityRole
+import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
+import play.api.Play.current
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.{AnyContent, Request}
+import play.api.mvc.{Action, AnyContent, Request, Result}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.BatchOrderRequestRepo
 import services.request.RequestStatusService
@@ -43,7 +47,7 @@ class BatchOrderRequestsController @Inject()(
 
   private implicit val hostoryFormatter = JsonFormatter[TrackingHistory]
   private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
-
+  private val requestsListRedirect = Redirect(routes.BatchOrderRequestsController.listAll())
 
   override protected[controllers] val form = Form(
     mapping(
@@ -74,7 +78,6 @@ class BatchOrderRequestsController @Inject()(
             val actionInfo = buildActionInfo(date,requestAction)
             val newHistory = buildHistory(None, date, user._id, actionInfo)
             batchRequest.copy(timeCreated = date, createdById = user._id, state = newState, history = newHistory)
-            //batchRequest.copy(timeCreated = new Date(), createdById = user._id, state = BatchRequestState.Created)
           case None => throw new AdaException("No logged user found")
         }
         repo.save(batchRequestWithUser)
@@ -92,51 +95,48 @@ class BatchOrderRequestsController @Inject()(
   }
   }
 
-  def buildActionInfo(date: Date,requestAction:BatchRequestAction):ActionInfo={
+  def buildActionInfo(date: Date,requestAction:BatchOrderRequestAction):ActionInfo={
     ActionInfo(date, requestAction, None)
   }
 
   def buildBatchRequestAction(userId: Option[BSONObjectID],fromState:BatchRequestState.Value, toState: BatchRequestState.Value)={
-  BatchRequestAction(userId.get,fromState,toState)
+  BatchOrderRequestAction(userId.get,fromState,toState)
 }
 
-  override def updateCall(
-                         batchRequest: BatchOrderRequest)(
-                         implicit request: Request[AnyContent]
-                       ): Future[BSONObjectID] =
-  {
-    for {
-      existingRequest <- repo.get(batchRequest._id.get)
-      user <- currentUser(request)
-      id <- {
-        val batchRequestWithUser = user match {
-          case Some(user) =>
-            val newState = getState(existingRequest.get.state,batchRequest.state)
-            val requestAction = buildBatchRequestAction(user._id,existingRequest.get.state,newState)
-            var actionInfo = buildActionInfo(new Date(),requestAction)
-
-            batchRequest.copy(state = newState,createdById = existingRequest.get.createdById, history = buildHistory(existingRequest.get.history,new Date(),user._id,actionInfo))
-          case None => throw new AdaException("No logged user found")
+  def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String)= restrictAdminAnyNoCaching(deadbolt){
+    implicit request =>
+      for {
+        existingRequest <- repo.get(requestId)
+        user <- currentUser(request)
+        id <- {
+          val batchRequestWithState = user match {
+            case Some(user) =>
+              val newState:BatchRequestState.Value = getState(existingRequest.get.state, action)
+              val requestAction = buildBatchRequestAction(user._id,existingRequest.get.state,newState)
+              var actionInfo = buildActionInfo(new Date(),requestAction)
+              existingRequest.get.copy(state = newState,createdById = existingRequest.get.createdById, history = buildHistory(existingRequest.get.history,new Date(),user._id,actionInfo))
+            case None => throw new AdaException("No logged user found")
         }
-        repo.update(batchRequestWithUser)
+          repo.update(batchRequestWithState)
+        } recoverWith {
+          case e:AdaException => Future{
+            requestsListRedirect.flashing("failure" -> "Status provided  not allowed for current status")
+          }
+        }
+      } yield {
+        id
+        requestsListRedirect.flashing("success" -> "state of request updated with success to: ")
       }
 
-    } yield
-      id
+      /*
+      Future {
+    requestsListRedirect.flashing("success" -> "state of request updated with success to: ")
+  } */
   }
 
 
-  def getState(currentState: BatchRequestState.Value, updatedState: BatchRequestState.Value):BatchRequestState.Value={
-    if(currentState==updatedState){
-      currentState
-    } else
-    {
-      statusService.getNextStates(currentState).contains((updatedState.toString,updatedState.toString)) match {
-        case true =>
-          updatedState
-        case false => throw new AdaException("Status provided "+updatedState+" not allowed for current status " + currentState)
-      }
-    }
+  def getState(currentState: BatchRequestState.Value, action: RequestAction.Value): BatchRequestState.Value = {
+      statusService.getNextState(currentState, action)
   }
 
   override protected def getListViewData(page: Page[BatchOrderRequest], conditions: Seq[FilterCondition]) = { request =>

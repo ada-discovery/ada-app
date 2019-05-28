@@ -1,11 +1,20 @@
 @import views.html.layout.formErrors
 @import org.incal.play.controllers.WebContext._
 @import org.incal.play.controllers.WebContext
+@import views.html.filter.{filter => filterUI}
 
+@import controllers.requests.{routes => requestRoutes}
+@import org.ada.server.models.FilterShowFieldStyle
+@import views.html.dataset.filter.dataSetFilter
+@import views.html.elements.labelValue
+@import views.html.table.dynamicStringTable
+@import reactivemongo.bson.BSONObjectID
+@import controllers.requests.routes
 @(
     displayName: String,
     messagePrefix: String,
     validNextStates: Seq[(String,String)],
+    requestId: BSONObjectID,
     trackingHistory: Seq[String],
     errors: Seq[FormError],
     elements: Html,
@@ -18,6 +27,8 @@
 )(
     implicit context: WebContext
 )
+
+
 
 @main(Messages("edit.title", displayName), sideBar, topContentBar, None, bottomResources, Some(formErrors(messagePrefix, errors))) {
 
@@ -34,12 +45,23 @@
             <hr/>
             <div class="actions pull-right">
 
-                @validNextStates.map{ state =>
-                    <button onclick="this.form.elements['state'].value = '@state._1'; submit()" class="btn btn-primary">@state._1</button>
+                 @validNextStates.filter(state=>Seq((BatchRequestState.Rejected.toString,BatchRequestState.Rejected.toString),(BatchRequestState.Sent.toString,BatchRequestState.Sent.toString),(BatchRequestState.Unavailable.toString,BatchRequestState.Unavailable.toString)).contains(state)).map{ state =>
+                    <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addRejectModal" title="Add decision descr">
+                        @state._1.toString()
+                    </a>
+                }
+
+                @validNextStates.filter(state => !Seq((BatchRequestState.Rejected.toString,BatchRequestState.Rejected.toString),(BatchRequestState.Sent.toString,BatchRequestState.Sent.toString),(BatchRequestState.Unavailable.toString,BatchRequestState.Unavailable.toString)).contains(state)).map{ state =>
+                    <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addAcceptModal" title="Add decision descr">
+                        @state._1.toString()
+                    </a>
                 }
 
                 <a href="@cancelCall" class="btn btn-default">Cancel</a>
-            </div>
+
+                @modal("addAcceptModal", "Add a description of the decision", addAcceptModalBody, None, Some(addAcceptModalButtons))
+                @modal("addRejectModal", "Add a description of the decision", addRejectModalBody, None, Some(addRejectModalButtons))
+     </div>
         }
         </div>
     </div>
@@ -53,4 +75,55 @@
             }
         </div>
     </div>
+
+
+
+
+
 }
+
+
+@addRejectModalBody = {
+    <div class="row">
+    @labelValue("content", "Content") {
+        <textarea id="decision-reason" name="content" rows="15" cols="65"></textarea>
+    }
+    </div>
+}
+
+@addAcceptModalBody = {
+    <div class="row">
+    </div>
+}
+
+
+@addRejectModalButtons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" class="btn btn-primary" onclick="rejectAction()" data-dismiss="modal">OK</button>
+}
+
+@addAcceptModalButtons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" class="btn btn-primary" onclick="acceptAction()" data-dismiss="modal">OK</button>
+}
+
+
+@helper.javascriptRouter("requestJsRoutes")(
+    controllers.requests.routes.javascript.BatchOrderRequestsController.requestAction
+)
+
+<script type="text/javascript">
+
+
+        function acceptAction() {
+            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', '@RequestAction.Approve', "accepted")
+            submit('post', action.url)
+        }
+
+        function rejectAction() {
+            var reasonDescription = $('#addRejectModal #decision-reason').val()
+            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', '@RequestAction.Reject', reasonDescription)
+            submit('post', action.url)
+        }
+
+</script>

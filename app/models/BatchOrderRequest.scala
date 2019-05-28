@@ -4,6 +4,7 @@ import java.util.Date
 
 import org.ada.server.dataaccess.BSONObjectIdentity
 import org.ada.server.json.EnumFormat
+import org.ada.web.controllers.EnumStringBindable
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
@@ -19,21 +20,21 @@ case class BatchOrderRequest(
                               timeCreated: Date = new Date(),
                               history: Option[TrackingHistory] = None
                             )
+
 case class TrackingHistory(actionInfo: List[ActionInfo])
-case class BatchRequestAction(performedById: BSONObjectID, fromState:BatchRequestState.Value, toState: BatchRequestState.Value)
-case class ActionInfo(timestamp: Date, action: BatchRequestAction, comment: Option[String])
+case class BatchOrderRequestAction(performedById: BSONObjectID, fromState:BatchRequestState.Value, toState: BatchRequestState.Value)
+case class ActionInfo(timestamp: Date, action: BatchOrderRequestAction, comment: Option[String])
 
 object BatchRequestState extends Enumeration {
-  val SentForApproval, Rejected, Created, Approved, OwnerAcknowledged, Unavailable, Sent, UserReceived, NotReceived = Value
+  val SentForApproval, Rejected, Created, Approved, OwnerAcknowledged, Unavailable, Sent, UserReceived, NotReceived, Error = Value
+  implicit val batchRequestStateStringBinder = new EnumStringBindable(BatchRequestState)
 }
+
+
 
 object BatchOrderRequest {
   implicit val stateFormat = EnumFormat(BatchRequestState)
-
-
-  //  implicit val objectIdOptionFormat = Json.format[Option[BSONObjectID]]
-  //  implicit val objectIdsFormat = Json.format[ Seq[BSONObjectID]]
-  implicit val requestActionFormat = Json.format[BatchRequestAction]
+  implicit val requestActionFormat = Json.format[BatchOrderRequestAction]
   implicit val actionInfoFormat = Json.format[ActionInfo]
   implicit val historyFormat = Json.format[TrackingHistory]
   implicit val batchRequestFormat = Json.format[BatchOrderRequest]
