@@ -15,7 +15,7 @@
     messagePrefix: String,
     validNextStates: Seq[(String,String)],
     requestId: BSONObjectID,
-    trackingHistory: Seq[String],
+    trackingHistory: TrackingHistory,
     errors: Seq[FormError],
     elements: Html,
     updateCall: Call,
@@ -68,18 +68,26 @@
 
     <div class="row">
         <div class="col-md-12">
-            @trackingHistory.map {entry =>
-            <p>
-                @entry
-            </p>
+            <table align="center">
+                <tr class="vertical-divider" valign='top'>
+                    <td>date</td>
+                    <td>by user</td>
+                    <td>from state</td>
+                    <td>to state</td>
+                    <td>comment</td>
+                </tr>
+            @trackingHistory.actionInfo.map {entry =>
+            <tr class="vertical-divider" valign='top'>
+                <td>@entry.timestamp.toLocaleString</td>
+                <td>@entry.action.performedById.stringify</td>
+                <td>@entry.action.fromState</td>
+                <td>@entry.action.toState</td>
+                <td>@entry.comment.getOrElse("")</td>
+            </tr>
             }
+            </table>
         </div>
     </div>
-
-
-
-
-
 }
 
 

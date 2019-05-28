@@ -27,7 +27,7 @@
     "translation",
     statusService.getNextStates(data.form.get.state),
     data.form.get._id.get,
-    data.form.get.history.get.actionInfo.map(info=>info.toString),
+    data.form.get.history.get,
     errors = data.form.errors,
     elements = elements,
     updateCall = controllers.requests.routes.BatchOrderRequestsController.update(data.id),
