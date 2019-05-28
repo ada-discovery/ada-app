@@ -124,7 +124,7 @@
 
 
         function acceptAction() {
-            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', '@RequestAction.Approve', "accepted")
+            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', '@RequestAction.Approve', '')
             submit('post', action.url)
         }
 

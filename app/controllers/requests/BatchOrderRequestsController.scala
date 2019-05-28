@@ -75,7 +75,7 @@ class BatchOrderRequestsController @Inject()(
             val date = new Date()
             val newState = BatchRequestState.Created
             val requestAction = buildBatchRequestAction(user._id,newState,newState)
-            val actionInfo = buildActionInfo(date,requestAction)
+            val actionInfo = buildActionInfo(date,requestAction,None)
             val newHistory = buildHistory(None, date, user._id, actionInfo)
             batchRequest.copy(timeCreated = date, createdById = user._id, state = newState, history = newHistory)
           case None => throw new AdaException("No logged user found")
@@ -95,8 +95,8 @@ class BatchOrderRequestsController @Inject()(
   }
   }
 
-  def buildActionInfo(date: Date,requestAction:BatchOrderRequestAction):ActionInfo={
-    ActionInfo(date, requestAction, None)
+  def buildActionInfo(date: Date,requestAction:BatchOrderRequestAction, description: Option[String]):ActionInfo={
+    ActionInfo(date, requestAction, description)
   }
 
   def buildBatchRequestAction(userId: Option[BSONObjectID],fromState:BatchRequestState.Value, toState: BatchRequestState.Value)={
@@ -113,25 +113,16 @@ class BatchOrderRequestsController @Inject()(
             case Some(user) =>
               val newState:BatchRequestState.Value = getState(existingRequest.get.state, action)
               val requestAction = buildBatchRequestAction(user._id,existingRequest.get.state,newState)
-              var actionInfo = buildActionInfo(new Date(),requestAction)
+              var actionInfo = buildActionInfo(new Date(),requestAction, Some(description))
               existingRequest.get.copy(state = newState,createdById = existingRequest.get.createdById, history = buildHistory(existingRequest.get.history,new Date(),user._id,actionInfo))
             case None => throw new AdaException("No logged user found")
         }
           repo.update(batchRequestWithState)
-        } recoverWith {
-          case e:AdaException => Future{
-            requestsListRedirect.flashing("failure" -> "Status provided  not allowed for current status")
-          }
         }
       } yield {
         id
         requestsListRedirect.flashing("success" -> "state of request updated with success to: ")
       }
-
-      /*
-      Future {
-    requestsListRedirect.flashing("success" -> "state of request updated with success to: ")
-  } */
   }
 
 
