@@ -1,16 +1,14 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json._
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.ada.server.services.DataSetService
 import org.ada.server.dataaccess.RepoTypes.JsonCrudRepo
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.incal.core.dataaccess.Criterion._
 import org.incal.core.util.seqFutures
-
 import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.ada.server.dataaccess.ignite.BinaryJsonUtil.getValueFromJson
@@ -24,7 +22,7 @@ import play.api.Logger
 class CheckConsistencyOfAllInOneFeatureSet @Inject()(
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService
-  ) extends InputFutureRunnable[CheckConsistencyOfAllInOneFeatureSetSpec] {
+  ) extends InputFutureRunnableExt[CheckConsistencyOfAllInOneFeatureSetSpec] {
 
   private val submissionIdFieldName = "submissionId"
   private val logger = Logger
@@ -115,8 +113,6 @@ class CheckConsistencyOfAllInOneFeatureSet @Inject()(
         )
       }
   }
-
-  override def inputType = typeOf[CheckConsistencyOfAllInOneFeatureSetSpec]
 }
 
 case class CheckConsistencyOfAllInOneFeatureSetSpec(

@@ -1,16 +1,15 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import org.ada.server.dataaccess.StreamSpec
 import org.ada.server.models.StorageType
-import org.ada.server.models.DerivedDataSetSpec
-import org.incal.core.runnables.InputFutureRunnable
+import org.ada.server.models.datatrans.ResultDataSetSpec
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.ada.server.services.DataSetService
 
 import scala.reflect.runtime.universe.typeOf
 
-class MergeMPowerTrainingTesting2DataSets @Inject()(dataSetService: DataSetService) extends InputFutureRunnable[MergeMPowerTrainingTesting2DataSetsSpec] {
+class MergeMPowerTrainingTesting2DataSets @Inject()(dataSetService: DataSetService) extends InputFutureRunnableExt[MergeMPowerTrainingTesting2DataSetsSpec] {
 
   private val dataSet1 = "mpower_challenge.walking_activity_training_2"
   private val dataSet2 = "mpower_challenge.walking_activity_supplement_training"
@@ -42,15 +41,13 @@ class MergeMPowerTrainingTesting2DataSets @Inject()(dataSetService: DataSetServi
       Seq(dataSet1, dataSet2, dataSet3),
       fieldNameMappings,
       true,
-      DerivedDataSetSpec(
+      ResultDataSetSpec(
         mergedDataSetId,
         mergedDataSetName,
         StorageType.Mongo
       ),
       StreamSpec(batchSize = input.batchSize)
     )
-
-  override def inputType = typeOf[MergeMPowerTrainingTesting2DataSetsSpec]
 }
 
 case class MergeMPowerTrainingTesting2DataSetsSpec(

@@ -1,7 +1,7 @@
 package runnables.core
 
 import javax.inject.Inject
-import org.incal.core.runnables.{InputFutureRunnable, RunnableHtmlOutput}
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt, RunnableHtmlOutput}
 import org.incal.core.util.seqFutures
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
@@ -18,7 +18,7 @@ import scala.concurrent.Future
 class CountSanityCheckForDataSpaceRecursively @Inject() (
     val dsaf: DataSetAccessorFactory,
     dataSpaceService: DataSpaceService
-  ) extends InputFutureRunnable[CountSanityCheckForDataSpaceRecursivelySpec] with CountSanityCheckHelper with RunnableHtmlOutput {
+  ) extends InputFutureRunnableExt[CountSanityCheckForDataSpaceRecursivelySpec] with CountSanityCheckHelper with RunnableHtmlOutput {
 
   override def runAsFuture(input: CountSanityCheckForDataSpaceRecursivelySpec) =
     for {
@@ -57,13 +57,11 @@ class CountSanityCheckForDataSpaceRecursively @Inject() (
     } yield
       results ++ subResults.flatten
   }
-
-  override def inputType = typeOf[CountSanityCheckForDataSpaceRecursivelySpec]
 }
 
 class CountSanityCheckForDataSet @Inject() (
   val dsaf: DataSetAccessorFactory
-) extends InputFutureRunnable[CountSanityCheckForDataSetSpec] with CountSanityCheckHelper {
+) extends InputFutureRunnableExt[CountSanityCheckForDataSetSpec] with CountSanityCheckHelper {
 
   override def runAsFuture(
     input: CountSanityCheckForDataSetSpec
@@ -76,8 +74,6 @@ class CountSanityCheckForDataSet @Inject() (
       } else {
         logger.info(s"Data set ${input.dataSetId} passed a sanity count check.")
       }
-
-  override def inputType = typeOf[CountSanityCheckForDataSetSpec]
 }
 
 trait CountSanityCheckHelper {

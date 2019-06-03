@@ -5,8 +5,7 @@ import akka.stream.scaladsl.Source
 import org.ada.server.dataaccess.StreamSpec
 import javax.inject.Inject
 import org.ada.server.models.{Field, FieldTypeId}
-import org.ada.server.models.DerivedDataSetSpec
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
@@ -15,14 +14,14 @@ import org.ada.server.services.DataSetService
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.ada.server.field.FieldUtil._
+import org.ada.server.models.datatrans.ResultDataSetSpec
 
-import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class SegmentWISDMSessions @Inject()(
   dsaf: DataSetAccessorFactory,
   dataSetService: DataSetService
-) extends InputFutureRunnable[SegmentWISDMSessionsSpec] {
+) extends InputFutureRunnableExt[SegmentWISDMSessionsSpec] {
 
   private val logger = Logger
 
@@ -44,7 +43,7 @@ class SegmentWISDMSessions @Inject()(
 
       // activities
       activityField <- dsa.fieldRepo.get(FieldName.activity).map(_.get)
-      activities = activityField.numValues.map(_.map(_._1.toInt)).get
+      activities = activityField.enumValues.map(_._1.toInt)
 
       // max session id
       maxSessionId <- dsa.dataSetRepo.max(FieldName.sessionId).map(_.get.as[Int])
@@ -87,8 +86,6 @@ class SegmentWISDMSessions @Inject()(
     } yield
       ()
   }
-
-  override def inputType = typeOf[SegmentWISDMSessionsSpec]
 }
 
 case class SegmentWISDMSessionsSpec(
@@ -96,6 +93,6 @@ case class SegmentWISDMSessionsSpec(
   segmentSize: Int,
   segmentStep: Int,
   allowLastShorterSegment: Boolean,
-  resultDataSetSpec: DerivedDataSetSpec,
+  resultDataSetSpec: ResultDataSetSpec,
   streamSpec: StreamSpec
 )

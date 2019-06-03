@@ -3,20 +3,19 @@ package runnables.other
 import akka.stream.scaladsl.Flow
 import org.ada.server.dataaccess.StreamSpec
 import javax.inject.Inject
-import org.ada.server.models.DerivedDataSetSpec
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsNull, JsNumber, JsObject, Json}
 import org.ada.server.services.DataSetService
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
+import org.ada.server.models.datatrans.ResultDataSetSpec
 
-import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class MaxNormalizeWISDM @Inject()(
   dsaf: DataSetAccessorFactory,
   dataSetService: DataSetService
-) extends InputFutureRunnable[MaxNormalizeWISDMSpec] {
+) extends InputFutureRunnableExt[MaxNormalizeWISDMSpec] {
 
   private object FieldName {
     val xAcceleration = "x_accel"
@@ -76,12 +75,10 @@ class MaxNormalizeWISDM @Inject()(
         case _ => Some(jsValue.as[Double])
       }
     )
-
-  override def inputType = typeOf[MaxNormalizeWISDMSpec]
 }
 
 case class MaxNormalizeWISDMSpec(
   sourceDataSetId: String,
-  resultDataSetSpec: DerivedDataSetSpec,
+  resultDataSetSpec: ResultDataSetSpec,
   streamSpec: StreamSpec
 )

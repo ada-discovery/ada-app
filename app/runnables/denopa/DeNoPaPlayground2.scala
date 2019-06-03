@@ -85,7 +85,7 @@ class DeNoPaPlayground2 @Inject() (
       enumFields <- dsa.fieldRepo.find(criteria = Seq("fieldType" #== FieldTypeId.Enum))
     } yield {
       enumFields.flatMap( field =>
-        field.numValues.get.flatMap { case (_, value) =>
+        field.enumValues.flatMap { case (_, value) =>
           if (!value.toLowerCase.equals("na") && value.exists(_.isLetter)) {
             Some(value)
           } else

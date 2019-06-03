@@ -1,9 +1,8 @@
 package runnables.singlecell
 
 import javax.inject.Inject
-
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.incal.core.util.writeStringAsStream
 
@@ -12,7 +11,7 @@ import scala.io.Source
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class FilterTargetGeneVarianceFromFile @Inject() (dsaf: DataSetAccessorFactory) extends InputFutureRunnable[FilterTargetGeneVarianceFromFileSpec] {
+class FilterTargetGeneVarianceFromFile @Inject() (dsaf: DataSetAccessorFactory) extends InputFutureRunnableExt[FilterTargetGeneVarianceFromFileSpec] {
 
   private val defaultDelimiter = ","
   private val eol = "\n"
@@ -43,8 +42,6 @@ class FilterTargetGeneVarianceFromFile @Inject() (dsaf: DataSetAccessorFactory) 
       writeStringAsStream(content, new java.io.File(input.exportFileName))
     }
   }
-
-  override def inputType = typeOf[FilterTargetGeneVarianceFromFileSpec]
 }
 
 case class FilterTargetGeneVarianceFromFileSpec(

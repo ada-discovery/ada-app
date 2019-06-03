@@ -1,13 +1,12 @@
 package runnables.singlecell
 
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.runnables.InputRunnable
-import org.incal.core.util.{writeStringAsStream, listFiles}
+import org.incal.core.runnables.{InputRunnable, InputRunnableExt}
+import org.incal.core.util.{listFiles, writeStringAsStream}
 
 import scala.io.Source
-import scala.reflect.runtime.universe.typeOf
 
-class MergeResultsFromFolder extends InputRunnable[MergeResultsFromFolderSpec] {
+class MergeResultsFromFolder extends InputRunnableExt[MergeResultsFromFolderSpec] {
 
   private val defaultDelimiter = ","
   private val eol = "\n"
@@ -38,8 +37,6 @@ class MergeResultsFromFolder extends InputRunnable[MergeResultsFromFolderSpec] {
     val content = resultsSorted.map { case (genesNum, distance, fileName) => Seq(genesNum, distance, fileName).mkString(delimiter)}.mkString(eol)
     writeStringAsStream(content, new java.io.File(input.exportFileName))
   }
-
-  override def inputType = typeOf[MergeResultsFromFolderSpec]
 }
 
 case class MergeResultsFromFolderSpec(

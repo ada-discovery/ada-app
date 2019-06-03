@@ -160,8 +160,6 @@ class VariantsToSubjectEntries extends InputRunnable[VariantsToSubjectEntriesSpe
         throw new AdaParseException(s"Column $expectedColumnName at the position ${index + 1} expected but got ${columnNames(index)} instead.")
     }
   }
-
-  override def inputType = typeOf[VariantsToSubjectEntriesSpec]
 }
 
 case class VariantsToSubjectEntriesSpec(

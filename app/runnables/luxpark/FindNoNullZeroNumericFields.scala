@@ -1,16 +1,16 @@
 package runnables.luxpark
 
 import javax.inject.Inject
-
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.models.FieldTypeId
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
+
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class FindNoNullZeroNumericFields @Inject() (dsaf: DataSetAccessorFactory) extends InputFutureRunnable[FindNoNullZeroNumericFieldsSpec] {
+class FindNoNullZeroNumericFields @Inject() (dsaf: DataSetAccessorFactory) extends InputFutureRunnableExt[FindNoNullZeroNumericFieldsSpec] {
 
   private val numericFieldTypeIds = Seq(FieldTypeId.Double, FieldTypeId.Integer)
 
@@ -43,8 +43,6 @@ class FindNoNullZeroNumericFields @Inject() (dsaf: DataSetAccessorFactory) exten
       logger.info("\n" + output)
     }
   }
-
-  override def inputType = typeOf[FindNoNullZeroNumericFieldsSpec]
 }
 
 case class FindNoNullZeroNumericFieldsSpec(

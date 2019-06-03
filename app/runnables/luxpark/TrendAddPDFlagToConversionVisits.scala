@@ -3,22 +3,21 @@ package runnables.luxpark
 import org.ada.server.dataaccess.StreamSpec
 import javax.inject.Inject
 import org.ada.server.models.{Field, FieldTypeId}
-import org.ada.server.models.DerivedDataSetSpec
 import org.incal.core.dataaccess.{Criterion, NotEqualsNullCriterion}
 import org.incal.core.dataaccess.Criterion._
-import org.incal.core.runnables.{FutureRunnable, InputFutureRunnable}
+import org.incal.core.runnables.{FutureRunnable, InputFutureRunnable, InputFutureRunnableExt}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsBoolean, Json}
 import org.ada.server.services.DataSetService
 import org.ada.server.field.FieldUtil._
+import org.ada.server.models.datatrans.ResultDataSetSpec
 
-import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class TrendAddPDFlagToConversionVisits @Inject()(
     dsaf: DataSetAccessorFactory,
     dss: DataSetService
-  ) extends InputFutureRunnable[TrendAddPDFlagToConversionVisitsSpec] {
+  ) extends InputFutureRunnableExt[TrendAddPDFlagToConversionVisitsSpec] {
 
   private val dataSetId = "trend.clinical_visit"
   private val conversionVisitFieldName  = "konversion_pd_erhebung"
@@ -84,11 +83,9 @@ class TrendAddPDFlagToConversionVisits @Inject()(
     } yield
       ()
   }
-
-  override def inputType = typeOf[TrendAddPDFlagToConversionVisitsSpec]
 }
 
 case class TrendAddPDFlagToConversionVisitsSpec(
-  resultDataSetSpec: DerivedDataSetSpec,
+  resultDataSetSpec: ResultDataSetSpec,
   streamSpec: StreamSpec
 )

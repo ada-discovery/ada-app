@@ -1,7 +1,6 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import org.ada.server.dataaccess.RepoTypes.JsonCrudRepo
 import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
@@ -9,7 +8,7 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -18,7 +17,7 @@ import scala.reflect.runtime.universe.typeOf
 
 class RemoveDuplicateRCResults @Inject()(
     dsaf: DataSetAccessorFactory
-  ) extends InputFutureRunnable[RemoveDuplicateRCResultsSpec] {
+  ) extends InputFutureRunnableExt[RemoveDuplicateRCResultsSpec] {
 
   private val logger = Logger // (this.getClass())
 
@@ -81,8 +80,6 @@ class RemoveDuplicateRCResults @Inject()(
 //      val duplicates = recordIds.toSeq.diff(recordIds.toSet.toSeq).toSet
       recordIds.groupBy(_._1).filter(_._2.size > 1).map { case (x, items) => (x, items.map(_._2)) }
     }
-
-  override def inputType = typeOf[RemoveDuplicateRCResultsSpec]
 }
 
 case class RemoveDuplicateRCResultsSpec(dataSetId: String)

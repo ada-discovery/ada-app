@@ -110,7 +110,7 @@ class CreatePPMIClinicalDataSet2 @Inject()(
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   private val newGenderField = Field("GENDER_EXT", Some("Gender"), FieldTypeId.Enum, false,
-    Some(Map("1" -> "Male","2" -> "Female"))
+    Map("1" -> "Male","2" -> "Female")
   )
   private val genderConversion = Map(0 -> 2, 1 -> 2, 2 -> 1)
 

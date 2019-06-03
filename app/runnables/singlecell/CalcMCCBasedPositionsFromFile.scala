@@ -6,9 +6,8 @@ import com.google.inject.Inject
 import org.ada.server.models.{Field, FieldTypeId}
 import org.ada.server.AdaException
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.runnables.InputFutureRunnable
-import org.incal.core.util.{writeStringAsStream, listFiles, seqFutures}
-
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
+import org.incal.core.util.{listFiles, seqFutures, writeStringAsStream}
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 
@@ -29,7 +28,7 @@ import scala.io.Source
   */
 class CalcMCCBasedPositionsFromFile @Inject()(
     dsaf: DataSetAccessorFactory
-  ) extends InputFutureRunnable[CalcMCCBasedPositionsFromFileSpec] with CalcMCCBasedPositionsHelper {
+  ) extends InputFutureRunnableExt[CalcMCCBasedPositionsFromFileSpec] with CalcMCCBasedPositionsHelper {
 
   protected implicit val positionInfoFormat = Json.format[PositionInfo]
   protected implicit val goldStandardCellPositionInfoFormat = Json.format[GoldStandardCellPositionInfo]
@@ -70,8 +69,6 @@ class CalcMCCBasedPositionsFromFile @Inject()(
       writeStringAsStream(metaInfoContent, new java.io.File(input.exportFileName + "_meta"))
     }
   }
-
-  override def inputType = typeOf[CalcMCCBasedPositionsFromFileSpec]
 }
 
 
@@ -82,7 +79,7 @@ class CalcMCCBasedPositionsFromFile @Inject()(
   */
 class CalcMCCBasedPositionsFromFolder @Inject()(
   dsaf: DataSetAccessorFactory
-) extends InputFutureRunnable[CalcMCCBasedPositionsFromFolderSpec] with CalcMCCBasedPositionsHelper {
+) extends InputFutureRunnableExt[CalcMCCBasedPositionsFromFolderSpec] with CalcMCCBasedPositionsHelper {
 
   protected implicit val positionInfoFormat = Json.format[PositionInfo]
   protected implicit val goldStandardCellPositionInfoFormat = Json.format[GoldStandardCellPositionInfo]
