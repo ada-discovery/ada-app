@@ -158,8 +158,6 @@ class CalcMCCBasedPositionsFromFolder @Inject()(
       }
     }
   }
-
-  override def inputType = typeOf[CalcMCCBasedPositionsFromFolderSpec]
 }
 
 

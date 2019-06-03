@@ -1,14 +1,15 @@
 package runnables.mpower
 
-import org.incal.core.runnables.InputRunnable
+import org.incal.core.runnables.{InputRunnable, InputRunnableExt}
 import org.incal.core.util.listFiles
 
 import scala.io.Source
-import java.nio.file.{Paths, Files}
+import java.nio.file.{Files, Paths}
 import java.nio.charset.StandardCharsets
+
 import scala.reflect.runtime.universe.typeOf
 
-class MergeHeaders extends InputRunnable[MergeHeadersSpec] {
+class MergeHeaders extends InputRunnableExt[MergeHeadersSpec] {
 
   override def run(input: MergeHeadersSpec) = {
     val newHeaders = listFiles(input.folderPath).sortBy(_.getName).zipWithIndex.map {
@@ -39,8 +40,6 @@ class MergeHeaders extends InputRunnable[MergeHeadersSpec] {
       newHeaders.mkString(",").getBytes(StandardCharsets.UTF_8)
     )
   }
-
-  override def inputType = typeOf[MergeHeadersSpec]
 }
 
 case class MergeHeadersSpec(folderPath: String)

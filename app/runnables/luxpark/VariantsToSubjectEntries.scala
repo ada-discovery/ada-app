@@ -2,13 +2,13 @@ package runnables.luxpark
 
 import org.ada.server.{AdaException, AdaParseException}
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.runnables.InputRunnable
+import org.incal.core.runnables.{InputRunnable, InputRunnableExt}
 import org.incal.core.util.{GroupMapList, writeStringAsStream}
 
 import scala.io.Source
 import scala.reflect.runtime.universe.typeOf
 
-class VariantsToSubjectEntries extends InputRunnable[VariantsToSubjectEntriesSpec] {
+class VariantsToSubjectEntries extends InputRunnableExt[VariantsToSubjectEntriesSpec] {
 
   private val defaultDelimiter = "\t"
 
