@@ -8,7 +8,7 @@ import models.BatchOrderRequest.batchRequestFormat
 import models.BatchOrderRequest.historyFormat
 import models.BatchOrderRequest.actionInfoFormat
 import models.BatchOrderRequest.requestActionFormat
-import models.{ActionInfo, ApprovalCommittee, BatchOrderRequest, BatchOrderRequestAction, BatchRequestState, RequestAction, TrackingHistory}
+import models.{ActionInfo, ApprovalCommittee, BatchOrderRequest, BatchOrderRequestAction, BatchRequestState, NotificationInfo, RequestAction, TrackingHistory}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
@@ -221,9 +221,8 @@ class BatchOrderRequestsController @Inject()(
   }
 
 
-  override protected def createView = { implicit ctx =>
-    views.html.requests.create(_)
-  }
+  override protected def createView = { implicit ctx => views.html.requests.create(_) }
+
   override protected def showView = editView
 
   override protected def editView = { implicit ctx =>
@@ -236,7 +235,4 @@ class BatchOrderRequestsController @Inject()(
 
   override protected def listView = { implicit ctx =>
     (views.html.requests.list(_, _)).tupled }
-
-
-
 }

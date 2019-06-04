@@ -1,8 +1,7 @@
 package services.request
 
-import models.{BatchOrderRequest, BatchRequestState, RequestAction, TrackingHistory}
+import models.{BatchOrderRequest, BatchRequestState, NotificationInfo, RequestAction, TrackingHistory}
 import BatchRequestState._
-import controllers.requests.NotificationInfo
 import javax.inject.Inject
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.services.UserManager
