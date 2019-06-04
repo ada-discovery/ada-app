@@ -1,0 +1,130 @@
+@import views.html.layout.formErrors
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
+@import views.html.filter.{filter => filterUI}
+@import org.ada.web.util.typeColumns
+@import controllers.requests.{routes => requestRoutes}
+@import org.ada.server.models.FilterShowFieldStyle
+@import views.html.dataset.filter.dataSetFilter
+@import views.html.elements.labelValue
+@import views.html.table.dynamicStringTable
+@import reactivemongo.bson.BSONObjectID
+@import controllers.requests.routes
+@import views.html.table.displayTable
+@(
+    displayName: String,
+    messagePrefix: String,
+    validNextStates: Seq[(String,String)],
+    requestId: BSONObjectID,
+    trackingHistory: TrackingHistory,
+    errors: Seq[FormError],
+    elements: Html,
+    updateCall: Call,
+    cancelCall: Call,
+    sideBar: Option[Html] = None,
+    topContentBar: Option[Html] = None,
+    bottomResources: Option[Html] = None,
+    formArgs: Seq[(Symbol, String)] = Nil
+)(
+    implicit context: WebContext
+)
+
+
+
+@main(Messages("edit.title", displayName), sideBar, topContentBar, None, bottomResources, Some(formErrors(messagePrefix, errors))) {
+
+    <div class="page-header">
+        <h3>@Messages("edit.title", displayName)</h3>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+        @helper.form(action = updateCall) {
+            <fieldset>
+            @elements
+            </fieldset>
+            <hr/>
+            <div class="actions pull-right">
+
+                 @validNextStates.filter(state=>Seq((BatchRequestState.Rejected.toString,BatchRequestState.Rejected.toString),(BatchRequestState.Sent.toString,BatchRequestState.Sent.toString),(BatchRequestState.Unavailable.toString,BatchRequestState.Unavailable.toString)).contains(state)).map{ state =>
+                    <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addRejectModal" title="Add decision descr">
+                        @state._1.toString()
+                    </a>
+                }
+
+                @validNextStates.filter(state => !Seq((BatchRequestState.Rejected.toString,BatchRequestState.Rejected.toString),(BatchRequestState.Sent.toString,BatchRequestState.Sent.toString),(BatchRequestState.Unavailable.toString,BatchRequestState.Unavailable.toString)).contains(state)).map{ state =>
+                    <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addAcceptModal" title="Add decision descr">
+                        @state._1.toString()
+                    </a>
+                }
+
+                <a href="@cancelCall" class="btn btn-default">Cancel</a>
+
+                @modal("addAcceptModal", "Add a description of the decision", addAcceptModalBody, None, Some(addAcceptModalButtons))
+                @modal("addRejectModal", "Add a description of the decision", addRejectModalBody, None, Some(addRejectModalButtons))
+     </div>
+        }
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            @displayTable(
+                trackingHistory.actionInfo,
+                typeColumns[ActionInfo](
+                    (None, "date", _.timestamp.format("yyyy-MM-dd HH:mm:ss")),
+                    (None, "by user", _.action.performedById.stringify),
+                    (None, "from state", _.action.fromState),
+                    (None, "to state", _.action.toState),
+                    (None, "comment", _.comment.getOrElse(""))
+                 )
+            )
+        </div>
+    </div>
+}
+
+
+@addRejectModalBody = {
+    <div class="row">
+    @labelValue("content", "Content") {
+        <textarea id="decision-reason" name="content" rows="15" cols="65"></textarea>
+    }
+    </div>
+}
+
+@addAcceptModalBody = {
+    <div class="row">
+    </div>
+}
+
+
+@addRejectModalButtons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" class="btn btn-primary" onclick="rejectAction()" data-dismiss="modal">OK</button>
+}
+
+@addAcceptModalButtons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" class="btn btn-primary" onclick="acceptAction()" data-dismiss="modal">OK</button>
+}
+
+
+@helper.javascriptRouter("requestJsRoutes")(
+    controllers.requests.routes.javascript.BatchOrderRequestsController.requestAction
+)
+
+<script type="text/javascript">
+
+
+        function acceptAction() {
+            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', '@RequestAction.Approve', '')
+            submit('post', action.url)
+        }
+
+        function rejectAction() {
+            var reasonDescription = $('#addRejectModal #decision-reason').val()
+            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', '@RequestAction.Reject', reasonDescription)
+            submit('post', action.url)
+        }
+
+</script>
