@@ -1,12 +1,11 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import org.ada.server.models.{Field, FieldTypeId, StorageType}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json._
 import org.ada.server.services.DataSetService
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -16,7 +15,7 @@ import scala.reflect.runtime.universe.typeOf
 class AddFeatureNumToScoreBoard @Inject()(
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService
-  ) extends InputFutureRunnable[AddFeatureNumToScoreBoardSpec] {
+  ) extends InputFutureRunnableExt[AddFeatureNumToScoreBoardSpec] {
 
   private val submissionIdFieldName = "submissionId"
   private val featureNumField = Field("featureNum", Some("Feature Num"), FieldTypeId.Integer)
@@ -88,8 +87,6 @@ class AddFeatureNumToScoreBoard @Inject()(
       }
     }.getOrElse(defaultJsonFuture)
   }
-
-  override def inputType = typeOf[AddFeatureNumToScoreBoardSpec]
 }
 
 case class AddFeatureNumToScoreBoardSpec(

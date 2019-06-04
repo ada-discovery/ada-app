@@ -42,9 +42,10 @@ class CreatePPMIUPSITData @Inject()(
     "UPSITUPSIT_Raw_Score"
   ) ++ booleanFAMFieldNames ++ integerFAMFieldNames
 
-  private val newGenderField = Field("GENDER_EXT", Some("Gender"), FieldTypeId.Enum, false,
-    Some(Map("1" -> "Male","2" -> "Female"))
+  private val newGenderField = Field(
+    "GENDER_EXT", Some("Gender"), FieldTypeId.Enum, false, Map("1" -> "Male","2" -> "Female")
   )
+
   private val genderConversion = Map(0 -> 2, 1 -> 2, 2 -> 1)
 
   private val newFamilyHistoryField = Field("PD_FAMILY_HISTORY_EXT", Some("PD Family History"), FieldTypeId.Boolean)

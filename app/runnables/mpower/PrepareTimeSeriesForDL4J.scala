@@ -4,7 +4,7 @@ import java.nio.file.{Files, Paths}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.writeStringAsStream
 import org.ada.server.akka.AkkaStreamUtil.fileHeaderAndContentSource
 
@@ -12,7 +12,7 @@ import scala.concurrent.Future
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class PrepareTimeSeriesForDL4J extends InputFutureRunnable[PrepareTimeSeriesForDL4JSpec] {
+class PrepareTimeSeriesForDL4J extends InputFutureRunnableExt[PrepareTimeSeriesForDL4JSpec] {
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
@@ -75,8 +75,6 @@ class PrepareTimeSeriesForDL4J extends InputFutureRunnable[PrepareTimeSeriesForD
     } yield
       ()
   }
-
-  override def inputType = typeOf[PrepareTimeSeriesForDL4JSpec]
 }
 
 case class PrepareTimeSeriesForDL4JSpec(

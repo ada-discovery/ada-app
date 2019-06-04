@@ -8,7 +8,7 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.models.FieldTypeId
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.dataaccess.EqualsCriterion
-import org.incal.core.runnables.{InputFutureRunnable, RunnableHtmlOutput}
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt, RunnableHtmlOutput}
 import play.api.{Configuration, Logger}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
@@ -17,7 +17,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 
 class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configuration, userRepo: UserRepo, committeeRepo: ApprovalCommitteeRepo, requestsRepo:BatchOrderRequestRepo)
-  extends InputFutureRunnable[EmaRunRunSpec] with RunnableHtmlOutput {
+  extends InputFutureRunnableExt[EmaRunRunSpec] with RunnableHtmlOutput {
   private val logger = Logger
 
   override def runAsFuture(input: EmaRunRunSpec) = {
@@ -77,8 +77,6 @@ class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configurati
       addParagraph(bold("Hooray"))
     }
   }
-
-  override def inputType = typeOf[EmaRunRunSpec]
 }
 
 case class EmaRunRunSpec(

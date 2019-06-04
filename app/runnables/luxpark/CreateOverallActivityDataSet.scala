@@ -65,43 +65,43 @@ class CreateOverallActivityDataSet  @Inject()(
 
   val dataGroupsField =
     Field("dataGroups", Some("Group"), FieldTypeId.Enum, false,
-      Some(Map(
+      Map(
         "0" -> "control",
         "1" -> "parkinson"
-      ))
+      )
     )
 
   val momentInDayField =
     Field("momentInDayFormatu002ejsonu002echoiceAnswers", Some("Moment In Day"), FieldTypeId.Enum, false,
-      Some(Map(
+      Map(
         "0" -> "Another time",
         "1" -> "Immediately before taking Parkinson medication",
         "2" -> "Just after taking Parkinson medication (at your best)",
         "3" -> "No Tracked Medication"
-      ))
+      )
     )
 
   val activityField =
     Field("activityType", Some("Activity Type"), FieldTypeId.Enum, false,
-      Some(Map(
+      Map(
         "0" -> "tapping",
         "1" -> "walking",
         "2" -> "memory",
         "3" -> "voice",
         "4" -> "tremor"
-      ))
+      )
     )
 
   val appVersionField =
     Field("appVersion", Some("App Version"), FieldTypeId.Enum, false,
-      Some(Map(
+      Map(
         "0" -> "version 1.3,build 42",
         "1" -> "version 1.3,build 43",
         "2" -> "version 1.3 LUX,build 43",
         "3" -> "version 1.3 LUX,build 44",
         "4" -> "version 1.3 LUX,build 45",
         "5" -> "version 1.3 LUX,build 46"
-      ))
+      )
     )
 
   val subjectIdField =
@@ -244,7 +244,7 @@ class CreateOverallActivityDataSet  @Inject()(
             if (!mergedField.label.equals(field.label))
               throw new AdaException(s"The label of the merged field '${fieldName}' differs from the one provided in the data set '${dataSetId}'.")
 
-            if (!mergedField.numValues.equals(field.numValues))
+            if (!mergedField.enumValues.equals(field.enumValues))
               throw new AdaException(s"The enum values of the merged field '${fieldName}' differs from the one provided in the data set '${dataSetId}'.")
           }
           case None =>

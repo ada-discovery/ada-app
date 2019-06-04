@@ -1,7 +1,7 @@
 package runnables.luxpark
 
 import javax.inject.Inject
-import org.incal.core.runnables.{FutureRunnable, InputFutureRunnable, RunnableHtmlOutput}
+import org.incal.core.runnables.{FutureRunnable, InputFutureRunnable, InputFutureRunnableExt, RunnableHtmlOutput}
 import play.api.{Configuration, Logger}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.ada.server.services.importers.EGaitServiceFactory
@@ -12,7 +12,7 @@ import scala.reflect.runtime.universe.typeOf
 class GetEGaitData @Inject() (
     configuration: Configuration,
     eGaitServiceFactory: EGaitServiceFactory
-  ) extends InputFutureRunnable[GetEGaitDataSpec] with RunnableHtmlOutput {
+  ) extends InputFutureRunnableExt[GetEGaitDataSpec] with RunnableHtmlOutput {
 
   private val username = configuration.getString("egait.api.username").get
   private val password = configuration.getString("egait.api.password").get
@@ -101,8 +101,6 @@ class GetEGaitData @Inject() (
     logger.info(message)
     addParagraph(message)
   }
-
-  override def inputType = typeOf[GetEGaitDataSpec]
 }
 
 case class GetEGaitDataSpec(

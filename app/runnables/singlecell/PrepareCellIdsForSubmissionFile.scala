@@ -1,9 +1,8 @@
 package runnables.singlecell
 
 import javax.inject.Inject
-
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.{listFiles, writeStringAsStream}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.Json
@@ -15,7 +14,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class PrepareCellIdsForSubmissionFile @Inject() (
     dsaf: DataSetAccessorFactory
-  ) extends InputFutureRunnable[PrepareCellIdsForSubmissionFileSpec]
+  ) extends InputFutureRunnableExt[PrepareCellIdsForSubmissionFileSpec]
     with PrepareCellIdsForSubmissionHelper {
 
   private implicit val cellIdFormat = Json.format[CellId]
@@ -30,13 +29,11 @@ class PrepareCellIdsForSubmissionFile @Inject() (
     } yield
       prepareSubmission(cellIds, input.inputFileName, input.delimiter, input.exportFileName)
   }
-
-  override def inputType = typeOf[PrepareCellIdsForSubmissionFileSpec]
 }
 
 class PrepareCellIdsForSubmissionFolder @Inject() (
     dsaf: DataSetAccessorFactory
-  ) extends InputFutureRunnable[PrepareCellIdsForSubmissionFolderSpec]
+  ) extends InputFutureRunnableExt[PrepareCellIdsForSubmissionFolderSpec]
     with PrepareCellIdsForSubmissionHelper {
 
   private implicit val cellIdFormat = Json.format[CellId]
@@ -59,8 +56,6 @@ class PrepareCellIdsForSubmissionFolder @Inject() (
       }
     }
   }
-
-  override def inputType = typeOf[PrepareCellIdsForSubmissionFolderSpec]
 }
 
 trait PrepareCellIdsForSubmissionHelper {

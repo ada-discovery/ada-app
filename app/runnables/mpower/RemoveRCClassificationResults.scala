@@ -1,11 +1,10 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.{ClassificationResultRepoFactory, DataSetAccessorFactory}
 import play.api.Logger
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -15,7 +14,7 @@ import scala.reflect.runtime.universe.typeOf
 class RemoveRCClassificationResults @Inject()(
     dsaf: DataSetAccessorFactory,
     classificationResultRepoFactory: ClassificationResultRepoFactory
-  ) extends InputFutureRunnable[RemoveRCClassificationResultsSpec] {
+  ) extends InputFutureRunnableExt[RemoveRCClassificationResultsSpec] {
 
   private val logger = Logger // (this.getClass())
 
@@ -41,8 +40,6 @@ class RemoveRCClassificationResults @Inject()(
     } yield
       ()
   }
-
-  override def inputType = typeOf[RemoveRCClassificationResultsSpec]
 }
 
 case class RemoveRCClassificationResultsSpec(dataSetId: String, groupSize: Int)

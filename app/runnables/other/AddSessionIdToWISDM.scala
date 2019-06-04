@@ -5,14 +5,14 @@ import akka.stream.scaladsl.Source
 import org.ada.server.dataaccess.StreamSpec
 import javax.inject.Inject
 import org.ada.server.models.{Field, FieldTypeId}
-import org.ada.server.models.DerivedDataSetSpec
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.libs.json.{JsNumber, JsObject}
 import org.ada.server.services.DataSetService
 import org.ada.server.field.FieldUtil._
+import org.ada.server.models.datatrans.ResultDataSetSpec
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -20,7 +20,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class AddSessionIdToWISDM @Inject()(
   dsaf: DataSetAccessorFactory,
   dataSetService: DataSetService
-) extends InputFutureRunnable[AddSessionIdToWISDMSpec] {
+) extends InputFutureRunnableExt[AddSessionIdToWISDMSpec] {
 
   private val logger = Logger
 
@@ -41,7 +41,7 @@ class AddSessionIdToWISDM @Inject()(
 
       // activities
       activityField <- dsa.fieldRepo.get(FieldName.activity).map(_.get)
-      activities = activityField.numValues.map(_.map(_._1.toInt)).get
+      activities = activityField.enumValues.map(_._1.toInt)
 
       userActivities = for { x <- userIds; y <- activities } yield (x, y)
 
@@ -85,13 +85,11 @@ class AddSessionIdToWISDM @Inject()(
     } yield
       ()
   }
-
-  override def inputType = typeOf[AddSessionIdToWISDMSpec]
 }
 
 case class AddSessionIdToWISDMSpec(
   sourceDataSetId: String,
   maxDiffBetweenSessions: Long,
-  resultDataSetSpec: DerivedDataSetSpec,
+  resultDataSetSpec: ResultDataSetSpec,
   streamSpec: StreamSpec
 )

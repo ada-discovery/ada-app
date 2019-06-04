@@ -6,9 +6,8 @@ import org.incal.core.runnables.{InputFutureRunnable, RunnableHtmlOutput}
 import services.BatchOrderRequestRepoTypes.BatchOrderRequestRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.reflect.runtime.universe.typeOf
 
-class SaveNewRequest @Inject() (requestsRepo:BatchOrderRequestRepo) extends InputFutureRunnable[SaveNewRequestSpec] with RunnableHtmlOutput {
+class SaveNewRequest @Inject() (requestsRepo:BatchOrderRequestRepo) extends InputFutureRunnableExt[SaveNewRequestSpec] with RunnableHtmlOutput {
 
   override def runAsFuture(input: SaveNewRequestSpec) = {
    // val request = BatchOrderRequest(None, input.dataSetId, input.itemIds.flatMap(BSONObjectID.parse(_).toOption), BatchRequestState.Created)
@@ -19,8 +18,6 @@ class SaveNewRequest @Inject() (requestsRepo:BatchOrderRequestRepo) extends Inpu
     } yield
       addParagraph(bold("New request save with id: " + savedRequestId))
   }
-
-  override def inputType = typeOf[SaveNewRequestSpec]
 }
 
 case class SaveNewRequestSpec(

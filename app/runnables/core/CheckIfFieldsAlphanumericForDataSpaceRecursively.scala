@@ -6,10 +6,11 @@ import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.ada.server.dataaccess.dataset.FieldRepoFactory
 import org.ada.server.models.DataSpaceMetaInfo
 import org.ada.web.services.DataSpaceService
-import org.incal.core.runnables.{InputFutureRunnable, RunnableHtmlOutput}
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt, RunnableHtmlOutput}
 import org.incal.core.util.{hasNonAlphanumericUnderscore, seqFutures}
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
+
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -18,7 +19,7 @@ class CheckIfFieldsAlphanumericForDataSpaceRecursively @Inject() (
   val fieldRepoFactory: FieldRepoFactory,
   dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
   dataSpaceService: DataSpaceService
-) extends InputFutureRunnable[CheckIfFieldsAlphanumericForDataSpaceRecursivelySpec] with CheckIfFieldsAlphanumericHelper{
+) extends InputFutureRunnableExt[CheckIfFieldsAlphanumericForDataSpaceRecursivelySpec] with CheckIfFieldsAlphanumericHelper{
 
   override def runAsFuture(input: CheckIfFieldsAlphanumericForDataSpaceRecursivelySpec) =
     for {
@@ -50,8 +51,6 @@ class CheckIfFieldsAlphanumericForDataSpaceRecursively @Inject() (
     } yield
       results ++ subResults.flatten
   }
-
-  override def inputType = typeOf[CheckIfFieldsAlphanumericForDataSpaceRecursivelySpec]
 }
 
 case class CheckIfFieldsAlphanumericForDataSpaceRecursivelySpec(

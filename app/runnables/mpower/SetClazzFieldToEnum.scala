@@ -1,13 +1,12 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.ada.server.models.FieldTypeId
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.seqFutures
 
 import scala.reflect.runtime.universe.typeOf
@@ -17,7 +16,7 @@ import scala.concurrent.Future
 class SetClazzFieldToEnum @Inject()(
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     dsaf: DataSetAccessorFactory
-  ) extends InputFutureRunnable[SetClazzFieldToEnumSpec] {
+  ) extends InputFutureRunnableExt[SetClazzFieldToEnumSpec] {
 
   private val logger = Logger
 
@@ -39,7 +38,7 @@ class SetClazzFieldToEnum @Inject()(
             _ match {
               case Some(clazzField) =>
                 val enumValues = for (i <- 1 to k) yield (i.toString -> i.toString)
-                val newField = clazzField.copy(fieldType = FieldTypeId.Enum, numValues = Some(enumValues.toMap))
+                val newField = clazzField.copy(fieldType = FieldTypeId.Enum, enumValues = enumValues.toMap)
                 dsa.fieldRepo.update(newField)
               case None =>
                 Future("")
@@ -51,8 +50,6 @@ class SetClazzFieldToEnum @Inject()(
     } yield
       ()
   }
-
-  override def inputType = typeOf[SetClazzFieldToEnumSpec]
 }
 
 case class SetClazzFieldToEnumSpec(

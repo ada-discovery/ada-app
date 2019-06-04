@@ -1,11 +1,10 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import org.ada.server.models.{Field, FieldTypeId}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json._
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.seqFutures
 import org.ada.server.services.DataSetService
 import play.api.Logger
@@ -17,7 +16,7 @@ import scala.reflect.runtime.universe.typeOf
 class CheckFeatureDiscrepancies @Inject()(
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService
-  ) extends InputFutureRunnable[CheckFeatureDiscrepanciesSpec] {
+  ) extends InputFutureRunnableExt[CheckFeatureDiscrepanciesSpec] {
 
   private val logger = Logger
 
@@ -89,8 +88,6 @@ class CheckFeatureDiscrepancies @Inject()(
       }
     }.getOrElse(unitFuture)
   }
-
-  override def inputType = typeOf[CheckFeatureDiscrepanciesSpec]
 }
 
 case class CheckFeatureDiscrepanciesSpec(

@@ -1,11 +1,10 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -14,7 +13,7 @@ import scala.reflect.runtime.universe.typeOf
 
 class FindDuplicateRCResults @Inject()(
     dsaf: DataSetAccessorFactory
-  ) extends InputFutureRunnable[FindDuplicateRCResultsSpec] {
+  ) extends InputFutureRunnableExt[FindDuplicateRCResultsSpec] {
 
   private val logger = Logger // (this.getClass())
 
@@ -63,8 +62,6 @@ class FindDuplicateRCResults @Inject()(
       recordIds.toSeq.groupBy(identity).collect { case (x, Seq(_,_,_*)) => x }
     }
   }
-
-  override def inputType = typeOf[FindDuplicateRCResultsSpec]
 }
 
 case class FindDuplicateRCResultsSpec(dataSetId: String)

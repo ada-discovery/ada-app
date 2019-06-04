@@ -36,8 +36,8 @@ class RCPredictionController @Inject()(
   private val messageLogger = MessageLogger(logger, messageRepo)
 
   private implicit val stringSeqFormatter = SeqFormatter.apply
-  private implicit val intSeqFormatter = SeqFormatter.applyInt
-  private implicit val doubleSeqFormatter = SeqFormatter.applyDouble
+  private implicit val intSeqFormatter = SeqFormatter.asInt
+  private implicit val doubleSeqFormatter = SeqFormatter.asDouble
   private implicit val vectorScalerTypeFormatter = EnumFormatter(VectorScalerType)
   private implicit val activationFunctionTypeFormatter = JavaEnumFormatter[ActivationFunctionType]
 

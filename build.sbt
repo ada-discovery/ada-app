@@ -1,14 +1,11 @@
 import com.github.play2war.plugin._
 import PlayKeys._
-import com.typesafe.config._
 
 organization := "org.adada"
 
 name := "ada-web-ncer"
 
-// load version from the app config
-val conf = ConfigFactory.parseFile(new java.io.File("conf/application.conf")).resolve()
-version := conf.getString("app.version")
+version := "0.7.3.RC.8"
 
 scalaVersion := "2.11.12"
 
@@ -23,13 +20,8 @@ libraryDependencies ++= Seq(cache, ws, filters)
 PlayKeys.devSettings := Seq("play.server.netty.maxInitialLineLength" -> "16384")
 
 resolvers ++= Seq(
-//  "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
-//  "JCenter" at "http://jcenter.bintray.com/",
-//  "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases",
-//  "jitpack.io" at "https://jitpack.io",   // for t-SNE (Java impl)
-//  "Local Maven Repository" at "file:///"+ Path.userHome.absolutePath + "/.m2/repository",
-  "bnd libs" at "https://peterbanda.net/maven2"
-//  "Ivylocal" at "file:///"++Path.userHome.absolutePath+"/.ivy2/local/"
+  "bnd libs" at "https://peterbanda.net/maven2",
+  Resolver.mavenLocal
 )
 
 routesImport ++= Seq(
@@ -42,14 +34,10 @@ routesImport ++= Seq(
 val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-web" % "0.7.3.RC.7.SNAPSHOT.7",
-  "org.adada" %% "ada-web" % "0.7.3.RC.7.SNAPSHOT.7" classifier "assets",
+  "org.adada" %% "ada-web" % "0.7.3.RC.8",
+  "org.adada" %% "ada-web" % "0.7.3.RC.8" classifier "assets",
   "org.adada" %% "ada-dream-pd-challenge" % "0.0.2",
-  "org.deeplearning4j" %% "scalnet" % "1.0.0-beta3",
-// "org.deeplearning4j" % "deeplearning4j-core" % "1.0.0-beta3",  
-  "org.nd4j" % "nd4j-native-platform" % "1.0.0-beta3",
-  "org.deeplearning4j" % "deeplearning4j-nlp" % "1.0.0-beta3",
-//  "org.deeplearning4j" %% "deeplearning4j-ui" % "1.0.0-beta3",
+  "org.in-cal" %% "incal-dl4j" % "0.1.0",   // DL4J
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 ).map(_.exclude("org.slf4j", "slf4j-log4j12"))
 

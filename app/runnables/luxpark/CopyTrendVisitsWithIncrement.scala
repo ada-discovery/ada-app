@@ -66,8 +66,8 @@ class CopyTrendVisitsWithIncrement @Inject()(dsaf: DataSetAccessorFactory) exten
       visitField <- targetDsa.fieldRepo.get(visitFieldName).map(_.get)
 
       _ <- {
-        val mergedEnumValues = visitField.numValues.get ++ newVisitLabels.map { case (from, to) => (from.toString, to) }
-        targetDsa.fieldRepo.save(visitField.copy(numValues = Some(mergedEnumValues)))
+        val mergedEnumValues = visitField.enumValues ++ newVisitLabels.map { case (from, to) => (from.toString, to) }
+        targetDsa.fieldRepo.save(visitField.copy(enumValues = mergedEnumValues))
       }
     } yield
       ()

@@ -8,13 +8,15 @@ import org.ada.server.dataaccess.StreamSpec
 import org.ada.server.dataaccess.JsonCrudRepoExtra._
 import org.ada.server.dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.ada.server.models._
-import org.ada.server.models.{DerivedDataSetSpec, RenameFieldsSpec}
-import org.incal.core.runnables.InputFutureRunnable
+import org.ada.server.models.datatrans.RenameFieldsTransformation
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.{hasNonAlphanumericUnderscore, nonAlphanumericToUnderscore}
 import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassificationResult, TemporalClassificationResult}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
+import org.ada.server.models.datatrans.ResultDataSetSpec
 import play.api.Logger
 import org.ada.server.services.DataSetService
+import org.ada.server.services.ServiceTypes.DataSetCentralTransformer
 import org.ada.web.services.DataSpaceService
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -26,8 +28,9 @@ class FixNonalphanumericFields @Inject() (
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
+    dataSetCentralTransformation: DataSetCentralTransformer,
     dataSpaceService: DataSpaceService
-  ) extends InputFutureRunnable[FixNonalphanumericFieldsSpec] {
+  ) extends InputFutureRunnableExt[FixNonalphanumericFieldsSpec] {
 
   private val logger = Logger
   private val escapedDotString = "u002e"
@@ -60,9 +63,9 @@ class FixNonalphanumericFields @Inject() (
       }
 
       // rename fields and move data to a temporary data set
-      _ <- dataSetService.renameFields(
-        RenameFieldsSpec(
-          input.dataSetId, oldToNewFieldNameMap, DerivedDataSetSpec(newDataSetId, "Temporary (To Delete)", input.tempStorageType), streamSpec
+      _ <- dataSetCentralTransformation(
+        RenameFieldsTransformation(None,
+          input.dataSetId, oldToNewFieldNameMap.toSeq, ResultDataSetSpec(newDataSetId, "Temporary (To Delete)", input.tempStorageType), streamSpec
         ))
 
       movedDsa = dsaf(newDataSetId).get
@@ -234,8 +237,6 @@ class FixNonalphanumericFields @Inject() (
     } yield
       ()
   }
-
-  override def inputType = typeOf[FixNonalphanumericFieldsSpec]
 }
 
 case class FixNonalphanumericFieldsSpec(

@@ -10,7 +10,7 @@ import org.ada.server.dataaccess.RepoTypes.ClassifierRepo
 import org.ada.server.dataaccess.dataset.{ClassificationResultRepoFactory, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.json.{JsObject, Json}
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.seqFutures
 import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassificationResult}
 import org.ada.server.services.DataSetService
@@ -26,7 +26,7 @@ class MergeRCClassificationResults @Inject() (
     classificationResultRepoFactory: ClassificationResultRepoFactory,
     filterRepoFactory: FilterRepoFactory,
     classificationRepo: ClassifierRepo
-  ) extends InputFutureRunnable[MergeRCClassificationResultsSpec] {
+  ) extends InputFutureRunnableExt[MergeRCClassificationResultsSpec] {
 
   private val logger = Logger // (this.getClass())
 
@@ -108,8 +108,6 @@ class MergeRCClassificationResults @Inject() (
     } yield
       resultsWithExtra
   }
-
-  override def inputType = typeOf[MergeRCClassificationResultsSpec]
 }
 
 case class MergeRCClassificationResultsSpec(dataSetId: String)
