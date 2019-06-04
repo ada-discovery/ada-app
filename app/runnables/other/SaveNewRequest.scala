@@ -2,7 +2,7 @@ package runnables.other
 
 import javax.inject.Inject
 import models.{BatchOrderRequest, BatchRequestState}
-import org.incal.core.runnables.{InputFutureRunnable, RunnableHtmlOutput}
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt, RunnableHtmlOutput}
 import services.BatchOrderRequestRepoTypes.BatchOrderRequestRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
