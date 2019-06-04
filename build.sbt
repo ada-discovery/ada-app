@@ -34,8 +34,8 @@ routesImport ++= Seq(
 val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-web" % "0.7.3.RC.8",
-  "org.adada" %% "ada-web" % "0.7.3.RC.8" classifier "assets",
+  "org.adada" %% "ada-web" % "0.7.3.RC.9.SNAPSHOT.1",
+  "org.adada" %% "ada-web" % "0.7.3.RC.9.SNAPSHOT.1" classifier "assets",
   "org.adada" %% "ada-dream-pd-challenge" % "0.0.2",
   "org.in-cal" %% "incal-dl4j" % "0.1.0",   // DL4J
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
