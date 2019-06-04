@@ -8,9 +8,11 @@ import models.BatchOrderRequest.batchRequestFormat
 import models.BatchOrderRequest.historyFormat
 import models.BatchOrderRequest.actionInfoFormat
 import models.BatchOrderRequest.requestActionFormat
-import models.{ActionInfo, BatchOrderRequest, BatchOrderRequestAction, BatchRequestState, RequestAction, TrackingHistory}
+import models.{ActionInfo, ApprovalCommittee, BatchOrderRequest, BatchOrderRequestAction, BatchRequestState, RequestAction, TrackingHistory}
 import org.ada.server.AdaException
-import org.ada.server.dataaccess.RepoTypes.UserRepo
+import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
+import org.ada.server.models.User.UserIdentity
 import org.ada.server.services.UserManager
 import org.ada.web.controllers.core.AdaCrudControllerImpl
 import org.ada.web.controllers.routes
@@ -26,10 +28,11 @@ import play.api.Play.current
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.mailer.{Email, MailerClient}
 import play.api.mvc.{Action, AnyContent, Request, Result}
 import reactivemongo.bson.BSONObjectID
-import services.BatchOrderRequestRepoTypes.BatchOrderRequestRepo
-import services.request.RequestStatusService
+import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
+import services.request.{ActionNotificationService, RequestStatusService}
 
 import scala.concurrent.Future
 import scala.util.parsing.json.JSONFormat
@@ -38,8 +41,11 @@ import scala.util.parsing.json.JSONFormat
 class BatchOrderRequestsController @Inject()(
                                               requestsRepo: BatchOrderRequestRepo,
                                               userRepo: UserRepo,
+                                              committeeRepo: ApprovalCommitteeRepo,
                                               val userManager: UserManager,
-                                              val statusService: RequestStatusService
+                                              val statusService: RequestStatusService,
+                                              val actionNotificationService: ActionNotificationService,
+                                              mailerClient: MailerClient
                                             ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
   with AdminRestrictedCrudController[BSONObjectID]
   with HasBasicFormCrudViews[BatchOrderRequest, BSONObjectID]
@@ -103,31 +109,84 @@ class BatchOrderRequestsController @Inject()(
   BatchOrderRequestAction(userId.get,fromState,toState)
 }
 
+
   def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String)= restrictAdminAnyNoCaching(deadbolt){
+
     implicit request =>
+
       for {
         existingRequest <- repo.get(requestId)
+        requesterUser <- userRepo.get(existingRequest.get.createdById.get)
         user <- currentUser(request)
         id <- {
           val batchRequestWithState = user match {
             case Some(user) =>
-              val newState:BatchRequestState.Value = getState(existingRequest.get.state, action)
+              val dateOfUpdate=new Date()
+              val newState:BatchRequestState.Value = statusService.getNextState(existingRequest.get.state, action)
               val requestAction = buildBatchRequestAction(user._id,existingRequest.get.state,newState)
-              var actionInfo = buildActionInfo(new Date(),requestAction, Some(description))
-              existingRequest.get.copy(state = newState,createdById = existingRequest.get.createdById, history = buildHistory(existingRequest.get.history,new Date(),user._id,actionInfo))
+              var actionInfo = buildActionInfo(dateOfUpdate,requestAction, Some(description))
+              var updatedHistory = buildHistory(existingRequest.get.history,dateOfUpdate,user._id,actionInfo)
+
+
+
+              addNotifications(existingRequest,requesterUser,newState,dateOfUpdate,user)
+
+
+
+              existingRequest.get.copy(state = newState,createdById = existingRequest.get.createdById, history = updatedHistory)
             case None => throw new AdaException("No logged user found")
         }
           repo.update(batchRequestWithState)
         }
       } yield {
         id
+        actionNotificationService.sendNotifications()
         requestsListRedirect.flashing("success" -> "state of request updated with success to: ")
       }
   }
 
+  def addNotifications(existingRequest: Option[BatchOrderRequest], requesterUser: Option[User], newState: BatchRequestState.Value, dateOfUpdate: Date, user: User) = {
 
-  def getState(currentState: BatchRequestState.Value, action: RequestAction.Value): BatchRequestState.Value = {
-      statusService.getNextState(currentState, action)
+
+    val requesterNotification=NotificationInfo(existingRequest.get._id.get,existingRequest.get.timeCreated,requesterUser.get.ldapDn,
+      requesterUser.get.email,existingRequest.get.state,newState,dateOfUpdate,user.ldapDn)
+    actionNotificationService.addNotification(requesterNotification)
+
+
+    println("searching committee")
+
+
+
+    for {
+
+      committeeUsersddd<- committeeRepo.find(projection = Seq("userIds"))
+      //  committeeUsers <- userRepo.fin
+    } yield {
+
+
+
+
+      println("committee1")
+      committeeUsersddd.map { users => println(users)}
+    }
+    println("searching committee")
+    for {
+
+     committeeIds <- committeeRepo.find(Seq("dataSetId" #== existingRequest.get.dataSetId))
+   //  committeeUsers <- userRepo.fin
+    } yield{
+      println("committee2")
+      println(committeeIds.take(1))
+
+
+
+
+
+      val committeeNotification=NotificationInfo(existingRequest.get._id.get,existingRequest.get.timeCreated,requesterUser.get.ldapDn,
+        requesterUser.get.email,existingRequest.get.state,newState,dateOfUpdate,user.ldapDn)
+
+      committeeIds
+    }
   }
 
   override protected def getListViewData(page: Page[BatchOrderRequest], conditions: Seq[FilterCondition]) = { request =>
@@ -162,7 +221,9 @@ class BatchOrderRequestsController @Inject()(
   }
 
 
-  override protected def createView = { implicit ctx => views.html.requests.create(_) }
+  override protected def createView = { implicit ctx =>
+    views.html.requests.create(_)
+  }
   override protected def showView = editView
 
   override protected def editView = { implicit ctx =>
@@ -175,4 +236,7 @@ class BatchOrderRequestsController @Inject()(
 
   override protected def listView = { implicit ctx =>
     (views.html.requests.list(_, _)).tupled }
+
+
+
 }

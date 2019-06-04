@@ -9,9 +9,13 @@ case class ApprovalCommittee(
   _id: Option[BSONObjectID] = None,
   dataSetId: String,
   userIds: Seq[BSONObjectID]
+ // userIds: UserIds
 )
 
+//case class UserIds(userIds: Seq[BSONObjectID])
+
 object ApprovalCommittee {
+ // implicit val userIdsFormat = Json.format[UserIds]
   implicit val approvalCommitteeFormat = Json.format[ApprovalCommittee]
 
   implicit object ApprovalCommitteeIdentity extends BSONObjectIdentity[ApprovalCommittee] {
