@@ -30,7 +30,7 @@ import play.api.libs.mailer.{Email, MailerClient}
 import play.api.mvc.{Action, AnyContent, Request, Result}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
-import services.request.{ActionNotificationService, RequestStatusService}
+import services.request.{ActionGraph, ActionNotificationService}
 
 import scala.concurrent.Future
 
@@ -42,7 +42,6 @@ class BatchOrderRequestsController @Inject()(
                                               userRepo: UserRepo,
                                               committeeRepo: ApprovalCommitteeRepo,
                                               val userManager: UserManager,
-                                              val statusService: RequestStatusService,
                                               val actionNotificationService: ActionNotificationService,
                                               mailerClient: MailerClient
                                             ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
@@ -116,7 +115,7 @@ class BatchOrderRequestsController @Inject()(
           val batchRequestWithState = user match {
             case Some(user) =>
               val dateOfUpdate=new Date()
-              val newState:BatchRequestState.Value = statusService.getNextState(existingRequest.get.state, action)
+              val newState:BatchRequestState.Value = getNextState(existingRequest.get.state, action)
               var actionInfo = buildActionInfo(dateOfUpdate,user._id,existingRequest.get.state,newState, Some(description))
               var updatedHistory = buildHistory(existingRequest.get.history,dateOfUpdate,user._id,actionInfo)
 
@@ -137,6 +136,13 @@ class BatchOrderRequestsController @Inject()(
         requestsListRedirect.flashing("success" -> "state of request updated with success to: ")
       }
   }
+
+  def getNextState(currentState: BatchRequestState.Value, action: RequestAction.Value):BatchRequestState.Value ={
+      ActionGraph.apply.get(currentState).get.find(validAction=>validAction.action == action) match {
+        case Some(allowedAction) =>  allowedAction.toState
+        case None => throw new AdaException("Action "+ action +" not allowed for current state" +currentState)
+      }
+   }
 
   def addNotifications(existingRequest: Option[BatchOrderRequest], requesterUser: Option[User], newState: BatchRequestState.Value, dateOfUpdate: Date, user: User) = {
 
@@ -220,7 +226,7 @@ class BatchOrderRequestsController @Inject()(
 
   override protected def editView = { implicit ctx =>
     if(true==true){
-      views.html.requests.actions(_, statusService)
+      views.html.requests.actions(_)
     } else {
       views.html.requests.edit(_)
     }

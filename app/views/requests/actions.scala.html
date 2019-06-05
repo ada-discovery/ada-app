@@ -7,12 +7,12 @@
 @import org.ada.web.controllers.routes
 @import views.html.elements._
 @import services.request.ActionGraph
+@import models.Action
 
 @import reactivemongo.bson.BSONObjectID
-@import services.request.RequestStatusService
+
 @(
-        data: IdForm[BSONObjectID, BatchOrderRequest],
-        statusService: RequestStatusService
+        data: IdForm[BSONObjectID, BatchOrderRequest]
 )(
         implicit context: WebContext
 )
@@ -27,7 +27,7 @@
     "Request status",
     "request",
 //    statusService.getNextStates(data.form.get.state),
-    ActionGraph.apply.get(data.form.get.state),
+    ActionGraph.apply.get(data.form.get.state).orElse(Some(Traversable[Action]())).get,
     data.form.get._id.get,
     data.form.get.history,
     errors = data.form.errors,
