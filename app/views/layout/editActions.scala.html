@@ -16,7 +16,7 @@
     messagePrefix: String,
     validNextStates: Seq[(String,String)],
     requestId: BSONObjectID,
-    trackingHistory: TrackingHistory,
+    trackingHistory: Seq[ActionInfo],
     errors: Seq[FormError],
     elements: Html,
     updateCall: Call,
@@ -117,13 +117,13 @@
 
 
         function acceptAction() {
-            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', '@RequestAction.Approve', '')
+            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', '@Action.Approve', '')
             submit('post', action.url)
         }
 
         function rejectAction() {
             var reasonDescription = $('#addRejectModal #decision-reason').val()
-            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', '@RequestAction.Reject', reasonDescription)
+            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', '@Action.Reject', reasonDescription)
             submit('post', action.url)
         }
 

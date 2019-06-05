@@ -13,30 +13,25 @@ import reactivemongo.play.json.JSONSerializationPack._
 case class BatchOrderRequest(
                               _id: Option[BSONObjectID] = None,
                               dataSetId: String,
-                              itemIds: String,
+                              itemIds: String, // Seq[BSONObjectID],
                               state: BatchRequestState.Value = BatchRequestState.Created,
                               createdById: Option[BSONObjectID] = None,
-                              createdByName: Option[String] = None,
+                              createdByName: Option[String] = None, //to be removed
                               timeCreated: Date = new Date(),
-                              history: Option[TrackingHistory] = None
+                              history: Option[String] = None //Seq[ActionInfo]
                             )
 
-case class TrackingHistory(actionInfo: List[ActionInfo])
-case class BatchOrderRequestAction(performedById: BSONObjectID, fromState:BatchRequestState.Value, toState: BatchRequestState.Value)
-case class ActionInfo(timestamp: Date, action: BatchOrderRequestAction, comment: Option[String])
+case class ActionInfo(timestamp: Date, performedById: BSONObjectID, fromState:BatchRequestState.Value, toState: BatchRequestState.Value, comment: Option[String])
 
 object BatchRequestState extends Enumeration {
   val SentForApproval, Rejected, Created, Approved, OwnerAcknowledged, Unavailable, Sent, UserReceived, NotReceived, Error = Value
-  implicit val batchRequestStateStringBinder = new EnumStringBindable(BatchRequestState)
 }
 
 
 
 object BatchOrderRequest {
   implicit val stateFormat = EnumFormat(BatchRequestState)
-  implicit val requestActionFormat = Json.format[BatchOrderRequestAction]
   implicit val actionInfoFormat = Json.format[ActionInfo]
-  implicit val historyFormat = Json.format[TrackingHistory]
   implicit val batchRequestFormat = Json.format[BatchOrderRequest]
 
   implicit object BatchRequestIdentity extends BSONObjectIdentity[BatchOrderRequest] {

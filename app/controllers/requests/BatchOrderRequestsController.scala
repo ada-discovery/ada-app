@@ -5,10 +5,8 @@ import java.util.Date
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
 import models.BatchOrderRequest.batchRequestFormat
-import models.BatchOrderRequest.historyFormat
 import models.BatchOrderRequest.actionInfoFormat
-import models.BatchOrderRequest.requestActionFormat
-import models.{ActionInfo, ApprovalCommittee, BatchOrderRequest, BatchOrderRequestAction, BatchRequestState, NotificationInfo, RequestAction, TrackingHistory}
+import models.{ActionInfo, ApprovalCommittee, BatchOrderRequest, BatchRequestState, NotificationInfo, Action}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
@@ -35,11 +33,12 @@ import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderReq
 import services.request.{ActionNotificationService, RequestStatusService}
 
 import scala.concurrent.Future
-import scala.util.parsing.json.JSONFormat
+
 
 @Deprecated
 class BatchOrderRequestsController @Inject()(
-                                              requestsRepo: BatchOrderRequestRepo,
+                                       requestsRepo: BatchOrderRequestRepo,
+
                                               userRepo: UserRepo,
                                               committeeRepo: ApprovalCommitteeRepo,
                                               val userManager: UserManager,
@@ -51,7 +50,7 @@ class BatchOrderRequestsController @Inject()(
   with HasBasicFormCrudViews[BatchOrderRequest, BSONObjectID]
   with AdaAuthConfig {
 
-  private implicit val hostoryFormatter = JsonFormatter[TrackingHistory]
+  private implicit val hostoryFormatter = JsonFormatter[Seq[ActionInfo]]
   private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
   private val requestsListRedirect = Redirect(routes.BatchOrderRequestsController.listAll())
 
@@ -64,7 +63,7 @@ class BatchOrderRequestsController @Inject()(
       "created by id" -> ignored(Option.empty[BSONObjectID]),
       "created by name" -> ignored(Option.empty[String]),
       "date" -> ignored(new Date()),
-      "history"->ignored(Option.empty[TrackingHistory])
+      "history"->ignored(Option.empty[String])
     )(BatchOrderRequest.apply)(BatchOrderRequest.unapply))
   override protected val homeCall = routes.BatchOrderRequestsController.find()
 
@@ -110,7 +109,7 @@ class BatchOrderRequestsController @Inject()(
 }
 
 
-  def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String)= restrictAdminAnyNoCaching(deadbolt){
+  def requestAction(requestId: BSONObjectID, action: Action.Value, description: String)= restrictAdminAnyNoCaching(deadbolt){
 
     implicit request =>
 
