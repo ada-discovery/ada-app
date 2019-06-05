@@ -13,12 +13,12 @@ import reactivemongo.play.json.JSONSerializationPack._
 case class BatchOrderRequest(
                               _id: Option[BSONObjectID] = None,
                               dataSetId: String,
-                              itemIds: String, // Seq[BSONObjectID],
+                              itemIds: Seq[String], //Seq[BSONObjectID],
                               state: BatchRequestState.Value = BatchRequestState.Created,
                               createdById: Option[BSONObjectID] = None,
                               createdByName: Option[String] = None, //to be removed
                               timeCreated: Date = new Date(),
-                              history: Option[String] = None //Seq[ActionInfo]
+                              history: Seq[ActionInfo] = Nil
                             )
 
 case class ActionInfo(timestamp: Date, performedById: BSONObjectID, fromState:BatchRequestState.Value, toState: BatchRequestState.Value, comment: Option[String])

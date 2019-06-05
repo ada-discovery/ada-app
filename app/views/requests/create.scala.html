@@ -8,6 +8,8 @@
 @import org.ada.web.security.AdaAuthConfig
 
 @import views.html.helper.input
+@import views.html.table.dynamicStringTable
+@import reactivemongo.bson.BSONObjectID
 @(
 	form: Form[BatchOrderRequest]
 )(
@@ -16,8 +18,13 @@
 
 @elements = {
 @inputText("request", "dataSetId", form)
-@inputText("request", "itemIds", form)
+
 <input type="hidden" name="state" value="@BatchRequestState.Created" />
+
+@labelValue("request", "itemIds"){
+	@dynamicStringTable("itemIds", Seq("577e18c24500004800cdc558"))
+}
+
 }
 
 @layout.create(

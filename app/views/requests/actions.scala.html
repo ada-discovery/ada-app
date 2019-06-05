@@ -6,6 +6,7 @@
 @import org.incal.play.controllers.WebContext._
 @import org.ada.web.controllers.routes
 @import views.html.elements._
+@import services.request.ActionGraph
 
 @import reactivemongo.bson.BSONObjectID
 @import services.request.RequestStatusService
@@ -25,9 +26,10 @@
 @layout.editActions(
     "Request status",
     "request",
-    statusService.getNextStates(data.form.get.state),
+//    statusService.getNextStates(data.form.get.state),
+    ActionGraph.apply.get(data.form.get.state),
     data.form.get._id.get,
-    data.form.get.history.get,
+    data.form.get.history,
     errors = data.form.errors,
     elements = elements,
     updateCall = controllers.requests.routes.BatchOrderRequestsController.update(data.id),

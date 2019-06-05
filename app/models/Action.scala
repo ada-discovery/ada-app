@@ -11,6 +11,6 @@ case class Action(
                    fromState: BatchRequestState.Value,
                    action: RequestAction.Value,
                    toState: BatchRequestState.Value,
-                   commentNeeded: Boolean = false,
-                   notified: Seq[NotificationRole.Value] = Nil
+                   notified: Seq[NotificationRole.Value] = Nil,
+                   commentNeeded: Boolean = false
                  )

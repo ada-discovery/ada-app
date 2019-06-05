@@ -12,7 +12,7 @@ class SaveNewRequest @Inject() (requestsRepo:BatchOrderRequestRepo) extends Inpu
 
   override def runAsFuture(input: SaveNewRequestSpec) = {
    // val request = BatchOrderRequest(None, input.dataSetId, input.itemIds.flatMap(BSONObjectID.parse(_).toOption), BatchRequestState.Created)
-   val request = BatchOrderRequest(None, input.dataSetId, "", BatchRequestState.Created)
+   val request = BatchOrderRequest(None, input.dataSetId, Seq(), BatchRequestState.Created)
 
     for {
       savedRequestId <- requestsRepo.save(request)

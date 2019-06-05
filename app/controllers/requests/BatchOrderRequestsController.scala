@@ -6,7 +6,7 @@ import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
 import models.BatchOrderRequest.batchRequestFormat
 import models.BatchOrderRequest.actionInfoFormat
-import models.{ActionInfo, ApprovalCommittee, BatchOrderRequest, BatchRequestState, NotificationInfo, Action}
+import models.{Action, ActionInfo, ApprovalCommittee, BatchOrderRequest, BatchRequestState, NotificationInfo, RequestAction}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
@@ -50,7 +50,7 @@ class BatchOrderRequestsController @Inject()(
   with HasBasicFormCrudViews[BatchOrderRequest, BSONObjectID]
   with AdaAuthConfig {
 
-  private implicit val hostoryFormatter = JsonFormatter[Seq[ActionInfo]]
+  private implicit val actionInfoFormatter = JsonFormatter[Seq[ActionInfo]]
   private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
   private val requestsListRedirect = Redirect(routes.BatchOrderRequestsController.listAll())
 
@@ -58,12 +58,12 @@ class BatchOrderRequestsController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSetId" -> nonEmptyText,
-      "itemIds" -> nonEmptyText,
+      "itemIds" -> ignored(Seq[String]()),
       "state" -> of[BatchRequestState.Value],
       "created by id" -> ignored(Option.empty[BSONObjectID]),
       "created by name" -> ignored(Option.empty[String]),
       "date" -> ignored(new Date()),
-      "history"->ignored(Option.empty[String])
+      "history"->ignored(Seq[ActionInfo]())
     )(BatchOrderRequest.apply)(BatchOrderRequest.unapply))
   override protected val homeCall = routes.BatchOrderRequestsController.find()
 
@@ -79,9 +79,8 @@ class BatchOrderRequestsController @Inject()(
           case Some(user) =>
             val date = new Date()
             val newState = BatchRequestState.Created
-            val requestAction = buildBatchRequestAction(user._id,newState,newState)
-            val actionInfo = buildActionInfo(date,requestAction,None)
-            val newHistory = buildHistory(None, date, user._id, actionInfo)
+            val actionInfo = buildActionInfo(date,user._id,newState,newState,None)
+            val newHistory = buildHistory(Seq(), date, user._id, actionInfo)
             batchRequest.copy(timeCreated = date, createdById = user._id, state = newState, history = newHistory)
           case None => throw new AdaException("No logged user found")
         }
@@ -91,25 +90,21 @@ class BatchOrderRequestsController @Inject()(
       id
 }
 
-  def buildHistory(currentHistory: Option[TrackingHistory], date: Date, userId: Option[BSONObjectID], actionInfo:ActionInfo):Option[TrackingHistory] ={
-    currentHistory match {
-    case Some(currentHistory) => {
-      Some(currentHistory.copy(actionInfo=actionInfo::currentHistory.actionInfo))
+  def buildHistory(currentHistory: Seq[ActionInfo], date: Date, userId: Option[BSONObjectID], actionInfo:ActionInfo):Seq[ActionInfo] ={
+    currentHistory.isEmpty match {
+    case false => {
+      currentHistory :+ actionInfo
     }
-    case None => Some(TrackingHistory(List(actionInfo)))
+    case true => List(actionInfo)
   }
   }
 
-  def buildActionInfo(date: Date,requestAction:BatchOrderRequestAction, description: Option[String]):ActionInfo={
-    ActionInfo(date, requestAction, description)
+  def buildActionInfo(date: Date,userId: Option[BSONObjectID],fromState:BatchRequestState.Value, toState: BatchRequestState.Value, description: Option[String]):ActionInfo={
+    ActionInfo(date, userId.get,fromState,toState, description)
   }
 
-  def buildBatchRequestAction(userId: Option[BSONObjectID],fromState:BatchRequestState.Value, toState: BatchRequestState.Value)={
-  BatchOrderRequestAction(userId.get,fromState,toState)
-}
 
-
-  def requestAction(requestId: BSONObjectID, action: Action.Value, description: String)= restrictAdminAnyNoCaching(deadbolt){
+  def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String)= restrictAdminAnyNoCaching(deadbolt){
 
     implicit request =>
 
@@ -122,8 +117,7 @@ class BatchOrderRequestsController @Inject()(
             case Some(user) =>
               val dateOfUpdate=new Date()
               val newState:BatchRequestState.Value = statusService.getNextState(existingRequest.get.state, action)
-              val requestAction = buildBatchRequestAction(user._id,existingRequest.get.state,newState)
-              var actionInfo = buildActionInfo(dateOfUpdate,requestAction, Some(description))
+              var actionInfo = buildActionInfo(dateOfUpdate,user._id,existingRequest.get.state,newState, Some(description))
               var updatedHistory = buildHistory(existingRequest.get.history,dateOfUpdate,user._id,actionInfo)
 
 

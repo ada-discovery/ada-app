@@ -1,6 +1,6 @@
 package services.request
 
-import models.{BatchOrderRequest, BatchRequestState, Action}
+import models.{Action, BatchOrderRequest, BatchRequestState, RequestAction}
 import BatchRequestState._
 
 class RequestStatusService {
@@ -12,10 +12,10 @@ class RequestStatusService {
     stateMapping.get(currentStatus).getOrElse(Seq()).toSeq
   }
 
-  def getNextState(currentStatus : BatchRequestState.Value, action: Action.Value): BatchRequestState.Value = {
+  def getNextState(currentStatus : BatchRequestState.Value, action: RequestAction.Value): BatchRequestState.Value = {
     action match {
-      case Action.Approve  => actionMapping.get(currentStatus).get.accept
-      case Action.Reject  => actionMapping.get(currentStatus).get.reject.get
+      case RequestAction.Approve  => actionMapping.get(currentStatus).get.accept
+      case RequestAction.Reject  => actionMapping.get(currentStatus).get.reject.get
     }
   }
 

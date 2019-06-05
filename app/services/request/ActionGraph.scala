@@ -5,24 +5,32 @@ import org.incal.core.util.GroupMapList
 
 object ActionGraph {
 
+  val needsDescription = true
+
   private val actions: Traversable[Action] = Seq(
     Action(
-      BatchRequestState.Created, RequestAction.Submit, BatchRequestState.SentForApproval, true, Seq(NotificationRole.Owner, NotificationRole.Committee)
+      BatchRequestState.Created, RequestAction.Submit, BatchRequestState.SentForApproval, Seq(NotificationRole.Requester, NotificationRole.Committee), needsDescription
     ),
     Action(
-      BatchRequestState.SentForApproval, RequestAction.Approve, BatchRequestState.Approved
+      BatchRequestState.SentForApproval, RequestAction.Approve, BatchRequestState.Approved, Seq(NotificationRole.Owner, NotificationRole.Requester, NotificationRole.Committee)
     ),
     Action(
-      BatchRequestState.Created, RequestAction.Approve, BatchRequestState.SentForApproval, true
+      BatchRequestState.SentForApproval, RequestAction.Reject, BatchRequestState.Rejected, Seq(NotificationRole.Requester, NotificationRole.Committee),needsDescription
     ),
     Action(
-      BatchRequestState.Created, RequestAction.Approve, BatchRequestState.SentForApproval, true
+      BatchRequestState.Approved, RequestAction.Approve, BatchRequestState.OwnerAcknowledged, Seq(NotificationRole.Requester, NotificationRole.Owner)
     ),
     Action(
-      BatchRequestState.Created, RequestAction.Approve, BatchRequestState.SentForApproval, true
+      BatchRequestState.Approved, RequestAction.NotAvailable, BatchRequestState.Unavailable, Seq(NotificationRole.Requester, NotificationRole.Owner), needsDescription
     ),
     Action(
-      BatchRequestState.Created, RequestAction.Approve, BatchRequestState.SentForApproval, true
+      BatchRequestState.OwnerAcknowledged, RequestAction.Send, BatchRequestState.Sent, Seq(NotificationRole.Requester, NotificationRole.Owner), needsDescription
+    ),
+    Action(
+      BatchRequestState.Sent, RequestAction.Receive, BatchRequestState.UserReceived, Seq(NotificationRole.Requester, NotificationRole.Owner)
+    ),
+    Action(
+      BatchRequestState.Sent, RequestAction.NotReceive, BatchRequestState.NotReceived,Seq(NotificationRole.Requester, NotificationRole.Owner), needsDescription
     )
   )
 
