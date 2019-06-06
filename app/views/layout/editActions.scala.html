@@ -51,7 +51,7 @@
 
 
                 @validActions.filter(a=>a.commentNeeded).map{ action =>
-                    <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addDescriptionModal" title="Add decision descr" action-value="@action.toState">
+                    <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addDescriptionModal" title="Add decision descr">
                     @action.toState
                     </a>
 
@@ -59,7 +59,7 @@
                }
 
                 @validActions.filter(a=> a.commentNeeded==false ).map{ action =>
-                <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addConfirmModal" title="Add decision descr" action-value="@action.toState">
+                <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addConfirmModal" title="Add decision descr">
                     @action.toState
                 </a>
 
@@ -123,8 +123,8 @@
 
         function acceptAction(action) {
             //test for invalid state
-//            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('requestId.stringify', 'RequestAction.NotReceive', '')
-            var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', action, '')
+           // var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('requestId.stringify', 'RequestAction.NotReceive', '')
+         var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', action, '')
             submit('post', requestAction.url)
         }
 

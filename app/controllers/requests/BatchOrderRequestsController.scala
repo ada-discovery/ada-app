@@ -13,7 +13,7 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.models.User.UserIdentity
 import org.ada.server.services.UserManager
 import org.ada.web.controllers.core.AdaCrudControllerImpl
-import org.ada.web.controllers.routes
+import org.ada.web.controllers.{BSONObjectIDStringFormatter, routes}
 import org.ada.web.security.AdaAuthConfig
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion.Infix
@@ -49,6 +49,7 @@ class BatchOrderRequestsController @Inject()(
   with HasBasicFormCrudViews[BatchOrderRequest, BSONObjectID]
   with AdaAuthConfig {
 
+  private implicit val idsFormatter = BSONObjectIDStringFormatter
   private implicit val actionInfoFormatter = JsonFormatter[Seq[ActionInfo]]
   private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
   private val requestsListRedirect = Redirect(routes.BatchOrderRequestsController.listAll())
@@ -57,7 +58,7 @@ class BatchOrderRequestsController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSetId" -> nonEmptyText,
-      "itemIds" -> ignored(Seq[String]()),
+      "itemIds" ->  seq(of[BSONObjectID]),
       "state" -> of[BatchRequestState.Value],
       "created by id" -> ignored(Option.empty[BSONObjectID]),
       "created by name" -> ignored(Option.empty[String]),
@@ -105,8 +106,7 @@ class BatchOrderRequestsController @Inject()(
 
   def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String)= restrictAdminAnyNoCaching(deadbolt){
 
-    implicit request =>
-
+    implicit request => {
       for {
         existingRequest <- repo.get(requestId)
         requesterUser <- userRepo.get(existingRequest.get.createdById.get)
@@ -114,20 +114,18 @@ class BatchOrderRequestsController @Inject()(
         id <- {
           val batchRequestWithState = user match {
             case Some(user) =>
-              val dateOfUpdate=new Date()
-              val newState:BatchRequestState.Value = getNextState(existingRequest.get.state, action)
-              var actionInfo = buildActionInfo(dateOfUpdate,user._id,existingRequest.get.state,newState, Some(description))
-              var updatedHistory = buildHistory(existingRequest.get.history,dateOfUpdate,user._id,actionInfo)
+              val dateOfUpdate = new Date()
+              val newState: BatchRequestState.Value = getNextState(existingRequest.get.state, action)
+              var actionInfo = buildActionInfo(dateOfUpdate, user._id, existingRequest.get.state, newState, Some(description))
+              var updatedHistory = buildHistory(existingRequest.get.history, dateOfUpdate, user._id, actionInfo)
 
 
-
-              addNotifications(existingRequest,requesterUser,newState,dateOfUpdate,user)
-
+              addNotifications(existingRequest, requesterUser, newState, dateOfUpdate, user)
 
 
-              existingRequest.get.copy(state = newState,createdById = existingRequest.get.createdById, history = updatedHistory)
+              existingRequest.get.copy(state = newState, createdById = existingRequest.get.createdById, history = updatedHistory)
             case None => throw new AdaException("No logged user found")
-        }
+          }
           repo.update(batchRequestWithState)
         }
       } yield {
@@ -135,12 +133,13 @@ class BatchOrderRequestsController @Inject()(
         actionNotificationService.sendNotifications()
         requestsListRedirect.flashing("success" -> "state of request updated with success to: ")
       }
+    }.recover(handleExceptions("request action"))
   }
 
   def getNextState(currentState: BatchRequestState.Value, action: RequestAction.Value):BatchRequestState.Value ={
       ActionGraph.apply.get(currentState).get.find(validAction=>validAction.action == action) match {
         case Some(allowedAction) =>  allowedAction.toState
-        case None => throw new AdaException("Action "+ action +" not allowed for current state" +currentState)
+        case None => throw new AdaException("Action '"+ action +"' not allowed for current state '" +currentState+"'")
       }
    }
 
