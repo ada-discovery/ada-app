@@ -1,9 +1,8 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import org.ada.server.models.StorageType
-import org.ada.server.models.{DataSetLinkSpec, DerivedDataSetSpec}
+import org.ada.server.models.datatrans.{DataSetLinkSpec, ResultDataSetSpec}
 import org.incal.core.runnables.FutureRunnable
 import org.ada.server.services.DataSetService
 
@@ -56,7 +55,7 @@ class LinkMPowerTrainingNormsAndDemographicsDataSets @Inject()(dataSetService: D
     walkingNormsFieldNames,
     demographicsFieldNames,
     false,
-    DerivedDataSetSpec(
+    ResultDataSetSpec(
       "mpower_challenge.walking_activity_training_norms_w_demographics",
       "Walking Activity Training Norms with Demographics",
       StorageType.Mongo

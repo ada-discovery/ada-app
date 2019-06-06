@@ -2,14 +2,12 @@ package runnables.luxpark
 
 import org.ada.server.{AdaException, AdaParseException}
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.runnables.InputRunnable
+import org.incal.core.runnables.{InputRunnable, InputRunnableExt}
 import org.incal.core.util.writeStringAsStream
 
 import scala.io.Source
 
-import scala.reflect.runtime.universe.typeOf
-
-class MergeVariantSubjectEntries extends InputRunnable[MergeVariantSubjectEntriesSpec] {
+class MergeVariantSubjectEntries extends InputRunnableExt[MergeVariantSubjectEntriesSpec] {
 
   private val defaultDelimiter = "\t"
   private val booleanColumnNum = 75
@@ -59,8 +57,6 @@ class MergeVariantSubjectEntries extends InputRunnable[MergeVariantSubjectEntrie
 
     inputFileNamePrefix + "-merged" + extension
   }
-
-  override def inputType = typeOf[MergeVariantSubjectEntriesSpec]
 }
 
 case class MergeVariantSubjectEntriesSpec(

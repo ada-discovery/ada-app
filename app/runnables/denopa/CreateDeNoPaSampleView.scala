@@ -44,8 +44,6 @@ class CreateDeNoPaSampleView extends DsaInputFutureRunnable[CreateDeNoPaSampleVi
       false
     )
   }
-
-  override def inputType = typeOf[CreateDeNoPaSampleViewSpec]
 }
 
 case class CreateDeNoPaSampleViewSpec(dataSetId: String)

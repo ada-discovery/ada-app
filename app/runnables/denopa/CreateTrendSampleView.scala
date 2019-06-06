@@ -46,8 +46,6 @@ class CreateTrendSampleView extends DsaInputFutureRunnable[CreateTrendSampleView
       false
     )
   }
-
-  override def inputType = typeOf[CreateTrendSampleViewSpec]
 }
 
 case class CreateTrendSampleViewSpec(dataSetId: String)

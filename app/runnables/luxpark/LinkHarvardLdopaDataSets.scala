@@ -1,10 +1,10 @@
 package runnables.luxpark
 
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import org.ada.server.models.StorageType
-import org.ada.server.models.{DataSetLinkSpec, DerivedDataSetSpec}
+import org.ada.server.models.datatrans.{DataSetLinkSpec, ResultDataSetSpec}
 import org.incal.core.runnables.FutureRunnable
 import org.ada.server.services.DataSetService
 
@@ -55,7 +55,7 @@ class LinkHarvardLdopaDataSets @Inject() (dataSetService: DataSetService) extend
     walkingFieldNames,
     scoreFieldNames,
     false,
-    DerivedDataSetSpec(
+    ResultDataSetSpec(
       "harvard_ldopa.walking_data_w_scores",
       "Walking Data with Score",
       StorageType.Mongo

@@ -9,7 +9,7 @@ import play.api.Logger
 
 import collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}
 import org.incal.core.dataaccess.Criterion._
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.{listFiles, writeStringAsStream}
 import org.incal.core.util.GroupMapList
 
@@ -25,7 +25,7 @@ import scala.util.Random
   */
 class SelectGenesAsCentroidClosestFromFile @Inject()(
       dsaf: DataSetAccessorFactory
-  ) extends InputFutureRunnable[SelectGenesAsCentroidClosestFromFileSpec]
+  ) extends InputFutureRunnableExt[SelectGenesAsCentroidClosestFromFileSpec]
     with SelectGenesAsCentroidClosestHelper {
 
   override def runAsFuture(input: SelectGenesAsCentroidClosestFromFileSpec) = {
@@ -38,8 +38,6 @@ class SelectGenesAsCentroidClosestFromFile @Inject()(
       selectGenes(targetGenes, input.clusterShuffling, input.inputFileName, input.delimiter, input.exportFileName)
     }
   }
-
-  override def inputType = typeOf[SelectGenesAsCentroidClosestFromFileSpec]
 }
 
 
@@ -50,7 +48,7 @@ class SelectGenesAsCentroidClosestFromFile @Inject()(
   */
 class SelectGenesAsCentroidClosestFromFolder @Inject()(
     dsaf: DataSetAccessorFactory
-  ) extends InputFutureRunnable[SelectGenesAsCentroidClosestFromFolderSpec]
+  ) extends InputFutureRunnableExt[SelectGenesAsCentroidClosestFromFolderSpec]
     with SelectGenesAsCentroidClosestHelper {
 
   override def runAsFuture(input: SelectGenesAsCentroidClosestFromFolderSpec) = {
@@ -72,8 +70,6 @@ class SelectGenesAsCentroidClosestFromFolder @Inject()(
       }
     }
   }
-
-  override def inputType = typeOf[SelectGenesAsCentroidClosestFromFolderSpec]
 }
 
 

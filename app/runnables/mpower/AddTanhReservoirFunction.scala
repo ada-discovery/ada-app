@@ -34,8 +34,6 @@ class AddTanhReservoirFunction extends DsaInputFutureRunnable[AddTanhReservoirFu
     } yield
       ()
   }
-
-  override def inputType = typeOf[AddTanhReservoirFunctionSpec]
 }
 
 case class AddTanhReservoirFunctionSpec(dataSetId: String)

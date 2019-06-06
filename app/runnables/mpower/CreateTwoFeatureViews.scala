@@ -117,8 +117,6 @@ class CreateTwoFeatureViews extends DsaInputFutureRunnable[CreateTwoFeatureViews
       true,
       false
     )
-
-  override def inputType = typeOf[CreateTwoFeatureViewsSpec]
 }
 
 case class CreateTwoFeatureViewsSpec(

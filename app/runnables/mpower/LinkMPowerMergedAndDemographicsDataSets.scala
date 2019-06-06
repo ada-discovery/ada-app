@@ -1,15 +1,14 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import org.ada.server.models.StorageType
-import org.ada.server.models.{DataSetLinkSpec, DerivedDataSetSpec}
-import org.incal.core.runnables.InputFutureRunnable
+import org.ada.server.models.datatrans.{DataSetLinkSpec, ResultDataSetSpec}
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.ada.server.services.DataSetService
 
 import scala.reflect.runtime.universe.typeOf
 
-class LinkMPowerMergedAndDemographicsDataSets @Inject()(dataSetService: DataSetService) extends InputFutureRunnable[LinkMPowerMergedAndDemographicsDataSetsSpec] {
+class LinkMPowerMergedAndDemographicsDataSets @Inject()(dataSetService: DataSetService) extends InputFutureRunnableExt[LinkMPowerMergedAndDemographicsDataSetsSpec] {
 
   private val walkingFieldNames = Nil // take all
 
@@ -58,7 +57,7 @@ class LinkMPowerMergedAndDemographicsDataSets @Inject()(dataSetService: DataSetS
     walkingFieldNames,
     demographicsFieldNames,
     false,
-    DerivedDataSetSpec(
+    ResultDataSetSpec(
       "mpower_challenge.walking_activity_2_w_demographics",
       "Merged Activity with Demographics",
       StorageType.Mongo
@@ -69,8 +68,6 @@ class LinkMPowerMergedAndDemographicsDataSets @Inject()(dataSetService: DataSetS
 
   override def runAsFuture(input: LinkMPowerMergedAndDemographicsDataSetsSpec) =
     dataSetService.linkDataSets(dataSetLinkSpec(input))
-
-  override def inputType = typeOf[LinkMPowerMergedAndDemographicsDataSetsSpec]
 }
 
 case class LinkMPowerMergedAndDemographicsDataSetsSpec(processingBatchSize: Option[Int], saveBatchSize: Option[Int])

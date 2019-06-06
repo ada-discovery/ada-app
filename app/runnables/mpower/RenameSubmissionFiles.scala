@@ -1,22 +1,22 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json._
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.listFiles
 import org.ada.server.services.DataSetService
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.nio.file.Files.copy
 import java.nio.file.Paths.get
+
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class RenameSubmissionFiles @Inject()(
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService
-  ) extends InputFutureRunnable[RenameSubmissionFilesSpec] {
+  ) extends InputFutureRunnableExt[RenameSubmissionFilesSpec] {
 
   private val submissionIdFieldName = "submissionId"
   private val submissionNameFieldName = "submissionName"
@@ -50,8 +50,6 @@ class RenameSubmissionFiles @Inject()(
       }
     }
   }
-
-  override def inputType = typeOf[RenameSubmissionFilesSpec]
 }
 
 case class RenameSubmissionFilesSpec(

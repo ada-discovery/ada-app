@@ -1,14 +1,13 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import org.incal.core.dataaccess.Criterion.Infix
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
 import org.ada.server.services.DataSetService
 import org.ada.server.dataaccess.JsonUtil
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.writeStringAsStream
 
 import scala.reflect.runtime.universe.typeOf
@@ -17,7 +16,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class ExtractSeriesPeaks @Inject() (
     dss: DataSetService,
     dsaf: DataSetAccessorFactory
-  ) extends InputFutureRunnable[ExtractSeriesPeaksSpec] {
+  ) extends InputFutureRunnableExt[ExtractSeriesPeaksSpec] {
 
   private val dataSetId = "lux_park.mpower_walking_activity"
 //  private val seriesFieldName = "accel_walking_outboundu002ejsonu002eitems.x"
@@ -63,8 +62,6 @@ class ExtractSeriesPeaks @Inject() (
 
     writeStringAsStream(output, new java.io.File(fileName))
   }
-
-  override def inputType = typeOf[ExtractSeriesPeaksSpec]
 }
 
 case class ExtractSeriesPeaksSpec(peakNum: Int, peakSelectionRatio: Option[Double])

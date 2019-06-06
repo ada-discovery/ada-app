@@ -1,12 +1,12 @@
 package runnables.denopa
 
 import java.io.{File, PrintWriter}
-import scala.reflect.runtime.universe.typeOf
-import org.incal.core.runnables.InputRunnable
+
+import org.incal.core.runnables.{InputRunnable, InputRunnableExt}
 
 import scala.io.Source
 
-class AddIBBLIdColumnToFile extends InputRunnable[AddIBBLIdColumnToFileSpec] {
+class AddIBBLIdColumnToFile extends InputRunnableExt[AddIBBLIdColumnToFileSpec] {
 
   private val IBBLDiagId = "-DIAG-VAR-BLD-PLA-"
   private val delimiter = ";"
@@ -32,8 +32,6 @@ class AddIBBLIdColumnToFile extends InputRunnable[AddIBBLIdColumnToFileSpec] {
     pw.write(newLines.mkString("\n"))
     pw.close
   }
-
-  override def inputType = typeOf[AddIBBLIdColumnToFileSpec]
 }
 
 case class AddIBBLIdColumnToFileSpec(fileName: String)

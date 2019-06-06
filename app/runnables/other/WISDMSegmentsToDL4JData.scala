@@ -8,9 +8,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.ada.server.dataaccess.StreamSpec
 import javax.inject.Inject
-import org.ada.server.models.{Field, FieldTypeId}
-import org.ada.server.models.DerivedDataSetSpec
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Logger
@@ -27,7 +25,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class WISDMSegmentsToDL4JData @Inject()(
   dsaf: DataSetAccessorFactory,
   dataSetService: DataSetService
-) extends InputFutureRunnable[WISDMSegmentsToDL4JDataSpec] {
+) extends InputFutureRunnableExt[WISDMSegmentsToDL4JDataSpec] {
 
   private val logger = Logger
 
@@ -56,7 +54,7 @@ class WISDMSegmentsToDL4JData @Inject()(
 
       // activities
       activityField <- dsa.fieldRepo.get(FieldName.activity).map(_.get)
-      activities = activityField.numValues.map(_.map(_._1.toInt)).get
+      activities = activityField.enumValues.map(_._1.toInt)
 
       // max session id
       maxSessionId <- dsa.dataSetRepo.max(FieldName.sessionId).map(_.get.as[Int])
@@ -117,8 +115,6 @@ class WISDMSegmentsToDL4JData @Inject()(
 
   private def asDouble(json: JsObject, fieldName: String) =
     (json \ fieldName).as[Double]
-
-  override def inputType = typeOf[WISDMSegmentsToDL4JDataSpec]
 }
 
 case class WISDMSegmentsToDL4JDataSpec(

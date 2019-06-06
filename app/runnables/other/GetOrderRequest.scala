@@ -1,14 +1,13 @@
 package runnables.other
 
 import javax.inject.Inject
-import org.incal.core.runnables.{InputFutureRunnable, RunnableHtmlOutput}
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt, RunnableHtmlOutput}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.BatchOrderRequestRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.reflect.runtime.universe.typeOf
 
-class GetOrderRequestRun @Inject() (requestsRepo:BatchOrderRequestRepo) extends InputFutureRunnable[GetRequestRunSpec] with RunnableHtmlOutput {
+class GetOrderRequestRun @Inject() (requestsRepo:BatchOrderRequestRepo) extends InputFutureRunnableExt[GetRequestRunSpec] with RunnableHtmlOutput {
 
   override def runAsFuture(input: GetRequestRunSpec) =
     requestsRepo.get(input.requestId).map(
@@ -17,8 +16,6 @@ class GetOrderRequestRun @Inject() (requestsRepo:BatchOrderRequestRepo) extends 
       )(
         request => addParagraph(bold(request.toString))
       ))
-
-  override def inputType = typeOf[GetRequestRunSpec]
 }
 
 case class GetRequestRunSpec(

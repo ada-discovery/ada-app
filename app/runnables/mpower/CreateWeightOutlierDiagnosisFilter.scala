@@ -1,14 +1,13 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import org.ada.server.models.{Field, Filter}
 import org.incal.core.{ConditionType, FilterCondition}
 import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion, EqualsCriterion, NotEqualsNullCriterion}
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.seqFutures
 import org.ada.server.services.StatsService
 
@@ -19,7 +18,7 @@ import scala.reflect.runtime.universe._
 class CreateWeightOutlierDiagnosisFilter @Inject()(
     dsaf: DataSetAccessorFactory,
     statsService: StatsService
-  ) extends InputFutureRunnable[CreateWeightOutlierDiagnosisFilterSpec] {
+  ) extends InputFutureRunnableExt[CreateWeightOutlierDiagnosisFilterSpec] {
 
   private val conditionCriterionNames = Seq(
     (
@@ -105,8 +104,6 @@ class CreateWeightOutlierDiagnosisFilter @Inject()(
           FilterCondition(field.name, None, ConditionType.LessEqual, Some(quantiles.upperWhisker.toString), None)
         )
       }
-
-  override def inputType = typeOf[CreateWeightOutlierDiagnosisFilterSpec]
 }
 
 case class CreateWeightOutlierDiagnosisFilterSpec(dataSetId: String, suffixFrom: Option[Int], suffixTo: Option[Int])

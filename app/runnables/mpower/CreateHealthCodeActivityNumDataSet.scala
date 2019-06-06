@@ -1,9 +1,8 @@
 package runnables.mpower
 
 import javax.inject.Inject
-
 import org.ada.server.models.{Field, FieldTypeId, StorageType}
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json._
 import org.ada.server.services.DataSetService
@@ -14,7 +13,7 @@ import scala.reflect.runtime.universe.typeOf
 class CreateHealthCodeActivityNumDataSet @Inject()(
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService
-  ) extends InputFutureRunnable[CreateHealthCodeActivityNumDataSetSpec] {
+  ) extends InputFutureRunnableExt[CreateHealthCodeActivityNumDataSetSpec] {
 
   private val healthCodeFieldName = "healthCode"
   private val recordNumFieldName = "recordNum"
@@ -67,8 +66,6 @@ class CreateHealthCodeActivityNumDataSet @Inject()(
     } yield
       ()
   }
-
-  override def inputType = typeOf[CreateHealthCodeActivityNumDataSetSpec]
 }
 
 case class CreateHealthCodeActivityNumDataSetSpec(

@@ -1,10 +1,10 @@
 package runnables.mpower
 
 import java.nio.charset.StandardCharsets
-import javax.inject.Inject
 
+import javax.inject.Inject
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
-import org.incal.core.runnables.InputFutureRunnable
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.{GroupMapList, writeByteArrayStream}
 import org.ada.server.services.DataSetService
 
@@ -18,7 +18,7 @@ import scala.io.Source
 class SplitCorrelationsByCategory @Inject()(
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService
-  ) extends InputFutureRunnable[SplitCorrelationsByCategorySpec] {
+  ) extends InputFutureRunnableExt[SplitCorrelationsByCategorySpec] {
 
   private val submissionIdFieldName = "SubmissionId"
   private val featureFieldName = "Name"
@@ -103,8 +103,6 @@ class SplitCorrelationsByCategory @Inject()(
     val outputStream = Stream(headerBytes) #::: rowBytesStream
     writeByteArrayStream(outputStream, new java.io.File(outputCorrelationFileName))
   }
-
-  override def inputType = typeOf[SplitCorrelationsByCategorySpec]
 }
 
 case class SplitCorrelationsByCategorySpec(

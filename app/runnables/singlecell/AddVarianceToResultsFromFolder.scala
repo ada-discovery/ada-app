@@ -2,13 +2,13 @@ package runnables.singlecell
 
 import org.ada.server.AdaException
 import org.apache.commons.lang3.StringEscapeUtils
-import org.incal.core.runnables.InputRunnable
-import org.incal.core.util.{writeStringAsStream, listFiles}
+import org.incal.core.runnables.{InputRunnable, InputRunnableExt}
+import org.incal.core.util.{listFiles, writeStringAsStream}
 
 import scala.io.Source
 import scala.reflect.runtime.universe.typeOf
 
-class AddVarianceToResultsFromFolder extends InputRunnable[AddVarianceToResultsFromFolderSpec] {
+class AddVarianceToResultsFromFolder extends InputRunnableExt[AddVarianceToResultsFromFolderSpec] {
 
   private val defaultDelimiter = ","
   private val eol = "\n"
@@ -65,8 +65,6 @@ class AddVarianceToResultsFromFolder extends InputRunnable[AddVarianceToResultsF
       (gene, variance)
     }.toMap
   }
-
-  override def inputType = typeOf[AddVarianceToResultsFromFolderSpec]
 }
 
 case class AddVarianceToResultsFromFolderSpec(

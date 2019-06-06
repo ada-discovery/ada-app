@@ -4,7 +4,7 @@ import javax.inject.Inject
 import models.{BatchOrderRequest, BatchRequestState}
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
-import org.incal.core.runnables.{InputFutureRunnable, RunnableHtmlOutput}
+import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt, RunnableHtmlOutput}
 import play.api.{Configuration, Logger}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 
 class RequestRepoRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configuration, userRepo: UserRepo, committeeRepo: ApprovalCommitteeRepo, requestsRepo:BatchOrderRequestRepo)
-  extends InputFutureRunnable[RequestRepoRunSpec] with RunnableHtmlOutput {
+  extends InputFutureRunnableExt[RequestRepoRunSpec] with RunnableHtmlOutput {
   private val logger = Logger
 
   override def runAsFuture(input: RequestRepoRunSpec) = {
@@ -36,8 +36,6 @@ class RequestRepoRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Con
       addParagraph(bold(requestRead.get.toString))
     }
   }
-
-  override def inputType = typeOf[RequestRepoRunSpec]
 }
 
 case class RequestRepoRunSpec(

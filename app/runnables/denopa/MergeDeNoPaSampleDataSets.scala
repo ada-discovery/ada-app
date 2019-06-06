@@ -1,9 +1,8 @@
 package runnables.denopa
 
 import javax.inject.Inject
-
 import org.ada.server.models.StorageType
-import org.ada.server.models.DerivedDataSetSpec
+import org.ada.server.models.datatrans.ResultDataSetSpec
 import org.incal.core.runnables.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import org.ada.server.services.DataSetService
@@ -30,7 +29,7 @@ class MergeDeNoPaSampleDataSets @Inject() (dataSetService: DataSetService) exten
 
   override def runAsFuture =
     dataSetService.mergeDataSets(
-      DerivedDataSetSpec(
+      ResultDataSetSpec(
         mergedDataSetId,
         mergedDataSetName,
         StorageType.ElasticSearch
