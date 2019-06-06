@@ -31,7 +31,7 @@ import play.api.mvc.{Action, AnyContent, Request, Result}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
 import services.request.{ActionGraph, ActionNotificationService}
-
+import org.incal.core.dataaccess.Criterion._
 import scala.concurrent.Future
 
 
@@ -104,30 +104,35 @@ class BatchOrderRequestsController @Inject()(
   }
 
 
+  def getUserIds(committeeIds: Traversable[ApprovalCommittee], existingRequest: Option[BatchOrderRequest]): Seq[BSONObjectID] = {
+   val ids=committeeIds.flatMap(_.userIds).toSeq :+ existingRequest.get.createdById.get
+  ids
+  }
+
+
   def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String)= restrictAdminAnyNoCaching(deadbolt){
 
     implicit request => {
       for {
         existingRequest <- repo.get(requestId)
-        requesterUser <- userRepo.get(existingRequest.get.createdById.get)
         user <- currentUser(request)
+        committeeIds <- committeeRepo.find(Seq("dataSetId" #== existingRequest.get.dataSetId))
+        usersToNotify <- userRepo.find(Seq(UserIdentity.name #-> getUserIds(committeeIds,existingRequest).map(id => Some(id))))
         id <- {
           val batchRequestWithState = user match {
-            case Some(user) =>
+            case Some(updatedByUser) =>
               val dateOfUpdate = new Date()
               val newState: BatchRequestState.Value = getNextState(existingRequest.get.state, action)
-              var actionInfo = buildActionInfo(dateOfUpdate, user._id, existingRequest.get.state, newState, Some(description))
-              var updatedHistory = buildHistory(existingRequest.get.history, dateOfUpdate, user._id, actionInfo)
+              var actionInfo = buildActionInfo(dateOfUpdate, updatedByUser._id, existingRequest.get.state, newState, Some(description))
+              var updatedHistory = buildHistory(existingRequest.get.history, dateOfUpdate, updatedByUser._id, actionInfo)
 
-
-              addNotifications(existingRequest, requesterUser, newState, dateOfUpdate, user)
-
-
+              usersToNotify.map(user => addNotification(buildNotification(existingRequest, user, newState, dateOfUpdate, updatedByUser)))
               existingRequest.get.copy(state = newState, createdById = existingRequest.get.createdById, history = updatedHistory)
             case None => throw new AdaException("No logged user found")
           }
           repo.update(batchRequestWithState)
         }
+
       } yield {
         id
         actionNotificationService.sendNotifications()
@@ -143,27 +148,25 @@ class BatchOrderRequestsController @Inject()(
       }
    }
 
-  def addNotifications(existingRequest: Option[BatchOrderRequest], requesterUser: Option[User], newState: BatchRequestState.Value, dateOfUpdate: Date, user: User) = {
 
+  def addNotification(notification: NotificationInfo)={
+       actionNotificationService.addNotification(notification)
+  }
 
-    val requesterNotification=NotificationInfo(existingRequest.get._id.get,existingRequest.get.timeCreated,requesterUser.get.ldapDn,
-      requesterUser.get.email,existingRequest.get.state,newState,dateOfUpdate,user.ldapDn)
-    actionNotificationService.addNotification(requesterNotification)
+  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, newState: BatchRequestState.Value, dateOfUpdate: Date, updatedByUser: User)={
+  NotificationInfo(existingRequest.get._id.get,existingRequest.get.timeCreated,targetUser.ldapDn,
+    targetUser.email,existingRequest.get.state,newState,dateOfUpdate,updatedByUser.ldapDn)
+  }
 
+  def addNotifications(existingRequest: Option[BatchOrderRequest], requesterUser: User, newState: BatchRequestState.Value, dateOfUpdate: Date, user: User) = {
+    addNotification(buildNotification(existingRequest,requesterUser,newState,dateOfUpdate,user))
 
     println("searching committee")
 
-
-
     for {
-
       committeeUsersddd<- committeeRepo.find(projection = Seq("userIds"))
       //  committeeUsers <- userRepo.fin
     } yield {
-
-
-
-
       println("committee1")
       committeeUsersddd.map { users => println(users)}
     }
@@ -173,15 +176,23 @@ class BatchOrderRequestsController @Inject()(
      committeeIds <- committeeRepo.find(Seq("dataSetId" #== existingRequest.get.dataSetId))
    //  committeeUsers <- userRepo.fin
     } yield{
+
+
+      committeeIds.flatMap(_.userIds).map(userId => addNotification(buildNotification(existingRequest,requesterUser,newState,dateOfUpdate,user)))
+     //   actionNotificationService.addNotification(requesterNotification))
+
+
+
       println("committee2")
+      println(committeeIds)
       println(committeeIds.take(1))
 
 
 
 
 
-      val committeeNotification=NotificationInfo(existingRequest.get._id.get,existingRequest.get.timeCreated,requesterUser.get.ldapDn,
-        requesterUser.get.email,existingRequest.get.state,newState,dateOfUpdate,user.ldapDn)
+     // val committeeNotification=NotificationInfo(existingRequest.get._id.get,existingRequest.get.timeCreated,requesterUser.get.ldapDn,
+      //  requesterUser.get.email,existingRequest.get.state,newState,dateOfUpdate,user.ldapDn)
 
       committeeIds
     }
