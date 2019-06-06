@@ -26,7 +26,6 @@
 @layout.editActions(
     "Request status",
     "request",
-//    statusService.getNextStates(data.form.get.state),
     ActionGraph.apply.get(data.form.get.state).orElse(Some(Traversable[Action]())).get,
     data.form.get._id.get,
     data.form.get.history,

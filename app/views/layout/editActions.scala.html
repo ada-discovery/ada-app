@@ -122,19 +122,16 @@
 
 
         function acceptAction(action) {
-            alert(action)
-           // alert($("[id^=request-action-]").text())
-            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', action, '')
-            submit('post', action.url)
+            //test for invalid state
+//            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('requestId.stringify', 'RequestAction.NotReceive', '')
+            var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', action, '')
+            submit('post', requestAction.url)
         }
 
         function rejectAction(action) {
-            alert(action)
-          //  alert($("[id^=request-action-]").text())
-         //   alert($("#request-action").getAttribute("actionValue"))
             var reasonDescription = $('#addRejectModal #decision-reason').val()
-            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', action, reasonDescription)
-            submit('post', action.url)
+            var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', action, reasonDescription)
+            submit('post', requestAction.url)
         }
 
 </script>
