@@ -5,7 +5,7 @@ organization := "org.adada"
 
 name := "ada-web-ncer"
 
-version := "0.7.3.RC.8"
+version := "0.7.3.RC.9.SNAPSHOT.2"
 
 scalaVersion := "2.11.12"
 
@@ -34,8 +34,8 @@ routesImport ++= Seq(
 val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-web" % "0.7.3.RC.9.SNAPSHOT.1",
-  "org.adada" %% "ada-web" % "0.7.3.RC.9.SNAPSHOT.1" classifier "assets",
+  "org.adada" %% "ada-web" % "0.7.3.RC.9.SNAPSHOT.2",
+  "org.adada" %% "ada-web" % "0.7.3.RC.9.SNAPSHOT.2" classifier "assets",
   "org.adada" %% "ada-dream-pd-challenge" % "0.0.3",
   "org.in-cal" %% "incal-dl4j" % "0.1.0",   // DL4J
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
