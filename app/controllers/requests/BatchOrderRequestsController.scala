@@ -34,6 +34,7 @@ import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderReq
 import services.request.{ActionGraph, ActionNotificationService}
 import org.incal.core.dataaccess.Criterion._
 import org.incal.spark_ml.models.regression.Regressor
+import services.request.ActionGraph.actions
 
 import scala.concurrent.Future
 
@@ -49,7 +50,7 @@ class BatchOrderRequestsController @Inject()(
                                               mailerClient: MailerClient
                                             ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
   with AdminRestrictedCrudController[BSONObjectID]
-  with HasBasicFormCrudViews[(BatchOrderRequest, String), BSONObjectID]
+  with HasBasicFormCrudViews[BatchOrderRequest, BSONObjectID]
   with AdaAuthConfig {
 
   private implicit val idsFormatter = BSONObjectIDStringFormatter
@@ -157,19 +158,24 @@ class BatchOrderRequestsController @Inject()(
   }
 
 
+  override protected type ListViewData = (
+    Page[BatchOrderRequest],
+      Seq[FilterCondition]
+      ,      Map[BSONObjectID,String]
+    )
 
-
-  override protected def getListViewData(page: Page[(BatchOrderRequest,String)], conditions: Seq[FilterCondition]) = { request =>
+  override protected def getListViewData(page: Page[BatchOrderRequest], conditions: Seq[FilterCondition], mao: Map[BSONObjectID,String] ) = { request =>
     for {
-      users<-getUsers(page.items.map( item=>item._1 ))
-    } yield{
+      users<-getUsers(page.items.map( item=>item ))
+    } yield {
 
-     val itemsWithName = page.items.map( item => (item, users.get(item._1.createdById.get).get.ldapDn)  )
-   //   ( page.copy(items= itemsWithName ),conditions)
+
+      //  val itemsWithName = page.items.map( item => (item, users.get(item._1.createdById.get).get.ldapDn)  )
+      //   ( page.copy(items= itemsWithName ),conditions)
       //(page.items.map,conditions)
-        (page,conditions)
-
-    }
+     // (page, conditions)
+      (page, conditions, users.map { user => (user._1, user._2.ldapDn) })
+  }
   }
 
   def getUsers(requests: Traversable[BatchOrderRequest])={
@@ -210,5 +216,11 @@ class BatchOrderRequestsController @Inject()(
     }
 
   override protected def listView = { implicit ctx =>
-    ((views.html.requests.list(_, _)).tupled) }
+
+
+
+    ((views.html.requests.list(_, _, _)).tupled) }
+
+
+
 }

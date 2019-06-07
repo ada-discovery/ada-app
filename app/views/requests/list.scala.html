@@ -11,7 +11,8 @@
 @import org.incal.core.FilterCondition
 @(
         page: Page[BatchOrderRequest],
-        conditions: Seq[FilterCondition]
+        conditions: Seq[FilterCondition],
+        userNames: Map[BSONObjectID, String]
  )(
         implicit context: WebContext
 )
