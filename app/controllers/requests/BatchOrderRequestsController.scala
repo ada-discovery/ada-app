@@ -6,10 +6,11 @@ import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
 import models.BatchOrderRequest.batchRequestFormat
 import models.BatchOrderRequest.actionInfoFormat
-import models.{Action, ActionInfo, ApprovalCommittee, BatchOrderRequest, BatchRequestState, NotificationInfo, RequestAction}
+import models.{Action, ActionInfo, ApprovalCommittee, BatchOrderRequest, BatchOrderRequestListItem, BatchRequestState, NotificationInfo, RequestAction}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
+import org.ada.server.models.DataSpaceMetaInfo
 import org.ada.server.models.User.UserIdentity
 import org.ada.server.services.UserManager
 import org.ada.web.controllers.core.AdaCrudControllerImpl
@@ -32,6 +33,8 @@ import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
 import services.request.{ActionGraph, ActionNotificationService}
 import org.incal.core.dataaccess.Criterion._
+import org.incal.spark_ml.models.regression.Regressor
+
 import scala.concurrent.Future
 
 
@@ -46,7 +49,7 @@ class BatchOrderRequestsController @Inject()(
                                               mailerClient: MailerClient
                                             ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
   with AdminRestrictedCrudController[BSONObjectID]
-  with HasBasicFormCrudViews[BatchOrderRequest, BSONObjectID]
+  with HasBasicFormCrudViews[(BatchOrderRequest, String), BSONObjectID]
   with AdaAuthConfig {
 
   private implicit val idsFormatter = BSONObjectIDStringFormatter
@@ -103,12 +106,9 @@ class BatchOrderRequestsController @Inject()(
     ActionInfo(date, userId.get,fromState,toState, description)
   }
 
-
   def getUserIds(committeeIds: Traversable[ApprovalCommittee], existingRequest: Option[BatchOrderRequest]): Seq[BSONObjectID] = {
-   val ids=committeeIds.flatMap(_.userIds).toSeq :+ existingRequest.get.createdById.get
-  ids
+   committeeIds.flatMap(_.userIds).toSeq :+ existingRequest.get.createdById.get
   }
-
 
   def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String)= restrictAdminAnyNoCaching(deadbolt){
 
@@ -132,7 +132,6 @@ class BatchOrderRequestsController @Inject()(
           }
           repo.update(batchRequestWithState)
         }
-
       } yield {
         id
         actionNotificationService.sendNotifications()
@@ -148,7 +147,6 @@ class BatchOrderRequestsController @Inject()(
       }
    }
 
-
   def addNotification(notification: NotificationInfo)={
        actionNotificationService.addNotification(notification)
   }
@@ -158,51 +156,20 @@ class BatchOrderRequestsController @Inject()(
     targetUser.email,existingRequest.get.state,newState,dateOfUpdate,updatedByUser.ldapDn)
   }
 
-  def addNotifications(existingRequest: Option[BatchOrderRequest], requesterUser: User, newState: BatchRequestState.Value, dateOfUpdate: Date, user: User) = {
-    addNotification(buildNotification(existingRequest,requesterUser,newState,dateOfUpdate,user))
 
-    println("searching committee")
 
+
+  override protected def getListViewData(page: Page[(BatchOrderRequest,String)], conditions: Seq[FilterCondition]) = { request =>
     for {
-      committeeUsersddd<- committeeRepo.find(projection = Seq("userIds"))
-      //  committeeUsers <- userRepo.fin
-    } yield {
-      println("committee1")
-      committeeUsersddd.map { users => println(users)}
-    }
-    println("searching committee")
-    for {
-
-     committeeIds <- committeeRepo.find(Seq("dataSetId" #== existingRequest.get.dataSetId))
-   //  committeeUsers <- userRepo.fin
+      users<-getUsers(page.items.map( item=>item._1 ))
     } yield{
 
+     val itemsWithName = page.items.map( item => (item, users.get(item._1.createdById.get).get.ldapDn)  )
+   //   ( page.copy(items= itemsWithName ),conditions)
+      //(page.items.map,conditions)
+        (page,conditions)
 
-      committeeIds.flatMap(_.userIds).map(userId => addNotification(buildNotification(existingRequest,requesterUser,newState,dateOfUpdate,user)))
-     //   actionNotificationService.addNotification(requesterNotification))
-
-
-
-      println("committee2")
-      println(committeeIds)
-      println(committeeIds.take(1))
-
-
-
-
-
-     // val committeeNotification=NotificationInfo(existingRequest.get._id.get,existingRequest.get.timeCreated,requesterUser.get.ldapDn,
-      //  requesterUser.get.email,existingRequest.get.state,newState,dateOfUpdate,user.ldapDn)
-
-      committeeIds
     }
-  }
-
-  override protected def getListViewData(page: Page[BatchOrderRequest], conditions: Seq[FilterCondition]) = { request =>
-    for {
-     users<-getUsers(page.items)
-    } yield
-      (page.copy(items = buildItemsWithUserName(page.items,users)),conditions)
   }
 
   def getUsers(requests: Traversable[BatchOrderRequest])={
@@ -243,5 +210,5 @@ class BatchOrderRequestsController @Inject()(
     }
 
   override protected def listView = { implicit ctx =>
-    (views.html.requests.list(_, _)).tupled }
+    ((views.html.requests.list(_, _)).tupled) }
 }
