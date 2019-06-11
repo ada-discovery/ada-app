@@ -10,9 +10,8 @@
 @import reactivemongo.bson.BSONObjectID
 @import org.incal.core.FilterCondition
 @(
-        page: Page[BatchOrderRequest],
-        conditions: Seq[FilterCondition],
-        userNames: Map[BSONObjectID, String]
+        page: Page[(BatchOrderRequest, String)],
+        conditions: Seq[FilterCondition]
  )(
         implicit context: WebContext
 )
@@ -21,15 +20,15 @@
     paginatedTable(
         page,
         controllers.requests.routes.BatchOrderRequestsController.find(_, _, conditions),
-        typeColumns[BatchOrderRequest](
-            (Some("createdby"), "Requester name", _.createdByName.getOrElse("None")),
-            (Some("timecreated"), "Date", _.timeCreated),
-            (Some("state"), "Status", _.state)
+
+        typeColumns[(BatchOrderRequest, String)](
+            (Some("createdby"), "Requester name", _._2),
+            (Some("timecreated"), "Date", _._1.timeCreated),
+            (Some("state"), "Status", _._1.state)
         ),
-        Some({ item : Any => controllers.requests.routes.BatchOrderRequestsController.get(item.asInstanceOf[BatchOrderRequest]._id.get)})
+        Some({ item : Any => controllers.requests.routes.BatchOrderRequestsController.get(item.asInstanceOf[(BatchOrderRequest,String)]._1._id.get)})
     )
 }
-
 
 @layout.list(
     "request",
