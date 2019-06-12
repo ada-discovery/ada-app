@@ -15,7 +15,6 @@ class ActionNotificationService @Inject()(
                                            mailerClient: MailerClient
                                          ) {
 
-
    var notificationsss:List[String]= List()
   var notifications= ListBuffer[NotificationInfo]()
   val fromEmail="emanuele.raffero@uni.lu"
@@ -25,75 +24,35 @@ class ActionNotificationService @Inject()(
     " \n\nrequester:%s\non date:%s\nstatus change:from %s to $s\ndate of status change:%s\nupdated by user: %s\n" +
     "Best regards, Ada Team"
 
-
- // def addNotification(requestId: BSONObjectID, updatedHistory: Option[TrackingHistory]) = {
  def addNotification(notification: NotificationInfo) = {
-
-   println("adding new history to notification"+ notification.toString)
-
-
    notifications+=notification
-
-
-
-
-  //  println(requestUrl.format(requestId.stringify))
   }
 
-
   def sendNotifications()={
-    println("sending notifications, size" + notifications.size)
-
-
     notifications.foreach(n=>sendNotification(n))
-/*
-
-    val recipients = null
-
-        val email = Email(
-          from = "emanuele.raffero@uni.lu",
-          to = Seq("emanuele.raffero@uni.lu"),
-          subject = "subj",
-          bodyText = Some(message)
-        )
-
-
-    println("sending message \n"+ message)
-
-        mailerClient.send(email)
-
- */
-
   }
 
   def sendNotification(notification:NotificationInfo)={
     println("sending notification")
 
-
     val message = MessageTemplate.format(
       notification.targetUser,
+      notification.userRole.toString,
       notification.requestId,
-      notification.targetUser,
+      notification.createdByUser,
       notification.creationDate,
       notification.fromState,
       notification.toState,
       notification.updateDate,
       notification.updatedByUser)
 
-
     val email = Email(
       from = fromEmail,
-    //  to = Seq(notification.targetUserEmail),
-      to = Seq("emanuele.raffero@uni.lu"),
+      to = Seq(notification.targetUserEmail),
       subject = "status of request "+ notification.requestId.stringify+ " updated to state "+ notification.toState,
       bodyText = Some(message)
     )
 
-
-
-
     mailerClient.send(email)
-
   }
-
 }

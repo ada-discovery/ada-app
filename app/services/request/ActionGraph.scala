@@ -9,7 +9,7 @@ object ActionGraph {
 
   private val actions: Traversable[Action] = Seq(
     Action(
-      BatchRequestState.Created, RequestAction.Submit, BatchRequestState.SentForApproval,Role.Requester, Role.Committee ,Seq(), needsDescription
+      BatchRequestState.Created, RequestAction.Submit, BatchRequestState.SentForApproval,Role.Requester, Role.Committee ,Seq(Role.Requester), needsDescription
     ),
     Action(
       BatchRequestState.SentForApproval, RequestAction.Approve, BatchRequestState.Approved, Role.Committee, Role.Owner, Seq(Role.Owner, Role.Requester, Role.Committee)

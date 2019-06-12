@@ -4,7 +4,7 @@ import java.util.Date
 
 import javax.inject.Inject
 import models.BatchOrderRequest.{actionInfoFormat, batchRequestFormat}
-import models._
+import models.{NotificationType, Role, _}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.models.User.UserIdentity
@@ -18,7 +18,7 @@ import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters.{EnumFormatter, JsonFormatter}
 import org.incal.play.security.SecurityRole
-import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
+import org.incal.play.security.SecurityUtil.restrictSubjectPresentAny
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -42,7 +42,7 @@ class BatchOrderRequestsController @Inject()(
                                               val actionNotificationService: ActionNotificationService,
                                               mailerClient: MailerClient
                                             ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
-  with AdminRestrictedCrudController[BSONObjectID]
+  with SubjectPresentRestrictedCrudController[BSONObjectID]
   with HasBasicFormCreateView[BatchOrderRequest]
   with HasBasicFormShowView[BatchOrderRequest, BSONObjectID]
   with HasBasicFormEditView[BatchOrderRequest, BSONObjectID]
@@ -107,52 +107,110 @@ class BatchOrderRequestsController @Inject()(
    committeeIds.flatMap(_.userIds).toSeq :+ existingRequest.get.createdById.get
   }
 
-  def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String)= restrictAdminAnyNoCaching(deadbolt){
+  def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String) = restrictSubjectPresentAny(deadbolt){
 
     implicit request => {
       for {
         existingRequest <- repo.get(requestId)
+        allowedStateAction <- Future { getNextState(existingRequest.get.state, action) }
         user <- currentUser(request)
-        usersToNotif <- determineUsersToNotify(existingRequest, action)
+        userIdsMapping <- determineUserIdsPerRole(existingRequest.get, allowedStateAction)
+        isUserAllowed <- Future { actionPermissionService.checkUserAllowed(user, allowedStateAction, userIdsMapping) }
+        usersToNotify <- retrieveUsersToNotify(userIdsMapping)
 
-        committeeIds <- committeeRepo.find(Seq("dataSetId" #== existingRequest.get.dataSetId))
-       // ownerIds <- Future{Seq(BSONObjectID.parse("577e18c24500004800cdc558"))}
-        usersToNotify <- userRepo.find(Seq(UserIdentity.name #-> getUserIds(committeeIds,existingRequest).map(id => Some(id))))
         id <- {
           val batchRequestWithState = user match {
             case Some(currentUser) =>
               val dateOfUpdate = new Date()
-              val stateAction = getNextState(existingRequest.get.state, action)
-              actionPermissionService.checkUserAllowed(stateAction, currentUser._id, existingRequest.get.createdById, committeeIds.flatMap(_.userIds).toSeq, Seq())
-
-              val newState = stateAction.toState
+              val newState = allowedStateAction.toState
               var actionInfo = buildActionInfo(dateOfUpdate, currentUser._id, existingRequest.get.state, newState, Some(description))
               var updatedHistory = buildHistory(existingRequest.get.history, dateOfUpdate, currentUser._id, actionInfo)
-
-              usersToNotify.map(user => addNotification(buildNotification(existingRequest, user, newState, dateOfUpdate, currentUser)))
-              existingRequest.get.copy(state = newState, createdById = existingRequest.get.createdById, history = updatedHistory)
+              usersToNotify.map(userRoleMapping => userRoleMapping._2.foreach( userToNotify =>
+                addNotification(buildNotification(existingRequest, userToNotify, userRoleMapping._1 ,newState, dateOfUpdate, currentUser)
+              )))
+                existingRequest.get.copy(state = newState, createdById = existingRequest.get.createdById, history = updatedHistory)
             case None => throw new AdaException("No logged user found")
           }
           repo.update(batchRequestWithState)
         }
       } yield {
-        id
+        println(id)
         actionNotificationService.sendNotifications()
         requestsListRedirect.flashing("success" -> "state of request updated with success to: ")
       }
     }.recover(handleExceptions("request action"))
   }
 
-def determineUsersToNotify(existingRequest: Option[BatchOrderRequest], action: RequestAction.Value)={
-//  committeeRepo.find(Seq("dataSetId" #== existingRequest.get.dataSetId))
-Future{
-}
+  def retrieveUsersToNotify(userIdsMapping : Map[Role.Value, Traversable[BSONObjectID]]): Future[ Map[Role.Value, Traversable[User]]] = {
+   val userIds: Seq[BSONObjectID]  =  userIdsMapping.flatMap(_._2).toSeq
+
+   for {
+     users <- userRepo.find(Seq(UserIdentity.name #-> userIds.map(id => Some(id))))
+   }
+     yield{
+       val usersMapping: Map[BSONObjectID, User] = users.toSeq.map(u=>(u._id.get,u)).toMap
+
+       userIdsMapping.map{mapping => (mapping._1,
+         mapping._2.map(userId => usersMapping.get(userId).get)
+       )}
+     }
+   }
+
+  def getIds(role: Role.Value,existingRequest: BatchOrderRequest): Future[Traversable[BSONObjectID]]= {
+    role match {
+      case Role.Committee => {
+        committeeRepo.find(Seq("dataSetId" #== existingRequest.dataSetId)).map {
+          _.flatMap(_.userIds)
+        }
+      }
+      case Role.Requester => Future {   Seq(existingRequest.createdById.get) }
+      case Role.Owner => Future{Seq(BSONObjectID.parse("5cc2b4b0ea0100ec0159ab13").get) // admin user for now, trace of owner id to be clarified and implemented
+    }
+    }
+  }
+
+def determineUserIdsPerRole(existingRequest: BatchOrderRequest, action: Action):Future[Map[Role.Value, Traversable[BSONObjectID]]] = {
+  val roles: Seq[Role.Value] = action.notified :+ action.solicited
+
+  for{
+    committeeIds <- {
+      roles.find(r => r == Role.Committee) match {
+        case Some(role) => committeeRepo.find(Seq("dataSetId" #== existingRequest.dataSetId)).map {
+          _.flatMap(_.userIds)
+        }
+        case _ => Future {
+          Traversable()
+        }
+      }
+    }
+    ownerIds <- {
+      roles.find(r => r == Role.Owner) match {
+        case Some(role) => Future {
+          Traversable(BSONObjectID.parse("5cfa58261601007302c7f8ed").get)  // hardcodede for now, trace of owner id to be clarified and implemented,) }
+        }
+        case _ => Future {Traversable()}
+      }
+    }
+    requesterId <- {
+      roles.find(r => r == Role.Requester) match {
+        case Some(role) => Future {
+          Traversable(existingRequest.createdById.get)
+        }
+        case _ => Future {Traversable()}
+      }
+    }
+  }
+    yield{
+      Map (
+        Role.Committee -> committeeIds,
+        Role.Requester -> requesterId,
+        Role.Owner -> ownerIds
+        )
+    }
 }
 
   def getUserIfAllowed(request : play.api.mvc.Request[_])= {
-
     currentUser(request)
-
   }
 
   def getNextState(currentState: BatchRequestState.Value, action: RequestAction.Value) = {
@@ -166,11 +224,10 @@ Future{
        actionNotificationService.addNotification(notification)
   }
 
-  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, newState: BatchRequestState.Value, dateOfUpdate: Date, updatedByUser: User)={
-  NotificationInfo(existingRequest.get._id.get,existingRequest.get.timeCreated,targetUser.ldapDn,
+  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, newState: BatchRequestState.Value, dateOfUpdate: Date, updatedByUser: User)={
+  NotificationInfo(NotificationType.Advice,existingRequest.get._id.get,existingRequest.get.timeCreated,existingRequest.get.createdById.get.toString(),targetUser.ldapDn,role,
     targetUser.email,existingRequest.get.state,newState,dateOfUpdate,updatedByUser.ldapDn)
   }
-
 
   override protected type ListViewData = (
     Page[(BatchOrderRequest, String)],
