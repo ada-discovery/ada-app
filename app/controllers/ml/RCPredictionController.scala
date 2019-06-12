@@ -16,7 +16,6 @@ import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
 import org.incal.play.controllers._
 import org.incal.play.formatters._
-import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
 import org.incal.core.util.seqFutures
 import org.ada.web.services.DataSpaceService
 import services.ml.RCPredictionService
@@ -109,7 +108,7 @@ class RCPredictionController @Inject()(
     seriesPreprocessingType = _seriesPreprocessingType
   }
 
-  def showRCPrediction = restrictAdminAnyNoCaching(deadbolt) {
+  def showRCPrediction = restrictAdminAny(noCaching = true) {
     implicit request =>
       for {
         tree <- dataSpaceService.getTreeForCurrentUser(request)
@@ -117,7 +116,7 @@ class RCPredictionController @Inject()(
         Ok(views.html.admin.rcPrediction(rcPredictionSettingsForm, tree))
   }
 
-  def runRCPrediction = restrictAdminAnyNoCaching(deadbolt) {
+  def runRCPrediction = restrictAdminAny(noCaching = true) {
     implicit request =>
       rcPredictionSettingsForm.bindFromRequest.fold(
         { formWithErrors =>

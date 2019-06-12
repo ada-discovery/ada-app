@@ -23,8 +23,6 @@ import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters.{EnumFormatter, JsonFormatter}
 import org.incal.play.security.SecurityRole
-import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
-import play.api.Play.current
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -70,7 +68,7 @@ class BatchOrderRequestsController @Inject()(
 
   override def saveCall(
                          batchRequest: BatchOrderRequest)(
-                         implicit request: Request[AnyContent]
+                         implicit request: AuthenticatedRequest[AnyContent]
                        ): Future[BSONObjectID] =
   {
     for {
@@ -110,7 +108,7 @@ class BatchOrderRequestsController @Inject()(
 }
 
 
-  def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String)= restrictAdminAnyNoCaching(deadbolt){
+  def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String)= restrictAdminAny(noCaching = true){
 
     implicit request =>
 
