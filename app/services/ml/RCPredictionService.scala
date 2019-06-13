@@ -16,9 +16,8 @@ import org.ada.server.models._
 import org.ada.server.models.RCPredictionSettingAndResults.rcPredictionSettingAndResultsFormat
 import org.ada.server.models.ml._
 import org.ada.server.models.Field
+import org.ada.server.field.FieldUtil.specToField
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.ml.linalg.{Vector, Vectors}
-import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import org.ada.server.field.FieldUtil.caseClassToFlatFieldTypes
@@ -386,9 +385,9 @@ class RCPredictionServiceImpl @Inject()(
           ("rc_w_" + index, FieldTypeSpec(FieldTypeId.Double))
         )
 
-        val fieldSpecs = originalFieldTypeSpecs ++ weightFieldNameTypeSpecs
+        val newFields = (originalFieldTypeSpecs ++ weightFieldNameTypeSpecs).map { case (fieldName, spec) => specToField(fieldName, None, spec) }
 
-        dataSetService.updateDictionary(resultDataSetId, fieldSpecs, false, true)
+        dataSetService.updateFields(resultDataSetId, newFields, false, true)
       }
 
       // delete all the data
@@ -554,7 +553,10 @@ class RCPredictionServiceImpl @Inject()(
       newDsa <- dataSetService.register(sourceDsa, resultDataSetId, resultDataSetName, StorageType.ElasticSearch)
 
       // update the dictionary
-      _ <- dataSetService.updateDictionary(resultDataSetId, settingAndResultsFields, false, true)
+      _ <- {
+        val newFields = settingAndResultsFields.map { case (fieldName, spec) => specToField(fieldName, None, spec) }
+        dataSetService.updateFields(resultDataSetId, newFields, false, true)
+      }
 
       // save the results
       _ <- newDsa.dataSetRepo.save(Json.toJson(item).as[JsObject])

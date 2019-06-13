@@ -45,10 +45,12 @@ class CreateHealthCodeActivityNumDataSet @Inject()(
       )
 
       // create a new dictionary
-      _ <- dataSetService.updateDictionaryFields(
+      _ <- dataSetService.updateFields(
         newDataSetId,
-        Seq(healthCodeField.getOrElse(throw new IllegalArgumentException("No health code field found")),
-        recordNumField),
+        Seq(
+          healthCodeField.getOrElse(throw new IllegalArgumentException("No health code field found")),
+          recordNumField
+        ),
         false,
         true
       )

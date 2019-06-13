@@ -52,7 +52,7 @@ class AddFeatureNumToScoreBoard @Inject()(
       )
 
       // create a new dictionary
-      _ <- dataSetService.updateDictionaryFields(newDataSetId, fields ++ Seq(featureNumField), false, true)
+      _ <- dataSetService.updateFields(newDataSetId, fields ++ Seq(featureNumField), false, true)
 
       // delete the old data (if any)
       _ <- targetDsa.dataSetRepo.deleteAll

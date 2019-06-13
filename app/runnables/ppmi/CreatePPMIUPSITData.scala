@@ -151,7 +151,7 @@ class CreatePPMIUPSITData @Inject()(
       // save the dictionary
       _ <- {
         val newFields = fields ++ Seq(newGenderField, newFamilyHistoryField)
-        dataSetService.updateDictionaryFields(newDsa.fieldRepo, newFields, false, true)
+        dataSetService.updateFields(newDsa.fieldRepo, newFields, false, true)
       }
     } yield
       ()

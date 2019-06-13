@@ -1,12 +1,11 @@
 package runnables.luxpark
 
-import java.{util => ju}
 import javax.inject.Inject
-
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import org.ada.server.models._
 import org.incal.core.runnables.FutureRunnable
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.field.FieldUtil.specToField
 import play.api.libs.json._
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.dataaccess.NotEqualsNullCriterion
@@ -59,8 +58,8 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
 
       // update the merged dictionary
       _ <- {
-        val fieldNameAndTypes = (clinicalFields ++ biosampleFields).map(field => (field.name, field.fieldTypeSpec))
-        dataSetService.updateDictionary(linkedDataSetId, fieldNameAndTypes, true, true)
+        val fields = (clinicalFields ++ biosampleFields)
+        dataSetService.updateFields(linkedDataSetId, fields, true, true)
       }
 
       // clinical items

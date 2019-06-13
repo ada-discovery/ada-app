@@ -74,8 +74,7 @@ class CreateMPowerTrainingDistanceDataSet @Inject()(
           )
         }.flatten
 
-        val fieldNameAndTypes = (strippedFields ++ newFields).map( field => (field.name, field.fieldTypeSpec))
-        dataSetService.updateDictionary(normDataSetId, fieldNameAndTypes, false, true)
+        dataSetService.updateFields(normDataSetId, strippedFields ++ newFields, false, true)
       }
 
       // delete all from the old data set

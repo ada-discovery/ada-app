@@ -49,12 +49,9 @@ class CreateOverallActivityDataSet  @Inject()(
   val dataSetIds = dataSetIdWithActivityEnums.map(_._1)
 
   val mergedDataSetInfo = DataSetMetaInfo(
-    None,
-    "lux_park.mpower_overall_activity",
-    "Overall Activity",
-    0,
-    false,
-    BSONObjectID.parse("5845702f5399e2561261c662").get
+    id = "lux_park.mpower_overall_activity",
+    name = "Overall Activity",
+    dataSpaceId = BSONObjectID.parse("5845702f5399e2561261c662").get
   )
 
   val createdOnField =

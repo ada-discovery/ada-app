@@ -134,7 +134,7 @@ class CreatePPMIClinicalDataSet @Inject()(
       }
 
       // save the dictionary
-      _ <- dataSetService.updateDictionaryFields(newDsa.fieldRepo, fields, false, true)
+      _ <- dataSetService.updateFields(newDsa.fieldRepo, fields, false, true)
     } yield
       ()
   }
