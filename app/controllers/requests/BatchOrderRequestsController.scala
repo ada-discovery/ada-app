@@ -39,9 +39,7 @@ class BatchOrderRequestsController @Inject()(
                                               val userManager: UserManager,
                                               val actionPermissionService: ActionPermissionService,
                                               val actionNotificationService: ActionNotificationService,
-                                              val validatorService: ActionDescriptionValidatorService,
-                                         //     implicit val roleService: RoleService,
-                                              mailerClient: MailerClient
+                                              val validatorService: ActionDescriptionValidatorService
                                             ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
   with SubjectPresentRestrictedCrudController[BSONObjectID]
   with HasBasicFormCreateView[BatchOrderRequest]
@@ -89,7 +87,10 @@ class BatchOrderRequestsController @Inject()(
       id <- {
         repo.save(batchRequestWithUser)
       }
-      notification <- Future{ addNotification(buildNotification(Some(batchRequestWithUser.copy(_id=Some(id))), user.get, Role.Requester , ActionGraph.createAction() , date, user.get)) }
+      notification <- Future{
+        implicit val getRequestUrl: String = routes.BatchOrderRequestsController.get(id).absoluteURL()
+        addNotification(buildNotification(Some(batchRequestWithUser.copy(_id=Some(id))), user.get, Role.Requester , ActionGraph.createAction() , date, user.get, getRequestUrl))
+      }
     } yield {
       actionNotificationService.sendNotifications()
       id
@@ -115,6 +116,8 @@ class BatchOrderRequestsController @Inject()(
 
   def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String) = restrictSubjectPresentAny(deadbolt){
     implicit request => {
+      implicit val getRequestUrl: String = routes.BatchOrderRequestsController.get(requestId).absoluteURL()
+
       actionNotificationService.cleanNotifications()
 
       for {
@@ -133,7 +136,7 @@ class BatchOrderRequestsController @Inject()(
               val actionInfo = buildActionInfo(dateOfUpdate, currentUser.ldapDn, existingRequest.get.state, newState, Some(description))
               val updatedHistory = buildHistory(existingRequest.get.history, actionInfo)
               usersToNotify.map(userRoleMapping => userRoleMapping._2.foreach( userToNotify =>
-                addNotification(buildNotification(existingRequest, userToNotify, userRoleMapping._1 ,allowedStateAction, dateOfUpdate, currentUser)
+                addNotification(buildNotification(existingRequest, userToNotify, userRoleMapping._1 ,allowedStateAction, dateOfUpdate, currentUser, getRequestUrl)
               )))
                 existingRequest.get.copy(state = newState, createdById = existingRequest.get.createdById, history = updatedHistory)
             case None => throw new AdaException("No logged user found")
@@ -243,15 +246,15 @@ def determineUserIdsPerRole(existingRequest: BatchOrderRequest, action: Action):
        actionNotificationService.addNotification(notification)
   }
 
-  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: Action, dateOfUpdate: Date, updatedByUser: User)= {
+  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: Action, dateOfUpdate: Date, updatedByUser: User, getRequestUrl: String)= {
     action.notified.find(r => r == role) match {
       case Some(role) => {
         NotificationInfo(NotificationType.Advice,existingRequest.get._id.get,existingRequest.get.timeCreated,existingRequest.get.createdById.get.toString(),targetUser.ldapDn,role,
-          targetUser.email,action.fromState,action.toState,dateOfUpdate,updatedByUser.ldapDn)
+          targetUser.email,action.fromState,action.toState,dateOfUpdate,updatedByUser.ldapDn, getRequestUrl)
       }
       case _ => {
         NotificationInfo(NotificationType.Solicitation,existingRequest.get._id.get,existingRequest.get.timeCreated,existingRequest.get.createdById.get.toString(),targetUser.ldapDn,role,
-          targetUser.email,action.fromState,action.toState,dateOfUpdate,updatedByUser.ldapDn)
+          targetUser.email,action.fromState,action.toState,dateOfUpdate,updatedByUser.ldapDn, getRequestUrl)
       }
     }
   }

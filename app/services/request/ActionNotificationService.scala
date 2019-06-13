@@ -42,7 +42,7 @@ class ActionNotificationService @Inject()(mailerClient: MailerClient) {
     mailerClient.send(email)
   }
 
-  def getMessage(notification:NotificationInfo)={
+  def getMessage(notification:NotificationInfo)= {
 
     notification.notificationType match {
       case NotificationType.Solicitation => MessageTemplate.formatSolicitation(
@@ -54,7 +54,8 @@ class ActionNotificationService @Inject()(mailerClient: MailerClient) {
         notification.fromState,
         notification.toState,
         notification.updateDate,
-        notification.updatedByUser)
+        notification.updatedByUser,
+        notification.getRequestUrl)
 
       case NotificationType.Advice => MessageTemplate.formatAdvice(
         notification.targetUser,
@@ -65,7 +66,8 @@ class ActionNotificationService @Inject()(mailerClient: MailerClient) {
         notification.fromState,
         notification.toState,
         notification.updateDate,
-        notification.updatedByUser)
+        notification.updatedByUser,
+        notification.getRequestUrl)
     }
   }
 
