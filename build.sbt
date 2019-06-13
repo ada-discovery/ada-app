@@ -17,7 +17,9 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala, SbtWeb)
 
 libraryDependencies ++= Seq(cache, ws, filters)
 
-PlayKeys.devSettings := Seq("play.server.netty.maxInitialLineLength" -> "16384")
+PlayKeys.devSettings := Seq("play.server.netty.maxInitialLineLength" -> "16384",
+  "play.server.netty.transport" -> "jdk"
+)
 
 resolvers ++= Seq(
   "bnd libs" at "https://peterbanda.net/maven2",
