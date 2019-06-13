@@ -12,7 +12,7 @@ object ActionGraph {
       BatchRequestState.Created, RequestAction.Submit, BatchRequestState.SentForApproval,Role.Requester, Role.Committee ,Seq(Role.Requester), needsDescription
     ),
     Action(
-      BatchRequestState.SentForApproval, RequestAction.Approve, BatchRequestState.Approved, Role.Committee, Role.Owner, Seq(Role.Owner, Role.Requester, Role.Committee)
+      BatchRequestState.SentForApproval, RequestAction.Approve, BatchRequestState.Approved, Role.Committee, Role.Owner, Seq(Role.Requester, Role.Committee)
     ),
     Action(
       BatchRequestState.SentForApproval, RequestAction.Reject, BatchRequestState.Rejected, Role.Committee,Role.Requester, Seq(Role.Committee),needsDescription
@@ -24,10 +24,10 @@ object ActionGraph {
       BatchRequestState.Approved, RequestAction.NotAvailable, BatchRequestState.Unavailable,Role.Owner,Role.Requester, Seq(Role.Owner), needsDescription
     ),
     Action(
-      BatchRequestState.OwnerAcknowledged, RequestAction.Send, BatchRequestState.Sent,Role.Owner,Role.Requester, Seq(Role.Requester, Role.Owner), needsDescription
+      BatchRequestState.OwnerAcknowledged, RequestAction.Send, BatchRequestState.Sent,Role.Owner,Role.Requester, Seq(Role.Owner), needsDescription
     ),
     Action(
-      BatchRequestState.Sent, RequestAction.Receive, BatchRequestState.UserReceived,Role.Requester,Role.Requester, Seq(Role.Owner)
+      BatchRequestState.Sent, RequestAction.Receive, BatchRequestState.UserReceived,Role.Requester,Role.Requester, Seq(Role.Owner, Role.Requester)
     ),
     Action(
       BatchRequestState.Sent, RequestAction.NotReceive, BatchRequestState.NotReceived, Role.Requester,Role.Owner, Seq(Role.Owner), needsDescription
@@ -35,4 +35,11 @@ object ActionGraph {
   )
 
   val apply: Map[BatchRequestState.Value, Traversable[Action]] = actions.map { action => (action.fromState, action) }.toGroupMap
+
+
+  def createAction() = {
+    Action(
+      BatchRequestState.None, RequestAction.Create, BatchRequestState.Created, Role.Requester, Role.Requester ,Seq()
+    )
+  }
 }

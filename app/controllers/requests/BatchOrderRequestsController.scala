@@ -20,7 +20,7 @@ import org.incal.play.formatters.{EnumFormatter, JsonFormatter}
 import org.incal.play.security.SecurityRole
 import org.incal.play.security.SecurityUtil.restrictSubjectPresentAny
 import play.api.data.Form
-import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
+import play.api.data.Forms.{date, ignored, mapping, nonEmptyText, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.mailer.MailerClient
 import play.api.mvc.{AnyContent, Request}
@@ -72,25 +72,31 @@ class BatchOrderRequestsController @Inject()(
                          implicit request: Request[AnyContent]
                        ): Future[BSONObjectID] =
   {
+    val date = new Date()
+    actionNotificationService.cleanNotifications()
     for {
       user <- currentUser(request)
-      id <- {
-        val batchRequestWithUser = user match {
+      batchRequestWithUser <- Future {
+        user match {
           case Some(user) =>
-            val date = new Date()
             val newState = BatchRequestState.Created
             val actionInfo = buildActionInfo(date,user._id,newState,newState,None)
-            val newHistory = buildHistory(Seq(), date, user._id, actionInfo)
+            val newHistory = buildHistory(Seq(), actionInfo)
             batchRequest.copy(timeCreated = date, createdById = user._id, state = newState, history = newHistory)
           case None => throw new AdaException("No logged user found")
         }
+      }
+      id <- {
         repo.save(batchRequestWithUser)
       }
-    } yield
+      notification <- Future{ addNotification(buildNotification(Some(batchRequestWithUser.copy(_id=Some(id))), user.get, Role.Requester , ActionGraph.createAction() , date, user.get)) }
+    } yield {
+      actionNotificationService.sendNotifications()
       id
-}
+    }
+  }
 
-  def buildHistory(currentHistory: Seq[ActionInfo], date: Date, userId: Option[BSONObjectID], actionInfo:ActionInfo):Seq[ActionInfo] ={
+  def buildHistory(currentHistory: Seq[ActionInfo], actionInfo:ActionInfo):Seq[ActionInfo] ={
     currentHistory.isEmpty match {
     case false => {
       currentHistory :+ actionInfo
@@ -108,8 +114,9 @@ class BatchOrderRequestsController @Inject()(
   }
 
   def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String) = restrictSubjectPresentAny(deadbolt){
-
     implicit request => {
+      actionNotificationService.cleanNotifications()
+
       for {
         existingRequest <- repo.get(requestId)
         allowedStateAction <- Future { getNextState(existingRequest.get.state, action) }
@@ -117,16 +124,15 @@ class BatchOrderRequestsController @Inject()(
         userIdsMapping <- determineUserIdsPerRole(existingRequest.get, allowedStateAction)
         isUserAllowed <- Future { actionPermissionService.checkUserAllowed(user, allowedStateAction, userIdsMapping) }
         usersToNotify <- retrieveUsersToNotify(userIdsMapping)
-
         id <- {
           val batchRequestWithState = user match {
             case Some(currentUser) =>
               val dateOfUpdate = new Date()
               val newState = allowedStateAction.toState
-              var actionInfo = buildActionInfo(dateOfUpdate, currentUser._id, existingRequest.get.state, newState, Some(description))
-              var updatedHistory = buildHistory(existingRequest.get.history, dateOfUpdate, currentUser._id, actionInfo)
+              val actionInfo = buildActionInfo(dateOfUpdate, currentUser._id, existingRequest.get.state, newState, Some(description))
+              val updatedHistory = buildHistory(existingRequest.get.history, actionInfo)
               usersToNotify.map(userRoleMapping => userRoleMapping._2.foreach( userToNotify =>
-                addNotification(buildNotification(existingRequest, userToNotify, userRoleMapping._1 ,newState, dateOfUpdate, currentUser)
+                addNotification(buildNotification(existingRequest, userToNotify, userRoleMapping._1 ,allowedStateAction, dateOfUpdate, currentUser)
               )))
                 existingRequest.get.copy(state = newState, createdById = existingRequest.get.createdById, history = updatedHistory)
             case None => throw new AdaException("No logged user found")
@@ -134,7 +140,7 @@ class BatchOrderRequestsController @Inject()(
           repo.update(batchRequestWithState)
         }
       } yield {
-        println(id)
+        id
         actionNotificationService.sendNotifications()
         requestsListRedirect.flashing("success" -> "state of request updated with success to: ")
       }
@@ -224,9 +230,17 @@ def determineUserIdsPerRole(existingRequest: BatchOrderRequest, action: Action):
        actionNotificationService.addNotification(notification)
   }
 
-  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, newState: BatchRequestState.Value, dateOfUpdate: Date, updatedByUser: User)={
-  NotificationInfo(NotificationType.Advice,existingRequest.get._id.get,existingRequest.get.timeCreated,existingRequest.get.createdById.get.toString(),targetUser.ldapDn,role,
-    targetUser.email,existingRequest.get.state,newState,dateOfUpdate,updatedByUser.ldapDn)
+  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: Action, dateOfUpdate: Date, updatedByUser: User)= {
+    action.notified.find(r => r == role) match {
+      case Some(role) => {
+        NotificationInfo(NotificationType.Advice,existingRequest.get._id.get,existingRequest.get.timeCreated,existingRequest.get.createdById.get.toString(),targetUser.ldapDn,role,
+          targetUser.email,action.fromState,action.toState,dateOfUpdate,updatedByUser.ldapDn)
+      }
+      case _ => {
+        NotificationInfo(NotificationType.Solicitation,existingRequest.get._id.get,existingRequest.get.timeCreated,existingRequest.get.createdById.get.toString(),targetUser.ldapDn,role,
+          targetUser.email,action.fromState,action.toState,dateOfUpdate,updatedByUser.ldapDn)
+      }
+    }
   }
 
   override protected type ListViewData = (
