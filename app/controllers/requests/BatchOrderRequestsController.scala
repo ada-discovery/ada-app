@@ -117,7 +117,6 @@ class BatchOrderRequestsController @Inject()(
   def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String) = restrictSubjectPresentAny(deadbolt){
     implicit request => {
       implicit val getRequestUrl: String = routes.BatchOrderRequestsController.get(requestId).absoluteURL()
-
       actionNotificationService.cleanNotifications()
 
       for {
