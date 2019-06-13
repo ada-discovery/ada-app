@@ -62,7 +62,6 @@ class BatchOrderRequestsController @Inject()(
       "itemIds" ->  seq(of[BSONObjectID]),
       "state" -> of[BatchRequestState.Value],
       "created by id" -> ignored(Option.empty[BSONObjectID]),
-      "created by name" -> ignored(Option.empty[String]),
       "date" -> ignored(new Date()),
       "history"->ignored(Seq[ActionInfo]())
     )(BatchOrderRequest.apply)(BatchOrderRequest.unapply))
@@ -278,14 +277,11 @@ def determineUserIdsPerRole(existingRequest: BatchOrderRequest, action: Action):
       users.map(c => (c._id.get, c)).toMap
     }
   }
-
+/*
   def buildItemsWithUserName(requests: Traversable[BatchOrderRequest],users:Map[BSONObjectID,User]) = {
       requests.map(r=>buildItemWithName(r, users.get(r.createdById.get)))
   }
-
-  def buildItemWithName(request:BatchOrderRequest,user:Option[User])= {
-    request.copy(createdByName = Some(user.get.ldapDn))
-  }
+  */
 
   def isAdmin(context: WebContext)={
     for {

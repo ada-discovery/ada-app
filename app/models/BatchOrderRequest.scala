@@ -16,7 +16,6 @@ case class BatchOrderRequest(
                               itemIds:Seq[BSONObjectID],
                               state: BatchRequestState.Value = BatchRequestState.Created,
                               createdById: Option[BSONObjectID] = None,
-                              createdByName: Option[String] = None, //to be removed
                               timeCreated: Date = new Date(),
                               history: Seq[ActionInfo] = Nil
                             )

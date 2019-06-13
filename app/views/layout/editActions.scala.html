@@ -51,10 +51,6 @@
             <hr/>
             <div class="actions pull-right">
 
-
-
-
-
                 @validActions.filter(a => a.commentNeeded /*&& a.allowed == userRole*/ ).map{ action =>
                     <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addDescriptionModal" title="Add decision descr">
                     @action.action
@@ -70,10 +66,6 @@
 
                 @modal("addConfirmModal", "Confirm the decision", addConfirmModalBody, None, Some(addConfirmModalButtons(action.action)))
               }
-
-
-
-            
 
                 <a href="@cancelCall" class="btn btn-default">Cancel</a>
        </div>
