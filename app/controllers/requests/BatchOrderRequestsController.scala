@@ -26,7 +26,7 @@ import play.api.libs.mailer.MailerClient
 import play.api.mvc.{AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
-import services.request.{ActionGraph, ActionNotificationService, ActionPermissionService}
+import services.request.{ActionDescriptionValidatorService, ActionGraph, ActionNotificationService, ActionPermissionService, RoleService}
 
 import scala.concurrent.Future
 
@@ -34,12 +34,13 @@ import scala.concurrent.Future
 @Deprecated
 class BatchOrderRequestsController @Inject()(
                                        requestsRepo: BatchOrderRequestRepo,
-
                                               userRepo: UserRepo,
                                               committeeRepo: ApprovalCommitteeRepo,
                                               val userManager: UserManager,
                                               val actionPermissionService: ActionPermissionService,
                                               val actionNotificationService: ActionNotificationService,
+                                              val validatorService: ActionDescriptionValidatorService,
+                                         //     implicit val roleService: RoleService,
                                               mailerClient: MailerClient
                                             ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
   with SubjectPresentRestrictedCrudController[BSONObjectID]
@@ -80,7 +81,7 @@ class BatchOrderRequestsController @Inject()(
         user match {
           case Some(user) =>
             val newState = BatchRequestState.Created
-            val actionInfo = buildActionInfo(date,user._id,newState,newState,None)
+            val actionInfo = buildActionInfo(date,user.ldapDn,newState,newState,None)
             val newHistory = buildHistory(Seq(), actionInfo)
             batchRequest.copy(timeCreated = date, createdById = user._id, state = newState, history = newHistory)
           case None => throw new AdaException("No logged user found")
@@ -105,8 +106,8 @@ class BatchOrderRequestsController @Inject()(
   }
   }
 
-  def buildActionInfo(date: Date,userId: Option[BSONObjectID],fromState:BatchRequestState.Value, toState: BatchRequestState.Value, description: Option[String]):ActionInfo={
-    ActionInfo(date, userId.get,fromState,toState, description)
+  def buildActionInfo(date: Date,userName: String,fromState:BatchRequestState.Value, toState: BatchRequestState.Value, description: Option[String]):ActionInfo={
+    ActionInfo(date, userName,fromState,toState, description)
   }
 
   def getUserIds(committeeIds: Traversable[ApprovalCommittee], existingRequest: Option[BatchOrderRequest]): Seq[BSONObjectID] = {
@@ -119,8 +120,9 @@ class BatchOrderRequestsController @Inject()(
 
       for {
         existingRequest <- repo.get(requestId)
-        allowedStateAction <- Future { getNextState(existingRequest.get.state, action) }
         user <- currentUser(request)
+        allowedStateAction <- Future { getNextState(existingRequest.get.state, action) }
+        descriptionExists <- Future { checkDescriptionExists(allowedStateAction, description) }
         userIdsMapping <- determineUserIdsPerRole(existingRequest.get, allowedStateAction)
         isUserAllowed <- Future { actionPermissionService.checkUserAllowed(user, allowedStateAction, userIdsMapping) }
         usersToNotify <- retrieveUsersToNotify(userIdsMapping)
@@ -129,7 +131,7 @@ class BatchOrderRequestsController @Inject()(
             case Some(currentUser) =>
               val dateOfUpdate = new Date()
               val newState = allowedStateAction.toState
-              val actionInfo = buildActionInfo(dateOfUpdate, currentUser._id, existingRequest.get.state, newState, Some(description))
+              val actionInfo = buildActionInfo(dateOfUpdate, currentUser.ldapDn, existingRequest.get.state, newState, Some(description))
               val updatedHistory = buildHistory(existingRequest.get.history, actionInfo)
               usersToNotify.map(userRoleMapping => userRoleMapping._2.foreach( userToNotify =>
                 addNotification(buildNotification(existingRequest, userToNotify, userRoleMapping._1 ,allowedStateAction, dateOfUpdate, currentUser)
@@ -145,6 +147,18 @@ class BatchOrderRequestsController @Inject()(
         requestsListRedirect.flashing("success" -> "state of request updated with success to: ")
       }
     }.recover(handleExceptions("request action"))
+  }
+
+  def checkDescriptionExists(action:Action, description: String)= {
+    action.commentNeeded match {
+      case true => {
+        validatorService.validate(description) match {
+          case false => throw new AdaException("Description not provided or not accepted '" + description + "'" + " for new state: " + action.toState)
+          case _ =>
+        }
+      }
+      case _ =>
+    }
   }
 
   def retrieveUsersToNotify(userIdsMapping : Map[Role.Value, Traversable[BSONObjectID]]): Future[ Map[Role.Value, Traversable[User]]] = {
@@ -288,6 +302,7 @@ def determineUserIdsPerRole(existingRequest: BatchOrderRequest, action: Action):
 
   override protected def editView = { implicit ctx =>
     if(true==true){
+      implicit val roleService: RoleService = RoleService(currentUser(ctx.request),committeeRepo, repo)
       views.html.requests.actions(_)
     } else {
       views.html.requests.edit(_)

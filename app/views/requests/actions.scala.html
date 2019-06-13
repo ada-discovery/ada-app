@@ -11,10 +11,12 @@
 
 @import reactivemongo.bson.BSONObjectID
 
+@import services.request.RoleService
 @(
         data: IdForm[BSONObjectID, BatchOrderRequest]
 )(
-        implicit context: WebContext
+        implicit context: WebContext,
+        service: RoleService
 )
 
 @elements = {
@@ -27,6 +29,7 @@
     "Request status",
     "request",
     ActionGraph.apply.get(data.form.get.state).orElse(Some(Traversable[Action]())).get,
+    service.getRole(data.id),
     data.form.get._id.get,
     data.form.get.history,
     errors = data.form.errors,

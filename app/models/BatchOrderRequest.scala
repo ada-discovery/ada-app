@@ -21,7 +21,7 @@ case class BatchOrderRequest(
                               history: Seq[ActionInfo] = Nil
                             )
 
-case class ActionInfo(timestamp: Date, performedById: BSONObjectID, fromState:BatchRequestState.Value, toState: BatchRequestState.Value, comment: Option[String])
+case class ActionInfo(timestamp: Date, performedByUser: String, fromState:BatchRequestState.Value, toState: BatchRequestState.Value, comment: Option[String])
 
 object BatchRequestState extends Enumeration {
   val SentForApproval, Rejected, Created, Approved, OwnerAcknowledged, Unavailable, Sent, UserReceived, NotReceived, Error, None = Value
