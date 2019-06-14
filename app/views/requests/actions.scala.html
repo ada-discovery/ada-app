@@ -6,14 +6,17 @@
 @import org.incal.play.controllers.WebContext._
 @import org.ada.web.controllers.routes
 @import views.html.elements._
+@import services.request.ActionGraph
+@import models.Action
 
 @import reactivemongo.bson.BSONObjectID
-@import services.request.RequestStatusService
+
+@import services.request.RoleService
 @(
-        data: IdForm[BSONObjectID, BatchOrderRequest],
-        statusService: RequestStatusService
+        data: IdForm[BSONObjectID, BatchOrderRequest]
 )(
-        implicit context: WebContext
+        implicit context: WebContext,
+        service: RoleService
 )
 
 @elements = {
@@ -25,9 +28,10 @@
 @layout.editActions(
     "Request status",
     "request",
-    statusService.getNextStates(data.form.get.state),
+    ActionGraph.apply.get(data.form.get.state).orElse(Some(Traversable[Action]())).get,
+    service.getRole(data.id),
     data.form.get._id.get,
-    data.form.get.history.get,
+    data.form.get.history,
     errors = data.form.errors,
     elements = elements,
     updateCall = controllers.requests.routes.BatchOrderRequestsController.update(data.id),

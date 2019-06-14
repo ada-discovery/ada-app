@@ -17,7 +17,9 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala, SbtWeb)
 
 libraryDependencies ++= Seq(cache, ws, filters)
 
-PlayKeys.devSettings := Seq("play.server.netty.maxInitialLineLength" -> "16384")
+PlayKeys.devSettings := Seq("play.server.netty.maxInitialLineLength" -> "16384",
+  "play.server.netty.transport" -> "jdk"
+)
 
 resolvers ++= Seq(
   "bnd libs" at "https://peterbanda.net/maven2",
@@ -28,7 +30,9 @@ routesImport ++= Seq(
   "reactivemongo.bson.BSONObjectID",
   "org.ada.web.controllers.PathBindables._",
   "org.ada.web.controllers.QueryStringBinders._",
-  "org.ada.web.controllers.pdchallenge.QueryStringBinders._"
+  "org.ada.web.controllers.pdchallenge.QueryStringBinders._",
+  "controllers.QueryStringBinders._"
+
 )
 
 val playVersion = "2.5.9"

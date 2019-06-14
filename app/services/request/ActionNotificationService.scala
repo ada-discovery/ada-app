@@ -1,6 +1,6 @@
 package services.request
 
-import models.{BatchOrderRequest, BatchRequestState, NotificationInfo, RequestAction, TrackingHistory}
+import models.{Action, BatchOrderRequest, BatchRequestState, NotificationInfo, NotificationType}
 import BatchRequestState._
 import javax.inject.Inject
 import org.ada.server.dataaccess.RepoTypes.UserRepo
@@ -11,89 +11,77 @@ import services.BatchOrderRequestRepoTypes.BatchOrderRequestRepo
 
 import scala.collection.mutable.ListBuffer
 
-class ActionNotificationService @Inject()(
-                                           mailerClient: MailerClient
-                                         ) {
-
-
+class ActionNotificationService @Inject()(mailerClient: MailerClient) {
    var notificationsss:List[String]= List()
   var notifications= ListBuffer[NotificationInfo]()
   val fromEmail="emanuele.raffero@uni.lu"
-  val messageHtml = "<html><p>Dear %s, <br>the status of the request number %s changed :%s</p></html>"
-  val message = "Dear %s, \nthe status of the request number %s changed,\nyou can see the request in Ada at the following url %s\n" +
-    "please find below the current status" +
-    " \n\nrequester:%s\non date:%s\nstatus change:from %s to $s\ndate of status change:%s\nupdated by user: %s\n" +
-    "Best regards, Ada Team"
 
-
- // def addNotification(requestId: BSONObjectID, updatedHistory: Option[TrackingHistory]) = {
  def addNotification(notification: NotificationInfo) = {
-
-   println("adding new history to notification"+ notification.toString)
-
-
    notifications+=notification
-
-
-
-
-  //  println(requestUrl.format(requestId.stringify))
   }
 
+  def cleanNotifications() = {
+    notifications.clear()
+  }
 
   def sendNotifications()={
-    println("sending notifications, size" + notifications.size)
-
-
     notifications.foreach(n=>sendNotification(n))
-/*
-
-    val recipients = null
-
-        val email = Email(
-          from = "emanuele.raffero@uni.lu",
-          to = Seq("emanuele.raffero@uni.lu"),
-          subject = "subj",
-          bodyText = Some(message)
-        )
-
-
-    println("sending message \n"+ message)
-
-        mailerClient.send(email)
-
- */
-
   }
 
   def sendNotification(notification:NotificationInfo)={
-    println("sending notification")
-
-
-    val message = MessageTemplate.format(
-      notification.targetUser,
-      notification.requestId,
-      notification.targetUser,
-      notification.creationDate,
-      notification.fromState,
-      notification.toState,
-      notification.updateDate,
-      notification.updatedByUser)
-
+    val message = getMessage(notification)
+    val subject = getSubject(notification)
 
     val email = Email(
       from = fromEmail,
-    //  to = Seq(notification.targetUserEmail),
-      to = Seq("emanuele.raffero@uni.lu"),
-      subject = "status of request "+ notification.requestId.stringify+ " updated to state "+ notification.toState,
+      to = Seq(notification.targetUserEmail),
+      subject = subject,
       bodyText = Some(message)
     )
 
-
-
-
     mailerClient.send(email)
-
   }
 
+  def getMessage(notification:NotificationInfo)= {
+
+    notification.notificationType match {
+      case NotificationType.Solicitation => MessageTemplate.formatSolicitation(
+        notification.targetUser,
+        notification.userRole.toString,
+        notification.requestId,
+        notification.createdByUser,
+        notification.creationDate,
+        notification.fromState,
+        notification.toState,
+        notification.updateDate,
+        notification.updatedByUser,
+        notification.getRequestUrl)
+
+      case NotificationType.Advice => MessageTemplate.formatAdvice(
+        notification.targetUser,
+        notification.userRole.toString,
+        notification.requestId,
+        notification.createdByUser,
+        notification.creationDate,
+        notification.fromState,
+        notification.toState,
+        notification.updateDate,
+        notification.updatedByUser,
+        notification.getRequestUrl)
+    }
+  }
+
+  def getSubject(notification:NotificationInfo)={
+
+    notification.notificationType match {
+      case NotificationType.Solicitation => MessageTemplate.formatSolicitationSubject(
+               notification.requestId,
+               notification.toState
+      )
+
+      case NotificationType.Advice => MessageTemplate.formatAdviceSubject(
+        notification.requestId,
+        notification.toState)
+    }
+  }
 }

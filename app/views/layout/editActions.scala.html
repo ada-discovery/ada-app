@@ -11,12 +11,17 @@
 @import reactivemongo.bson.BSONObjectID
 @import controllers.requests.routes
 @import views.html.table.displayTable
+@import models.Action
+@import models.RequestAction
+@import play.api.libs.concurrent.Execution.Implicits.defaultContext
+@import scala.concurrent.Future
 @(
     displayName: String,
     messagePrefix: String,
-    validNextStates: Seq[(String,String)],
+    validActions: Traversable[Action],
+    userRoleFuture: Future[Role.Value],
     requestId: BSONObjectID,
-    trackingHistory: TrackingHistory,
+    trackingHistory: Seq[ActionInfo],
     errors: Seq[FormError],
     elements: Html,
     updateCall: Call,
@@ -46,23 +51,24 @@
             <hr/>
             <div class="actions pull-right">
 
-                 @validNextStates.filter(state=>Seq((BatchRequestState.Rejected.toString,BatchRequestState.Rejected.toString),(BatchRequestState.Sent.toString,BatchRequestState.Sent.toString),(BatchRequestState.Unavailable.toString,BatchRequestState.Unavailable.toString)).contains(state)).map{ state =>
-                    <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addRejectModal" title="Add decision descr">
-                        @state._1.toString()
+                @validActions.filter(a => a.commentNeeded /*&& a.allowed == userRole*/ ).map{ action =>
+                    <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addDescriptionModal" title="Add decision descr">
+                    @action.action
                     </a>
-                }
 
-                @validNextStates.filter(state => !Seq((BatchRequestState.Rejected.toString,BatchRequestState.Rejected.toString),(BatchRequestState.Sent.toString,BatchRequestState.Sent.toString),(BatchRequestState.Unavailable.toString,BatchRequestState.Unavailable.toString)).contains(state)).map{ state =>
-                    <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addAcceptModal" title="Add decision descr">
-                        @state._1.toString()
-                    </a>
-                }
+                @modal("addDescriptionModal", "Add a description of the decision", addDescriptionModalBody, None, Some(addDescriptionModalButtons(action.action)))
+               }
+
+                @validActions.filter(a => a.commentNeeded==false /*&& a.allowed == userRole*/).map{ action =>
+                <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addConfirmModal" title="Add decision descr">
+                    @action.action
+                </a>
+
+                @modal("addConfirmModal", "Confirm the decision", addConfirmModalBody, None, Some(addConfirmModalButtons(action.action)))
+              }
 
                 <a href="@cancelCall" class="btn btn-default">Cancel</a>
-
-                @modal("addAcceptModal", "Add a description of the decision", addAcceptModalBody, None, Some(addAcceptModalButtons))
-                @modal("addRejectModal", "Add a description of the decision", addRejectModalBody, None, Some(addRejectModalButtons))
-     </div>
+       </div>
         }
         </div>
     </div>
@@ -70,12 +76,12 @@
     <div class="row">
         <div class="col-md-12">
             @displayTable(
-                trackingHistory.actionInfo,
+                trackingHistory,
                 typeColumns[ActionInfo](
                     (None, "date", _.timestamp.format("yyyy-MM-dd HH:mm:ss")),
-                    (None, "by user", _.action.performedById.stringify),
-                    (None, "from state", _.action.fromState),
-                    (None, "to state", _.action.toState),
+                    (None, "by user", _.performedByUser),
+                    (None, "from state", _.fromState),
+                    (None, "to state", _.toState),
                     (None, "comment", _.comment.getOrElse(""))
                  )
             )
@@ -84,28 +90,28 @@
 }
 
 
-@addRejectModalBody = {
+@addDescriptionModalBody = {
     <div class="row">
     @labelValue("content", "Content") {
-        <textarea id="decision-reason" name="content" rows="15" cols="65"></textarea>
+        <textarea id="decision-reason" name="content" rows="15" cols="65" resize="none"></textarea>
     }
     </div>
 }
 
-@addAcceptModalBody = {
+@addConfirmModalBody = {
     <div class="row">
     </div>
 }
 
 
-@addRejectModalButtons = {
+@addDescriptionModalButtons(action: RequestAction.Value) = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="button" class="btn btn-primary" onclick="rejectAction()" data-dismiss="modal">OK</button>
+    <button type="button" class="btn btn-primary" onclick="submitWithDescription('@action')" data-dismiss="modal">OK</button>
 }
 
-@addAcceptModalButtons = {
+@addConfirmModalButtons(action: RequestAction.Value) = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="button" class="btn btn-primary" onclick="acceptAction()" data-dismiss="modal">OK</button>
+    <button type="button" class="btn btn-primary" onclick="simpleSubmit('@action')" data-dismiss="modal">OK</button>
 }
 
 
@@ -114,17 +120,14 @@
 )
 
 <script type="text/javascript">
-
-
-        function acceptAction() {
-            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', '@RequestAction.Approve', '')
-            submit('post', action.url)
+        function simpleSubmit(action) {
+         var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', action, '')
+            submit('post', requestAction.url)
         }
 
-        function rejectAction() {
-            var reasonDescription = $('#addRejectModal #decision-reason').val()
-            var action = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', '@RequestAction.Reject', reasonDescription)
-            submit('post', action.url)
+        function submitWithDescription(action) {
+            var reasonDescription = $('#addDescriptionModal #decision-reason').val()
+            var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', action, reasonDescription)
+            submit('post', requestAction.url)
         }
-
 </script>

@@ -1,0 +1,18 @@
+package models
+
+import org.ada.web.controllers.EnumStringBindable
+
+
+object Role extends Enumeration {
+  val Requester, Committee, Owner = Value
+}
+
+case class Action(
+                   fromState: BatchRequestState.Value,
+                   action: RequestAction.Value,
+                   toState: BatchRequestState.Value,
+                   allowed: Role.Value,
+                   solicited: Role.Value,
+                   notified: Seq[Role.Value] = Nil,
+                   commentNeeded: Boolean = false
+                 )

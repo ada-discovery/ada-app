@@ -4,4 +4,9 @@ import java.util.Date
 
 import reactivemongo.bson.BSONObjectID
 
-case class NotificationInfo (val requestId: BSONObjectID, val creationDate:Date, val targetUser:String, val targetUserEmail:String, val fromState:BatchRequestState.Value, val toState:BatchRequestState.Value, val updateDate:Date, val updatedByUser:String)
+object NotificationType extends Enumeration {
+  val Advice, Solicitation = Value
+}
+
+case class NotificationInfo (val notificationType: NotificationType.Value,val requestId: BSONObjectID, val creationDate:Date,val createdByUser:String , val targetUser:String, val userRole: Role.Value, val targetUserEmail:String, val fromState:BatchRequestState.Value, val toState:BatchRequestState.Value, val updateDate:Date,
+                             val updatedByUser:String, val getRequestUrl:String)
