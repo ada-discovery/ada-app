@@ -81,12 +81,9 @@ class CreateClinicalMPowerTappingDataSet @Inject()(dsaf: DataSetAccessorFactory)
     result(
       dsaf.register(
         DataSetMetaInfo(
-          None,
-          "lux_park.clinical_and_mpower_tapping_activity",
-          "Tapping Activity & Clinical",
-          0,
-          false,
-          BSONObjectID.parse("5845702f5399e2561261c662").get
+          id = "lux_park.clinical_and_mpower_tapping_activity",
+          name = "Tapping Activity & Clinical",
+          dataSpaceId = BSONObjectID.parse("5845702f5399e2561261c662").get
         ),
         Some(DataSetSetting(
           None,

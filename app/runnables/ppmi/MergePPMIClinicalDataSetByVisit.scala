@@ -44,7 +44,7 @@ class MergePPMIClinicalDataSetByVisit @Inject()(
       fields <- fieldRepo.find()
 
       // save the dictionary
-      _ <- dataSetService.updateDictionaryFields(newDsa.fieldRepo, fields, false, true)
+      _ <- dataSetService.updateFields(newDsa.fieldRepo, fields, false, true)
 
       // get the subject ids
       subjectIds <- repo.find(projection = Seq(subjectIdFieldName)).map(_.map(json =>

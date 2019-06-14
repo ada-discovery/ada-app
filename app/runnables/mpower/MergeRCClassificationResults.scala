@@ -14,11 +14,10 @@ import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.seqFutures
 import org.incal.spark_ml.models.result.{ClassificationResult, StandardClassificationResult}
 import org.ada.server.services.DataSetService
-import org.ada.server.field.FieldUtil.caseClassToFlatFieldTypes
+import org.ada.server.field.FieldUtil.{caseClassToFlatFieldTypes, specToField}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.reflect.runtime.universe.typeOf
 
 class MergeRCClassificationResults @Inject() (
     dsaf: DataSetAccessorFactory,
@@ -67,7 +66,10 @@ class MergeRCClassificationResults @Inject() (
       targetDsa <- dataSetService.register(dsa, targetDataSetId, dataSetName + " Classification", StorageType.Mongo)
 
       // update the dictionary
-      _ <- dataSetService.updateDictionary(targetDataSetId, fields ++ extraFields, false, true)
+      _ <- {
+        val newFields = (fields ++ extraFields).map { case (fieldName, spec) => specToField(fieldName, None, spec) }
+        dataSetService.updateFields(targetDataSetId, newFields, false, true)
+      }
 
       // delete the old results (if any)
       _ <- targetDsa.dataSetRepo.deleteAll

@@ -84,8 +84,7 @@ class LinkADSMTBAndDrugDataSet @Inject()(
         val drugEnumMap = drugCodeHarmonizedNames.map { case (_, (drugName, index)) => (index.toString, drugName) }.toMap
         val fullHarmonizedDrugField = harmonizedDrugField.copy(enumValues = drugEnumMap)
 
-        val fieldNameAndTypes = (globalFields ++ Seq(fullHarmonizedDrugField)).map(field => (field.name, field.fieldTypeSpec))
-        dataSetService.updateDictionary(linkedDataSetId, fieldNameAndTypes, false, true)
+        dataSetService.updateFields(linkedDataSetId, globalFields ++ Seq(fullHarmonizedDrugField), false, true)
       }
 
       linkedJsons = {
