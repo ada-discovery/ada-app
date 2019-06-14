@@ -18,7 +18,6 @@ import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters.{EnumFormatter, JsonFormatter}
 import org.incal.play.security.SecurityRole
-import org.incal.play.security.SecurityUtil.restrictSubjectPresentAny
 import play.api.data.Form
 import play.api.data.Forms.{date, ignored, mapping, nonEmptyText, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -27,7 +26,7 @@ import play.api.mvc.{AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
 import services.request.{ActionDescriptionValidatorService, ActionGraph, ActionNotificationService, ActionPermissionService, RoleService}
-
+import be.objectify.deadbolt.scala.AuthenticatedRequest
 import scala.concurrent.Future
 
 
@@ -46,7 +45,8 @@ class BatchOrderRequestsController @Inject()(
   with HasBasicFormShowView[BatchOrderRequest, BSONObjectID]
   with HasBasicFormEditView[BatchOrderRequest, BSONObjectID]
   with HasListView[BatchOrderRequest]
-  with AdaAuthConfig {
+  with AdaAuthConfig
+{
 
   private implicit val idsFormatter = BSONObjectIDStringFormatter
   private implicit val actionInfoFormatter = JsonFormatter[Seq[ActionInfo]]
@@ -67,7 +67,7 @@ class BatchOrderRequestsController @Inject()(
 
   override def saveCall(
                          batchRequest: BatchOrderRequest)(
-                         implicit request: Request[AnyContent]
+                         implicit request: AuthenticatedRequest[AnyContent]
                        ): Future[BSONObjectID] =
   {
     val date = new Date()
@@ -114,7 +114,7 @@ class BatchOrderRequestsController @Inject()(
    committeeIds.flatMap(_.userIds).toSeq :+ existingRequest.get.createdById.get
   }
 
-  def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String) = restrictSubjectPresentAny(deadbolt){
+  def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String) = restrictSubjectPresentAny(){
     implicit request => {
       implicit val getRequestUrl: String = routes.BatchOrderRequestsController.get(requestId).absoluteURL()
       actionNotificationService.cleanNotifications()
