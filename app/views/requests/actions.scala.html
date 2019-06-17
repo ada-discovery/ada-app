@@ -29,7 +29,6 @@
     "Update request status as " + service.getRole(data.id)+" member",
     "request",
     ActionGraph.apply.get(data.form.get.state).orElse(Some(Traversable[Action]())).get,
-   // service.getRole(data.id),
     data.form.get._id.get,
     data.form.get.history,
     errors = data.form.errors,
