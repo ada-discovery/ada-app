@@ -6,14 +6,22 @@
 @import views.html.elements.labelValue
 @import org.incal.play.Page
 @import org.ada.web.util.typeColumns
-
+@import scala.concurrent.ExecutionContext.Implicits.global
 @import reactivemongo.bson.BSONObjectID
 @import org.incal.core.FilterCondition
+@import services.request.ActionGraph
+@import services.request.RoleProviderService
+@import scala.util.Success
+@import scala.util.Failure
+@import scala.concurrent.duration._
+
+@import scala.concurrent.Await
 @(
         page: Page[(BatchOrderRequest, String)],
         conditions: Seq[FilterCondition]
  )(
-        implicit context: WebContext
+        implicit context: WebContext,
+        roleService: RoleProviderService
 )
 
 @table = @{
@@ -26,7 +34,34 @@
             (Some("timecreated"), "Date", _._1.timeCreated),
             (Some("state"), "Status", _._1.state)
         ),
-        Some({ item : Any => controllers.requests.routes.BatchOrderRequestsController.get(item.asInstanceOf[(BatchOrderRequest,String)]._1._id.get)})
+        Some({ item : Any =>
+            val batchRequest = item.asInstanceOf[(BatchOrderRequest, String)]._1
+  //          val userRoleFuture = roleService.getRoleFuture(batchRequest._id.get)
+            val currentStatus = batchRequest.state
+
+//            val userRole = Await.result(userRoleFuture, 10 seconds)
+
+            val userRole = roleService.getRole(batchRequest._id.get)
+            val applicableActions = ActionGraph.apply.get(currentStatus).getOrElse(Traversable()).filter(a => a.allowed == userRole)
+
+            applicableActions.size > 0 match {
+                case true =>                  controllers.requests.routes.BatchOrderRequestsController.edit(item.asInstanceOf[(BatchOrderRequest, String)]._1._id.get)
+
+                case false =>                     controllers.requests.routes.BatchOrderRequestsController.get(item.asInstanceOf[(BatchOrderRequest, String)]._1._id.get)
+
+            }
+/*
+            userRole onComplete {
+                case Success(role) => {println(role)
+                    controllers.requests.routes.BatchOrderRequestsController.get(item.asInstanceOf[(BatchOrderRequest, String)]._1._id.get)
+                }
+                case Failure(t) => { println("An error has occurred: " + t.getMessage)
+                    controllers.requests.routes.BatchOrderRequestsController.get(item.asInstanceOf[(BatchOrderRequest, String)]._1._id.get)
+                }
+            }
+*/
+
+        })
     )
 }
 

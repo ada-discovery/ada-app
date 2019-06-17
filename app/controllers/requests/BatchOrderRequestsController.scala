@@ -22,11 +22,15 @@ import play.api.data.Form
 import play.api.data.Forms.{date, ignored, mapping, nonEmptyText, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.mailer.MailerClient
-import play.api.mvc.{AnyContent, Request}
+import play.api.mvc.{Action, AnyContent, Request, Result}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
-import services.request.{ActionDescriptionValidatorService, ActionGraph, ActionNotificationService, ActionPermissionService, RoleService}
+import services.request.{ActionDescriptionValidatorService, ActionGraph, ActionNotificationService, ActionPermissionService, RoleProviderService}
 import be.objectify.deadbolt.scala.AuthenticatedRequest
+import org.ada.server.models.DataSpaceMetaInfo
+import org.incal.play.security.ActionSecurity.AuthenticatedAction
+import org.incal.play.security.SecurityUtil.toAuthenticatedAction
+
 import scala.concurrent.Future
 
 
@@ -42,8 +46,8 @@ class BatchOrderRequestsController @Inject()(
                                             ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
   with SubjectPresentRestrictedCrudController[BSONObjectID]
   with HasBasicFormCreateView[BatchOrderRequest]
-  with HasBasicFormShowView[BatchOrderRequest, BSONObjectID]
   with HasBasicFormEditView[BatchOrderRequest, BSONObjectID]
+  with HasBasicFormShowView[BatchOrderRequest, BSONObjectID]
   with HasListView[BatchOrderRequest]
   with AdaAuthConfig
 {
@@ -64,6 +68,37 @@ class BatchOrderRequestsController @Inject()(
       "history"->ignored(Seq[ActionInfo]())
     )(BatchOrderRequest.apply)(BatchOrderRequest.unapply))
   override protected val homeCall = routes.BatchOrderRequestsController.find()
+
+
+  override def get(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
+    restrictToInvolved(super.get(id))
+
+  override def edit(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
+    restrictToInvolved(super.edit(id))
+
+  override def update(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
+    restrictToInvolved(super.update(id))
+
+  override def delete(id: BSONObjectID): Action[AnyContent] =
+    restrictToInvolved(super.delete(id))
+
+  protected def restrictToInvolved(
+                             action: Action[AnyContent]
+                           ): Action[AnyContent] =
+    restrict[AnyContent](parse.anyContent)(toAllowedUserAction(action))
+
+
+  def toAllowedUserAction[A](action: Action[A]): AuthenticatedAction[A] = {
+    implicit request => {
+      val isUserAllowed = true
+      isUserAllowed match {
+        case true => action.apply (request)
+        case false => throw new AdaException("not allowed")
+      }
+    }
+  }
+
+ // type AuthenticatedAction[A] = AuthenticatedRequest[A] => Future[Result]
 
   override def saveCall(
                          batchRequest: BatchOrderRequest)(
@@ -114,7 +149,16 @@ class BatchOrderRequestsController @Inject()(
    committeeIds.flatMap(_.userIds).toSeq :+ existingRequest.get.createdById.get
   }
 
-  def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String) = restrictSubjectPresentAny(){
+
+  def isAllowed(user: USER, request: AuthenticatedRequest[Any]):Future[Boolean] = {
+    val isUserAllowed = true
+    Future{isUserAllowed}
+  }
+
+  def requestAction(requestId: BSONObjectID, action: RequestAction.Value, description: String) =
+  ///  restrictSubjectPresentAny()
+    restrictAdminOrUserCustom(isAllowed,parse.anyContent)
+  {
     implicit request => {
       implicit val getRequestUrl: String = routes.BatchOrderRequestsController.get(requestId).absoluteURL()
       actionNotificationService.cleanNotifications()
@@ -150,7 +194,7 @@ class BatchOrderRequestsController @Inject()(
     }.recover(handleExceptions("request action"))
   }
 
-  def checkDescriptionExists(action:Action, description: String)= {
+  def checkDescriptionExists(action:models.Action, description: String)= {
     action.commentNeeded match {
       case true => {
         validatorService.validate(description) match {
@@ -190,7 +234,7 @@ class BatchOrderRequestsController @Inject()(
     }
   }
 
-def determineUserIdsPerRole(existingRequest: BatchOrderRequest, action: Action):Future[Map[Role.Value, Traversable[BSONObjectID]]] = {
+def determineUserIdsPerRole(existingRequest: BatchOrderRequest, action: models.Action):Future[Map[Role.Value, Traversable[BSONObjectID]]] = {
   val roles: Seq[Role.Value] = action.notified :+ action.solicited
 
   for{
@@ -245,7 +289,7 @@ def determineUserIdsPerRole(existingRequest: BatchOrderRequest, action: Action):
        actionNotificationService.addNotification(notification)
   }
 
-  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: Action, dateOfUpdate: Date, updatedByUser: User, getRequestUrl: String)= {
+  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: models.Action, dateOfUpdate: Date, updatedByUser: User, getRequestUrl: String)= {
     action.notified.find(r => r == role) match {
       case Some(role) => {
         NotificationInfo(NotificationType.Advice,existingRequest.get._id.get,existingRequest.get.timeCreated,existingRequest.get.createdById.get.toString(),targetUser.ldapDn,role,
@@ -262,6 +306,21 @@ def determineUserIdsPerRole(existingRequest: BatchOrderRequest, action: Action):
     Page[(BatchOrderRequest, String)],
     Seq[FilterCondition]
   )
+
+/*
+  override protected type ShowViewData = (
+    BatchOrderRequest
+    )
+
+  override protected def getFormShowViewData(
+                                              id: BSONObjectID,
+                                              form: Form[BatchOrderRequest]
+                                            ) = { implicit request =>
+    getFormEditViewData(id, form)(request).map { f =>
+      (f.form.get)
+    }
+  }
+*/
 
   override protected def getListViewData(page: Page[BatchOrderRequest], conditions: Seq[FilterCondition] ) = { request =>
     for {
@@ -293,14 +352,15 @@ def determineUserIdsPerRole(existingRequest: BatchOrderRequest, action: Action):
     }
   }
 
-
   override protected def createView = { implicit ctx => views.html.requests.create(_) }
 
-  override protected def showView = editView
+  override protected def showView = { implicit ctx =>
+    views.html.requests.show(_)
+    }
 
   override protected def editView = { implicit ctx =>
     if(true==true){
-      implicit val roleService: RoleService = RoleService(currentUser(ctx.request),committeeRepo, repo)
+      implicit val roleService: RoleProviderService = RoleProviderService(currentUser(ctx.request),committeeRepo, repo)
       views.html.requests.actions(_)
     } else {
       views.html.requests.edit(_)
@@ -308,5 +368,7 @@ def determineUserIdsPerRole(existingRequest: BatchOrderRequest, action: Action):
     }
 
   override protected def listView = { implicit ctx =>
-    (views.html.requests.list(_, _)).tupled }
+    implicit val roleService: RoleProviderService = RoleProviderService(currentUser(ctx.request), committeeRepo, repo)
+    (views.html.requests.list(_, _)).tupled
+  }
 }

@@ -19,7 +19,7 @@
     displayName: String,
     messagePrefix: String,
     validActions: Traversable[Action],
-    userRoleFuture: Future[Role.Value],
+ //   userRoleFuture: Future[Role.Value],
     requestId: BSONObjectID,
     trackingHistory: Seq[ActionInfo],
     errors: Seq[FormError],
@@ -36,10 +36,10 @@
 
 
 
-@main(Messages("edit.title", displayName), sideBar, topContentBar, None, bottomResources, Some(formErrors(messagePrefix, errors))) {
+@main(Messages(displayName), sideBar, topContentBar, None, bottomResources, Some(formErrors(messagePrefix, errors))) {
 
     <div class="page-header">
-        <h3>@Messages("edit.title", displayName)</h3>
+        <h3>@Messages(displayName)</h3>
     </div>
 
     <div class="row">

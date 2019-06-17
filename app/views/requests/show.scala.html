@@ -1,0 +1,41 @@
+
+@import views.html.elements.editableTextElements
+
+@import org.ada.server.models.Translation
+@import org.incal.play.controllers.{WebContext, IdForm}
+@import org.incal.play.controllers.WebContext._
+@import org.ada.web.controllers.routes
+@import views.html.elements._
+@import services.request.ActionGraph
+@import models.Action
+
+@import reactivemongo.bson.BSONObjectID
+
+@import services.request.RoleProviderService
+@(
+        data: IdForm[BSONObjectID, BatchOrderRequest]
+)(
+        implicit context: WebContext
+)
+
+    @elements = {
+    @inputText("request", "dataSetId", data.form)
+    @inputText("request", "itemIds", data.form)
+        <input type="hidden" name="state" value=""/>
+    }
+
+    @layout.editActions(
+        "Request status",
+        "request",
+        Traversable[Action](),
+        // service.getRole(data.id),
+        data.form.get._id.get,
+        data.form.get.history,
+        errors = data.form.errors,
+        elements = elements,
+        updateCall = controllers.requests.routes.BatchOrderRequestsController.update(data.id),
+        cancelCall = controllers.requests.routes.BatchOrderRequestsController.listAll(),
+        None,
+        None
+    )
+

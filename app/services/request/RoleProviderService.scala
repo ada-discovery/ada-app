@@ -8,12 +8,12 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
 import org.incal.core.dataaccess.Criterion.Infix
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
-import scala.concurrent.Future
+case class RoleProviderService(val userFuture: Future[Option[User]], val committeeRepo: ApprovalCommitteeRepo, val requestRepo: BatchOrderRequestRepo) {
 
-case class RoleService(val userFuture: Future[Option[User]],val committeeRepo: ApprovalCommitteeRepo, val requestRepo: BatchOrderRequestRepo) {
-
-  def getRole(requestId: BSONObjectID) = {
+  def getRoleFuture(requestId: BSONObjectID) = {
 
     for {
       user <- userFuture
@@ -25,9 +25,9 @@ case class RoleService(val userFuture: Future[Option[User]],val committeeRepo: A
         Seq(BSONObjectID.parse("5cc2b4b0ea0100ec0159ab13").get)
       }
       } yield {
-      commiteeIds.find (c => c == user.get._id) match {
+     commiteeIds.find (c => c == user.get._id.get) match {
       case None => {
-        ownerId.find (c => c == user.get._id) match {
+        ownerId.find (c => c == user.get._id.get) match {
           case None => {
             batchRequest.get.createdById.get == user.get._id.get match {
               case true => Role.Requester
@@ -40,5 +40,9 @@ case class RoleService(val userFuture: Future[Option[User]],val committeeRepo: A
       case _ => Role.Committee
     }
    }
+  }
+
+  def getRole(requestId: BSONObjectID) = {
+      Await.result(getRoleFuture(requestId), 10 seconds)
   }
 }
