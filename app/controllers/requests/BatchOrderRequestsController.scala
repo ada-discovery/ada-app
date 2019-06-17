@@ -42,7 +42,6 @@ class BatchOrderRequestsController @Inject()(
                                               val userManager: UserManager,
                                               val actionPermissionService: ActionPermissionService,
                                               val actionNotificationService: ActionNotificationService,
-                                         //    val requestFilter: RequestFilterProvider,
                                               val validatorService: ActionDescriptionValidatorService
                                             ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
   with SubjectPresentRestrictedCrudController[BSONObjectID]
@@ -322,59 +321,21 @@ def determineUserIdsPerRole(existingRequest: BatchOrderRequest, action: models.A
   )
 
   override protected def getListViewData(page: Page[BatchOrderRequest], conditions: Seq[FilterCondition] ) = { request =>
-
     val requestFilter = RequestFilterProvider(currentUser(request), committeeRepo, repo)
-
     for {
-      filteredItems <- Future.sequence(requestFilter.filterRelevant(page.items))
+      filteredItems <- requestFilter.filterRelevant(page.items)
       users <- getUsers(filteredItems.flatten.map(item => item))
+      currentUser <- currentUser(request)
     } yield {
-      // val itemsWithName =
-
-   // val items : Seq[Option[BatchOrderRequest]]  =
-
-
-      val itemsWithName =
-//      page.items
-        filteredItems.flatten
-        //        .filter( item => requestFilter.isUserRelevantFuture(item._id.get) )
-        .map(item => (item, users.get(item.createdById.get).get.ldapDn) )
-
-      /*item =>
-        requestFilter.isUserRelevantFuture(item._id.get).map {
-          isRelevant =>
-            isRelevant match {
-              case true => Some((item, users.get(item.createdById.get).get.ldapDn))
-              case false => None
-            }
-        })
-*/
+      val submittedItems = requestFilter.filterSubmitted(filteredItems,currentUser)
+      val itemsWithName = submittedItems.map(item => (item, users.get(item.createdById.get).get.ldapDn) )
       buildPageWithNames(itemsWithName,page, conditions)
     }
-
-
-
-//    items.map (item, users.get(item.createdById.get).get.ldapDn)
   }
-
 
 def buildPageWithNames(itemsWithName: Traversable[(BatchOrderRequest, String)], page :Page[BatchOrderRequest], conditions: Seq[FilterCondition])={
   ( Page(itemsWithName,page.page,page.offset,itemsWithName.size,page.orderBy),conditions)
 }
-
-  def filterItems()={
-
-
-  }
-
-         /*
-          {
-          (item, users.get(item.createdById.get).get.ldapDn)  )
-      ( Page(itemsWithName,page.page,page.offset,page.total,page.orderBy),conditions)
-          }
-
-          */
-
 
   def getUsers(requests: Traversable[BatchOrderRequest])={
     val userIds =requests.map(_.createdById).flatten.map(Some(_)).toSeq

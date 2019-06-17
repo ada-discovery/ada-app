@@ -1,6 +1,7 @@
 package services.request
 
-import models.{BatchOrderRequest, Role}
+import controllers.requests.BatchOrderRequestsController
+import models.{BatchOrderRequest, BatchRequestState, Role}
 import org.ada.server.AdaException
 import org.ada.server.models.User
 import org.incal.core.FilterCondition
@@ -15,10 +16,13 @@ import org.incal.core.dataaccess.Criterion.Infix
 case class RequestFilterProvider(val userFuture: Future[Option[User]], val committeeRepo: ApprovalCommitteeRepo, val requestRepo: BatchOrderRequestRepo) {
 
 
-  def filterRelevant(requests: Traversable[BatchOrderRequest]): Traversable[Future[Option[BatchOrderRequest]]] = {
+  def isExternalDraft(request: BatchOrderRequest, currentUser: Option[User]): Boolean = {
+    request.state == BatchRequestState.Created && currentUser.get._id.get != request.createdById.get
+  }
 
-    val relevant : Traversable[Future[Option[BatchOrderRequest]]] =
-     requests.map( r => {
+
+  def filterRelevant(requests: Traversable[BatchOrderRequest]): Future[Traversable[Option[BatchOrderRequest]]] = {
+    Future.sequence( requests.map( r => {
       val isRelevantFuture = isUserRelevantFuture(r._id.get)
        isRelevantFuture.map(
         isRelevant =>
@@ -27,30 +31,13 @@ case class RequestFilterProvider(val userFuture: Future[Option[User]], val commi
             case false => None
           }
         )
-
-    } )
-
-
-  //  Future.sequence(relevant)
-
-//relevant.map()
-
-
-
-
- relevant
+    }))
   }
 
-  /*
-  def filter(page: Int): Int = {
-
+  def filterSubmitted(requests: Traversable[Option[BatchOrderRequest]],currentUser: Option[User]): Traversable[BatchOrderRequest] = {
+    requests.flatten.filter(r => !isExternalDraft(r, currentUser))
   }
 
-
-  def getRequestFilter(): Seq[FilterCondition] = {
-
-  }
-*/
   def isUserRelevantFuture(requestId: BSONObjectID): Future[Boolean] = {
     for {
       user <- userFuture
@@ -77,7 +64,5 @@ case class RequestFilterProvider(val userFuture: Future[Option[User]], val commi
         case _ => true
       }
     }
-
   }
-
 }
