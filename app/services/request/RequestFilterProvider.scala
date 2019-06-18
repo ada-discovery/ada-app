@@ -1,18 +1,16 @@
 package services.request
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
-import controllers.requests.BatchOrderRequestsController
-import models.{BatchOrderRequest, BatchRequestState, Role}
-import org.ada.server.AdaException
+import models.{BatchOrderRequest, BatchRequestState}
 import org.ada.server.models.User
 import org.incal.core.FilterCondition
-import reactivemongo.bson.BSONObjectID
-import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
-import scala.concurrent.Future
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.Page
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import reactivemongo.bson.BSONObjectID
+import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
+
+import scala.concurrent.Future
 
 
 case class RequestFilterProvider( val committeeRepo: ApprovalCommitteeRepo, val requestRepo: BatchOrderRequestRepo) {

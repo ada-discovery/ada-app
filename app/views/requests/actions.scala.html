@@ -15,8 +15,8 @@
 @(
         data: IdForm[BSONObjectID, BatchOrderRequest]
 )(
-        implicit context: WebContext,
-        service: RoleProviderService
+        implicit context: WebContext//,
+      //  service: RoleProviderService
 )
 
 @elements = {
@@ -26,7 +26,7 @@
 }
 
 @layout.editActions(
-    "Update request status as " + service.getRole(data.id)+" member",
+    "Update request status as ",// + service.getRole(data.id)+" member",
     "request",
     ActionGraph.apply.get(data.form.get.state).orElse(Some(Traversable[Action]())).get,
     data.form.get._id.get,

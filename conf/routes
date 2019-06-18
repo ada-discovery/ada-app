@@ -14,6 +14,7 @@ GET         /requests/new                      controllers.requests.BatchOrderRe
 POST        /requests/save                     controllers.requests.BatchOrderRequestsController.save
 GET         /requests/:id/get                  controllers.requests.BatchOrderRequestsController.get(id: BSONObjectID)
 GET         /requests/:id/edit                 controllers.requests.BatchOrderRequestsController.edit(id: BSONObjectID)
+GET         /requests/:id/performAction        controllers.requests.BatchOrderRequestsController.performAction(id: BSONObjectID)
 POST        /requests/:id                      controllers.requests.BatchOrderRequestsController.update(id: BSONObjectID)
 POST        /requests/:id/delete               controllers.requests.BatchOrderRequestsController.delete(id: BSONObjectID)
 POST        /requests/:id/requestAction        controllers.requests.BatchOrderRequestsController.requestAction(id: BSONObjectID, action: models.RequestAction.Value, desc: String)
