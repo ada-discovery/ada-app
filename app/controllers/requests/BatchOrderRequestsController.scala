@@ -320,16 +320,40 @@ def determineUserIdsPerRole(existingRequest: BatchOrderRequest, action: models.A
     Seq[FilterCondition]
   )
 
+/*
+  def getListForCurrentUser(isAdmin: Boolean, page: Page[BatchOrderRequest], conditions: Seq[FilterCondition], request: AuthenticatedRequest[Any])={
+
+
+    isAdmin match {
+      case true => {
+        for {
+          users <- getUsers(page.items)
+        } yield {
+          page.items.map(item => (item, users.get(item.createdById.get).get.ldapDn))
+        }
+      }
+      case false => {
+        for {
+          filteredItems <- requestFilter.filterRelevant(page.items)
+          users <- getUsers(filteredItems.flatten.map(item => item))
+          currentUser <- currentUser(request)
+        } yield {
+          val submittedItems = requestFilter.filterSubmitted(filteredItems, currentUser)
+          submittedItems.map(item => (item, users.get(item.createdById.get).get.ldapDn))
+        }
+      }
+    }
+  }
+*/
+
   override protected def getListViewData(page: Page[BatchOrderRequest], conditions: Seq[FilterCondition] ) = { request =>
-    val requestFilter = RequestFilterProvider(currentUser(request), committeeRepo, repo)
+    val requestFilter = RequestFilterProvider(committeeRepo, repo)
+
     for {
-      filteredItems <- requestFilter.filterRelevant(page.items)
-      users <- getUsers(filteredItems.flatten.map(item => item))
-      currentUser <- currentUser(request)
+      isAdmin <- isAdmin(request)
+      itemsForUser <- requestFilter.filterForCurrentUser(isAdmin, page, conditions,request, currentUser(request), getUsers)
     } yield {
-      val submittedItems = requestFilter.filterSubmitted(filteredItems,currentUser)
-      val itemsWithName = submittedItems.map(item => (item, users.get(item.createdById.get).get.ldapDn) )
-      buildPageWithNames(itemsWithName,page, conditions)
+      buildPageWithNames(itemsForUser,page, conditions)
     }
   }
 
@@ -345,9 +369,9 @@ def buildPageWithNames(itemsWithName: Traversable[(BatchOrderRequest, String)], 
     }
   }
 
-  def isAdmin(context: WebContext)={
+  def isAdmin(request: AuthenticatedRequest[Any])={
     for {
-      user <- currentUser(context.request)
+      user <- currentUser(request)
     } yield {
       user.get.roles.contains(SecurityRole.admin)
     }

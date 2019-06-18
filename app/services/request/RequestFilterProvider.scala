@@ -1,5 +1,6 @@
 package services.request
 
+import be.objectify.deadbolt.scala.AuthenticatedRequest
 import controllers.requests.BatchOrderRequestsController
 import models.{BatchOrderRequest, BatchRequestState, Role}
 import org.ada.server.AdaException
@@ -11,19 +12,37 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import org.incal.core.dataaccess.Criterion.Infix
+import org.incal.play.Page
 
 
-case class RequestFilterProvider(val userFuture: Future[Option[User]], val committeeRepo: ApprovalCommitteeRepo, val requestRepo: BatchOrderRequestRepo) {
+case class RequestFilterProvider( val committeeRepo: ApprovalCommitteeRepo, val requestRepo: BatchOrderRequestRepo) {
 
+  def filterForCurrentUser(isAdmin: Boolean, page: Page[BatchOrderRequest], conditions: Seq[FilterCondition], request: AuthenticatedRequest[Any],
+                           currentUserFuture: Future[Option[User]], getUsers: (Traversable[BatchOrderRequest]) => Future[Map[BSONObjectID,User]])={
+    isAdmin match {
+      case true => {
+        getUsers(page.items).map(user => page.items.map(item => (item, user.get(item.createdById.get).get.ldapDn)))
+      }
+      case false => {
+        for {
+          filteredItems <- filterRelevant(page.items, currentUserFuture)
+          users <- getUsers(filteredItems.flatten.map(item => item))
+          currentUser <- currentUserFuture
+        } yield {
+          val submittedItems = filterSubmitted(filteredItems, currentUser)
+          submittedItems.map(item => (item, users.get(item.createdById.get).get.ldapDn))
+        }
+      }
+    }
+  }
 
   def isExternalDraft(request: BatchOrderRequest, currentUser: Option[User]): Boolean = {
     request.state == BatchRequestState.Created && currentUser.get._id.get != request.createdById.get
   }
 
-
-  def filterRelevant(requests: Traversable[BatchOrderRequest]): Future[Traversable[Option[BatchOrderRequest]]] = {
+  def filterRelevant(requests: Traversable[BatchOrderRequest], currentUserFuture: Future[Option[User]]): Future[Traversable[Option[BatchOrderRequest]]] = {
     Future.sequence( requests.map( r => {
-      val isRelevantFuture = isUserRelevantFuture(r._id.get)
+      val isRelevantFuture = isUserRelevantFuture(r._id.get, currentUserFuture)
        isRelevantFuture.map(
         isRelevant =>
           isRelevant match {
@@ -38,9 +57,9 @@ case class RequestFilterProvider(val userFuture: Future[Option[User]], val commi
     requests.flatten.filter(r => !isExternalDraft(r, currentUser))
   }
 
-  def isUserRelevantFuture(requestId: BSONObjectID): Future[Boolean] = {
+  def isUserRelevantFuture(requestId: BSONObjectID, currentUserFuture: Future[Option[User]]): Future[Boolean] = {
     for {
-      user <- userFuture
+      user <- currentUserFuture
       batchRequest <- requestRepo.get(requestId)
       commiteeIds <- committeeRepo.find(Seq("dataSetId" #== batchRequest.get.dataSetId)).map {
         _.flatMap(_.userIds)
