@@ -5,12 +5,12 @@
 @import services.request.{ActionGraph, RoleProviderService}
 @import views.html.layout
 @import views.html.table.paginatedTable
+@import reactivemongo.bson.BSONObjectID
 @(
-        page: Page[(BatchOrderRequest, String)],
+        page: Page[(BatchOrderRequest, String, Call )],
         conditions: Seq[FilterCondition]
 )(
-        implicit context: WebContext,
-        roleService: RoleProviderService
+        implicit context: WebContext
 )
 
     @table = @{
@@ -18,29 +18,12 @@
             page,
             controllers.requests.routes.BatchOrderRequestsController.find(_, _, conditions),
 
-            typeColumns[(BatchOrderRequest, String)](
+            typeColumns[(BatchOrderRequest, String, Call)](
                 (Some("createdby"), "Requester name", _._2),
                 (Some("timecreated"), "Date", _._1.timeCreated),
                 (Some("state"), "Status", _._1.state)
             ),
-            Some({ item: Any =>
-                val batchRequest = item.asInstanceOf[(BatchOrderRequest, String)]._1
-                val currentStatus = batchRequest.state
-
-                val userRole = roleService.getRole(batchRequest._id.get)
-
-                userRole match {
-                    case Role.Administrator => controllers.requests.routes.BatchOrderRequestsController.edit(item.asInstanceOf[(BatchOrderRequest, String)]._1._id.get)
-                    case _ => {
-                        val applicableActions = ActionGraph.apply.get(currentStatus).getOrElse(Traversable()).filter(a => a.allowed == userRole)
-
-                        applicableActions.size > 0 match {
-                            case true => controllers.requests.routes.BatchOrderRequestsController.performAction(item.asInstanceOf[(BatchOrderRequest, String)]._1._id.get)
-                            case false => controllers.requests.routes.BatchOrderRequestsController.get(item.asInstanceOf[(BatchOrderRequest, String)]._1._id.get)
-                        }
-                    }
-                }
-            })
+            Some({ item: Any => item.asInstanceOf[(BatchOrderRequest, String, Call)]._3 })
         )
     }
 

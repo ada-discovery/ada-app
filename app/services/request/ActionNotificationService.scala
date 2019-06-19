@@ -1,18 +1,12 @@
 package services.request
 
-import models.{Action, BatchOrderRequest, BatchRequestState, NotificationInfo, NotificationType}
-import BatchRequestState._
 import javax.inject.Inject
-import org.ada.server.dataaccess.RepoTypes.UserRepo
-import org.ada.server.services.UserManager
+import models.{NotificationInfo, NotificationType}
 import play.api.libs.mailer.{Email, MailerClient}
-import reactivemongo.bson.BSONObjectID
-import services.BatchOrderRequestRepoTypes.BatchOrderRequestRepo
 
 import scala.collection.mutable.ListBuffer
 
 class ActionNotificationService @Inject()(mailerClient: MailerClient) {
-   var notificationsss:List[String]= List()
   var notifications= ListBuffer[NotificationInfo]()
   val fromEmail="emanuele.raffero@uni.lu"
 

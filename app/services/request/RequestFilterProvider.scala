@@ -1,21 +1,23 @@
 package services.request
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
+import javax.inject.Inject
 import models.{BatchOrderRequest, BatchRequestState}
 import org.ada.server.models.User
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.Page
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.mailer.MailerClient
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
 
 import scala.concurrent.Future
 
 
-case class RequestFilterProvider( val committeeRepo: ApprovalCommitteeRepo, val requestRepo: BatchOrderRequestRepo) {
+class RequestFilterProvider @Inject()(committeeRepo: ApprovalCommitteeRepo, requestRepo: BatchOrderRequestRepo) {
 
-  def filterForCurrentUser(isAdmin: Boolean, page: Page[BatchOrderRequest], conditions: Seq[FilterCondition], request: AuthenticatedRequest[Any],
+  def filterForCurrentUser(isAdmin: Boolean, page: Page[BatchOrderRequest], conditions: Seq[FilterCondition],
                            currentUserFuture: Future[Option[User]], getUsers: (Traversable[BatchOrderRequest]) => Future[Map[BSONObjectID,User]])={
     isAdmin match {
       case true => {
@@ -27,8 +29,8 @@ case class RequestFilterProvider( val committeeRepo: ApprovalCommitteeRepo, val 
           users <- getUsers(filteredItems.flatten.map(item => item))
           currentUser <- currentUserFuture
         } yield {
-          val submittedItems = filterSubmitted(filteredItems, currentUser)
-          submittedItems.map(item => (item, users.get(item.createdById.get).get.ldapDn))
+         val submittedItems = filterSubmitted(filteredItems, currentUser)
+         submittedItems.map(item => (item, users.get(item.createdById.get).get.ldapDn))
         }
       }
     }

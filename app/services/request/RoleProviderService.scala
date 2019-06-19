@@ -1,8 +1,11 @@
 package services.request
 
+import com.google.inject.ImplementedBy
+import javax.inject.{Inject, Singleton}
 import models.Role
 import org.ada.server.AdaException
 import org.ada.server.models.User
+import org.ada.server.services.ml.MachineLearningServiceImpl
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.security.SecurityRole
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -12,20 +15,30 @@ import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderReq
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-case class RoleProviderService(val userFuture: Future[Option[User]], val committeeRepo: ApprovalCommitteeRepo, val requestRepo: BatchOrderRequestRepo) {
 
-  def getRoleFuture(requestId: BSONObjectID) = {
+@ImplementedBy(classOf[RoleProviderServiceImpl])
+trait RoleProviderService {
+
+
+  def getRole(requestId: BSONObjectID, userFuture : Future[Option[User]]) : Role.Value
+  def isAdmin(userFuture : Future[Option[User]]) : Future[Boolean]
+}
+
+@Singleton
+class RoleProviderServiceImpl @Inject() (committeeRepo: ApprovalCommitteeRepo, requestRepo: BatchOrderRequestRepo) extends RoleProviderService {
+
+  def getRoleFuture(requestId: BSONObjectID, userFuture : Future[Option[User]]) = {
 
     for {
-      isAdmin <- isAdmin()
-      role <- determineRole(isAdmin, requestId)
+      isAdmin <- isAdmin(userFuture)
+      role <- determineRole(isAdmin, requestId, userFuture)
     }
       yield {
         role
       }
   }
 
-  def determineRole(isAdmin: Boolean, requestId: BSONObjectID) = {
+  def determineRole(isAdmin: Boolean, requestId: BSONObjectID, userFuture : Future[Option[User]]): Future[Role.Value] = {
 
     isAdmin match {
       case true => Future {
@@ -61,11 +74,11 @@ case class RoleProviderService(val userFuture: Future[Option[User]], val committ
     }
   }
 
-  def getRole(requestId: BSONObjectID) = {
-   Await.result(getRoleFuture(requestId), 10 seconds)
+ override def getRole(requestId: BSONObjectID, userFuture : Future[Option[User]]) = {
+   Await.result(getRoleFuture(requestId, userFuture), 10 seconds)
   }
 
-  def isAdmin() = {
+  override def isAdmin(userFuture : Future[Option[User]]) = {
     for {
       user <- userFuture
     } yield {

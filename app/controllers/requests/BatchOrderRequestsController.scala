@@ -2,6 +2,7 @@ package controllers.requests
 
 import java.util.Date
 
+import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
 import models.BatchOrderRequest.{actionInfoFormat, batchRequestFormat}
 import models.{NotificationType, Role, _}
@@ -17,24 +18,16 @@ import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters.{EnumFormatter, JsonFormatter}
-import org.incal.play.security.{AuthAction, SecurityRole, SecurityUtil}
+import org.incal.play.security.SecurityUtil.toAuthenticatedAction
 import play.api.data.Form
-import play.api.data.Forms.{date, ignored, mapping, nonEmptyText, _}
+import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.mailer.MailerClient
-import play.api.mvc.{Action, AnyContent, Request, Result}
+import play.api.mvc.{Action, AnyContent, Call}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
-import services.request.{ActionDescriptionValidatorService, ActionGraph, ActionNotificationService, ActionPermissionService, RequestFilterProvider, RoleProviderService}
-import be.objectify.deadbolt.scala.AuthenticatedRequest
-import org.ada.server.models.{Category, DataSpaceMetaInfo, Field, FilterShowFieldStyle}
-import org.incal.play.security.ActionSecurity.AuthenticatedAction
-import org.incal.play.security.SecurityUtil.toAuthenticatedAction
+import services.request._
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.twirl.api.Html
+import scala.concurrent.Future
 
 @Deprecated
 class BatchOrderRequestsController @Inject()(
@@ -44,6 +37,8 @@ class BatchOrderRequestsController @Inject()(
                                               val userManager: UserManager,
                                               val actionPermissionService: ActionPermissionService,
                                               val actionNotificationService: ActionNotificationService,
+                                              val requestFilter: RequestFilterProvider,
+                                              roleService: RoleProviderService,
                                               val validatorService: ActionDescriptionValidatorService
                                             ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
   with SubjectPresentRestrictedCrudController[BSONObjectID]
@@ -301,36 +296,22 @@ def determineUserIdsPerRole(existingRequest: BatchOrderRequest, action: models.A
     }
   }
 
-
-
   override protected type ListViewData = (
-    Page[(BatchOrderRequest, String)],
+    Page[(BatchOrderRequest, String, Call)],
     Seq[FilterCondition]
   )
 
-
-/*
-  override protected type EditViewData = (
-      IdForm[BSONObjectID,BatchOrderRequest]
-    )
-*/
- // override protected type EditView = WebContext => EditViewData => Html
-
-
-
   override protected def getListViewData(page: Page[BatchOrderRequest], conditions: Seq[FilterCondition] ) = { request =>
-    val requestFilter = RequestFilterProvider(committeeRepo, repo)
-    val roleService  = RoleProviderService(currentUser(request), committeeRepo, repo)
-
     for {
-      isAdmin <- roleService.isAdmin()
-      itemsForUser <- requestFilter.filterForCurrentUser(isAdmin, page, conditions,request, currentUser(request), getUsers)
+      isAdmin <- roleService.isAdmin(currentUser(request))
+      itemsForUser <- requestFilter.filterForCurrentUser(isAdmin, page, conditions, currentUser(request), getUsers)
     } yield {
-      buildPageWithNames(itemsForUser,page, conditions)
+     val itemsForUserWithCall = itemsForUser.map(item => (item._1,item._2, itemViewRouting(item._1, currentUser(request))))
+     buildPageWithNames(itemsForUserWithCall,page, conditions)
     }
   }
 
-def buildPageWithNames(itemsWithName: Traversable[(BatchOrderRequest, String)], page :Page[BatchOrderRequest], conditions: Seq[FilterCondition])={
+def buildPageWithNames(itemsWithName: Traversable[(BatchOrderRequest, String, Call)], page :Page[BatchOrderRequest], conditions: Seq[FilterCondition])={
   ( Page(itemsWithName,page.page,page.offset,itemsWithName.size,page.orderBy),conditions)
 }
 
@@ -349,27 +330,16 @@ def buildPageWithNames(itemsWithName: Traversable[(BatchOrderRequest, String)], 
     }
 
   override protected def editView = { implicit ctx =>
-    /*
-    if(true==true){
-      implicit val roleService: RoleProviderService = RoleProviderService(currentUser(ctx.request),committeeRepo, repo)
-      views.html.requests.actions(_)
-    } else {*/
-
       views.html.requests.edit(_)
-   // }
     }
 
 
   def performAction(id: BSONObjectID) = restrictAdminOrUserCustom(isAllowed,parse.anyContent) {
     implicit request => {
       for {
-        // retrieve the item
         item <- repo.get(id)
-
-        // create a view data if the item has been found
         viewData <- item.fold(
           throw new AdaException("request with id '" + id.stringify + "' not found")
-//          Future(Option.empty[EditViewData]) //bad request
         ) { entity =>
           getEditViewData(id, entity)(request).map(Some(_))
         }
@@ -380,37 +350,31 @@ def buildPageWithNames(itemsWithName: Traversable[(BatchOrderRequest, String)], 
             val form : IdForm[BSONObjectID, BatchOrderRequest] = IdForm(viewData.get.id,viewData.get.form)
 
             render {
-//              val form : IdForm[BSONObjectID,BatchOrderRequest] =  IdForm[BSONObjectID,BatchOrderRequest](viewData.get.id, viewData.get.form.get)
-   //           case Accepts.Html() => Ok(performActionViewWithContext(viewData.get))
               case Accepts.Html() => Ok(views.html.requests.actions(form))
-
-
               case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
             }
         }
     }.recover(handleEditExceptions(id))
   }
-/*
-  protected def performActionViewWithContext(
-                                     data: EditViewData)(
-                                     implicit context: WebContext
-                                   ) = performActionView(data)
 
+  def itemViewRouting(request: BatchOrderRequest, userFuture: Future[Option[User]]): Call = {
+    val currentStatus = request.state
+    val userRole = roleService.getRole(request._id.get, userFuture)
 
-  def performActionView(data : EditViewData): EditView = { implicit ctx =>
-//    implicit val roleService: RoleProviderService = RoleProviderService(currentUser(ctx.request),committeeRepo, repo)
-    val form : IdForm[BSONObjectID, BatchOrderRequest] = IdForm(data.id,data.form)
-    views.html.requests.actions(_)
+    userRole match {
+      case Role.Administrator => controllers.requests.routes.BatchOrderRequestsController.edit(request._id.get)
+      case _ => {
+        val applicableActions = ActionGraph.apply.get(currentStatus).getOrElse(Traversable()).filter(a => a.allowed == userRole)
+
+        applicableActions.size > 0 match {
+          case true => controllers.requests.routes.BatchOrderRequestsController.performAction(request._id.get)
+          case false => controllers.requests.routes.BatchOrderRequestsController.get(request._id.get)
+        }
+      }
+    }
   }
-*/
-/*
-  protected def editStateView = { implicit ctx =>
-      views.html.requests.actions(_)
-  }
-*/
 
   override protected def listView = { implicit ctx =>
-    implicit val roleService: RoleProviderService = RoleProviderService(currentUser(ctx.request), committeeRepo, repo)
-    (views.html.requests.list(_, _)).tupled
+    (views.html.requests.list(_,_)).tupled
   }
 }
