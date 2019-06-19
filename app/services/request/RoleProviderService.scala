@@ -51,9 +51,7 @@ class RoleProviderServiceImpl @Inject() (committeeRepo: ApprovalCommitteeRepo, r
           commiteeIds <- committeeRepo.find(Seq("dataSetId" #== batchRequest.get.dataSetId)).map {
             _.flatMap(_.userIds)
           }
-          ownerId <- Future {
-            Seq(BSONObjectID.parse("5cc2b4b0ea0100ec0159ab13").get)
-          }
+          ownerId = { Seq(BSONObjectID.parse("5cc2b4b0ea0100ec0159ab13").get) }
         } yield {
           commiteeIds.find(c => c == user.get._id.get) match {
             case None => {

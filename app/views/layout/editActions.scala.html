@@ -115,18 +115,18 @@
 
 
 @helper.javascriptRouter("requestJsRoutes")(
-    controllers.requests.routes.javascript.BatchOrderRequestsController.requestAction
+    controllers.requests.routes.javascript.BatchOrderRequestsController.performAction
 )
 
 <script type="text/javascript">
         function simpleSubmit(action) {
-         var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', action, '')
+         var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.performAction('@requestId.stringify', action, '')
             submit('post', requestAction.url)
         }
 
         function submitWithDescription(action) {
             var reasonDescription = $('#addDescriptionModal #decision-reason').val()
-            var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', action, reasonDescription)
+            var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.performAction('@requestId.stringify', action, reasonDescription)
             submit('post', requestAction.url)
         }
 </script>
