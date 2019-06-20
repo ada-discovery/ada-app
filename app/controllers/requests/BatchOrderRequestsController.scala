@@ -340,10 +340,11 @@ def determineUserIdsPerRole(existingRequest: BatchOrderRequest, allowedRoles: Se
 
   override protected def getListViewData(page: Page[BatchOrderRequest], conditions: Seq[FilterCondition] ) = { request =>
     for {
-      isAdmin <- roleService.isAdmin(currentUser(request))
-      itemsForUser <- requestFilter.filterForCurrentUser(isAdmin, page, conditions, currentUser(request), getUsers)
+      currentUser <- currentUser(request)
+      isAdmin = roleService.isAdmin(currentUser)
+      itemsForUser <- requestFilter.filterForCurrentUser(isAdmin, page, conditions, currentUser, getUsers)
     } yield {
-     val itemsForUserWithCall = itemsForUser.map(item => (item._1,item._2, itemViewRouting(item._1, currentUser(request))))
+     val itemsForUserWithCall = itemsForUser.map(item => (item._1,item._2, itemViewRouting(item._1, currentUser)))
      buildPageWithNames(itemsForUserWithCall,page, conditions)
     }
   }
@@ -395,7 +396,7 @@ def buildPageWithNames(itemsWithName: Traversable[(BatchOrderRequest, String, Ca
     }.recover(handleEditExceptions(id))
   }
 
-  def itemViewRouting(request: BatchOrderRequest, userFuture: Future[Option[User]]): Call = {
+  def itemViewRouting(request: BatchOrderRequest, userFuture: Option[User]): Call = {
     val currentStatus = request.state
     val userRole = roleService.getRole(request._id.get, userFuture)
 

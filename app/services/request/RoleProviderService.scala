@@ -20,25 +20,18 @@ import scala.concurrent.{Await, Future}
 trait RoleProviderService {
 
 
-  def getRole(requestId: BSONObjectID, userFuture : Future[Option[User]]) : Role.Value
-  def isAdmin(userFuture : Future[Option[User]]) : Future[Boolean]
+  def getRole(requestId: BSONObjectID, userFuture : Option[User]) : Role.Value
+  def isAdmin(userFuture : Option[User]) : Boolean
 }
 
 @Singleton
 class RoleProviderServiceImpl @Inject() (committeeRepo: ApprovalCommitteeRepo, requestRepo: BatchOrderRequestRepo) extends RoleProviderService {
 
-  def getRoleFuture(requestId: BSONObjectID, userFuture : Future[Option[User]]) = {
-
-    for {
-      isAdmin <- isAdmin(userFuture)
-      role <- determineRole(isAdmin, requestId, userFuture)
-    }
-      yield {
-        role
-      }
+  def getRoleFuture(requestId: BSONObjectID, user : Option[User]) = {
+      determineRole(isAdmin(user), requestId, user)
   }
 
-  def determineRole(isAdmin: Boolean, requestId: BSONObjectID, userFuture : Future[Option[User]]): Future[Role.Value] = {
+  def determineRole(isAdmin: Boolean, requestId: BSONObjectID, user: Option[User]): Future[Role.Value] = {
 
     isAdmin match {
       case true => Future {
@@ -46,7 +39,6 @@ class RoleProviderServiceImpl @Inject() (committeeRepo: ApprovalCommitteeRepo, r
       }
       case false => {
         for {
-          user <- userFuture
           batchRequest <- requestRepo.get(requestId)
           commiteeIds <- committeeRepo.find(Seq("dataSetId" #== batchRequest.get.dataSetId)).map {
             _.flatMap(_.userIds)
@@ -72,15 +64,11 @@ class RoleProviderServiceImpl @Inject() (committeeRepo: ApprovalCommitteeRepo, r
     }
   }
 
- override def getRole(requestId: BSONObjectID, userFuture : Future[Option[User]]) = {
+ override def getRole(requestId: BSONObjectID, userFuture : Option[User]) = {
    Await.result(getRoleFuture(requestId, userFuture), 10 seconds)
   }
 
-  override def isAdmin(userFuture : Future[Option[User]]) = {
-    for {
-      user <- userFuture
-    } yield {
+  override def isAdmin(user : Option[User]) = {
       user.get.roles.contains(SecurityRole.admin)
-    }
   }
 }
