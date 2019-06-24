@@ -6,6 +6,7 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import reactivemongo.bson.BSONObjectID
+@import org.incal.core.ConditionType
 @(
         page: Page[(BatchOrderRequest, String, Call )],
         conditions: Seq[FilterCondition]
@@ -14,6 +15,8 @@
 )
 
     @table = @{
+   //     val createdBy = FilterCondition("dataSetId",None, ConditionType.NotEquals, Some("abalone_space.abalone_set"), None  )
+
         paginatedTable(
             page,
             controllers.requests.routes.BatchOrderRequestsController.find(_, _, conditions),
@@ -27,8 +30,9 @@
         )
     }
 
+
     @layout.list(
-        "request",
+        "request Created",
         None,
         page.total,
         None,

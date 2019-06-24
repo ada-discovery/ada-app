@@ -6,7 +6,7 @@
 @import org.ada.web.controllers.routes
 @import views.html.elements._
 @import org.ada.web.security.AdaAuthConfig
-@import views.html.table.{dynamicStringTable, dynamicTableJsImport}
+@import views.html.table.{dynamicStringTable, dynamicTableJsImport, dynamicTable}
 @import views.html.helper.input
 @import views.html.table.dynamicStringTable
 @import reactivemongo.bson.BSONObjectID
@@ -16,12 +16,17 @@
     implicit context: WebContext
 )
 
+
+
 @elements = {
 @inputText("request", "dataSetId", form)
 
 <input type="hidden" name="state" value="@BatchRequestState.Created" />
 
+@dynamicTableJsImport()
+
 @labelValue("request", "itemIds"){
+	//dynamicStringTable("itemIds", form.value.map(_.itemIds.map(_.stringify)).getOrElse(Nil))
 	@dynamicStringTable("itemIds", Seq("577e18c24500004800cdc558"))
 }
 
@@ -33,5 +38,5 @@
 	form = form,
 	elements = elements,
 	saveCall = controllers.requests.routes.BatchOrderRequestsController.save(),
-	listCall = controllers.requests.routes.BatchOrderRequestsController.listAll()
+	listCall = controllers.requests.routes.BatchOrderRequestsController.findActive()
 )
