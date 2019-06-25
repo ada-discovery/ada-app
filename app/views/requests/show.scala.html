@@ -34,7 +34,7 @@
         errors = data.form.errors,
         elements = elements,
         updateCall = controllers.requests.routes.BatchOrderRequestsController.update(data.id),
-        cancelCall = controllers.requests.routes.BatchOrderRequestsController.listAll(),
+        cancelCall = controllers.requests.routes.BatchOrderRequestsController.findActive(),
         None,
         None
     )

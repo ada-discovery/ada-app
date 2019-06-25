@@ -7,10 +7,10 @@ import play.api.libs.mailer.{Email, MailerClient}
 import scala.collection.mutable.ListBuffer
 
 class ActionNotificationService @Inject()(mailerClient: MailerClient) {
-  var notifications= ListBuffer[NotificationInfo]()
+  var notifications= ListBuffer[Option[NotificationInfo]]()
   val fromEmail="emanuele.raffero@uni.lu"
 
- def addNotification(notification: NotificationInfo) = {
+ def addNotification(notification: Option[NotificationInfo]) = {
    notifications+=notification
   }
 
@@ -19,7 +19,11 @@ class ActionNotificationService @Inject()(mailerClient: MailerClient) {
   }
 
   def sendNotifications()={
-    notifications.foreach(n=>sendNotification(n))
+    notifications.map {
+     _.foreach { n =>
+        sendNotification(n)
+      }
+    }
   }
 
   def sendNotification(notification:NotificationInfo)={

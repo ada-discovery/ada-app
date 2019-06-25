@@ -10,23 +10,15 @@
 @(
         page1: Page[(BatchOrderRequest, String, Call )],
         page2: Page[(BatchOrderRequest, String, Call )],
- //      page1: Page[BatchOrderRequest],
-  //      page2: Page[BatchOrderRequest],
-
-
         conditions: Seq[FilterCondition]
 )(
         implicit context: WebContext
 )
 
     @tableOwnedRequest = @{
-   //     val createdBy = FilterCondition("dataSetId",None, ConditionType.NotEquals, Some("abalone_space.abalone_set"), None  )
-
         paginatedTable(
             page1,
          controllers.requests.routes.BatchOrderRequestsController.findActive(_,page2.page,_, conditions),
-          //  controllers.requests.routes.BatchOrderRequestsController.findActive(page1.page,_, conditions),
-
             typeColumns[(BatchOrderRequest, String, Call)](
                 (Some("createdby"), "Requester name", _._2),
                 (Some("timecreated"), "Date", _._1.timeCreated),
@@ -40,8 +32,6 @@
         paginatedTable(
             page2,
             controllers.requests.routes.BatchOrderRequestsController.findActive(page1.page,_,_, conditions),
-//            controllers.requests.routes.BatchOrderRequestsController.findActive(_,_,_, conditions),
-//            controllers.requests.routes.BatchOrderRequestsController.find(_,_, conditions),
             typeColumns[(BatchOrderRequest, String, Call)](
                 (Some("createdby"), "Requester name", _._2),
                 (Some("timecreated"), "Date", _._1.timeCreated),

@@ -2,7 +2,7 @@ package services.request
 
 import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Singleton}
-import models.Role
+import models.{BatchOrderRequest, Role}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.DataSetSettingRepo
 import org.ada.server.models.User
@@ -21,20 +21,58 @@ import scala.concurrent.{Await, Future}
 trait RoleProviderService {
 
 
-  def getRole(requestId: BSONObjectID, user : Option[User]) : Role.Value
+  def getRole(request: BatchOrderRequest, user : Option[User]) : Role.Value
   def isAdmin(userFuture : Option[User]) : Boolean
 }
 
 @Singleton
-class RoleProviderServiceImpl @Inject() (committeeRepo: ApprovalCommitteeRepo, requestRepo: BatchOrderRequestRepo, dataSetRepo: DataSetSettingRepo) extends RoleProviderService {
+class RoleProviderServiceImpl @Inject() (committeeRepo: ApprovalCommitteeRepo, requestRepo: BatchOrderRequestRepo, dataSetRepo: DataSetSettingRepo) extends UserIdByRoleProvider[Role.Value](committeeRepo: ApprovalCommitteeRepo, dataSetRepo: DataSetSettingRepo) with RoleProviderService {
 
-  def getRoleFuture(requestId: BSONObjectID, user : Option[User]) = {
-      determineRole(isAdmin(user), requestId, user)
+  def getRoleFuture(request: BatchOrderRequest, user : Option[User]) = {
+
+     isAdmin(user) match {
+      case true => Future {
+        Role.Administrator
+      }
+      case false => {
+        getIdByRole(request, user)
+      }
+    }
   }
+
+  override def processIds(requesterId: Traversable[BSONObjectID], committeeIds: Traversable[BSONObjectID], ownerIds:  Traversable[BSONObjectID], batchRequest: BatchOrderRequest, user: Option[User]) = {
+
+
+    committeeIds.find(c => c == user.get._id.get) match {
+      case None => {
+        ownerIds.find(c => c == user.get._id.get) match {
+          case None => {
+            batchRequest.createdById.get == user.get._id.get match {
+              case true => Role.Requester
+              case _ => throw new AdaException("no role found for user id: " + user.get._id)
+            }
+          }
+          case Some(id) => Role.Owner
+        }
+      }
+      case _ => Role.Committee
+    }
+
+  }
+
+  /*
+  override def getCommitteeIds = {
+    committeeRepo.find(Seq("dataSetId" #== batchRequest.get.dataSetId)).map {
+      _.flatMap(_.userIds)
+    }
+  }
+
+
 
   def determineRole(isAdmin: Boolean, requestId: BSONObjectID, user: Option[User]): Future[Role.Value] = {
 
 
+    getIdByRole(user)
 
     isAdmin match {
       case true => Future {
@@ -49,27 +87,14 @@ class RoleProviderServiceImpl @Inject() (committeeRepo: ApprovalCommitteeRepo, r
           }
           ownerId = dataSetSetting.toSeq(0).ownerId.get
         } yield {
-          commiteeIds.find(c => c == user.get._id.get) match {
-            case None => {
-              ownerId == user.get._id.get match {
-                case false => {
-                  batchRequest.get.createdById.get == user.get._id.get match {
-                    case true => Role.Requester
-                    case _ => throw new AdaException("no role found for user id: " + user.get._id)
-                  }
-                }
-                case true => Role.Owner
-              }
-            }
-            case _ => Role.Committee
-          }
+
         }
       }
     }
   }
-
- override def getRole(requestId: BSONObjectID, user: Option[User]) = {
-   Await.result(getRoleFuture(requestId, user), 10 seconds)
+*/
+ override def getRole(request: BatchOrderRequest, user: Option[User]) = {
+   Await.result(getRoleFuture(request, user), 10 seconds)
   }
 
   override def isAdmin(user : Option[User]) = {

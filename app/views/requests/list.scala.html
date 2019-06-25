@@ -15,8 +15,6 @@
 )
 
     @table = @{
-   //     val createdBy = FilterCondition("dataSetId",None, ConditionType.NotEquals, Some("abalone_space.abalone_set"), None  )
-
         paginatedTable(
             page,
             controllers.requests.routes.BatchOrderRequestsController.find(_, _, conditions),
@@ -32,7 +30,7 @@
 
 
     @layout.list(
-        "request Created",
+        "request",
         None,
         page.total,
         None,
