@@ -24,16 +24,12 @@ import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
 import services.request.{ActionGraph, _}
 import play.api.mvc.Results._
-
 import scala.concurrent.Future
 import javax.inject.Inject
-import org.ada.server.field.FieldUtil.valueConverters
 import org.ada.server.services.UserManager
 import org.ada.web.models.security.DeadboltUser
-import org.bytedeco.javacpp.RealSense.context
 import org.incal.core.dataaccess.Criterion
 import org.incal.play.security.AuthAction
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @Deprecated
@@ -69,7 +65,7 @@ class BatchOrderRequestsController @Inject()(
       "itemIds" ->  seq(of[BSONObjectID]),
       "state" -> of[BatchRequestState.Value],
       "created by id" -> ignored(Option.empty[BSONObjectID]),
-      "date" -> ignored(new Date()),
+      "timeCreated" -> ignored(new Date()),
       "history"->ignored(Seq[ActionInfo]())
     )(BatchOrderRequest.apply)(BatchOrderRequest.unapply))
 
@@ -93,9 +89,9 @@ class BatchOrderRequestsController @Inject()(
   override def find(page: Int, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent] =
   restrictAdminAny(noCaching = true) (toAuthenticatedAction(super.find(page, orderBy, filter)))
 
-
-  def findActive(page1: Int, page2: Int, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent] =
-    restrictAny(findRequestsForUser(page1, page2, orderBy, filter))
+  def findActive(pageCreated: Option[Int] = None, pageToApprove: Option[Int]= None, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent] = {
+    restrictAny(findRequestsForUser(pageCreated, pageToApprove, orderBy, filter))
+  }
 
   override def listAll(orderBy: String): Action[AnyContent] = {
     restrictAdminAny(noCaching = true) (toAuthenticatedAction(super.listAll(orderBy)))
@@ -128,51 +124,53 @@ class BatchOrderRequestsController @Inject()(
      Seq("createdById" #== user.get._id)
   }
 
-  def findRequestsForUser(page1: Int = 0,page2: Int = 0, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent] = AuthAction { implicit request =>
-      {
-          for {
-          user <- currentUser(request)
-          filterWithRequestFilters = filter
-          approverCriterion <- buildApproverCriterion(user)
-          (items1, count1) <- getFutureItemsAndCount(page1, orderBy, filterWithRequestFilters, buildRequesterCriterion(user))
-          (items2, count2) <- getFutureItemsAndCount(page2, orderBy, filterWithRequestFilters, approverCriterion)
-         viewData <- getUserScopedListViewData( Page(items1, page1, page1 * pageLimit, count1, orderBy), Page(items2, page2, page2 * pageLimit, count2, orderBy), filterWithRequestFilters)(request)
-        } yield {
-          implicit val req = request: Request[_]//, context
-          render {
-             case Accepts.Html() => Ok((views.html.requests.userScopedList(viewData._1,viewData._2,filter)))
-            case Accepts.Json() => Ok(toJson(items1))
-          }
-        }
-      }.recover(handleFindExceptions)
+  def getPageWithCriteria(pageCreated: Option[Int] = None, pageToApprove: Option[Int] = None, orderBy: String, criteria: Seq[Criterion[Any]], user: Option[User], approverCriterion: Seq[Criterion[Any]])={
+
+    pageCreated.isDefined match{
+      case true => (pageCreated.get, criteria ++ buildRequesterCriterion(user), PageType.Created)
+      case false => pageToApprove.isDefined match {
+        case true => (pageToApprove.get, criteria ++ approverCriterion, PageType.ToApprove)
+        case false => (0, criteria ++ buildRequesterCriterion(user), PageType.Created)
+      }
     }
+  }
 
-  def getFutureItemsAndCount(
-                                        page: Int,
-                                        orderBy: String,
-                                        filter: Seq[FilterCondition], additionalCriterion: Seq[Criterion[Any]]
-                            ): Future[(Traversable[BatchOrderRequest], Int)] =
-    getFutureItemsAndCount(Some(page), orderBy, filter, listViewColumns.getOrElse(Nil), Some(pageLimit), additionalCriterion)
+  def findRequestsForUser(pageCreated: Option[Int] = None, pageToApprove: Option[Int] = None, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent] = AuthAction { implicit request =>
+    {
+      for {
+        user <- currentUser(request)
+        approverCriterion <- buildApproverCriterion(user)
+        criteria <- toCriteria(filter)
+        (page, userCriteria, pageType) = getPageWithCriteria(pageCreated,pageToApprove, orderBy, criteria, user, approverCriterion)
+        (items, count) <- getFutureUserScopedItemsAndCount(Some(page), orderBy, userCriteria)
+         viewData <- getUserScopedListViewData( Page(items, page, page * pageLimit, count, orderBy), filter)(request)
+      } yield {
+        implicit val req = request: Request[_]
+        render {
+          case Accepts.Html() => Ok((views.html.requests.listByCategory(viewData._1, pageType, filter)))
+          case Accepts.Json() => Ok(toJson(items))
+        }
+      }
+    }.recover(handleFindExceptions)
+  }
 
- def getFutureItemsAndCount(
-                                        page: Option[Int],
+  def getFutureUserScopedItemsAndCount(
+                                        page:  Option[Int],
                                         orderBy: String,
-                                        filter: Seq[FilterCondition],
-                                        projection: Seq[String],
-                                        limit: Option[Int],
-                                        additionalCriterion: Seq[Criterion[Any]]
-                                      ): Future[(Traversable[BatchOrderRequest], Int)] = {
+                                        criteria: Seq[Criterion[Any]],
+                                        limit: Option[Int] = Some(pageLimit),
+                                        projection: Seq[String] = listViewColumns.getOrElse(Nil)
+                                      ): Future[(Traversable[BatchOrderRequest], Int)] =
+  {
     val sort = toSort(orderBy)
     val skip = page.zip(limit).headOption.map { case (page, limit) =>
       page * limit
     }
 
     for {
-      criteria <- toCriteria(filter)
-      criteriaWithCustomUserFilter = criteria ++ additionalCriterion
       itemsCount <- {
-        val itemsFuture = repo.find(criteriaWithCustomUserFilter, sort, projection, limit, skip)
-        val countFuture = repo.count(criteriaWithCustomUserFilter)
+        val itemsFuture = repo.find(criteria, sort, projection, limit, skip)
+        val countFuture = repo.count(criteria)
 
         for { items <- itemsFuture; count <- countFuture} yield
           (items, count)
@@ -351,7 +349,7 @@ class BatchOrderRequestsController @Inject()(
         Some(NotificationInfo(NotificationType.Advice,existingRequest.get._id.get,existingRequest.get.timeCreated,existingRequest.get.createdById.get.toString(),targetUser.ldapDn,role,
           targetUser.email,action.fromState,action.toState,dateOfUpdate,updatedByUser.ldapDn, urlProvider.getReadOnlyUrl(existingRequest.get._id.get)))
       }
-      case _ => {action.solicited == role match {
+      case None => {action.solicited == role match {
         case true => {
           Some(NotificationInfo(NotificationType.Solicitation,existingRequest.get._id.get,existingRequest.get.timeCreated,existingRequest.get.createdById.get.toString(),targetUser.ldapDn,role,
             targetUser.email,action.fromState,action.toState,dateOfUpdate,updatedByUser.ldapDn, urlProvider.getActionUrl(existingRequest.get._id.get)))
@@ -368,22 +366,20 @@ class BatchOrderRequestsController @Inject()(
 
   protected type UserScopedListViewData = (
     Page[(BatchOrderRequest, String, Call)],
-      Page[(BatchOrderRequest, String, Call)],
       Seq[FilterCondition]
     )
 
-  protected def getUserScopedListViewData(page1: Page[BatchOrderRequest], page2: Page[BatchOrderRequest], conditions: Seq[FilterCondition] ): AuthenticatedRequest[_] => Future[UserScopedListViewData] = {
+  protected def getUserScopedListViewData(page: Page[BatchOrderRequest], conditions: Seq[FilterCondition] ): AuthenticatedRequest[_] => Future[UserScopedListViewData] = {
     request => {
 
       for {
-     currentUser <- currentUser(request)
-      users <- getUsers( (page1.items ++ page2.items).toSet )
-    } yield {
-        val page1ItemsWithCall = buildItems(page1.items, users, currentUser)
-        val page2ItemsWithCall = buildItems(page2.items, users, currentUser)
-      (buildPageWithNames(page1ItemsWithCall, page1), buildPageWithNames(page2ItemsWithCall, page2), conditions)
+        currentUser <- currentUser(request)
+        users <- getUsers( page.items )
+      } yield {
+        val page1ItemsWithCall = buildItems(page.items, users, currentUser)
+        (buildPageWithNames(page1ItemsWithCall, page), conditions)
+      }
     }
- }
   }
 
 def buildItems(items: Traversable[BatchOrderRequest], users: Map[BSONObjectID, User], currentUser: Option[User]) ={
@@ -402,7 +398,7 @@ def buildItems(items: Traversable[BatchOrderRequest], users: Map[BSONObjectID, U
   }
 
 def buildPageWithNames(itemsWithName: Traversable[(BatchOrderRequest, String, Call)], page :Page[BatchOrderRequest])={
-  Page(itemsWithName,page.page,page.offset,itemsWithName.size,page.orderBy)
+  Page(itemsWithName,page.page,page.offset,page.total,page.orderBy)
 }
 
   def getUsers(requests: Traversable[BatchOrderRequest])={

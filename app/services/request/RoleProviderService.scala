@@ -41,8 +41,6 @@ class RoleProviderServiceImpl @Inject() (committeeRepo: ApprovalCommitteeRepo, r
   }
 
   override def processIds(requesterId: Traversable[BSONObjectID], committeeIds: Traversable[BSONObjectID], ownerIds:  Traversable[BSONObjectID], batchRequest: BatchOrderRequest, user: Option[User]) = {
-
-
     committeeIds.find(c => c == user.get._id.get) match {
       case None => {
         ownerIds.find(c => c == user.get._id.get) match {
@@ -57,43 +55,9 @@ class RoleProviderServiceImpl @Inject() (committeeRepo: ApprovalCommitteeRepo, r
       }
       case _ => Role.Committee
     }
-
   }
 
-  /*
-  override def getCommitteeIds = {
-    committeeRepo.find(Seq("dataSetId" #== batchRequest.get.dataSetId)).map {
-      _.flatMap(_.userIds)
-    }
-  }
-
-
-
-  def determineRole(isAdmin: Boolean, requestId: BSONObjectID, user: Option[User]): Future[Role.Value] = {
-
-
-    getIdByRole(user)
-
-    isAdmin match {
-      case true => Future {
-        Role.Administrator
-      }
-      case false => {
-        for {
-          batchRequest <- requestRepo.get(requestId)
-          dataSetSetting <-  dataSetRepo.find(Seq("dataSetId" #== batchRequest.get.dataSetId))
-          commiteeIds <- committeeRepo.find(Seq("dataSetId" #== batchRequest.get.dataSetId)).map {
-            _.flatMap(_.userIds)
-          }
-          ownerId = dataSetSetting.toSeq(0).ownerId.get
-        } yield {
-
-        }
-      }
-    }
-  }
-*/
- override def getRole(request: BatchOrderRequest, user: Option[User]) = {
+  override def getRole(request: BatchOrderRequest, user: Option[User]) = {
    Await.result(getRoleFuture(request, user), 10 seconds)
   }
 

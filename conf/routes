@@ -8,8 +8,8 @@ GET         /admin/showRCPrediction           controllers.ml.RCPredictionControl
 POST        /admin/runRCPrediction            controllers.ml.RCPredictionController.runRCPrediction
 
 # Item requests
-GET         /requests                          controllers.requests.BatchOrderRequestsController.find(p: Int ?= 0, s: String ?= "dataSetId", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
-GET         /requests/active                   controllers.requests.BatchOrderRequestsController.findActive(p1: Int ?= 0, p2: Int ?= 0, s: String ?= "dataSetId", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /requests                          controllers.requests.BatchOrderRequestsController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /requests/active                   controllers.requests.BatchOrderRequestsController.findActive(p1: Option[Int] ?= None, p2: Option[Int] ?= None, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /requests/all                      controllers.requests.BatchOrderRequestsController.listAll(s: String ?= "original")
 GET         /requests/new                      controllers.requests.BatchOrderRequestsController.create
 POST        /requests/save                     controllers.requests.BatchOrderRequestsController.save

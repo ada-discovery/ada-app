@@ -1,0 +1,52 @@
+@import org.ada.web.util.typeColumns
+@import org.incal.core.FilterCondition
+@import org.incal.play.Page
+@import org.incal.play.controllers.WebContext
+@import views.html.layout
+@import views.html.table.paginatedTable
+
+@(
+        page: Page[(BatchOrderRequest, String, Call)],
+        pageType: PageType.Value,
+        conditions: Seq[FilterCondition]
+)(
+        implicit context: WebContext
+)
+
+    @table = @{
+        paginatedTable(
+            page,
+            (pageNumber, orderBy) => {
+                pageType match {
+                    case PageType.ToApprove => controllers.requests.routes.BatchOrderRequestsController.findActive(None, Some(pageNumber), orderBy, conditions)
+                    case PageType.Created => controllers.requests.routes.BatchOrderRequestsController.findActive(Some(pageNumber), None, orderBy, conditions)
+                }
+            },
+            typeColumns[(BatchOrderRequest, String, Call)](
+                (Some("createdby"), "Requester name", _._2),
+                (Some("timeCreated"), "Date", _._1.timeCreated),
+                (Some("state"), "Status", _._1.state)
+            ),
+            Some({ item: Any => item.asInstanceOf[(BatchOrderRequest, String, Call)]._3 })
+        )
+    }
+
+
+    <ul id="dataSetSubMenu" class="nav nav-tabs">
+        <li { class="active" }>
+            <a href="@controllers.requests.routes.BatchOrderRequestsController.findActive(Some(0), None, "", conditions)">Created</a>
+        </li>
+        <li { class="active" }>
+            <a href="@controllers.requests.routes.BatchOrderRequestsController.findActive(None, Some(0), "", conditions)">To Approve</a>
+        </li>
+    </ul>
+
+
+    @layout.list(
+        "request",
+        None,
+        page.total,
+        None,
+        Some(table),
+        None
+    )
