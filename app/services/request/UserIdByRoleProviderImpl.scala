@@ -1,15 +1,11 @@
 package services.request
 
 import javax.inject.Inject
-import models.{BatchOrderRequest, Role, RoleByUserIdsMapping}
-import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
+import models.{BatchOrderRequest, Role}
+import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo}
 import org.ada.server.models.User
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
-import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
-
-import scala.concurrent.Future
-
+import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo}
 
 class UserIdByRoleProviderImpl @Inject()(committeeRepo: ApprovalCommitteeRepo,  dataSetSettingRepo: DataSetSettingRepo) extends UserIdByRoleProvider[Map[Role.Value, Traversable[BSONObjectID]]](committeeRepo, dataSetSettingRepo) {
 
