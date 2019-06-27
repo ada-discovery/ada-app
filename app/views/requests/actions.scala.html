@@ -13,7 +13,8 @@
 
 @import services.request.RoleProviderService
 @(
-        data: IdForm[BSONObjectID, BatchOrderRequest]
+        data: IdForm[BSONObjectID, BatchOrderRequest],
+        role: Role.Value
 )(
         implicit context: WebContext
 )
@@ -25,9 +26,10 @@
 }
 
 @layout.editActions(
-    "Update request status",
+    "Update request status as " + role,
     "request",
     ActionGraph.apply.get(data.form.get.state).orElse(Some(Traversable[Action]())).get,
+    Some(role),
     data.form.get._id.get,
     data.form.get.history,
     errors = data.form.errors,

@@ -1,6 +1,7 @@
 package services.request
 
 import controllers.requests.routes
+import models.Role
 import play.api.mvc.RequestHeader
 import reactivemongo.bson.BSONObjectID
 
@@ -10,7 +11,7 @@ class AbsoluteUrlProvider {
     routes.BatchOrderRequestsController.get(requestId).absoluteURL()
   }
 
-  def getActionUrl(requestId: BSONObjectID)(implicit request: RequestHeader) ={
-    routes.BatchOrderRequestsController.action(requestId).absoluteURL()
+  def getActionUrl(requestId: BSONObjectID, role: Role.Value)(implicit request: RequestHeader) ={
+    routes.BatchOrderRequestsController.action(requestId, role).absoluteURL()
   }
 }

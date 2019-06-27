@@ -3,62 +3,56 @@ package services.request
 import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Singleton}
 import models.{BatchOrderRequest, Role}
-import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.DataSetSettingRepo
 import org.ada.server.models.User
-import org.ada.server.services.ml.MachineLearningServiceImpl
-import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.security.SecurityRole
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 
 @ImplementedBy(classOf[RoleProviderServiceImpl])
 trait RoleProviderService {
-
-
-  def getRole(request: BatchOrderRequest, user : Option[User]) : Role.Value
+  def getRoles(request: BatchOrderRequest, user : Option[User]) : Future[(BSONObjectID, Traversable[Role.Value])]
+  def getRolesMapping(requests: Traversable[BatchOrderRequest], user : Option[User]): Future[Map[BSONObjectID,Traversable[Role.Value]]]
   def isAdmin(userFuture : Option[User]) : Boolean
 }
 
 @Singleton
-class RoleProviderServiceImpl @Inject() (committeeRepo: ApprovalCommitteeRepo, requestRepo: BatchOrderRequestRepo, dataSetRepo: DataSetSettingRepo) extends UserIdByRoleProvider[Role.Value](committeeRepo: ApprovalCommitteeRepo, dataSetRepo: DataSetSettingRepo) with RoleProviderService {
+class RoleProviderServiceImpl @Inject() (committeeRepo: ApprovalCommitteeRepo, requestRepo: BatchOrderRequestRepo, dataSetRepo: DataSetSettingRepo)
+  extends UserIdByRoleProvider[Traversable[Role.Value]](committeeRepo: ApprovalCommitteeRepo, dataSetRepo: DataSetSettingRepo) with RoleProviderService {
 
-  def getRoleFuture(request: BatchOrderRequest, user : Option[User]) = {
-
-     isAdmin(user) match {
-      case true => Future {
-        Role.Administrator
-      }
-      case false => {
-        getIdByRole(request, user)
-      }
-    }
-  }
-
-  override def processIds(requesterId: Traversable[BSONObjectID], committeeIds: Traversable[BSONObjectID], ownerIds:  Traversable[BSONObjectID], batchRequest: BatchOrderRequest, user: Option[User]) = {
-    committeeIds.find(c => c == user.get._id.get) match {
-      case None => {
-        ownerIds.find(c => c == user.get._id.get) match {
-          case None => {
-            batchRequest.createdById.get == user.get._id.get match {
-              case true => Role.Requester
-              case _ => throw new AdaException("no role found for user id: " + user.get._id)
-            }
-          }
-          case Some(id) => Role.Owner
+  def getRoleIfApplicable(ids: Traversable[BSONObjectID], role: Role.Value, batchRequest: BatchOrderRequest, user: Option[User]): Option[Role.Value] = {
+    ids.find(u => u == user.get._id.get) match {
+      case None => None
+      case Some(id) => Some(role)
         }
-      }
-      case _ => Role.Committee
     }
+
+  override def processIds(requesterId: Traversable[BSONObjectID], committeeIds: Traversable[BSONObjectID], ownerIds:  Traversable[BSONObjectID], batchRequest: BatchOrderRequest, user: Option[User]): Traversable[Role.Value] = {
+
+   val roleOptions= Traversable (
+      getRoleIfApplicable(committeeIds, Role.Committee, batchRequest, user),
+      getRoleIfApplicable(requesterId, Role.Requester, batchRequest, user),
+      getRoleIfApplicable(ownerIds, Role.Owner, batchRequest, user)
+    )
+
+    roleOptions.filter(_.isDefined).map(_.get)
   }
 
-  override def getRole(request: BatchOrderRequest, user: Option[User]) = {
-   Await.result(getRoleFuture(request, user), 10 seconds)
+  override def getRoles(request: BatchOrderRequest, user: Option[User]) = {
+    getIdByRole(request, user).map( roles =>  (request._id.get, roles))
+  }
+
+  override def getRolesMapping(requests: Traversable[BatchOrderRequest], user: Option[User])= {
+  for {
+     entries <- Future.sequence(requests.map(r => getRoles(r, user)))
+   }
+     yield {
+       entries.map{e => (e._1, e._2)}.toMap
+     }
   }
 
   override def isAdmin(user : Option[User]) = {

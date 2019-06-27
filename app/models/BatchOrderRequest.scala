@@ -13,7 +13,8 @@ import reactivemongo.play.json.JSONSerializationPack._
 case class BatchOrderRequest(
                               _id: Option[BSONObjectID] = None,
                               dataSetId: String,
-                              itemIds:Seq[BSONObjectID],
+                             itemIds:Seq[BSONObjectID],
+//                              itemIds:Seq[String],
                               state: BatchRequestState.Value = BatchRequestState.Created,
                               createdById: Option[BSONObjectID] = None,
                               timeCreated: Date = new Date(),

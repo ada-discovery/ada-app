@@ -8,23 +8,22 @@ import reactivemongo.bson.BSONObjectID
 
 class ActionPermissionService {
 
-  def checkUserAllowed(user: Option[User], validRoles: Set[Role.Value], userIdsMapping: Map[Role.Value, Traversable[BSONObjectID]]) = {
+  def checkUserAllowed(user: Option[User], assumingRole: Role.Value, validRoles: Set[Role.Value], userIdsMapping: Map[Role.Value, Traversable[BSONObjectID]]) = {
     user match {
       case Some(currentUser) => {
-        validRoles.map( role =>
-          checkIsIncluded(currentUser._id.get, userIdsMapping.get(role).get)
-        ).filter( isIncluded => isIncluded).size == 1
+        assumedRoleMatchesUserRole(user.get, userIdsMapping.get(assumingRole).get) match {
+          case true => {
+            validRoles.filter(role => assumingRole == role).size == 1
+          }
+          case false => false
+        }
       }
       case None => throw new AdaException("No logged user found")
     }
   }
 
-
-  def checkIsIncluded(userId: BSONObjectID, ids: Traversable[BSONObjectID]): Boolean = {
-    ids.find(user => user == userId) match {
-      case None => false
-      case _ => true
-    }
+  def assumedRoleMatchesUserRole(user: User, userIdsMapping: Traversable[BSONObjectID]) = {
+    userIdsMapping.toSeq.contains(user._id.get)
   }
 }
 
