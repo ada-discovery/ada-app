@@ -4,14 +4,14 @@ import java.util.Date
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
-import models.BatchOrderRequest.{actionInfoFormat, batchRequestFormat}
+import models.BatchOrderRequest.{batchRequestFormat}
 import models.{NotificationType, Role, _}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
 import org.ada.server.models.User.UserIdentity
 import org.ada.server.services.UserManager
 import org.ada.web.controllers.BSONObjectIDStringFormatter
-import org.ada.web.controllers.core.AdaCrudControllerImpl
+import org.ada.web.controllers.core.{AdaCrudControllerImpl}
 import org.ada.web.models.security.DeadboltUser
 import org.ada.web.security.AdaAuthConfig
 import org.incal.core.FilterCondition
@@ -19,7 +19,7 @@ import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.Page
 import org.incal.play.controllers._
-import org.incal.play.formatters.{EnumFormatter, JsonFormatter}
+import org.incal.play.formatters.{EnumFormatter}
 import org.incal.play.security.AuthAction
 import org.incal.play.security.SecurityUtil.toAuthenticatedAction
 import play.api.data.Form
@@ -52,16 +52,16 @@ class BatchOrderRequestsController @Inject()(
   with HasBasicFormShowView[BatchOrderRequest, BSONObjectID]
   with HasListView[BatchOrderRequest]
   with AdaAuthConfig {
-  private implicit val idsFormatter = BSONObjectIDStringFormatter
-  private implicit val actionInfoFormatter = JsonFormatter[Seq[ActionInfo]]
-  private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
-  private val activeRequestsListRedirect = Redirect(routes.BatchOrderRequestsController.findActive())
+
+   private implicit val idsFormatter = BSONObjectIDStringFormatter
+   private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
+   private val activeRequestsListRedirect = Redirect(routes.BatchOrderRequestsController.findActive())
 
   override protected[controllers] val form = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSetId" -> nonEmptyText,
-      "itemIds" -> seq(of[BSONObjectID]),
+      "item Ids" -> seq(of[BSONObjectID]),
       "state" -> of[BatchRequestState.Value],
       "created by id" -> ignored(Option.empty[BSONObjectID]),
       "timeCreated" -> ignored(new Date()),
@@ -87,7 +87,6 @@ class BatchOrderRequestsController @Inject()(
     restrictAdminAny(noCaching = true) {
       toAuthenticatedAction(super.delete(id))
     }
-
 
   override def find(page: Int, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent] =
     restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.find(page, orderBy, filter)))
@@ -201,7 +200,7 @@ class BatchOrderRequestsController @Inject()(
         repo.save(batchRequestWithUser)
       }
     } yield {
-      addNotification(buildNotification(Some(batchRequestWithUser.copy(_id = Some(id))), user.get, Role.Requester, ActionGraph.createAction(), date, user.get))
+      addNotification(buildNotification(Some(batchRequestWithUser.copy(_id = Some(id))), user.get, Role.Requester, ActionGraph.createAction(), date, user.get, ""))
       actionNotificationService.sendNotifications()
       id
     }
@@ -223,7 +222,6 @@ class BatchOrderRequestsController @Inject()(
   def getUserIds(committeeIds: Traversable[ApprovalCommittee], existingRequest: Option[BatchOrderRequest]): Seq[BSONObjectID] = {
     committeeIds.flatMap(_.userIds).toSeq :+ existingRequest.get.createdById.get
   }
-
 
   def isActionAllowed(
                        requestId: BSONObjectID,
@@ -292,7 +290,7 @@ class BatchOrderRequestsController @Inject()(
               val updatedHistory = buildHistory(existingRequest.get.history, actionInfo)
               usersToNotify.map(userRoleMapping => userRoleMapping._2.foreach(userToNotify =>
                 addNotification(
-                  buildNotification(existingRequest, userToNotify, userRoleMapping._1, allowedStateAction, dateOfUpdate, currentUser)
+                  buildNotification(existingRequest, userToNotify, userRoleMapping._1, allowedStateAction, dateOfUpdate, currentUser, description)
                 )))
               existingRequest.get.copy(state = newState, createdById = existingRequest.get.createdById, history = updatedHistory)
             case None => throw new AdaException("No logged user found")
@@ -351,18 +349,17 @@ class BatchOrderRequestsController @Inject()(
     actionNotificationService.addNotification(notification)
   }
 
-  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: models.Action, dateOfUpdate: Date, updatedByUser: User)(implicit request: RequestHeader) = {
-
+  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: models.Action, dateOfUpdate: Date, updatedByUser: User, description: String)(implicit request: RequestHeader) = {
     action.notified.find(r => r == role) match {
       case Some(role) => {
         Some(NotificationInfo(NotificationType.Advice, existingRequest.get._id.get, existingRequest.get.timeCreated, existingRequest.get.createdById.get.toString(), targetUser.ldapDn, role,
-          targetUser.email, action.fromState, action.toState, dateOfUpdate, updatedByUser.ldapDn, urlProvider.getReadOnlyUrl(existingRequest.get._id.get)))
+          targetUser.email, action.fromState, action.toState, dateOfUpdate, updatedByUser.ldapDn, urlProvider.getReadOnlyUrl(existingRequest.get._id.get), description))
       }
       case None => {
         action.solicited == role match {
           case true => {
             Some(NotificationInfo(NotificationType.Solicitation, existingRequest.get._id.get, existingRequest.get.timeCreated, existingRequest.get.createdById.get.toString(), targetUser.ldapDn, role,
-              targetUser.email, action.fromState, action.toState, dateOfUpdate, updatedByUser.ldapDn, urlProvider.getActionUrl(existingRequest.get._id.get, role)))
+              targetUser.email, action.fromState, action.toState, dateOfUpdate, updatedByUser.ldapDn, urlProvider.getActionUrl(existingRequest.get._id.get, role), description))
           }
           case _ => None
         }
