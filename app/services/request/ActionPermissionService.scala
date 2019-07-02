@@ -22,7 +22,7 @@ class ActionPermissionService {
 
   def roleMatchesWithRequestPermission(user: User,assumingRole: Option[Role.Value], validRoles: Set[Role.Value],  userIdsMapping: Map[Role.Value, Traversable[BSONObjectID]] ): Boolean = {
     assumingRole match {
-      case Some(role) => assumedRoleMatchesUserRole(user, userIdsMapping.get(role).get) && validRoles.filter(role => assumingRole == role).size == 1
+      case Some(someRole) => assumedRoleMatchesUserRole(user, userIdsMapping.get(someRole).get) && validRoles.filter(role => someRole == role).size == 1
       case None =>  userIdsMapping.values.filter(ids=>ids.toSet.contains(user._id.get)).size == 1
     }
   }
