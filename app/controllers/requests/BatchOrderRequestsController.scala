@@ -44,7 +44,8 @@ class BatchOrderRequestsController @Inject()(
                                               roleService: RoleProviderService,
                                               userIdByRoleProvider: UserIdByRoleProviderImpl,
                                               val validatorService: ActionDescriptionValidatorService,
-                                              val urlProvider: AbsoluteUrlProvider
+                                              val urlProvider: AbsoluteUrlProvider,
+                                              criterionBuilder: ListCriterionBuilder
                                             ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
   with SubjectPresentRestrictedCrudController[BSONObjectID]
   with HasBasicFormCreateView[BatchOrderRequest]
@@ -99,33 +100,13 @@ class BatchOrderRequestsController @Inject()(
     restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.listAll(orderBy)))
   }
 
-  def buildApproverCriterion(user: Option[User]) = {
-    for {
-      committees <- committeeRepo.find()
-      dataSetSettings <- dataSetSettingRepo.find(Seq("ownerId" #== user.get._id))
-      }
-      yield {
-        val userCommittee = committees.filter(c => c.userIds.contains(user.get._id.get))
-        val committeeDataSetIds = userCommittee.map(c=>c.dataSetId).toSeq
-        val ownedDataSetIds = dataSetSettings.map(s=>s.dataSetId).toSeq
-
-        val ids = ownedDataSetIds ++ committeeDataSetIds
-
-        Seq("dataSetId" #-> ids, "state" #!= BatchRequestState.Created.toString)
-      }
-  }
-
-  def buildRequesterCriterion(user: Option[User]) = {
-    Seq("createdById" #== user.get._id)
-  }
-
   def getPageWithCriteria(pageCreated: Option[Int] = None, pageToApprove: Option[Int] = None, orderBy: String, criteria: Seq[Criterion[Any]], user: Option[User], approverCriterion: Seq[Criterion[Any]]) = {
 
     pageCreated.isDefined match {
-      case true => (pageCreated.get, criteria ++ buildRequesterCriterion(user), PageType.Created)
+      case true => (pageCreated.get, criteria ++ criterionBuilder.buildRequesterCriterion(user), PageType.Created)
       case false => pageToApprove.isDefined match {
         case true => (pageToApprove.get, criteria ++ approverCriterion, PageType.ToApprove)
-        case false => (0, criteria ++ buildRequesterCriterion(user), PageType.Created)
+        case false => (0, criteria ++ criterionBuilder.buildRequesterCriterion(user), PageType.Created)
       }
     }
   }
@@ -133,7 +114,7 @@ class BatchOrderRequestsController @Inject()(
   def findRequestsForUser(pageCreated: Option[Int] = None, pageToApprove: Option[Int] = None, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent] = AuthAction { implicit request => {
     for {
       user <- currentUser(request)
-      approverCriterion <- buildApproverCriterion(user)
+      approverCriterion <- criterionBuilder.buildApproverCriterion(user)
       criteria <- toCriteria(filter)
       (page, userCriteria, pageType) = getPageWithCriteria(pageCreated, pageToApprove, orderBy, criteria, user, approverCriterion)
       (items, count) <- getFutureUserScopedItemsAndCount(Some(page), orderBy, userCriteria)
