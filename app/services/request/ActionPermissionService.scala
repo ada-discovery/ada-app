@@ -8,22 +8,23 @@ import reactivemongo.bson.BSONObjectID
 
 class ActionPermissionService {
 
-  def checkUserAllowed(user: Option[User], assumingRole: Role.Value, validRoles: Set[Role.Value], userIdsMapping: Map[Role.Value, Traversable[BSONObjectID]]) = {
+  def checkUserAllowed(user: Option[User], assumingRole: Option[Role.Value], validRoles: Set[Role.Value], userIdsMapping: Map[Role.Value, Traversable[BSONObjectID]]) = {
     user match {
-      case Some(currentUser) => {
-        assumedRoleMatchesUserRole(user.get, userIdsMapping.get(assumingRole).get) match {
-          case true => {
-            validRoles.filter(role => assumingRole == role).size == 1
-          }
-          case false => false
-        }
-      }
+      case Some(currentUser) => roleMatchesWithRequestPermission(user.get,assumingRole, validRoles, userIdsMapping)
       case None => throw new AdaException("No logged user found")
     }
   }
 
   def assumedRoleMatchesUserRole(user: User, userIdsMapping: Traversable[BSONObjectID]) = {
     userIdsMapping.toSeq.contains(user._id.get)
+  }
+
+
+  def roleMatchesWithRequestPermission(user: User,assumingRole: Option[Role.Value], validRoles: Set[Role.Value],  userIdsMapping: Map[Role.Value, Traversable[BSONObjectID]] ): Boolean = {
+    assumingRole match {
+      case Some(role) => assumedRoleMatchesUserRole(user, userIdsMapping.get(role).get) && validRoles.filter(role => assumingRole == role).size == 1
+      case None =>  userIdsMapping.values.filter(ids=>ids.toSet.contains(user._id.get)).size == 1
+    }
   }
 }
 

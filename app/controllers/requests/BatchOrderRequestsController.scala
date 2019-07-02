@@ -61,7 +61,7 @@ class BatchOrderRequestsController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSetId" -> nonEmptyText,
-      "item Ids" -> seq(of[BSONObjectID]),
+      "itemIds" -> seq(of[BSONObjectID]),
       "state" -> of[BatchRequestState.Value],
       "created by id" -> ignored(Option.empty[BSONObjectID]),
       "timeCreated" -> ignored(new Date()),
@@ -102,23 +102,16 @@ class BatchOrderRequestsController @Inject()(
   def buildApproverCriterion(user: Option[User]) = {
     for {
       committees <- committeeRepo.find()
-      dataSetSettings <- dataSetSettingRepo.find()
-    }
+      dataSetSettings <- dataSetSettingRepo.find(Seq("ownerId" #== user.get._id))
+      }
       yield {
-        val ownedDataSet = dataSetSettings.filter(d => d.ownerId.isDefined && d.ownerId.get == user.get._id.get)
         val userCommittee = committees.filter(c => c.userIds.contains(user.get._id.get))
+        val committeeDataSetIds = userCommittee.map(c=>c.dataSetId).toSeq
+        val ownedDataSetIds = dataSetSettings.map(s=>s.dataSetId).toSeq
 
-        val committeeDataSetId = userCommittee.size == 1 match {
-          case true => userCommittee.toSeq(0).dataSetId
-          case false => ""
-        }
+        val ids = ownedDataSetIds ++ committeeDataSetIds
 
-        val ownedDataSetId = ownedDataSet.size == 1 match {
-          case true => ownedDataSet.toSeq(0).dataSetId
-          case false => ""
-        }
-
-        Seq("dataSetId" #-> Set(ownedDataSetId, committeeDataSetId).toSeq, "state" #!= BatchRequestState.Created.toString)
+        Seq("dataSetId" #-> ids, "state" #!= BatchRequestState.Created.toString)
       }
   }
 
@@ -238,7 +231,7 @@ class BatchOrderRequestsController @Inject()(
       }
       userIdsMapping <- userIdByRoleProvider.getIdByRole(existingRequestOption.get, None)
     } yield {
-      actionPermissionService.checkUserAllowed(Some(deadboltUser.user), role, Set(allowedStateAction.allowed), userIdsMapping)
+      actionPermissionService.checkUserAllowed(Some(deadboltUser.user), Some(role), Set(allowedStateAction.allowed), userIdsMapping)
     }
   }
 
@@ -254,13 +247,13 @@ class BatchOrderRequestsController @Inject()(
       existingRequestOption <- repo.get(requestId)
       userIdsMapping <- userIdByRoleProvider.getIdByRole(existingRequestOption.get, None)
     } yield {
-      readOnly match {
-        case false => {
+   readOnly match {
+       case false => {
           val validRoles = ActionGraph.apply.get(existingRequestOption.get.state).get.map(action => action.allowed).toSet
-          actionPermissionService.checkUserAllowed(Some(deadboltUser.user), role.get, validRoles, userIdsMapping)
-        }
+          actionPermissionService.checkUserAllowed(Some(deadboltUser.user), role, validRoles, userIdsMapping)
+      }
         case true => {
-          actionPermissionService.checkUserAllowed(Some(deadboltUser.user), Role.Requester, Set(Role.Requester, Role.Owner, Role.Committee), userIdsMapping)
+          actionPermissionService.checkUserAllowed(Some(deadboltUser.user), role, Set(Role.Requester, Role.Owner, Role.Committee), userIdsMapping)
         }
       }
     }
