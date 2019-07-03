@@ -1,25 +1,28 @@
 package controllers.requests
 
-import java.util.Date
+import java.util.{Date, UUID}
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
-import models.BatchOrderRequest.{batchRequestFormat}
+import models.BatchOrderRequest.batchRequestFormat
 import models.{NotificationType, Role, _}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.ada.server.models.User.UserIdentity
-import org.ada.server.services.UserManager
+import org.ada.server.services.{DataSetService, UserManager}
 import org.ada.web.controllers.BSONObjectIDStringFormatter
-import org.ada.web.controllers.core.{AdaCrudControllerImpl}
+import org.ada.web.controllers.core.AdaCrudControllerImpl
+import org.ada.web.controllers.dataset.{DataSetRouter}
 import org.ada.web.models.security.DeadboltUser
 import org.ada.web.security.AdaAuthConfig
+import org.ada.web.services.DataSpaceService
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion.Infix
-import org.incal.play.Page
+import org.incal.play.{Page}
 import org.incal.play.controllers._
-import org.incal.play.formatters.{EnumFormatter}
+import org.incal.play.formatters.EnumFormatter
 import org.incal.play.security.AuthAction
 import org.incal.play.security.SecurityUtil.toAuthenticatedAction
 import play.api.data.Form
@@ -28,7 +31,6 @@ import play.api.mvc.{Action, AnyContent, Call, _}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
 import services.request.{ActionGraph, _}
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -45,7 +47,11 @@ class BatchOrderRequestsController @Inject()(
                                               userIdByRoleProvider: UserIdByRoleProviderImpl,
                                               val validatorService: ActionDescriptionValidatorService,
                                               val urlProvider: AbsoluteUrlProvider,
-                                              criterionBuilder: ListCriterionBuilder
+                                              criterionBuilder: ListCriterionBuilder,
+
+                                              dsaf: DataSetAccessorFactory,
+                                              dataSetService: DataSetService,
+                                              dataSpaceService: DataSpaceService
                                             ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
   with SubjectPresentRestrictedCrudController[BSONObjectID]
   with HasBasicFormCreateView[BatchOrderRequest]
@@ -54,7 +60,15 @@ class BatchOrderRequestsController @Inject()(
   with HasListView[BatchOrderRequest]
   with AdaAuthConfig {
 
-   private implicit val idsFormatter = BSONObjectIDStringFormatter
+  protected val dsa: DataSetAccessor = dsaf("abalone_space.abalone_set").get
+
+  protected val fieldRepo = dsa.fieldRepo
+  protected val categoryRepo = dsa.categoryRepo
+  protected val filterRepo = dsa.filterRepo
+  protected val dataViewRepo = dsa.dataViewRepo
+
+
+  private implicit val idsFormatter = BSONObjectIDStringFormatter
    private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
    private val activeRequestsListRedirect = Redirect(routes.BatchOrderRequestsController.findActive())
 
@@ -97,6 +111,7 @@ class BatchOrderRequestsController @Inject()(
   }
 
   override def listAll(orderBy: String): Action[AnyContent] = {
+
     restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.listAll(orderBy)))
   }
 
@@ -242,6 +257,10 @@ class BatchOrderRequestsController @Inject()(
 
   def performAction(requestId: BSONObjectID, action: RequestAction.Value, role: Role.Value, description: String) = restrictAdminOrUserCustomAny(isActionAllowed(requestId, action, role)) {
     implicit request => {
+
+      Redirect(new DataSetRouter("abalone_space.abalone_set")
+        .getView(BSONObjectID.parse("5cd9298d0f010049029b76d9").get, Nil, Nil, false))
+
       actionNotificationService.cleanNotifications()
 
       for {

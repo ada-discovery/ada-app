@@ -3,12 +3,16 @@
 @import org.ada.server.models.Translation
 @import org.incal.play.controllers.WebContext._
 @import org.incal.play.controllers.WebContext
+@import org.ada.web.util.typeColumns
 @import org.ada.web.controllers.routes
 @import views.html.elements._
+@import org.incal.play.Page
 @import org.ada.web.security.AdaAuthConfig
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport, dynamicTable}
 @import views.html.helper.input
 @import views.html.table.dynamicStringTable
+@import views.html.table.paginatedTable
+
 @import reactivemongo.bson.BSONObjectID
 @(
 	form: Form[BatchOrderRequest]
@@ -16,20 +20,34 @@
     implicit context: WebContext
 )
 
-
-
 @elements = {
 @inputText("request", "dataSetId", form)
 
 <input type="hidden" name="state" value="@BatchRequestState.Created" />
 
 @dynamicTableJsImport()
+@typeaheadJsImport()
+
+	Select the items to request from this table
+
+@table
 
 @labelValue("request", "itemIds"){
-	@dynamicStringTable("itemIds", Seq("577e18c24500004800cdc558"))
+	@dynamicStringTable("itemId", Seq("577e18c24500004800cdc558"))
+}
 }
 
-}
+	@table = @{
+		paginatedTable(
+			Page(Traversable("vvv"), 0, 20, 0, ""),
+			controllers.requests.routes.BatchOrderRequestsController.find(_, _),
+
+			typeColumns[String](
+				(Some("itemId"), "Item Id", item => item)
+			),
+			None
+		)
+	}
 
 @layout.create(
     "Request",
