@@ -5,15 +5,20 @@
 @import org.incal.play.controllers.WebContext
 @import org.ada.web.util.typeColumns
 @import org.ada.web.controllers.routes
+@import controllers.requests.routes
 @import views.html.elements._
 @import org.incal.play.Page
+@import org.ada.web.controllers.dataset.routes
 @import org.ada.web.security.AdaAuthConfig
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport, dynamicTable}
 @import views.html.helper.input
 @import views.html.table.dynamicStringTable
 @import views.html.table.paginatedTable
-
+@import views.html.dataset.{dynamicFieldTable, dataSetExportDropdown}
+@import views.html.table.dynamicTableJsImport
 @import reactivemongo.bson.BSONObjectID
+@import org.incal.play.controllers.{GenericJsRouter, GenericRouter}
+
 @(
 	form: Form[BatchOrderRequest]
 )(
@@ -27,27 +32,7 @@
 
 @dynamicTableJsImport()
 @typeaheadJsImport()
-
-	Select the items to request from this table
-
-@table
-
-@labelValue("request", "itemIds"){
-	@dynamicStringTable("itemId", Seq("577e18c24500004800cdc558"))
 }
-}
-
-	@table = @{
-		paginatedTable(
-			Page(Traversable("vvv"), 0, 20, 0, ""),
-			controllers.requests.routes.BatchOrderRequestsController.find(_, _),
-
-			typeColumns[String](
-				(Some("itemId"), "Item Id", item => item)
-			),
-			None
-		)
-	}
 
 @layout.create(
     "Request",
@@ -57,3 +42,4 @@
 	saveCall = controllers.requests.routes.BatchOrderRequestsController.save(),
 	listCall = controllers.requests.routes.BatchOrderRequestsController.findActive()
 )
+

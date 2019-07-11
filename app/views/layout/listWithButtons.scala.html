@@ -1,0 +1,93 @@
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
+@import reactivemongo.bson.BSONObjectID
+
+@(
+    itemName: String,
+    title: Option[String],
+    count: Long,
+    actions: Option[Html],
+    cancelCall: Call,
+    requestId: BSONObjectID,
+    dataSetId: String,
+    table: Option[Html] = None,
+    widgets: Option[Html] = None,
+    sideBar: Option[Html] = None,
+    topContentBar: Option[Html] = None,
+    topResources: Option[Html] = None,
+    bottomResources: Option[Html] = None
+)(
+    implicit context: WebContext
+)
+
+@main(title.getOrElse(Messages("overviewList.title", itemName)), sideBar, topContentBar, topResources, bottomResources) {
+
+    <div class="page-header">
+        <h3>
+            @Messages("list.count.title", count, itemName)
+        </h3>
+    </div>
+
+    @if(actions.isDefined) {
+        <div id="actions">
+            @actions.get
+        </div>
+        <hr/>
+    }
+
+    @if(widgets.isDefined){
+        @widgets.get
+
+        @if(table.isDefined && count > 0) {
+            @collapsibleElement(table.get)
+        }
+    } else {
+        @table
+    }
+
+
+
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="actions pull-right">
+
+            <a class="btn btn-primary" onclick="submitAddItems()" title ="Add decision descr">
+              Add to request
+            </a>
+
+            <a class="btn btn-default" href="@cancelCall" title = "Add decision descr">
+          Cancel
+            </a>
+
+
+        </div>
+    </div>
+
+
+        @helper.javascriptRouter("requestJsRoutes")(
+            controllers.requests.routes.javascript.BatchOrderRequestsController.addItemsToRequest
+        )
+
+
+    <script type="text/javascript">
+            function submitAddItems() {
+                var rows = $("tbody tr")
+                var selectedRows = []
+
+               rows.each(function(){
+                  var selected = $(this).find("td input").prop("checked")
+                  var itemId = $(this).find("td span")[0].id;
+
+                  if (selected){
+                  selectedRows.push(itemId)
+                  }
+               })
+
+                var addItems = requestJsRoutes.controllers.requests.BatchOrderRequestsController.addItemsToRequest('@requestId.stringify', '@dataSetId', selectedRows )
+                submit('post', addItems.url)
+            }
+
+    </script>
+
+}

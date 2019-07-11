@@ -1,6 +1,6 @@
 package services
 
-import models.{ApprovalCommittee, BatchOrderRequest}
+import models.{BatchRequestSetting, BatchOrderRequest}
 import models.BatchOrderRequest.batchRequestFormat
 import net.codingwell.scalaguice.ScalaModule
 import org.ada.server.dataaccess.mongo.MongoAsyncCrudRepo
@@ -17,12 +17,12 @@ class BatchOrderRequestModule extends ScalaModule {
     )
 
     bind[ApprovalCommitteeRepo].toInstance(
-      new MongoAsyncCrudRepo[ApprovalCommittee, BSONObjectID]("approval_committees")
+      new MongoAsyncCrudRepo[BatchRequestSetting, BSONObjectID]("batch_request_setting")
     )
   }
 }
 
 object BatchOrderRequestRepoTypes {
   type BatchOrderRequestRepo = AsyncCrudRepo[BatchOrderRequest, BSONObjectID]
-  type ApprovalCommitteeRepo = AsyncCrudRepo[ApprovalCommittee, BSONObjectID]
+  type ApprovalCommitteeRepo = AsyncCrudRepo[BatchRequestSetting, BSONObjectID]
 }
