@@ -8,7 +8,8 @@
 @import views.html.elements._
 @import services.request.ActionGraph
 @import models.Action
-
+@import org.ada.web.util.typeColumns
+@import views.html.table.{displayTable, dynamicTable}
 @import reactivemongo.bson.BSONObjectID
 
 @import services.request.RoleProviderService
@@ -20,8 +21,20 @@
 
     @elements = {
     @inputText("request", "dataSetId", data.form)
-    @inputText("request", "itemIds", data.form)
-        <input type="hidden" name="state" value=""/>
+         <input type="hidden" name="state" value=""/>
+
+    @table
+
+    }
+
+
+    @table = {
+    @displayTable(
+        data.form.value.get.itemIds,
+        typeColumns[(BSONObjectID)](
+            (Some("item"), "item", _.stringify )
+        )
+    )
     }
 
     @layout.editActions(

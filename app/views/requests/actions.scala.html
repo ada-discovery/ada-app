@@ -8,9 +8,10 @@
 @import views.html.elements._
 @import services.request.ActionGraph
 @import models.Action
-
+@import views.html.table.paginatedTable
 @import reactivemongo.bson.BSONObjectID
-
+@import views.html.table.{displayTable, dynamicTable}
+@import org.ada.web.util.typeColumns
 @import services.request.RoleProviderService
 @(
         data: IdForm[BSONObjectID, BatchOrderRequest],
@@ -21,9 +22,23 @@
 
 @elements = {
 @inputText("request", "dataSetId", data.form)
-@inputText("request", "itemIds", data.form)
+
 <input type="hidden" name="state" value=""/>
+
+@table
 }
+
+
+
+@table = {
+@displayTable(
+    data.form.value.get.itemIds,
+    typeColumns[(BSONObjectID)](
+        (Some("item"), "item", _.stringify )
+    )
+)
+}
+
 
 @layout.editActions(
     "Update request status as " + role,
