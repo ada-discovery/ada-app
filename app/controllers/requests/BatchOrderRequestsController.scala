@@ -110,9 +110,8 @@ class BatchOrderRequestsController @Inject()(
     val requestId = requestIdOption.get
 
     for {
-      items <- Future {1}
       fieldNames <- fieldNamesProvider.getFieldNames(dataSetId)
-      tableWithFilter<-  itemsProvider.retrieveTableWithFilter(page, orderBy,filterOrId, fieldNames.toSeq)
+      tableWithFilter<-  itemsProvider.retrieveTableWithFilter(page, dataSetId, orderBy,filterOrId, fieldNames.toSeq)
 
       item <- repo.get(requestId)
       viewData <- item.fold(

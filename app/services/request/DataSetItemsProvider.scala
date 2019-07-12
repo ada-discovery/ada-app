@@ -22,10 +22,8 @@ import scala.concurrent.Future
 class DataSetItemsProvider @Inject() (dsaf: DataSetAccessorFactory,   dataSpaceService: DataSpaceService) {
 
 
-  def retrieveTableWithFilter(page: Int, orderBy: String, filterOrId: FilterOrId, fieldNames: Seq[String])(implicit request: AuthenticatedRequest[_]) = {
+  def retrieveTableWithFilter(page: Int, dataSetId: String, orderBy: String, filterOrId: FilterOrId, fieldNames: Seq[String])(implicit request: AuthenticatedRequest[_]) = {
 
-
-    val dataSetId = "abalone_space.abalone_set"
     val dsa: DataSetAccessor = dsaf(dataSetId).get
     val fieldRepo = dsa.fieldRepo
     val categoryRepo = dsa.categoryRepo
