@@ -11,34 +11,41 @@
 @import reactivemongo.bson.BSONObjectID
 
 @(
-        data: IdForm[BSONObjectID, BatchOrderRequest]
+        data: IdForm[BSONObjectID, BatchRequestSetting]
 )(
         implicit context: WebContext
 )
 
 @elements = {
-@inputText("request", "dataSetId", data.form)
-@select("request", "state", data.form, BatchRequestState.values.map(state=>(state.toString,state.toString)).toSeq, true)
-@table
-}
 
-@table = {
+@inputText("requestSetting", "dataSetId", data.form)
+
 @displayTable(
-    data.form.value.get.itemIds,
-    typeColumns[(BSONObjectID)](
-        (Some("item"), "item", _.stringify )
+    data.form.get.userIds,
+    typeColumns[BSONObjectID](
+        (Some("user id"), "user id", _.stringify )
     )
 )
+
+@displayTable(
+    data.form.get.displayFieldNames,
+    typeColumns[String](
+        (Some("field"), "field", s => s )
+    )
+)
+
 }
+
+
 
 @layout.edit(
     "Request",
     "request",
     errors = data.form.errors,
     elements = elements,
-    updateCall = controllers.requests.routes.BatchOrderRequestsController.update(data.id),
-    cancelCall = controllers.requests.routes.BatchOrderRequestsController.listAll(),
-    deleteCall = Some(controllers.requests.routes.BatchOrderRequestsController.delete(data.id)),
+    updateCall = controllers.requestSetting.routes.RequestSettingController.update(data.id),
+    cancelCall = controllers.requestSetting.routes.RequestSettingController.listAll(),
+    deleteCall = Some(controllers.requestSetting.routes.RequestSettingController.delete(data.id)),
     None,
     None
 )

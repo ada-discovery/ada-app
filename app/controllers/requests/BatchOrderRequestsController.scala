@@ -28,7 +28,7 @@ import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, Call, _}
 import reactivemongo.bson.BSONObjectID
-import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
+import services.BatchOrderRequestRepoTypes.{RequestSettingRepo, BatchOrderRequestRepo}
 import services.request.{ActionGraph, _}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -38,7 +38,7 @@ import scala.concurrent.Future
 class BatchOrderRequestsController @Inject()(
                                               requestsRepo: BatchOrderRequestRepo,
                                               userRepo: UserRepo,
-                                              committeeRepo: ApprovalCommitteeRepo,
+                                              committeeRepo: RequestSettingRepo,
                                               dataSetSettingRepo: DataSetSettingRepo,
                                               val userManager: UserManager,
                                               val actionPermissionService: ActionPermissionService,
@@ -398,10 +398,6 @@ class BatchOrderRequestsController @Inject()(
           )
         }
       }
-  }
-
-  def getUserIfAllowed(request: play.api.mvc.Request[_]) = {
-    currentUser(request)
   }
 
   def getNextState(currentState: BatchRequestState.Value, action: RequestAction.Value): models.Action = {

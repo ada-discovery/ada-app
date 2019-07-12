@@ -8,10 +8,10 @@ import org.ada.server.models.User
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
-import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
+import services.BatchOrderRequestRepoTypes.{RequestSettingRepo, BatchOrderRequestRepo}
 import org.incal.core.dataaccess.Criterion.Infix
 
-abstract class UserIdByRoleProvider[T] (committeeRepo: ApprovalCommitteeRepo, dataSetSettingRepo: DataSetSettingRepo) {
+abstract class UserIdByRoleProvider[T] (committeeRepo: RequestSettingRepo, dataSetSettingRepo: DataSetSettingRepo) {
 
 def getIdByRole(existingRequest: BatchOrderRequest, user: Option[User])= {
 

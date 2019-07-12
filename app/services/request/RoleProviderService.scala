@@ -8,7 +8,7 @@ import org.ada.server.models.User
 import org.incal.play.security.SecurityRole
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
-import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
+import services.BatchOrderRequestRepoTypes.{RequestSettingRepo, BatchOrderRequestRepo}
 
 import scala.concurrent.Future
 
@@ -21,8 +21,8 @@ trait RoleProviderService {
 }
 
 @Singleton
-class RoleProviderServiceImpl @Inject() (committeeRepo: ApprovalCommitteeRepo, requestRepo: BatchOrderRequestRepo, dataSetRepo: DataSetSettingRepo)
-  extends UserIdByRoleProvider[Traversable[Role.Value]](committeeRepo: ApprovalCommitteeRepo, dataSetRepo: DataSetSettingRepo) with RoleProviderService {
+class RoleProviderServiceImpl @Inject() (committeeRepo: RequestSettingRepo, requestRepo: BatchOrderRequestRepo, dataSetRepo: DataSetSettingRepo)
+  extends UserIdByRoleProvider[Traversable[Role.Value]](committeeRepo: RequestSettingRepo, dataSetRepo: DataSetSettingRepo) with RoleProviderService {
 
   def getRoleIfApplicable(ids: Traversable[BSONObjectID], role: Role.Value, batchRequest: BatchOrderRequest, user: Option[User]): Option[Role.Value] = {
     ids.find(u => u == user.get._id.get) match {

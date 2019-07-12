@@ -7,7 +7,7 @@ import org.ada.server.dataaccess.mongo.MongoAsyncCrudRepo
 import org.incal.core.dataaccess.AsyncCrudRepo
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import services.BatchOrderRequestRepoTypes.{ApprovalCommitteeRepo, BatchOrderRequestRepo}
+import services.BatchOrderRequestRepoTypes.{RequestSettingRepo, BatchOrderRequestRepo}
 
 class BatchOrderRequestModule extends ScalaModule {
 
@@ -16,7 +16,7 @@ class BatchOrderRequestModule extends ScalaModule {
       new MongoAsyncCrudRepo[BatchOrderRequest, BSONObjectID]("batch_requests")
     )
 
-    bind[ApprovalCommitteeRepo].toInstance(
+    bind[RequestSettingRepo].toInstance(
       new MongoAsyncCrudRepo[BatchRequestSetting, BSONObjectID]("batch_request_setting")
     )
   }
@@ -24,5 +24,5 @@ class BatchOrderRequestModule extends ScalaModule {
 
 object BatchOrderRequestRepoTypes {
   type BatchOrderRequestRepo = AsyncCrudRepo[BatchOrderRequest, BSONObjectID]
-  type ApprovalCommitteeRepo = AsyncCrudRepo[BatchRequestSetting, BSONObjectID]
+  type RequestSettingRepo = AsyncCrudRepo[BatchRequestSetting, BSONObjectID]
 }

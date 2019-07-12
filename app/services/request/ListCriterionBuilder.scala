@@ -4,11 +4,11 @@ import javax.inject.Inject
 import models.BatchRequestState
 import org.ada.server.dataaccess.RepoTypes.DataSetSettingRepo
 import org.ada.server.models.User
-import services.BatchOrderRequestRepoTypes.ApprovalCommitteeRepo
+import services.BatchOrderRequestRepoTypes.RequestSettingRepo
 import org.incal.core.dataaccess.Criterion.Infix
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class ListCriterionBuilder @Inject()(committeeRepo: ApprovalCommitteeRepo, dataSetSettingRepo: DataSetSettingRepo){
+class ListCriterionBuilder @Inject()(committeeRepo: RequestSettingRepo, dataSetSettingRepo: DataSetSettingRepo){
 
   def buildApproverCriterion(user: Option[User]) = {
     for {

@@ -2,10 +2,10 @@ package services.request
 
 import javax.inject.Inject
 import org.incal.core.dataaccess.Criterion.Infix
-import services.BatchOrderRequestRepoTypes.ApprovalCommitteeRepo
+import services.BatchOrderRequestRepoTypes.RequestSettingRepo
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class FieldNamesProvider @Inject()(requestSettingRepo: ApprovalCommitteeRepo) {
+class FieldNamesProvider @Inject()(requestSettingRepo: RequestSettingRepo) {
 
  def getFieldNames(dataSetId: String) = {
     for{

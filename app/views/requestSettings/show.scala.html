@@ -1,0 +1,51 @@
+
+@import views.html.elements.editableTextElements
+
+@import org.ada.server.models.Translation
+@import org.incal.play.controllers.{WebContext, IdForm}
+@import org.incal.play.controllers.WebContext._
+@import org.ada.web.controllers.routes
+@import views.html.elements._
+@import services.request.ActionGraph
+@import models.Action
+@import org.ada.web.util.typeColumns
+@import views.html.table.{displayTable, dynamicTable}
+@import reactivemongo.bson.BSONObjectID
+
+@import services.request.RoleProviderService
+@(
+        data: IdForm[BSONObjectID, BatchRequestSetting]
+)(
+        implicit context: WebContext
+)
+
+    @elements = {
+
+    @inputText("requestSetting", "dataSetId", data.form)
+
+    @displayTable(
+        data.form.get.userIds,
+        typeColumns[(BSONObjectID)](
+            (Some("user id"), "user id", _.stringify )
+        )
+    )
+
+    @displayTable(
+        data.form.get.displayFieldNames,
+        typeColumns[String](
+            (Some("field"), "field", s => s )
+        )
+    )
+
+
+    }
+
+
+    @layout.show(
+        "Request setting",
+        elements = elements,
+        cancelCall = Some(controllers.requestSetting.routes.RequestSettingController.listAll()),
+        None,
+        None
+    )
+
