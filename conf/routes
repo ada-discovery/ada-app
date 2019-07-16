@@ -8,7 +8,7 @@ GET         /admin/showRCPrediction           controllers.ml.RCPredictionControl
 POST        /admin/runRCPrediction            controllers.ml.RCPredictionController.runRCPrediction
 
 # Item requests
-GET         /requests/items/select             controllers.requests.BatchOrderRequestsController.select(id: Option[BSONObjectID]?= None, dataSetId: String, p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil, filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil))
+GET         /requests/items/select             controllers.requests.BatchOrderRequestsController.select(id: Option[BSONObjectID]?= None, dataSetId: String, p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil, filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil), filterOrIds: Seq[Either[Seq[org.incal.core.FilterCondition], BSONObjectID]] ?= Nil)
 GET         /requests                          controllers.requests.BatchOrderRequestsController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /requests/active                   controllers.requests.BatchOrderRequestsController.findActive(p1: Option[Int] ?= None, p2: Option[Int] ?= None, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /requests/all                      controllers.requests.BatchOrderRequestsController.listAll(s: String ?= "original")
@@ -23,7 +23,7 @@ POST        /requests/:id/items/add            controllers.requests.BatchOrderRe
 POST        /requests/:id/performAction        controllers.requests.BatchOrderRequestsController.performAction(id: BSONObjectID, action: models.RequestAction.Value, role: models.Role.Value, desc: String)
 
 
-# Requests Settingd
+# Requests Settings
 GET         /requestSettings                   controllers.requestSetting.RequestSettingController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /requestSettings/all               controllers.requestSetting.RequestSettingController.listAll(s: String ?= "original")
 GET         /requestSettings/new               controllers.requestSetting.RequestSettingController.create

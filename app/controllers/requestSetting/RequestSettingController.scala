@@ -69,8 +69,6 @@ class RequestSettingController @Inject()(
    restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.listAll(orderBy)))
   }
 
-
-
   override protected def createView = { implicit ctx => views.html.requestSettings.create(_) }
 
   override protected def showView = { implicit ctx =>

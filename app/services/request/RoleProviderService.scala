@@ -28,15 +28,23 @@ class RoleProviderServiceImpl @Inject() (committeeRepo: RequestSettingRepo, requ
     ids.find(u => u == user.get._id.get) match {
       case None => None
       case Some(id) => Some(role)
-        }
     }
+  }
+
+  def getAdminRoleIfApplicable(user: Option[User]): Option[Role.Value] = {
+    isAdmin(user) match {
+      case true => Some(Role.Administrator)
+      case false => None
+    }
+  }
 
   override def processIds(requesterId: Traversable[BSONObjectID], committeeIds: Traversable[BSONObjectID], ownerIds:  Traversable[BSONObjectID], batchRequest: BatchOrderRequest, user: Option[User]): Traversable[Role.Value] = {
 
    val roleOptions= Traversable (
       getRoleIfApplicable(committeeIds, Role.Committee, batchRequest, user),
       getRoleIfApplicable(requesterId, Role.Requester, batchRequest, user),
-      getRoleIfApplicable(ownerIds, Role.Owner, batchRequest, user)
+      getRoleIfApplicable(ownerIds, Role.Owner, batchRequest, user),
+      getAdminRoleIfApplicable(user)
     )
 
     roleOptions.filter(_.isDefined).map(_.get)

@@ -9,9 +9,11 @@
 @import org.ada.web.util.typeColumns
 @import views.html.table.{displayTable, dynamicTable}
 @import reactivemongo.bson.BSONObjectID
-
+@import views.html.requests.itemsTable
+@import org.ada.web.controllers.dataset.TableViewData
 @(
-        data: IdForm[BSONObjectID, BatchOrderRequest]
+        data: IdForm[BSONObjectID, BatchOrderRequest],
+        items: Option[TableViewData]
 )(
         implicit context: WebContext
 )
@@ -19,17 +21,14 @@
 @elements = {
 @inputText("request", "dataSetId", data.form)
 @select("request", "state", data.form, BatchRequestState.values.map(state=>(state.toString,state.toString)).toSeq, true)
-@table
+
+
+@if(items.isDefined) {
+    @itemsTable(items.get)
 }
 
-@table = {
-@displayTable(
-    data.form.value.get.itemIds,
-    typeColumns[(BSONObjectID)](
-        (Some("item"), "item", _.stringify )
-    )
-)
 }
+
 
 @layout.edit(
     "Request",

@@ -8,14 +8,17 @@
 @import views.html.elements._
 @import services.request.ActionGraph
 @import models.Action
+@import views.html.requests.itemsTable
 @import views.html.table.paginatedTable
 @import reactivemongo.bson.BSONObjectID
 @import views.html.table.{displayTable, dynamicTable}
 @import org.ada.web.util.typeColumns
 @import services.request.RoleProviderService
+@import org.ada.web.controllers.dataset.TableViewData
 @(
         data: IdForm[BSONObjectID, BatchOrderRequest],
-        role: Role.Value
+        role: Role.Value,
+        items: Option[TableViewData]
 )(
         implicit context: WebContext
 )
@@ -25,19 +28,18 @@
 
 <input type="hidden" name="state" value=""/>
 
-@table
+
+@if(items.isDefined) {
+  @itemsTable(items.get)
+}
+
 }
 
 
 
-@table = {
-@displayTable(
-    data.form.value.get.itemIds,
-    typeColumns[(BSONObjectID)](
-        (Some("item"), "item", _.stringify )
-    )
-)
-}
+
+
+
 
 
 @layout.editActions(
