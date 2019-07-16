@@ -2,6 +2,7 @@ package models
 
 import java.util.Date
 
+import org.ada.web.controllers.dataset.TableViewData
 import reactivemongo.bson.BSONObjectID
 
 object NotificationType extends Enumeration {
@@ -9,4 +10,4 @@ object NotificationType extends Enumeration {
 }
 
 case class NotificationInfo (val notificationType: NotificationType.Value,val requestId: BSONObjectID, val creationDate:Date,val createdByUser:String , val targetUser:String, val userRole: Role.Value, val targetUserEmail:String, val fromState:BatchRequestState.Value, val toState:BatchRequestState.Value, val updateDate:Date,
-                             val updatedByUser:String, val getRequestUrl:String, val description: String)
+                             val updatedByUser:String, val getRequestUrl:String, val description: String, val items: Option[TableViewData])

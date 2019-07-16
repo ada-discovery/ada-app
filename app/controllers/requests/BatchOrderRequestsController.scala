@@ -216,7 +216,7 @@ class BatchOrderRequestsController @Inject()(
         repo.save(batchRequestWithUser)
       }
     } yield {
-      addNotification(buildNotification(Some(batchRequestWithUser.copy(_id = Some(id))), user.get, Role.Requester, ActionGraph.createAction(), date, user.get, ""))
+      addNotification(buildNotification(Some(batchRequestWithUser.copy(_id = Some(id))), user.get, Role.Requester, ActionGraph.createAction(), date, user.get, "", None))
       actionNotificationService.sendNotifications()
       id
     }
@@ -332,13 +332,13 @@ class BatchOrderRequestsController @Inject()(
     }.recover(handleExceptions("request action"))
   }
 
-
   def performAction(requestId: BSONObjectID, action: RequestAction.Value, role: Role.Value, description: String) = restrictAdminOrUserCustomAny(isActionAllowed(requestId, action, role)) {
     implicit request => {
      actionNotificationService.cleanNotifications()
 
       for {
         existingRequest <- repo.get(requestId)
+        itemsExist =  checkItemsExist(existingRequest.get)
         user <- currentUser(request)
         allowedStateAction = {
           getNextState(existingRequest.get.state, action)
@@ -348,6 +348,8 @@ class BatchOrderRequestsController @Inject()(
         }
         userIdsMapping <- userIdByRoleProvider.getIdByRole(existingRequest.get, None)
         usersToNotify <- retrieveUsersToNotify(userIdsMapping)
+        fieldNames <- fieldNamesProvider.getFieldNames(existingRequest.get.dataSetId)
+        items <- itemsProvider.getItemsById(existingRequest.get.itemIds, existingRequest.get.dataSetId, fieldNames)
         id <- {
           val batchRequestWithState = user match {
             case Some(currentUser) =>
@@ -357,7 +359,7 @@ class BatchOrderRequestsController @Inject()(
               val updatedHistory = buildHistory(existingRequest.get.history, actionInfo)
               usersToNotify.map(userRoleMapping => userRoleMapping._2.foreach(userToNotify =>
                 addNotification(
-                  buildNotification(existingRequest, userToNotify, userRoleMapping._1, allowedStateAction, dateOfUpdate, currentUser, description)
+                  buildNotification(existingRequest, userToNotify, userRoleMapping._1, allowedStateAction, dateOfUpdate, currentUser, description, items)
                 )))
               existingRequest.get.copy(state = newState, createdById = existingRequest.get.createdById, history = updatedHistory)
             case None => throw new AdaException("No logged user found")
@@ -370,6 +372,14 @@ class BatchOrderRequestsController @Inject()(
         activeRequestsListRedirect.flashing("success" -> "state of request updated with success to: ")
       }
     }.recover(handleExceptions("request action"))
+  }
+
+  def checkItemsExist(request: BatchOrderRequest)={
+    request.itemIds.size > 0 match
+    {
+      case false => throw new AdaException("No item in this request, please select items before submitting")
+      case _ =>
+    }
   }
 
   def checkDescriptionExists(action: models.Action, description: String) = {
@@ -412,24 +422,23 @@ class BatchOrderRequestsController @Inject()(
     actionNotificationService.addNotification(notification)
   }
 
-  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: models.Action, dateOfUpdate: Date, updatedByUser: User, description: String)(implicit request: RequestHeader) = {
+  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: models.Action, dateOfUpdate: Date, updatedByUser: User, description: String, itemsOption: Option[TableViewData])(implicit request: RequestHeader) = {
     action.notified.find(r => r == role) match {
       case Some(role) => {
         Some(NotificationInfo(NotificationType.Advice, existingRequest.get._id.get, existingRequest.get.timeCreated, existingRequest.get.createdById.get.toString(), targetUser.ldapDn, role,
-          targetUser.email, action.fromState, action.toState, dateOfUpdate, updatedByUser.ldapDn, urlProvider.getReadOnlyUrl(existingRequest.get._id.get), description))
+          targetUser.email, action.fromState, action.toState, dateOfUpdate, updatedByUser.ldapDn, urlProvider.getReadOnlyUrl(existingRequest.get._id.get), description, itemsOption))
       }
       case None => {
         action.solicited == role match {
           case true => {
             Some(NotificationInfo(NotificationType.Solicitation, existingRequest.get._id.get, existingRequest.get.timeCreated, existingRequest.get.createdById.get.toString(), targetUser.ldapDn, role,
-              targetUser.email, action.fromState, action.toState, dateOfUpdate, updatedByUser.ldapDn, urlProvider.getActionUrl(existingRequest.get._id.get, role), description))
+              targetUser.email, action.fromState, action.toState, dateOfUpdate, updatedByUser.ldapDn, urlProvider.getActionUrl(existingRequest.get._id.get, role), description, itemsOption))
           }
           case _ => None
         }
       }
     }
   }
-
 
   override protected type EditViewData = ViewData
 
@@ -482,7 +491,6 @@ class BatchOrderRequestsController @Inject()(
         currentUser <- currentUser(request)
         users <- getUsers(page.items)
         userRolesByRequest <- roleService.getRolesMapping(page.items, currentUser)
-
       } yield {
         val pageItemsWithCall = buildItems(page.items, users, currentUser, userRolesByRequest)
         (buildPageWithNames(pageItemsWithCall, page), conditions)

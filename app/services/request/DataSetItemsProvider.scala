@@ -314,7 +314,7 @@ class DataSetItemsProvider @Inject() (dsaf: DataSetAccessorFactory,   dataSpaceS
 
 
 
-  def getItemsById(itemIds: Seq[BSONObjectID], dataSetId: String, fieldNames: Seq[String])(implicit request: AuthenticatedRequest[_])={
+  def getItemsById(itemIds: Seq[BSONObjectID], dataSetId: String, fieldNames: Traversable[String])(implicit request: AuthenticatedRequest[_])={
 
  itemIds.size > 0 match {
    case true => for{

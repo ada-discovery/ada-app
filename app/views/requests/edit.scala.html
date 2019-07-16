@@ -22,13 +22,10 @@
 @inputText("request", "dataSetId", data.form)
 @select("request", "state", data.form, BatchRequestState.values.map(state=>(state.toString,state.toString)).toSeq, true)
 
-
 @if(items.isDefined) {
     @itemsTable(items.get)
 }
-
 }
-
 
 @layout.edit(
     "Request",

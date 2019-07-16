@@ -5,6 +5,8 @@ import java.io.File
 import models.NotificationInfo
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.apache.pdfbox.pdmodel.{PDDocument, PDPage, PDPageContentStream}
+import play.api.libs.json.{JsObject, JsValue}
+
 
 class PdfBuilder {
   def getFile(notificationInfo: NotificationInfo): File = {
@@ -59,9 +61,16 @@ val text = "Request resume\n" + MessageTemplate.format(
   notification.toState,
   notification.updateDate,
   notification.updatedByUser,
-  notification.getRequestUrl) + "\nDescription:\n"+notification.description
+  notification.getRequestUrl) + "\nDescription:\n \n"+notification.description + "\n \n"
 
-    buildLines(text, content)
+    val itemsToPrint = notification.items.get.page.items.map(i=>i.fields.filter(f=>f._1 != "_id"))
+    println("items to print "+ itemsToPrint)
+
+    val table = "table\n \n" + itemsToPrint.toSeq(0).map( item => item._1).mkString(" ") + "\n"  + itemsToPrint.map(item=> "-> " + buildListLine(item)).mkString("\n")
+
+    val textWithTable = text + table
+
+    buildLines(textWithTable, content)
 
 
 
@@ -69,6 +78,12 @@ val text = "Request resume\n" + MessageTemplate.format(
 
 
     content.close()
+  }
+
+
+
+  def buildListLine(item: Seq[(String, JsValue)])= {
+    item.map(f => f._2.toString()).mkString(" ")
   }
 
 }
