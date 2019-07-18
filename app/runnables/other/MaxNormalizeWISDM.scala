@@ -1,5 +1,6 @@
 package runnables.other
 
+import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
 import org.ada.server.dataaccess.StreamSpec
 import javax.inject.Inject
@@ -14,7 +15,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class MaxNormalizeWISDM @Inject()(
   dsaf: DataSetAccessorFactory,
-  dataSetService: DataSetService
+  dataSetService: DataSetService)(
+  implicit materializer: Materializer
 ) extends InputFutureRunnableExt[MaxNormalizeWISDMSpec] {
 
   private object FieldName {

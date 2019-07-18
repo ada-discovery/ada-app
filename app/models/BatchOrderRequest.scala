@@ -4,7 +4,6 @@ import java.util.Date
 
 import org.ada.server.dataaccess.BSONObjectIdentity
 import org.ada.server.json.EnumFormat
-import org.ada.web.controllers.EnumStringBindable
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
