@@ -2,8 +2,10 @@ package controllers.requestSetting
 
 import java.util.Date
 
+import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
 import models._
+import org.ada.server.AdaException
 import org.ada.server.services.UserManager
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaCrudControllerImpl
@@ -16,6 +18,11 @@ import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.RequestSettingRepo
+import services.request.ActionGraph
+import scala.concurrent.ExecutionContext.Implicits.global
+import org.incal.core.dataaccess.Criterion.Infix
+
+import scala.concurrent.Future
 
 @Deprecated
 class RequestSettingController @Inject()(
@@ -68,6 +75,25 @@ class RequestSettingController @Inject()(
   override def listAll(orderBy: String): Action[AnyContent] = {
    restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.listAll(orderBy)))
   }
+
+
+  override def saveCall(
+                         requestSetting: BatchRequestSetting)(
+                         implicit request: AuthenticatedRequest[AnyContent]
+                       ): Future[BSONObjectID] = {
+    for {
+      dataSetIdExists <- repo.find(Seq("dataSetId" #== requestSetting.dataSetId))
+      id <- {
+        dataSetIdExists.size == 0 match {
+          case false => throw new AdaException("A configuration already exists for dataset id " + requestSetting.dataSetId)
+          case true => repo.save(requestSetting)
+        }
+      }
+    } yield {
+      id
+    }
+  }
+
 
   override protected def createView = { implicit ctx => views.html.requestSettings.create(_) }
 

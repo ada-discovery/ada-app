@@ -20,9 +20,10 @@
             controllers.requestSetting.routes.RequestSettingController.find(_, _, conditions),
 
             typeColumns[BatchRequestSetting](
+                (Some("dataSetId"), "Dataset id", _.dataSetId),
                 (Some("timecreated"), "Date", _.timeCreated)
             ),
-            Some({ item: Any => controllers.requestSetting.routes.RequestSettingController.get(item.asInstanceOf[BatchRequestSetting]._id.get) })
+            Some({ item: Any => controllers.requestSetting.routes.RequestSettingController.edit(item.asInstanceOf[BatchRequestSetting]._id.get) })
         )
     }
 
