@@ -64,19 +64,9 @@ val text = "Request resume\n" + MessageTemplate.format(
   notification.getRequestUrl) + "\nDescription:\n \n"+notification.description + "\n \n"
 
     val itemsToPrint = notification.items.get.page.items.map(i=>i.fields.filter(f=>f._1 != "_id"))
-    println("items to print "+ itemsToPrint)
-
     val table = "table\n \n" + itemsToPrint.toSeq(0).map( item => item._1).mkString(" ") + "\n"  + itemsToPrint.map(item=> "-> " + buildListLine(item)).mkString("\n")
 
-    val textWithTable = text + table
-
-    buildLines(textWithTable, content)
-
-
-
-
-
-
+    buildLines(text + table, content)
     content.close()
   }
 

@@ -11,7 +11,8 @@
 @import reactivemongo.bson.BSONObjectID
 
 @(
-        data: IdForm[BSONObjectID, BatchRequestSetting]
+        data: IdForm[BSONObjectID, BatchRequestSetting],
+        committeeIds: Traversable[String]
 )(
         implicit context: WebContext
 )
@@ -20,10 +21,11 @@
 
 @inputText("requestSetting", "dataSetId", data.form)
 
+
 @displayTable(
-    data.form.get.userIds,
-    typeColumns[BSONObjectID](
-        (Some("user id"), "user id", _.stringify )
+    committeeIds,
+    typeColumns[String](
+        (Some("commitee users"), "commitee users", u => u )
     )
 )
 

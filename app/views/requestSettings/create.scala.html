@@ -18,22 +18,17 @@
 @import views.html.table.dynamicTableJsImport
 @import reactivemongo.bson.BSONObjectID
 @import org.incal.play.controllers.{GenericJsRouter, GenericRouter}
-
 @import org.ada.web.controllers.dataset.datatrans.javascript.ReverseDataSetTransformationController
 @import org.ada.web.controllers.dataset.datatrans.DataSetTransformationController
-
-
-
 @import views.html.table.dynamicStringTable
 @import views.html.dataset.{dynamicFieldTable}
-
 @import views.html.requestSettings.dataSetTypeahead
+
 @(
 	form: Form[BatchRequestSetting]
 )(
     implicit context: WebContext
 )
-
 
 @elements = {
 
