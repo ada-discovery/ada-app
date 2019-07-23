@@ -22,13 +22,22 @@
 @import org.ada.web.controllers.dataset.datatrans.DataSetTransformationController
 @import views.html.table.dynamicStringTable
 @import views.html.dataset.{dynamicFieldTable}
-@import views.html.requestSettings.dataSetTypeahead
+@import views.html.dataSetTypeahead
 
+@import  org.ada.server.models.FilterShowFieldStyle
+
+@import org.ada.server.models.User
 @(
 	form: Form[BatchRequestSetting]
 )(
     implicit context: WebContext
 )
+
+@extraFieldButtons = {
+	<a id="addAllFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllFields();" data-toggle="tooltip" title="Add All Fields">
+		<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All
+	</a>
+}
 
 @elements = {
 
@@ -37,14 +46,87 @@
 @dynamicTableJsImport()
 @typeaheadJsImport()
 
-@labelValue("requestSetting", "Committee users Ids") {
-	@dynamicStringTable("userId", Seq("577e18c24500004800cdc558"))
+
+@labelValue("userNames", attributeLabel("requestSetting", "Committee users Ids")){
+	@dynamicFieldTable(
+		"userId",
+		Nil,
+		true,
+		5,
+		None,
+		None,
+		showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
+	)
 }
 
-	@labelValue("requestSetting", "Display field names") {
-		@dynamicStringTable("displayFieldName", Seq("field1"))
 
+@labelValue("tableColumnNames", attributeLabel("requestSetting", "tableColumnNames")){
+	@dynamicFieldTable(
+		"tableColumnName",
+		Nil,
+		true,
+		5,
+		Some(extraFieldButtons),
+		None,
+		showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
+	)
 }
+
+@helper.javascriptRouter("dataSetJsRoutes")(
+	org.ada.web.controllers.dataset.routes.javascript.DataSetDispatcher.getFields
+)
+
+	<script type="text/javascript">
+			$(function () {
+				populateIdNameTypeahedFromUrl(
+						$('#userIdDiv').find('#fieldTypeahead'),
+						$('#userIdDiv').find('#fieldName'),
+						'@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)', true)
+			})
+
+			$('#dataSetIdTypeahead').on("change paste type", function(){
+				updateTypeahead($(this).val())
+			})
+
+			function clearTable(){
+				$('#tableColumnNameDiv').find('table tbody tr').remove()
+			}
+
+			function clearTypeahead(){
+				$('#tableColumnNameDiv').find('.tt-menu').remove()
+			}
+
+		    function updateTypeahead(dataSetId) {
+				clearTypeahead()
+				clearTable()
+				var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
+				populateFieldTypeahedFromUrl(
+						$('#tableColumnNameDiv').find('#fieldTypeahead'),
+						$('#tableColumnNameDiv').find('#fieldName'),
+						url,
+						@FilterShowFieldStyle.NamesOnly.id
+				)
+		}
+
+			function addAllFields() {
+				var dataSetId = $('#dataSetIdTypeahead').val()
+				clearTable()
+				var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
+
+				$.ajax({
+					url: url,
+					success: function (data) {
+						$.each(data, function(index, field) {
+							var values = {};
+							values["fieldName"] = field.name;
+							values["fieldTypeahead"] = field.label ? field.label : field.name;
+
+							$('#tableColumnNameDiv').dynamicTable('addTableRow', values)
+						});
+					}
+				});
+			}
+	</script>
 }
 
 @layout.create(

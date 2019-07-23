@@ -1,7 +1,6 @@
 package controllers.requestSetting
 
 import java.util.Date
-
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
 import models._
@@ -9,7 +8,6 @@ import org.ada.server.AdaException
 import org.ada.server.services.UserManager
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaCrudControllerImpl
-import org.ada.web.controllers.dataset.TableViewData
 import org.ada.web.security.AdaAuthConfig
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion.Infix
@@ -21,7 +19,6 @@ import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.RequestSettingRepo
 import services.UserProviderService
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -32,10 +29,10 @@ class RequestSettingController @Inject()(
                                               userProvider: UserProviderService
                                             ) extends AdaCrudControllerImpl[BatchRequestSetting, BSONObjectID](requestSettingRepo)
   with SubjectPresentRestrictedCrudController[BSONObjectID]
-  with HasBasicFormCreateView[BatchRequestSetting]
   with HasFormEditView[BatchRequestSetting, BSONObjectID]
   with HasFormShowView[BatchRequestSetting, BSONObjectID]
   with HasBasicListView[BatchRequestSetting]
+  with HasBasicFormCreateView[BatchRequestSetting]
   with AdaAuthConfig {
 
   private implicit val idsFormatter = BSONObjectIDStringFormatter
@@ -75,18 +72,16 @@ class RequestSettingController @Inject()(
     restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.find(page, orderBy, filter)))
 
   override def listAll(orderBy: String): Action[AnyContent] = {
-   restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.listAll(orderBy)))
+    restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.listAll(orderBy)))
   }
 
-
-  protected type ShowViewData = (
+  override protected type ShowViewData = (
     IdForm[BSONObjectID, BatchRequestSetting], Traversable[String]
     )
 
-  protected type EditViewData = (
+  override protected type EditViewData = (
     IdForm[BSONObjectID, BatchRequestSetting], Traversable[String]
     )
-
 
   override protected def getFormEditViewData(requestId: BSONObjectID, form: Form[BatchRequestSetting]): AuthenticatedRequest[_] => Future[EditViewData]  =
   {
@@ -129,7 +124,10 @@ class RequestSettingController @Inject()(
     }
   }
 
-  override protected def createView = { implicit ctx => views.html.requestSettings.create(_) }
+  override protected def createView = {
+    implicit ctx =>
+    views.html.requestSettings.create(_)
+  }
 
   override protected def showView = { implicit ctx =>
     (views.html.requestSettings.show(_, _)).tupled
