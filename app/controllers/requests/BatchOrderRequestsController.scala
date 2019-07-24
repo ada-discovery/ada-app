@@ -79,7 +79,7 @@ class BatchOrderRequestsController @Inject()(
 //  def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
   override def get(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
-    restrictAdminOrUserCustomAny(isRequestAllowed(id, true))(toAuthenticatedAction(super.get(id)))
+    restrictAdminOrUserCustomAny(isRequestAllowed(id,None, None ,true))(toAuthenticatedAction(super.get(id)))
 
   override def edit(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
     restrictAdminAny(noCaching = true) {
@@ -234,46 +234,44 @@ class BatchOrderRequestsController @Inject()(
     committeeIds.flatMap(_.userIds).toSeq :+ existingRequest.get.createdById.get
   }
 
-  def isActionAllowed(
-                       requestId: BSONObjectID,
-                       action: RequestAction.Value,
-                       role: Role.Value
-                     )(
-                       deadboltUser: DeadboltUser,
-                       request: AuthenticatedRequest[Any]
-                     ): Future[Boolean] = {
-    for {
-      existingRequestOption <- repo.get(requestId)
-      allowedStateAction = {
-        getNextState(existingRequestOption.get.state, action)
-      }
-      userIdsMapping <- userIdByRoleProvider.getIdByRole(existingRequestOption.get, None)
-    } yield {
-      actionPermissionService.checkUserAllowed(Some(deadboltUser.user), Some(role), Set(allowedStateAction.allowed), userIdsMapping)
-    }
-  }
-
   def isRequestAllowed(
                         requestId: BSONObjectID,
-                        readOnly: Boolean,
-                        role: Option[Role.Value] = None
+                        action: Option[RequestAction.Value] = None,
+                        assumedRole: Option[Role.Value] = None,
+                        readOnly: Boolean = false
                       )(
                         deadboltUser: DeadboltUser,
                         request: AuthenticatedRequest[Any]
-                      ): Future[Boolean] = {
+                      ):  Future[Boolean] = {
     for {
       existingRequestOption <- repo.get(requestId)
+      allowedRoles = determineValidRoles(action, assumedRole, readOnly, existingRequestOption.get)
       userIdsMapping <- userIdByRoleProvider.getIdByRole(existingRequestOption.get, None)
     } yield {
-   readOnly match {
-       case false => {
-          val validRoles = ActionGraph.apply.get(existingRequestOption.get.state).get.map(action => action.allowed).toSet
-          actionPermissionService.checkUserAllowed(Some(deadboltUser.user), role, validRoles, userIdsMapping)
-      }
-        case true => {
-          actionPermissionService.checkUserAllowed(Some(deadboltUser.user), role, Set(Role.Requester, Role.Owner, Role.Committee), userIdsMapping)
+      actionPermissionService.checkUserHasRoles(Some(deadboltUser.user), assumedRole, allowedRoles, userIdsMapping)
+    }
+  }
+
+  def determineValidRoles(action: Option[RequestAction.Value],role: Option[Role.Value], readOnly: Boolean, existingRequest: BatchOrderRequest): Set[Role.Value] = {
+    readOnly match {
+      case false => {
+        action match {
+          case Some(action) =>
+            role match {
+              case Some(role) => {
+                getNextState(existingRequest.state, action).allowed == role match {
+                  case true => Set(role)
+                  case false => Set()
+                }
+              }
+                case None => throw new AdaException("No role existing with action request "+ action)
+              }
+          case None => {
+            ActionGraph.apply.get(existingRequest.state).get.map(a => a.allowed).toSet
+          }
         }
       }
+      case true => Set(Role.Requester, Role.Owner, Role.Committee)
     }
   }
 
@@ -311,7 +309,7 @@ class BatchOrderRequestsController @Inject()(
     }.recover(handleExceptions("request action"))
   }
 
-  def performAction(requestId: BSONObjectID, action: RequestAction.Value, role: Role.Value, description: String) = restrictAdminOrUserCustomAny(isActionAllowed(requestId, action, role)) {
+  def performAction(requestId: BSONObjectID, action: RequestAction.Value, role: Role.Value, description: String) = restrictAdminOrUserCustomAny(isRequestAllowed(requestId, Some(action), Some(role), false)) {
     implicit request => {
      actionNotificationService.cleanNotifications()
 
@@ -506,7 +504,7 @@ class BatchOrderRequestsController @Inject()(
     (views.html.requests.edit(_, _)).tupled
   }
 
-  def action(id: BSONObjectID, role: Role.Value) = restrictAdminOrUserCustomAny(isRequestAllowed(id, false, Some(role))) {
+  def action(id: BSONObjectID, role: Role.Value) = restrictAdminOrUserCustomAny(isRequestAllowed(id, None, Some(role),false)) {
     implicit request => {
       for {
         existingRequest <- repo.get(id)
