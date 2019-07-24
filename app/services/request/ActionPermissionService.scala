@@ -8,7 +8,7 @@ import reactivemongo.bson.BSONObjectID
 
 class ActionPermissionService {
 
-  def checkUserAllowed(user: Option[User], assumingRole: Option[Role.Value], validRoles: Set[Role.Value], userIdsMapping: Map[Role.Value, Traversable[BSONObjectID]]) = {
+  def checkUserHasRoles(user: Option[User], assumingRole: Option[Role.Value], validRoles: Set[Role.Value], userIdsMapping: Map[Role.Value, Traversable[BSONObjectID]]) = {
     user match {
       case Some(currentUser) => roleMatchesWithRequestPermission(user.get,assumingRole, validRoles, userIdsMapping)
       case None => throw new AdaException("No logged user found")
@@ -18,7 +18,6 @@ class ActionPermissionService {
   def assumedRoleMatchesUserRole(user: User, userIdsMapping: Traversable[BSONObjectID]) = {
     userIdsMapping.toSeq.contains(user._id.get)
   }
-
 
   def roleMatchesWithRequestPermission(user: User,assumingRole: Option[Role.Value], validRoles: Set[Role.Value],  userIdsMapping: Map[Role.Value, Traversable[BSONObjectID]] ): Boolean = {
     assumingRole match {
