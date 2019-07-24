@@ -37,10 +37,7 @@ class DataSetItemsProvider @Inject() (dsaf: DataSetAccessorFactory,   dataSpaceS
 
     for {
       resolvedFilter <- filterRepo.resolve(filterOrId.get)
-      criteria <- toCriteria(resolvedFilter.conditions)
-      nameFieldMap <- createNameFieldMap(fieldRepo, Seq(resolvedFilter.conditions), fieldNames)
-      resolvedFilters <- Future.sequence(filterOrIds.map(filterRepo.resolve))
-      criteria <- toCriteria(resolvedFilter.conditions)
+      criteria <- buildCriteria(resolvedFilter.conditions, itemIds)
       nameFieldMap <- createNameFieldMap(fieldRepo, Seq(resolvedFilter.conditions), fieldNames)
       tableItems <- getTableItems(repo, page, orderBy, criteria, nameFieldMap, fieldNames)
       count <- repo.count(criteria)
@@ -56,148 +53,15 @@ class DataSetItemsProvider @Inject() (dsaf: DataSetAccessorFactory,   dataSpaceS
     }
   }
 
+def buildCriteria(conditions: Seq[FilterCondition], itemIds: Option[Seq[Option[BSONObjectID]]] )={
+  val conditionsCriteria = toCriteria(conditions)
 
-
-  def retrieveTableWithFilterByItemIds(page: Int, dataSetId: String, orderBy: String, filterOrIds: Seq[FilterOrId],filterOrId: Option[FilterOrId], fieldNames: Seq[String], itemIds: Option[Seq[Option[BSONObjectID]]], tablePages: Seq[PageOrder] = Nil)(implicit request: AuthenticatedRequest[_]) = {
-
-    val dsa: DataSetAccessor = dsaf(dataSetId).get
-    val fieldRepo = dsa.fieldRepo
-    val categoryRepo = dsa.categoryRepo
-    val filterRepo = dsa.filterRepo
-    val dataViewRepo = dsa.dataViewRepo
-    val repo = dsa.dataSetRepo
-
-    for {
-   //   resolvedFilter <- filterRepo.resolve(filterOrId)
-    //  criteria <- toCriteria(resolvedFilter.conditions)
-     // nameFieldMap <- createNameFieldMap(fieldRepo, Seq(resolvedFilter.conditions), fieldNames)
-
-
-
-      resolvedFilters <- Future.sequence(filterOrIds.map(filterRepo.resolve))
-    //  criteria <- toCriteria(conditions)
-    //  nameFieldMap <- createNameFieldMap(fieldRepo, conditions, Nil, fieldNames)
-  //    tableItems <- getTableItems(repo, page, orderBy, criteria, nameFieldMap, fieldNames)
-  //    count <- repo.count(criteria)
-
-      filterOrIdsToUse = filterOrIds
-
-
-      // initialize table pages
-      tablePagesToUse = {
-        val padding = Seq.fill(Math.max(filterOrIdsToUse.size - tablePages.size, 0))(PageOrder(0, ""))
-        tablePages ++ padding
-      }
-
-      // table column names and widget specs
-      //(tableColumnNames, widgetSpecs) = fieldNames.map(f => (f, Nil))
-
-
-      // load all the filters if needed
-    //resolvedFilters <- Future.sequence(filterOrIds.map(filterRepo.resolve))
-
-      // collect the filters' conditions
-      conditions = resolvedFilters.map(_.conditions)
-
-      // convert the conditions to criteria
-      criteria <- Future.sequence(conditions.map(toCriteria))
-
-      criteriaWithIds = //criteria
-
-      if (itemIds.isDefined) {
-        criteria.map( _ ++ Seq("_id" #-> itemIds.get))
-            }
-      else
-        {
-          criteria
-        }
-
-
-
-      //criteria
-     // criteria.map( _ ++ Seq("_id" #-> Seq(Some(BSONObjectID.parse("5cc6c0d9110100200306cd15").get))))
-
-      // create a name -> field map of all the referenced fields for a quick lookup
-      nameFieldMap <- createNameFieldMap(fieldRepo, conditions, fieldNames)
-
-
-      viewResponses <-
-      Future.sequence(
-        (tablePagesToUse, criteriaWithIds, resolvedFilters).zipped.map { case (tablePage, criteria, resolvedFilter) =>
-          getInitViewResponse(repo, tablePage.page, tablePage.orderBy, resolvedFilter, criteria, nameFieldMap, fieldNames)
-        }
-      )
-
-
-
-
-      viewResponse <-  getInitViewResponse(repo, 0, "", resolvedFilters(0), criteriaWithIds(0), nameFieldMap, fieldNames)
-
-
-
-      /*
-      viewResponses <-
-
-      Future.sequence(
-        (tablePagesToUse, criteria, resolvedFilters).zipped.map { case (tablePage, criteria, resolvedFilter) =>
-          getInitViewResponse(repo, tablePage.page, tablePage.orderBy, resolvedFilter, criteria, nameFieldMap, fieldNames)
-        }
-      )
-      */
-
-    } yield {
-   //   val tablePage = Page(tableItems, page, page * 20, count, orderBy)
-    //  val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
-
-
-      val viewFutures = (viewResponses, tablePagesToUse, criteriaWithIds).zipped.map {
-        case (viewResponse, tablePage, criteria2) =>
-          val newPage = Page(viewResponse.tableItems, tablePage.page, tablePage.page * 20, viewResponse.count, tablePage.orderBy)
-          val viewData = TableViewData(newPage, Some(viewResponse.filter), viewResponse.tableFields)
-          viewData
-      }
-
-       viewFutures
-     // tablePage
+  itemIds match {
+    case Some(idsOptions) => conditionsCriteria.map( _ ++ Seq("_id" #-> idsOptions))
+    case None => conditionsCriteria
   }
-  }
+}
 
-
-  case class InitViewResponse(
-                                       count: Int,
-                                       tableItems: Traversable[JsObject],
-                                       filter: Filter,
-                                       tableFields: Traversable[Field]
-                                     )
-
-  def getInitViewResponse(
-                                   repo : JsonCrudRepo,
-                                   page: Int,
-                                   orderBy: String,
-                                   filter: Filter,
-                                   criteria: Seq[Criterion[Any]],
-                                   nameFieldMap: Map[String, Field],
-                                   tableFieldNames: Seq[String]
-                                 ): Future[InitViewResponse] = {
-
-    // total count
-    val countFuture = repo.count(criteria)
-
-    // table items
-    val tableItemsFuture = getTableItems(repo, page, orderBy, criteria, nameFieldMap, tableFieldNames)
-
-    for {
-      // obtain the total item count satisfying the resolved filter
-      count <- countFuture
-
-      // load the table items
-      tableItems <- tableItemsFuture
-    } yield {
-      val tableFields = tableFieldNames.map(nameFieldMap.get).flatten
-      val newFilter = setFilterLabels(filter, nameFieldMap)
-      InitViewResponse(count, tableItems, newFilter, tableFields)
-    }
-  }
 
     def setFilterLabels(
                                  filter: Filter,
@@ -323,10 +187,12 @@ class DataSetItemsProvider @Inject() (dsaf: DataSetAccessorFactory,   dataSpaceS
 
  itemIds.size > 0 match {
    case true => for{
-     items <- retrieveTableWithFilterByItemIds(0, dataSetId, "",Seq(Right(itemIds(0)))  , None, fieldNames.toSeq, Some(itemIds.map(Some(_))))
+//     items <- retrieveTableWithFilterByItemIds(0, dataSetId, "",Seq(Right(itemIds(0)))  , None, fieldNames.toSeq, Some(itemIds.map(Some(_))))
+     items <- retrieveTableWithFilterForSelection(0, dataSetId, "",Seq(Right(itemIds(0)))  , Some(Left(List())), fieldNames.toSeq, Some(itemIds.map(Some(_))))
    }yield
      {
-       Some(items(0))
+       Some(items)
+//       Some(items(0))
      }
    case false => Future {None}
  }

@@ -338,7 +338,7 @@ class BatchOrderRequestsController @Inject()(
               val updatedHistory = buildHistory(existingRequest.get.history, actionInfo)
               usersToNotify.map(userRoleMapping => userRoleMapping._2.foreach(userToNotify =>
                 addNotification(
-                  buildNotification(existingRequest, userToNotify, userRoleMapping._1, allowedStateAction, dateOfUpdate, currentUser, description, items)
+                  buildNotification(existingRequest, userToNotify, userRoleMapping._1, allowedStateAction, dateOfUpdate, currentUser, description, items.map(i=>i._1))
                 )))
               existingRequest.get.copy(state = newState, createdById = existingRequest.get.createdById, history = updatedHistory)
             case None => throw new AdaException("No logged user found")
@@ -456,7 +456,7 @@ class BatchOrderRequestsController @Inject()(
         fieldNames <- fieldNamesProvider.getFieldNames(existingRequest.get.dataSetId)
         items <- itemsProvider.getItemsById(existingRequest.get.itemIds, existingRequest.get.dataSetId, fieldNames.toSeq)
       } yield {
-        (IdForm(requestId, form), items)
+        (IdForm(requestId, form), items.map(i=>i._1))
       }
     }
 

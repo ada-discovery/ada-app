@@ -16,10 +16,11 @@
 @import org.ada.web.util.typeColumns
 @import services.request.RoleProviderService
 @import org.ada.web.controllers.dataset.TableViewData
+@import org.ada.server.models.{Field, FieldTypeId, Filter}
 @(
         data: IdForm[BSONObjectID, BatchOrderRequest],
         role: Role.Value,
-        items: Option[TableViewData]
+        items: Option[(TableViewData, Filter)]
 )(
         implicit context: WebContext
 )
@@ -30,7 +31,7 @@
 <input type="hidden" name="state" value=""/>
 
 @if(items.isDefined) {
-  @itemsTable(items.get)
+  @itemsTable(items.get._1)
 }
 }
 
