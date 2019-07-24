@@ -75,8 +75,8 @@ def isResumeRequired(role: Role.Value, notificationType: NotificationType.Value)
       notification.notificationType ,
       notification.targetUser,
       notification.userRole.toString,
-      notification.requestId,
       notification.createdByUser,
+      notification.dataSetId,
       notification.creationDate,
       notification.fromState,
       notification.toState,
@@ -86,16 +86,9 @@ def isResumeRequired(role: Role.Value, notificationType: NotificationType.Value)
   }
 
   def getSubject(notification:NotificationInfo)={
-
     notification.notificationType match {
-      case NotificationType.Solicitation => MessageTemplate.formatSolicitationSubject(
-               notification.requestId,
-               notification.toState
-      )
-
-      case NotificationType.Advice => MessageTemplate.formatAdviceSubject(
-        notification.requestId,
-        notification.toState)
+      case NotificationType.Solicitation => MessageTemplate.formatSolicitationSubject(notification.toState)
+      case NotificationType.Advice => MessageTemplate.formatAdviceSubject(notification.toState)
     }
   }
 }

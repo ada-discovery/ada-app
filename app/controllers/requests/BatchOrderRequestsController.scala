@@ -211,7 +211,7 @@ class BatchOrderRequestsController @Inject()(
         repo.save(batchRequestWithUser)
       }
     } yield {
-      addNotification(buildNotification(Some(batchRequestWithUser.copy(_id = Some(id))), user.get, Role.Requester, ActionGraph.createAction(), date, user.get, "", None))
+      addNotification(buildNotification(Some(batchRequestWithUser.copy(_id = Some(id))), user.get, Role.Requester, ActionGraph.createAction(), date,user.get, user.get, "", None))
       actionNotificationService.sendNotifications()
       id
     }
@@ -338,7 +338,7 @@ class BatchOrderRequestsController @Inject()(
               val updatedHistory = buildHistory(existingRequest.get.history, actionInfo)
               usersToNotify.map(userRoleMapping => userRoleMapping._2.foreach(userToNotify =>
                 addNotification(
-                  buildNotification(existingRequest, userToNotify, userRoleMapping._1, allowedStateAction, dateOfUpdate, currentUser, description, items.map(i=>i._1))
+                  buildNotification(existingRequest, userToNotify, userRoleMapping._1, allowedStateAction, dateOfUpdate, usersToNotify.get(Role.Requester).get.toSeq(0), currentUser, description, items.map(i=>i._1))
                 )))
               existingRequest.get.copy(state = newState, createdById = existingRequest.get.createdById, history = updatedHistory)
             case None => throw new AdaException("No logged user found")
@@ -399,16 +399,16 @@ class BatchOrderRequestsController @Inject()(
     actionNotificationService.addNotification(notification)
   }
 
-  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: models.Action, dateOfUpdate: Date, updatedByUser: User, description: String, itemsOption: Option[TableViewData])(implicit request: RequestHeader) = {
+  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: models.Action, dateOfUpdate: Date,createdByUser: User, updatedByUser: User, description: String, itemsOption: Option[TableViewData])(implicit request: RequestHeader) = {
     action.notified.find(r => r == role) match {
       case Some(role) => {
-        Some(NotificationInfo(NotificationType.Advice, existingRequest.get._id.get, existingRequest.get.timeCreated, existingRequest.get.createdById.get.toString(), targetUser.ldapDn, role,
+        Some(NotificationInfo(NotificationType.Advice, existingRequest.get.dataSetId, existingRequest.get.timeCreated, createdByUser.ldapDn, targetUser.ldapDn, role,
           targetUser.email, action.fromState, action.toState, dateOfUpdate, updatedByUser.ldapDn, urlProvider.getReadOnlyUrl(existingRequest.get._id.get), description, itemsOption))
       }
       case None => {
         action.solicited == role match {
           case true => {
-            Some(NotificationInfo(NotificationType.Solicitation, existingRequest.get._id.get, existingRequest.get.timeCreated, existingRequest.get.createdById.get.toString(), targetUser.ldapDn, role,
+            Some(NotificationInfo(NotificationType.Solicitation, existingRequest.get.dataSetId, existingRequest.get.timeCreated, createdByUser.ldapDn, targetUser.ldapDn, role,
               targetUser.email, action.fromState, action.toState, dateOfUpdate, updatedByUser.ldapDn, urlProvider.getActionUrl(existingRequest.get._id.get, role), description, itemsOption))
           }
           case _ => None
@@ -510,7 +510,7 @@ class BatchOrderRequestsController @Inject()(
     implicit request => {
       for {
         existingRequest <- repo.get(id)
-        viewData <- existingRequest.fold(
+        editViewData <- existingRequest.fold(
           throw new AdaException("request with id '" + id.stringify + "' not found")
         ) { entity =>
           getEditViewData(id, entity)(request).map(Some(_))
@@ -521,7 +521,7 @@ class BatchOrderRequestsController @Inject()(
         existingRequest match {
           case None => NotFound(s"$entityName '${formatId(id)}' not found")
           case Some(_) =>
-            val form: IdForm[BSONObjectID, BatchOrderRequest] = IdForm(viewData.get._1.id, viewData.get._1.form)
+            val form: IdForm[BSONObjectID, BatchOrderRequest] = IdForm(editViewData.get._1.id, editViewData.get._1.form)
 
             render {
               case Accepts.Html() => Ok(views.html.requests.actions(form, role, items))
