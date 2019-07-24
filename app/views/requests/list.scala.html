@@ -1,12 +1,17 @@
 @import org.ada.web.util.typeColumns
 @import org.incal.core.FilterCondition
 @import org.incal.play.Page
+@import org.incal.play.controllers.WebContext._
 @import org.incal.play.controllers.WebContext
 @import services.request.{ActionGraph, RoleProviderService}
 @import views.html.layout
+@import views.html.filter.{filter, filterWithJs}
 @import views.html.table.paginatedTable
 @import reactivemongo.bson.BSONObjectID
 @import org.incal.core.ConditionType
+@import org.ada.server.models.{User,Field,FilterShowFieldStyle,Filter}
+@import views.html.requests.requestTable
+
 @(
         page: Page[(BatchOrderRequest, String, Call )],
         conditions: Seq[FilterCondition]
@@ -14,25 +19,26 @@
         implicit context: WebContext
 )
 
-    @table = @{
-        paginatedTable(
-            page,
-            controllers.requests.routes.BatchOrderRequestsController.find(_, _, conditions),
-
-            typeColumns[(BatchOrderRequest, String, Call)](
-                (Some("createdby"), "Requester name", _._2),
-                (Some("timecreated"), "Date", _._1.timeCreated),
-                (Some("state"), "Status", _._1.state)
-            ),
-            Some({ item: Any => item.asInstanceOf[(BatchOrderRequest, String, Call)]._3 })
+@actions = {
+    <div class="row">
+        <div class="col-md-8">
+        @filterWithJs(
+            Filter(conditions),
+            controllers.requests.routes.BatchOrderRequestsController.findActive(),
+            Left(Seq(
+                Field("Status", Some("Status"))
+            )),
+            None,
+            Some(FilterShowFieldStyle.LabelsOnly)
         )
-    }
+        </div>
+}
 
     @layout.list(
         "request",
         None,
         page.total,
-        None,
-        Some(table),
+        Some(actions),
+        Some(requestTable(page,conditions,controllers.requests.routes.BatchOrderRequestsController.find(_, _, conditions))),
         None
     )

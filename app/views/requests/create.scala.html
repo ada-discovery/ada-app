@@ -8,6 +8,7 @@
 @import controllers.requests.routes
 @import views.html.elements._
 @import org.incal.play.Page
+@import org.ada.server.models.FilterShowFieldStyle
 @import org.ada.web.controllers.dataset.routes
 @import org.ada.web.security.AdaAuthConfig
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport, dynamicTable}
@@ -18,6 +19,10 @@
 @import views.html.table.dynamicTableJsImport
 @import reactivemongo.bson.BSONObjectID
 @import org.incal.play.controllers.{GenericJsRouter, GenericRouter}
+@import views.html.requests.itemsTable
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import views.html.dataset.view.{viewExportDropdown, viewTables, viewCountFilters}
+@import views.html.dataSetTypeahead
 
 @(
 	form: Form[BatchOrderRequest]
@@ -25,14 +30,72 @@
     implicit context: WebContext
 )
 
+@actions = {
+<div class="row">
+	<div id="singleFilterDiv" class="col-md-10">
+	</div>
+	}
+
 @elements = {
-@inputText("request", "dataSetId", form)
+@dataSetTypeahead("request", form)
 
 <input type="hidden" name="state" value="@BatchRequestState.Created" />
 
 @dynamicTableJsImport()
 @typeaheadJsImport()
+	@helper.javascriptRouter("requestJsRoutes")(
+	controllers.requests.routes.javascript.BatchOrderRequestsController.findItems
+)
+
+	<div class="filter-div"> </div>
+	<div class="table-div"> </div>
+
+	<script type="text/javascript">
+			$('#dataSetIdTypeahead').on("change",function() {
+				requestItems()
+			});
+
+			$(".inner-content form").submit(function() {
+				addItemsToRequest()
+			});
+
+			function generateTable(data) {
+
+			// filter
+				var filterElement = $(".filter-div");
+			//	filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
+
+				var tableDiv = $(".table-div")
+				tableDiv.html(data.table)
+			}
+
+			function requestItems() {
+				var dataSetId = $("#dataSetId").val()
+				requestJsRoutes.controllers.requests.BatchOrderRequestsController.findItems(dataSetId,0,"").ajax({
+      					type: 'GET',
+						success: function (data) {
+							generateTable(data)
+						},
+						error: function (err) {
+							alert("err "+ err)
+						}
+					})
+				}
+
+				function addItemsToRequest(){
+					var rows = $("tbody tr")
+					rows.each(function(){
+						var selected = $(this).find("td input").prop("checked")
+						var itemId = $(this).find("td span")[0].id;
+
+						if (selected){
+							$(".inner-content form").append('<input type="hidden" name="itemIds[]" value='+ itemId +'>')
+						}
+					})
+				}
+	</script>
 }
+
 
 @layout.create(
     "Request",

@@ -7,8 +7,6 @@
         items: TableViewData
 )
 
-
-
 @{
     val columns: Traversable[(Option[String], String, Any => Html)] =
         items.tableFields.map(f => {

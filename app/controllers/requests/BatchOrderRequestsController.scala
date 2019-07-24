@@ -7,18 +7,17 @@ import javax.inject.Inject
 import models.BatchOrderRequest.batchRequestFormat
 import models.{NotificationType, Role, _}
 import org.ada.server.AdaException
-import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
+import org.ada.server.dataaccess.RepoTypes.DataSetSettingRepo
 import org.ada.server.models.Filter.FilterOrId
-import org.ada.server.models.User.UserIdentity
 import org.ada.server.services.UserManager
 import org.ada.web.controllers.BSONObjectIDStringFormatter
+import org.ada.web.controllers.FilterConditionExtraFormats.coreFilterConditionFormat
 import org.ada.web.controllers.core.AdaCrudControllerImpl
-import org.ada.web.controllers.dataset.TableViewData
+import org.ada.web.controllers.dataset.{DataSetWebContext, TableViewData}
 import org.ada.web.models.security.DeadboltUser
 import org.ada.web.security.AdaAuthConfig
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion
-import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters.EnumFormatter
@@ -30,15 +29,14 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, Call, _}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, RequestSettingRepo}
+import services.UserProviderService
 import services.request.{ActionGraph, _}
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 @Deprecated
 class BatchOrderRequestsController @Inject()(
                                               requestsRepo: BatchOrderRequestRepo,
-                                              userRepo: UserRepo,
                                               committeeRepo: RequestSettingRepo,
                                               dataSetSettingRepo: DataSetSettingRepo,
                                               val userManager: UserManager,
@@ -50,7 +48,8 @@ class BatchOrderRequestsController @Inject()(
                                               val urlProvider: AbsoluteUrlProvider,
                                               criterionBuilder: ListCriterionBuilder,
                                               itemsProvider: DataSetItemsProvider,
-                                              fieldNamesProvider: FieldNamesProvider
+                                              fieldNamesProvider: FieldNamesProvider,
+                                              userProvider: UserProviderService
                                             ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
   with SubjectPresentRestrictedCrudController[BSONObjectID]
   with HasBasicFormCreateView[BatchOrderRequest]
@@ -61,10 +60,6 @@ class BatchOrderRequestsController @Inject()(
    private implicit val idsFormatter = BSONObjectIDStringFormatter
    private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
    private val activeRequestsListRedirect = Redirect(routes.BatchOrderRequestsController.findActive())
-
-  def selectItemsRedirect(requestId: BSONObjectID, dataSetId: String) = {
-    Redirect(routes.BatchOrderRequestsController.select(Some(requestId),dataSetId))
-  }
 
   override protected val homeCall = {
     routes.BatchOrderRequestsController.findActive()
@@ -80,6 +75,8 @@ class BatchOrderRequestsController @Inject()(
       "timeCreated" -> ignored(new Date()),
       "history" -> ignored(Seq[ActionInfo]())
     )(BatchOrderRequest.apply)(BatchOrderRequest.unapply))
+
+//  def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
   override def get(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
     restrictAdminOrUserCustomAny(isRequestAllowed(id, true))(toAuthenticatedAction(super.get(id)))
@@ -100,38 +97,30 @@ class BatchOrderRequestsController @Inject()(
   override def find(page: Int, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent] =
     restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.find(page, orderBy, filter)))
 
-  def select(requestId: Option[BSONObjectID], dataSetId: String, page: Int, orderBy: String, filter: Seq[FilterCondition], filterOrId: FilterOrId,filterOrIds: Seq[FilterOrId]): Action[AnyContent] =
-    restrictAdminOrUserCustomAny(isUserRequester(requestId.get))(toAuthenticatedAction(
-      selectItems(requestId, dataSetId, page, orderBy,filter, filterOrIds, filterOrId)
-    ))
-
-  def selectItems(requestIdOption: Option[BSONObjectID], dataSetId: String, page: Int, orderBy: String, filter: Seq[FilterCondition], filterOrIds: Seq[FilterOrId], filterOrId: FilterOrId): Action[AnyContent] = AuthAction
-  {
+  def findItems(dataSetId: String, page: Int, orderBy: String, filterOrId: FilterOrId, filterOrIds: Seq[FilterOrId]) =  restrictSubjectPresentAny(noCaching = true) {
     implicit request => {
-    val requestId = requestIdOption.get
+      for {
+        fieldNames <- fieldNamesProvider.getFieldNames(dataSetId)
+        (tableViewData, newFilter) <- itemsProvider.retrieveTableWithFilterForSelection(page, dataSetId, orderBy, filterOrIds, Some(filterOrId), fieldNames.toSeq, None)
+      } yield {
+        val tableJson = views.html.requests.itemsPaginatedTable(dataSetId,tableViewData, tableViewData.page, tableViewData.filter, tableViewData.tableFields, isAjaxRefresh = true)
+        val conditionPanel = views.html.filter.conditionPanel(Some(newFilter))
+        val filterModel = Json.toJson( tableViewData.filter.get.conditions)
 
-    for {
-      fieldNames <- fieldNamesProvider.getFieldNames(dataSetId)
-      tableWithFilter <-  itemsProvider.retrieveTableWithFilterForSelection(page, dataSetId, orderBy,filterOrIds,Some(filterOrId), fieldNames.toSeq, None)
-
-      item <- repo.get(requestId)
-      viewData <- item.fold(
-        throw new AdaException("request with id '" + requestId.stringify + "' not found")
-      ) { entity =>
-        getEditViewData(requestId, entity)(request).map(Some(_))
-      }
-    } yield {
-      item match {
-        case None => NotFound(s"$entityName '${formatId(requestId)}' not found")
-        case Some(_) =>
-          render {
-            case Accepts.Html() => Ok(views.html.layout.selectItems("",item.get.dataSetId,requestId, tableWithFilter,fieldNames))
-            case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
+        request.method == "POST" match {
+          case false => {
+            Ok(Json.obj(
+              "conditionPanel" -> conditionPanel.toString(),
+              "filterModel" -> filterModel,
+              "table" -> tableJson.toString()
+            ))
           }
+          case true => {
+            Ok(tableJson)
+          }
+        }
       }
     }
-  }
-    .recover(handleFindExceptions)
   }
 
   def findActive(pageCreated: Option[Int] = None, pageToApprove: Option[Int] = None, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent] = {
@@ -162,10 +151,16 @@ class BatchOrderRequestsController @Inject()(
       (items, count) <- getFutureUserScopedItemsAndCount(Some(page), orderBy, userCriteria)
       viewData <- getUserScopedListViewData(Page(items, page, page * pageLimit, count, orderBy), filter)(request)
     } yield {
-      implicit val req = request: Request[_]
-      render {
-        case Accepts.Html() => Ok((views.html.requests.listByCategory(viewData._1, pageType, filter)))
-        case Accepts.Json() => Ok(toJson(items))
+      request.method == "POST" match {
+       case false => {
+         Ok((views.html.requests.listByCategory(viewData._1, pageType, filter)))
+       }
+       case true => {
+         pageToApprove match {
+           case Some(page) => Ok((views.html.requests.requestTable(viewData._1, filter, (p, o) => controllers.requests.routes.BatchOrderRequestsController.findActive(None, Some(p), o, filter), isAjaxRefresh = true)))
+           case None => Ok((views.html.requests.requestTable(viewData._1, filter, (p, o) => controllers.requests.routes.BatchOrderRequestsController.findActive(Some(p), None, o, filter), isAjaxRefresh = true)))
+         }
+       }
       }
     }
   }.recover(handleFindExceptions)
@@ -220,22 +215,6 @@ class BatchOrderRequestsController @Inject()(
       actionNotificationService.sendNotifications()
       id
     }
-  }
-
-  override protected def save(redirect: Request[_] => Result) = AuthAction { implicit request =>
-    formFromRequest.fold(
-      formWithErrors => getFormCreateViewData(formWithErrors).map(viewData =>
-        BadRequest(createViewWithContext(viewData))
-      ),
-      item =>
-        saveCall(item).map { id =>
-          render {
-            case Accepts.Html() =>
-              selectItemsRedirect(id, item.dataSetId).flashing("success" -> s"$entityName '${formatId(id)}' has been created")
-            case Accepts.Json() => Created(Json.obj("message" -> s"$entityName successfully created", "id" -> formatId(id)))
-          }
-        }.recover(handleSaveExceptions)
-    )
   }
 
   def buildHistory(currentHistory: Seq[ActionInfo], actionInfo: ActionInfo): Seq[ActionInfo] = {
@@ -395,17 +374,15 @@ class BatchOrderRequestsController @Inject()(
   }
 
   def retrieveUsersToNotify(userIdsMapping: Map[Role.Value, Traversable[BSONObjectID]]): Future[Map[Role.Value, Traversable[User]]] = {
-    val userIds: Seq[BSONObjectID] = userIdsMapping.flatMap(_._2).toSeq
+    val userIds: Seq[Option[BSONObjectID]] = userIdsMapping.flatMap(_._2.map(Some(_))).toSeq
 
     for {
-      users <- userRepo.find(Seq(UserIdentity.name #-> userIds.map(id => Some(id))))
+      users <- userProvider.getUsersByIds(userIds)
     }
       yield {
-        val usersMapping: Map[BSONObjectID, User] = users.toSeq.map(u => (u._id.get, u)).toMap
-
         userIdsMapping.map { mapping =>
           (mapping._1,
-            mapping._2.map(userId => usersMapping.get(userId).get)
+            mapping._2.map(userId => users.get(userId).get)
           )
         }
       }
@@ -489,7 +466,7 @@ class BatchOrderRequestsController @Inject()(
 
       for {
         currentUser <- currentUser(request)
-        users <- getUsers(page.items)
+        users <- userProvider.getUsersByIds(page.items.map(_.createdById))
         userRolesByRequest <- roleService.getRolesMapping(page.items, currentUser)
       } yield {
         val pageItemsWithCall = buildItems(page.items, users, currentUser, userRolesByRequest)
@@ -506,7 +483,7 @@ class BatchOrderRequestsController @Inject()(
     for {
       currentUser <- currentUser(request)
       isAdmin = roleService.isAdmin(currentUser)
-      users <- getUsers(page.items)
+      users <- userProvider.getUsersByIds(page.items.map(_.createdById))
       userRolesByRequest <- roleService.getRolesMapping(page.items, currentUser)
     } yield {
       val itemsForUserWithCall =
@@ -517,14 +494,6 @@ class BatchOrderRequestsController @Inject()(
 
   def buildPageWithNames(itemsWithName: Traversable[(BatchOrderRequest, String, Call)], page: Page[BatchOrderRequest]) = {
     Page(itemsWithName, page.page, page.offset, page.total, page.orderBy)
-  }
-
-  def getUsers(requests: Traversable[BatchOrderRequest]) = {
-    val userIds = requests.map(_.createdById).flatten.map(Some(_)).toSeq
-
-    userRepo.find(Seq(BatchOrderRequest.BatchRequestIdentity.name #-> userIds)).map { users =>
-      users.map(c => (c._id.get, c)).toMap
-    }
   }
 
   override protected def createView = { implicit ctx => views.html.requests.create(_) }
@@ -563,7 +532,6 @@ class BatchOrderRequestsController @Inject()(
   }
 
   def itemViewRouting(request: BatchOrderRequest, user: Option[User], roles: Traversable[Role.Value]): Call = {
-
     val userRolesPrioritized = PrioritizedRoles.roles.toSeq.sortBy(_._1).filter(p => roles.toSeq.contains(p._2))
     val applicableActions = ActionGraph.apply.get(request.state).getOrElse(Traversable())
     val allowedRoles = applicableActions.map(a => a.allowed).toSet

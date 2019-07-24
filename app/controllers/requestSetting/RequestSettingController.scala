@@ -124,10 +124,7 @@ class RequestSettingController @Inject()(
     }
   }
 
-  override protected def createView = {
-    implicit ctx =>
-    views.html.requestSettings.create(_)
-  }
+  override protected def createView = { implicit ctx => views.html.requestSettings.create(_) }
 
   override protected def showView = { implicit ctx =>
     (views.html.requestSettings.show(_, _)).tupled

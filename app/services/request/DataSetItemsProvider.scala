@@ -8,7 +8,8 @@ import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactor
 import org.ada.server.field.{FieldType, FieldTypeHelper}
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import org.ada.server.models.Filter.FilterOrId
-import org.ada.server.models.{Field, FieldTypeId, Filter, WidgetGenerationMethod, WidgetSpec}
+import org.ada.server.models.{Field, FieldTypeId, Filter}
+import org.ada.web.controllers.FilterConditionExtraFormats.coreFilterConditionFormat
 import org.ada.web.controllers.dataset.TableViewData
 import org.ada.web.services.DataSpaceService
 import org.incal.core.ConditionType.{In, NotIn}
@@ -16,12 +17,10 @@ import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.dataaccess.{AscSort, Criterion, DescSort, Sort}
 import org.incal.play.{Page, PageOrder}
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsObject, Json}
 import reactivemongo.bson.BSONObjectID
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 
 class DataSetItemsProvider @Inject() (dsaf: DataSetAccessorFactory,   dataSpaceService: DataSpaceService) {
 
@@ -37,20 +36,26 @@ class DataSetItemsProvider @Inject() (dsaf: DataSetAccessorFactory,   dataSpaceS
     val repo = dsa.dataSetRepo
 
     for {
-         resolvedFilter <- filterRepo.resolve(filterOrId.get)
-        criteria <- toCriteria(resolvedFilter.conditions)
-       nameFieldMap <- createNameFieldMap(fieldRepo, Seq(resolvedFilter.conditions), fieldNames)
+      resolvedFilter <- filterRepo.resolve(filterOrId.get)
+      criteria <- toCriteria(resolvedFilter.conditions)
+      nameFieldMap <- createNameFieldMap(fieldRepo, Seq(resolvedFilter.conditions), fieldNames)
       resolvedFilters <- Future.sequence(filterOrIds.map(filterRepo.resolve))
-         criteria <- toCriteria(resolvedFilter.conditions)
-     nameFieldMap <- createNameFieldMap(fieldRepo, Seq(resolvedFilter.conditions), fieldNames)
-     tableItems <- getTableItems(repo, page, orderBy, criteria, nameFieldMap, fieldNames)
-         count <- repo.count(criteria)
+      criteria <- toCriteria(resolvedFilter.conditions)
+      nameFieldMap <- createNameFieldMap(fieldRepo, Seq(resolvedFilter.conditions), fieldNames)
+      tableItems <- getTableItems(repo, page, orderBy, criteria, nameFieldMap, fieldNames)
+      count <- repo.count(criteria)
     } yield {
-         val tablePage = Page(tableItems, page, page * 20, count, orderBy)
-        val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
-      tablePage
+      val tablePage = Page(tableItems, page, page * 20, count, orderBy)
+      val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
+
+      val newFilter = setFilterLabels(resolvedFilter, nameFieldMap)
+      val conditionPanel = views.html.filter.conditionPanel(Some(newFilter))
+      val filterModel = Json.toJson(resolvedFilter.conditions)
+
+      (TableViewData(tablePage,Some(resolvedFilter), fieldsInOrder), newFilter)
     }
   }
+
 
 
   def retrieveTableWithFilterByItemIds(page: Int, dataSetId: String, orderBy: String, filterOrIds: Seq[FilterOrId],filterOrId: Option[FilterOrId], fieldNames: Seq[String], itemIds: Option[Seq[Option[BSONObjectID]]], tablePages: Seq[PageOrder] = Nil)(implicit request: AuthenticatedRequest[_]) = {

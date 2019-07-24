@@ -8,6 +8,7 @@
 @import views.html.elements._
 @import services.request.ActionGraph
 @import models.Action
+@import views.html.dataset.view.{viewExportDropdown, viewTables, viewCountFilters}
 @import views.html.requests.itemsTable
 @import views.html.table.paginatedTable
 @import reactivemongo.bson.BSONObjectID
@@ -27,7 +28,6 @@
 @inputText("request", "dataSetId", data.form)
 
 <input type="hidden" name="state" value=""/>
-
 
 @if(items.isDefined) {
   @itemsTable(items.get)

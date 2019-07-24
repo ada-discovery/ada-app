@@ -1,0 +1,52 @@
+@import views.html.dataset.jsonTable
+@import play.api.libs.json.JsObject
+@import org.ada.server.models.{Field, Filter}
+@import org.ada.web.controllers.dataset.DataSetRouter
+@import org.incal.play.Page
+@import views.html.table.paginatedTable
+@import views.html.table.{header, displayJsonTable, pagination}
+@import org.ada.web.controllers.dataset.TableViewData
+@(
+        dataSetId: String,
+        items: TableViewData,
+        page: Page[JsObject],
+        filter: Option[Filter],
+        tableFields: Traversable[Field],
+        withRowClickableJs: Boolean = false,
+        isAjaxRefresh: Boolean = false
+)(
+        implicit request: Request[_]
+)
+
+@scheduleCheckbox = {
+    <input type="checkbox" class="no-rowClicked"/>
+}
+
+@{
+    val columns: Traversable[(Option[String], String, Any => Html)] =
+        items.tableFields.map(f => {
+            val fieldName = f.name
+            (Some(fieldName), fieldName, (x: Any) => {
+                val item = x.asInstanceOf[JsObject]
+                val itemId = item.value.get("_id").get.as[JsObject].value.get("$oid").get
+                itemField(item.value.get(fieldName).get.toString(), itemId.toString())
+            })
+        })
+
+    paginatedTable(
+        page,
+        controllers.requests.routes.BatchOrderRequestsController.findItems(dataSetId,_,_, filter.map(_.conditionsOrId).getOrElse(Left(Nil)), Seq(filter.map(_.conditionsOrId).getOrElse(Left(Nil)))),
+        Seq((Some("select"), "Add to request", (x: Any) => scheduleCheckbox)) ++ columns,
+        None,
+        isAjaxRefresh = true
+    )
+}
+
+@itemField(value: String, itemId: String) = {
+
+    <span id="@itemId">
+    @Html(value)
+    </span>
+}
+
+

@@ -23,9 +23,7 @@
 @import views.html.table.dynamicStringTable
 @import views.html.dataset.{dynamicFieldTable}
 @import views.html.dataSetTypeahead
-
 @import  org.ada.server.models.FilterShowFieldStyle
-
 @import org.ada.server.models.User
 @(
 	form: Form[BatchRequestSetting]
@@ -59,10 +57,9 @@
 	)
 }
 
-
-@labelValue("tableColumnNames", attributeLabel("requestSetting", "tableColumnNames")){
+@labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")){
 	@dynamicFieldTable(
-		"tableColumnName",
+		"displayFieldName",
 		Nil,
 		true,
 		5,
@@ -89,11 +86,11 @@
 			})
 
 			function clearTable(){
-				$('#tableColumnNameDiv').find('table tbody tr').remove()
+				$('#displayFieldNameDiv').find('table tbody tr').remove()
 			}
 
 			function clearTypeahead(){
-				$('#tableColumnNameDiv').find('.tt-menu').remove()
+				$('#displayFieldNameDiv').find('.tt-menu').remove()
 			}
 
 		    function updateTypeahead(dataSetId) {
@@ -101,8 +98,8 @@
 				clearTable()
 				var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
 				populateFieldTypeahedFromUrl(
-						$('#tableColumnNameDiv').find('#fieldTypeahead'),
-						$('#tableColumnNameDiv').find('#fieldName'),
+						$('#displayFieldNameDiv').find('#fieldTypeahead'),
+						$('#tdisplayFieldNameDiv').find('#fieldName'),
 						url,
 						@FilterShowFieldStyle.NamesOnly.id
 				)
@@ -121,7 +118,7 @@
 							values["fieldName"] = field.name;
 							values["fieldTypeahead"] = field.label ? field.label : field.name;
 
-							$('#tableColumnNameDiv').dynamicTable('addTableRow', values)
+							$('#displayFieldNameDiv').dynamicTable('addTableRow', values)
 						});
 					}
 				});
