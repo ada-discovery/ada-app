@@ -67,7 +67,6 @@ def isResumeRequired(role: Role.Value, notificationType: NotificationType.Value)
       case true => Some(buildResumeDocument(notificationInfo))
       case false => None
     }
-
     Seq(requestResume).filter(a=>a.isDefined).map(a=>a.get)
   }
 

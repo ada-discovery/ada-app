@@ -29,8 +29,7 @@ class RequestSettingController @Inject()(
                                               userProvider: UserProviderService
                                             ) extends AdaCrudControllerImpl[BatchRequestSetting, BSONObjectID](requestSettingRepo)
   with SubjectPresentRestrictedCrudController[BSONObjectID]
-  with HasFormEditView[BatchRequestSetting, BSONObjectID]
-  with HasFormShowView[BatchRequestSetting, BSONObjectID]
+  with HasFormShowEqualEditView[BatchRequestSetting, BSONObjectID]
   with HasBasicListView[BatchRequestSetting]
   with HasBasicFormCreateView[BatchRequestSetting]
   with AdaAuthConfig {
@@ -75,16 +74,11 @@ class RequestSettingController @Inject()(
     restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.listAll(orderBy)))
   }
 
-  override protected type ShowViewData = (
-    IdForm[BSONObjectID, BatchRequestSetting], Traversable[String]
-    )
-
   override protected type EditViewData = (
     IdForm[BSONObjectID, BatchRequestSetting], Traversable[String]
     )
 
-  override protected def getFormEditViewData(requestId: BSONObjectID, form: Form[BatchRequestSetting]): AuthenticatedRequest[_] => Future[EditViewData]  =
-  {
+  override protected def getFormEditViewData(requestId: BSONObjectID, form: Form[BatchRequestSetting]): AuthenticatedRequest[_] => Future[EditViewData]  = {
     implicit request => {
       for {
         existingSetting <- repo.get(requestId)
@@ -94,19 +88,7 @@ class RequestSettingController @Inject()(
       }
     }
   }
-
-  override protected def getFormShowViewData(requestId: BSONObjectID, form: Form[BatchRequestSetting]): AuthenticatedRequest[_] => Future[ShowViewData]  =
-  {
-    implicit request => {
-      for {
-        existingSetting <- repo.get(requestId)
-        users <- userProvider.getUsersByIds(existingSetting.get.userIds.map(Some(_)))
-      } yield {
-        (IdForm(requestId, form), users.map(_._2.ldapDn))
-      }
-    }
-  }
-
+  
   override def saveCall(
                          requestSetting: BatchRequestSetting)(
                          implicit request: AuthenticatedRequest[AnyContent]
@@ -126,9 +108,7 @@ class RequestSettingController @Inject()(
 
   override protected def createView = { implicit ctx => views.html.requestSettings.create(_) }
 
-  override protected def showView = { implicit ctx =>
-    (views.html.requestSettings.show(_, _)).tupled
-  }
+  override protected def showView = editView
 
   override protected def editView = { implicit ctx =>
     (views.html.requestSettings.edit(_, _)).tupled
