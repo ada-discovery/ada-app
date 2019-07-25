@@ -81,8 +81,16 @@
 						'@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)', true)
 			})
 
+			$("#dataSetIdTypeahead").parent("div").on( "click", function() {
+			if (!$(this).find("div.tt-menu").hasClass("tt-open")) {
+						$("#dataSetIdTypeahead").blur()
+						updateTypeahead($('#dataSetIdTypeahead').val())
+				}
+			});
+
+
 			$('#dataSetIdTypeahead').on("change paste type", function(){
-				updateTypeahead($(this).val())
+	//			updateTypeahead($(this).val())
 			})
 
 			function clearTable(){
@@ -99,7 +107,7 @@
 				var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
 				populateFieldTypeahedFromUrl(
 						$('#displayFieldNameDiv').find('#fieldTypeahead'),
-						$('#tdisplayFieldNameDiv').find('#fieldName'),
+						$('#displayFieldNameDiv').find('#fieldName'),
 						url,
 						@FilterShowFieldStyle.NamesOnly.id
 				)
