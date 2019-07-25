@@ -1,19 +1,18 @@
 package services.request
 
-import java.io.{ByteArrayOutputStream, File}
+import java.io.File
 
 import javax.inject.Inject
 import models.{NotificationInfo, NotificationType, Role}
-import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.commons.mail.EmailException
+import play.api.Logger
 import play.api.libs.mailer.{AttachmentFile, Email, MailerClient}
-import play.libs.mailer.Attachment
-import org.apache.pdfbox.pdmodel.PDPageContentStream
-import org.apache.pdfbox.pdmodel.font.PDType1Font
+
 import scala.collection.mutable.ListBuffer
-import java.io.File
-import org.apache.pdfbox.pdmodel.PDPage
 
 class ActionNotificationService @Inject()(mailerClient: MailerClient, pdfBuilder: PdfBuilder, messageBuilder: MessageBuilder) {
+  protected val logger = Logger
+
   var notifications = ListBuffer[Option[NotificationInfo]]()
   var tempFiles = ListBuffer[File]()
   val fromEmail="emanuele.raffero@uni.lu"
@@ -26,7 +25,7 @@ class ActionNotificationService @Inject()(mailerClient: MailerClient, pdfBuilder
     notifications.clear()
   }
 
-  def sendNotifications()={
+  def sendNotifications()= {
     notifications.map {
      _.foreach { n =>
         sendNotification(n)
@@ -48,7 +47,15 @@ class ActionNotificationService @Inject()(mailerClient: MailerClient, pdfBuilder
       attachments = attachments
     )
 
-    mailerClient.send(email)
+    try {
+      mailerClient.send(email)
+    }
+    catch {
+      case e: EmailException => {
+        logger.error(message, e)
+      }
+    }
+
   }
 
 def isResumeRequired(role: Role.Value, notificationType: NotificationType.Value)={
