@@ -172,7 +172,7 @@ class BatchOrderRequestsController @Inject()(
                                         criteria: Seq[Criterion[Any]],
                                         limit: Option[Int] = Some(pageLimit),
                                         projection: Seq[String] = listViewColumns.getOrElse(Nil)
-                                      ): Future[(Traversable[BatchOrderRequest], Int)] = {
+                                      ): Future[(Traversable[(BatchOrderRequest, String)], Int)] = {
     val sort = toSort(orderBy)
     val skip = page.zip(limit).headOption.map { case (page, limit) =>
       page * limit
@@ -187,9 +187,16 @@ class BatchOrderRequestsController @Inject()(
         for {items <- itemsFuture; count <- countFuture} yield
          (items, count)
       }
-    } yield
-      (items, count)
-  }
+      users <- userProvider.getUsersByIds(items.map(_.createdById))
+    } yield {
+      val itemsWithName = items.map( i => (i, users.get(i.createdById.get).get.ldapDn))
+      orderBy match  {
+        case "createdby" => (itemsWithName.toSeq.sortWith(_._2 < _._2), count)
+        case "-createdby" => (itemsWithName.toSeq.sortWith(_._2 > _._2), count)
+        case _ => (itemsWithName, count)
+      }
+    }
+    }
 
   override def saveCall(
                          batchRequest: BatchOrderRequest)(
@@ -459,22 +466,25 @@ class BatchOrderRequestsController @Inject()(
       }
     }
 
-
-  protected def getUserScopedListViewData(page: Page[BatchOrderRequest], conditions: Seq[FilterCondition]): AuthenticatedRequest[_] => Future[UserScopedListViewData] = {
+  protected def getUserScopedListViewData(page: Page[(BatchOrderRequest, String)], conditions: Seq[FilterCondition]): AuthenticatedRequest[_] => Future[UserScopedListViewData] = {
     request => {
 
       for {
         currentUser <- currentUser(request)
-        users <- userProvider.getUsersByIds(page.items.map(_.createdById))
-        userRolesByRequest <- roleService.getRolesMapping(page.items, currentUser)
+        userRolesByRequest <- roleService.getRolesMapping(page.items.map(_._1), currentUser)
       } yield {
-        val pageItemsWithCall = buildItems(page.items, users, currentUser, userRolesByRequest)
-        (buildPageWithNames(pageItemsWithCall, page), conditions)
+        val pageItemsWithCall = buildItemsWithCall(page.items, currentUser, userRolesByRequest)
+//        (buildPage(pageItemsWithCall, page), conditions)
+        (Page(pageItemsWithCall, page.page, page.offset, page.total, page.orderBy), conditions)
       }
     }
   }
 
-  def buildItems(items: Traversable[BatchOrderRequest], users: Map[BSONObjectID, User], currentUser: Option[User], rolesByRequestId: Map[BSONObjectID, Traversable[Role.Value]]) = {
+  def buildItemsWithCall(items: Traversable[(BatchOrderRequest, String)], currentUser: Option[User], rolesByRequestId: Map[BSONObjectID, Traversable[Role.Value]]) = {
+    items.map(item => (item._1, item._2, itemViewRouting(item._1, currentUser, rolesByRequestId.get(item._1._id.get).get)))
+  }
+
+  def buildItemsWithUserAndCall(items: Traversable[BatchOrderRequest], users: Map[BSONObjectID, User], currentUser: Option[User], rolesByRequestId: Map[BSONObjectID, Traversable[Role.Value]]) = {
     items.map(item => (item, users.get(item.createdById.get).get.ldapDn, itemViewRouting(item, currentUser, rolesByRequestId.get(item._id.get).get)))
   }
 
@@ -486,13 +496,14 @@ class BatchOrderRequestsController @Inject()(
       userRolesByRequest <- roleService.getRolesMapping(page.items, currentUser)
     } yield {
       val itemsForUserWithCall =
-        buildItems(page.items, users, currentUser, userRolesByRequest)
-      (buildPageWithNames(itemsForUserWithCall, page), conditions)
+        buildItemsWithUserAndCall(page.items, users, currentUser, userRolesByRequest)
+   //   (buildPage(itemsForUserWithCall, page), conditions)
+      (Page(itemsForUserWithCall, page.page, page.offset, page.total, page.orderBy), conditions)
     }
   }
 
-  def buildPageWithNames(itemsWithName: Traversable[(BatchOrderRequest, String, Call)], page: Page[BatchOrderRequest]) = {
-    Page(itemsWithName, page.page, page.offset, page.total, page.orderBy)
+  def buildPage(items: Traversable[(BatchOrderRequest, String, Call)], page: Page[BatchOrderRequest]) = {
+    Page(items, page.page, page.offset, page.total, page.orderBy)
   }
 
   override protected def createView = { implicit ctx => views.html.requests.create(_) }
