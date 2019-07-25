@@ -51,8 +51,16 @@
 	<div class="table-div"> </div>
 
 	<script type="text/javascript">
+			$(".form-group div").on( "click", function() {
+				if(!$(this).find("div.tt-menu").hasClass("tt-open"))
+				 {
+					$("#dataSetIdTypeahead").blur()
+					requestItems()
+				}
+			});
+
 			$('#dataSetIdTypeahead').on("change",function() {
-				requestItems()
+			//	requestItems()
 			});
 
 			$(".inner-content form").submit(function() {
@@ -95,7 +103,6 @@
 				}
 	</script>
 }
-
 
 @layout.create(
     "Request",
