@@ -219,7 +219,7 @@ class BatchOrderRequestsController @Inject()(
         repo.save(batchRequestWithUser)
       }
     } yield {
-      addNotification(buildNotification(Some(batchRequestWithUser.copy(_id = Some(id))), user.get, Role.Requester, ActionGraph.createAction(), date,user.get, user.get, "", None))
+      addNotification(buildNotification(Some(batchRequestWithUser.copy(_id = Some(id))), user.get, Role.Requester, ActionGraph.createAction(), date,user.get, user.get, None, None))
       actionNotificationService.sendNotifications()
       id
     }
@@ -317,7 +317,7 @@ class BatchOrderRequestsController @Inject()(
     }.recover(handleExceptions("request action"))
   }
 
-  def performAction(requestId: BSONObjectID, action: RequestAction.Value, role: Role.Value, description: String) = restrictAdminOrUserCustomAny(isRequestAllowed(requestId, Some(action), Some(role), false)) {
+  def performAction(requestId: BSONObjectID, action: RequestAction.Value, role: Role.Value, description: Option[String]) = restrictAdminOrUserCustomAny(isRequestAllowed(requestId, Some(action), Some(role), false)) {
     implicit request => {
      actionNotificationService.cleanNotifications()
 
@@ -340,7 +340,7 @@ class BatchOrderRequestsController @Inject()(
             case Some(currentUser) =>
               val dateOfUpdate = new Date()
               val newState = allowedStateAction.toState
-              val actionInfo = buildActionInfo(dateOfUpdate, currentUser.ldapDn, existingRequest.get.state, newState, Some(description))
+              val actionInfo = buildActionInfo(dateOfUpdate, currentUser.ldapDn, existingRequest.get.state, newState, description)
               val updatedHistory = buildHistory(existingRequest.get.history, actionInfo)
               usersToNotify.map(userRoleMapping => userRoleMapping._2.foreach(userToNotify =>
                 addNotification(
@@ -367,7 +367,7 @@ class BatchOrderRequestsController @Inject()(
     }
   }
 
-  def checkDescriptionExists(action: models.Action, description: String) = {
+  def checkDescriptionExists(action: models.Action, description: Option[String]) = {
     action.commentNeeded match {
       case true => {
         validatorService.validate(description) match {
@@ -405,7 +405,7 @@ class BatchOrderRequestsController @Inject()(
     actionNotificationService.addNotification(notification)
   }
 
-  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: models.Action, dateOfUpdate: Date,createdByUser: User, updatedByUser: User, description: String, itemsOption: Option[TableViewData])(implicit request: RequestHeader) = {
+  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: models.Action, dateOfUpdate: Date,createdByUser: User, updatedByUser: User, description: Option[String], itemsOption: Option[TableViewData])(implicit request: RequestHeader) = {
     action.notified.find(r => r == role) match {
       case Some(role) => {
         Some(NotificationInfo(NotificationType.Advice, existingRequest.get.dataSetId, existingRequest.get.timeCreated, createdByUser.ldapDn, targetUser.ldapDn, role,
@@ -474,7 +474,6 @@ class BatchOrderRequestsController @Inject()(
         userRolesByRequest <- roleService.getRolesMapping(page.items.map(_._1), currentUser)
       } yield {
         val pageItemsWithCall = buildItemsWithCall(page.items, currentUser, userRolesByRequest)
-//        (buildPage(pageItemsWithCall, page), conditions)
         (Page(pageItemsWithCall, page.page, page.offset, page.total, page.orderBy), conditions)
       }
     }
@@ -497,13 +496,8 @@ class BatchOrderRequestsController @Inject()(
     } yield {
       val itemsForUserWithCall =
         buildItemsWithUserAndCall(page.items, users, currentUser, userRolesByRequest)
-   //   (buildPage(itemsForUserWithCall, page), conditions)
       (Page(itemsForUserWithCall, page.page, page.offset, page.total, page.orderBy), conditions)
     }
-  }
-
-  def buildPage(items: Traversable[(BatchOrderRequest, String, Call)], page: Page[BatchOrderRequest]) = {
-    Page(items, page.page, page.offset, page.total, page.orderBy)
   }
 
   override protected def createView = { implicit ctx => views.html.requests.create(_) }

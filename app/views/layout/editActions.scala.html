@@ -121,7 +121,7 @@
 
 <script type="text/javascript">
         function simpleSubmit(action) {
-         var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.performAction('@requestId.stringify', action, '@role', '')
+         var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.performAction('@requestId.stringify', action, '@role')
             submit('post', requestAction.url)
         }
 
