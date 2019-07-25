@@ -12,7 +12,7 @@ class ListRequests @Inject()(requestsRepo: BatchOrderRequestRepo) extends Future
   override def runAsFuture =
     requestsRepo.find().map { requests =>
       val page = Page(requests, 0, 0, requests.size,"")
-     // val html = listWithButtons(requests.toSeq).toString()
-     // addDiv(html)
+ //     val html = listWithButtons(requests.toSeq).toString()
+//      addDiv(html)
     }
 }
