@@ -24,8 +24,8 @@
 )
 
     @elements = {
-    @inputText("request", "dataSetId", data.form)
-         <input type="hidden" name="state" value=""/>
+    @inputTextReadonly("request", "dataSetId", data.form)
+    <input type="hidden" name="state" value=""/>
 
     @if(items.isDefined) {
         @itemsTable(items.get)
