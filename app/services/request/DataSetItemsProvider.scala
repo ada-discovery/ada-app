@@ -62,7 +62,6 @@ def buildCriteria(conditions: Seq[FilterCondition], itemIds: Option[Seq[Option[B
   }
 }
 
-
     def setFilterLabels(
                                  filter: Filter,
                                  fieldNameMap: Map[String, Field]
@@ -99,12 +98,10 @@ def buildCriteria(conditions: Seq[FilterCondition], itemIds: Option[Seq[Option[B
       filter.copy(conditions = newConditions)
     }
 
-
       def createNameFieldMap(fieldRepo: FieldRepo,
                              conditions: Traversable[Traversable[FilterCondition]],
                              tableColumnNames: Traversable[String]
-                            )
-      = {
+                            )= {
         val filterFieldNames = conditions.flatMap(_.map(_.fieldName.trim))
 
 
@@ -151,7 +148,6 @@ def buildCriteria(conditions: Seq[FilterCondition], itemIds: Option[Seq[Option[B
           getFutureItemsForCriteria(repo, Some(page), orderBy, criteria, tableFieldNamesToLoad ++ Seq(JsObjectIdentity.name), Some(20))
         else
           Future(Nil)
-
       }
 
 
@@ -170,7 +166,6 @@ def buildCriteria(conditions: Seq[FilterCondition], itemIds: Option[Seq[Option[B
     repo.find(criteria, sort, projection, limit, skip)
   }
 
-
   def toSort(fieldName : String): Seq[Sort] =
     if (fieldName.nonEmpty) {
       val sort = if (fieldName.startsWith("-"))
@@ -181,22 +176,17 @@ def buildCriteria(conditions: Seq[FilterCondition], itemIds: Option[Seq[Option[B
     } else
       Nil
 
-
-
-  def getItemsById(itemIds: Seq[BSONObjectID], dataSetId: String, fieldNames: Traversable[String])(implicit request: AuthenticatedRequest[_])={
-
+ def getItemsById(itemIds: Seq[BSONObjectID], dataSetId: String, fieldNames: Traversable[String])(implicit request: AuthenticatedRequest[_])={
  itemIds.size > 0 match {
    case true => for{
-//     items <- retrieveTableWithFilterByItemIds(0, dataSetId, "",Seq(Right(itemIds(0)))  , None, fieldNames.toSeq, Some(itemIds.map(Some(_))))
      items <- retrieveTableWithFilterForSelection(0, dataSetId, "",Seq(Right(itemIds(0)))  , Some(Left(List())), fieldNames.toSeq, Some(itemIds.map(Some(_))))
    }yield
      {
        Some(items)
-//       Some(items(0))
      }
-   case false => Future {None}
+   case false => Future {
+     None
+   }
  }
-
-
   }
 }
