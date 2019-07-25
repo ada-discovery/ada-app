@@ -13,7 +13,7 @@ import scala.collection.mutable.ListBuffer
 import java.io.File
 import org.apache.pdfbox.pdmodel.PDPage
 
-class ActionNotificationService @Inject()(mailerClient: MailerClient, pdfBuilder: PdfBuilder) {
+class ActionNotificationService @Inject()(mailerClient: MailerClient, pdfBuilder: PdfBuilder, messageBuilder: MessageBuilder) {
   var notifications = ListBuffer[Option[NotificationInfo]]()
   var tempFiles = ListBuffer[File]()
   val fromEmail="emanuele.raffero@uni.lu"
@@ -36,15 +36,15 @@ class ActionNotificationService @Inject()(mailerClient: MailerClient, pdfBuilder
   }
 
   def sendNotification(notification:NotificationInfo)={
-    val message = getMessage(notification)
-    val subject = getSubject(notification)
+    val subject = messageBuilder.buildSubject(notification)
     val attachments = getAttachments(notification)
+    val message = messageBuilder.buildBody(notification)
 
     val email = Email(
       from = fromEmail,
       to = Seq(notification.targetUserEmail),
       subject = subject,
-      bodyText = Some(message),
+      bodyHtml = Some(message),
       attachments = attachments
     )
 
@@ -68,27 +68,5 @@ def isResumeRequired(role: Role.Value, notificationType: NotificationType.Value)
     val resumeFile =  pdfBuilder.getFile(notificationInfo)
     tempFiles += resumeFile
     AttachmentFile("request-resume.pdf", resumeFile)
-  }
-
-  def getMessage(notification:NotificationInfo)= {
-    MessageTemplate.format(
-      notification.notificationType ,
-      notification.targetUser,
-      notification.userRole.toString,
-      notification.createdByUser,
-      notification.dataSetId,
-      notification.creationDate,
-      notification.fromState,
-      notification.toState,
-      notification.updateDate,
-      notification.updatedByUser,
-      notification.getRequestUrl)
-  }
-
-  def getSubject(notification:NotificationInfo)={
-    notification.notificationType match {
-      case NotificationType.Solicitation => MessageTemplate.formatSolicitationSubject(notification.toState)
-      case NotificationType.Advice => MessageTemplate.formatAdviceSubject(notification.toState)
-    }
   }
 }
