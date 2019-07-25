@@ -21,7 +21,7 @@
         refreshCall,
         typeColumns[(BatchOrderRequest, String, Call)](
             (Some("createdby"), "Requester name", _._2),
-            (Some("timecreated"), "Date", _._1.timeCreated),
+            (Some("timeCreated"), "Date", _._1.timeCreated),
             (Some("state"), "Status", _._1.state)
         ),
         Some({ item: Any => item.asInstanceOf[(BatchOrderRequest, String, Call)]._3 }),

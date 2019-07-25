@@ -179,15 +179,16 @@ class BatchOrderRequestsController @Inject()(
     }
 
     for {
-      itemsCount <- {
+      (items, count) <- {
         val itemsFuture = repo.find(criteria, sort, projection, limit, skip)
         val countFuture = repo.count(criteria)
 
+
         for {items <- itemsFuture; count <- countFuture} yield
-          (items, count)
+         (items, count)
       }
     } yield
-      itemsCount
+      (items, count)
   }
 
   override def saveCall(
