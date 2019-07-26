@@ -16,34 +16,33 @@
 @import org.ada.web.controllers.dataset.TableViewData
 @import play.api.libs.json.JsObject
 @import views.html.requests.itemsTable
+@import views.html.requests.historyTable
 @(
-        data: (IdForm[BSONObjectID, BatchOrderRequest]),
+        request: BatchOrderRequest,
         items: Option[TableViewData]
 )(
         implicit context: WebContext
 )
 
     @elements = {
-    @inputTextReadonly("request", "dataSetId", data.form)
-    <input type="hidden" name="state" value=""/>
+   @labelValue("request", "DataSet Id") {
+        <input type="text" class="form-control" value="@request.dataSetId" readonly="readonly"/>
+    }
 
-    @if(items.isDefined) {
-        @itemsTable(items.get)
+    @labelValue("request", "Requested items") {
+        @if(items.isDefined) {
+            @itemsTable(items.get)
+        }
+    }
+
+    @labelValue("request", "History") {
+       @historyTable(request.history)
     }
     }
 
-    @layout.editActions(
+    @layout.show(
         "Request status",
-        "request",
-        Traversable[Action](),
-        None,
-        data.form.get._id.get,
-        data.form.get.history,
-        errors = data.form.errors,
         elements = elements,
-        updateCall = controllers.requests.routes.BatchOrderRequestsController.update(data.id),
-        cancelCall = controllers.requests.routes.BatchOrderRequestsController.findActive(),
-        None,
-        None
+        Some(controllers.requests.routes.BatchOrderRequestsController.findActive())
     )
 

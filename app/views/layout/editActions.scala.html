@@ -19,12 +19,10 @@
     displayName: String,
     messagePrefix: String,
     validActions: Traversable[Action],
-        role: Option[Role.Value],
+    role: Option[Role.Value],
     requestId: BSONObjectID,
     trackingHistory: Seq[ActionInfo],
-    errors: Seq[FormError],
     elements: Html,
-    updateCall: Call,
     cancelCall: Call,
     sideBar: Option[Html] = None,
     topContentBar: Option[Html] = None,
@@ -36,7 +34,7 @@
 
 
 
-@main(Messages(displayName), sideBar, topContentBar, None, bottomResources, Some(formErrors(messagePrefix, errors))) {
+@main(Messages(displayName), sideBar, topContentBar, None, bottomResources) {
 
     <div class="page-header">
         <h3>@Messages(displayName)</h3>
@@ -44,7 +42,7 @@
 
     <div class="row">
         <div class="col-md-12">
-        @helper.form(action = updateCall) {
+
             <fieldset>
             @elements
             </fieldset>
@@ -69,22 +67,7 @@
 
                 <a href="@cancelCall" class="btn btn-default">Cancel</a>
        </div>
-        }
-        </div>
-    </div>
 
-    <div class="row">
-        <div class="col-md-12">
-            @displayTable(
-                trackingHistory,
-                typeColumns[ActionInfo](
-                    (None, "date", _.timestamp.format("yyyy-MM-dd HH:mm:ss")),
-                    (None, "by user", _.performedByUser),
-                    (None, "from state", _.fromState),
-                    (None, "to state", _.toState),
-                    (None, "comment", _.comment.getOrElse(""))
-                 )
-            )
         </div>
     </div>
 }

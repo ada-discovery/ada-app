@@ -88,7 +88,7 @@ class RequestSettingController @Inject()(
       }
     }
   }
-  
+
   override def saveCall(
                          requestSetting: BatchRequestSetting)(
                          implicit request: AuthenticatedRequest[AnyContent]

@@ -11,6 +11,7 @@
 @import reactivemongo.bson.BSONObjectID
 @import views.html.requests.itemsTable
 @import org.ada.web.controllers.dataset.TableViewData
+@import views.html.requests.historyTable
 @(
         data: IdForm[BSONObjectID, BatchOrderRequest],
         items: Option[TableViewData]
@@ -19,12 +20,22 @@
 )
 
 @elements = {
-@inputText("request", "dataSetId", data.form)
+@inputTextReadonly("request", "dataSetId", data.form)
+
 @select("request", "state", data.form, BatchRequestState.values.map(state=>(state.toString,state.toString)).toSeq, true)
 
+
+@labelValue("request", "Requested items") {
 @if(items.isDefined) {
-    @itemsTable(items.get)
+       @itemsTable(items.get)
+    }
 }
+
+@labelValue("request", "History") {
+    @historyTable(data.form.get.history)
+}
+
+
 }
 
 @layout.edit(

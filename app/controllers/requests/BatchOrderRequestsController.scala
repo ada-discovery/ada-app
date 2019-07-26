@@ -54,7 +54,6 @@ class BatchOrderRequestsController @Inject()(
   with SubjectPresentRestrictedCrudController[BSONObjectID]
   with HasBasicFormCreateView[BatchOrderRequest]
   with HasEditView[BatchOrderRequest, BSONObjectID]
-  with HasShowView[BatchOrderRequest, BSONObjectID]
   with HasListView[BatchOrderRequest]
   with AdaAuthConfig {
    private implicit val idsFormatter = BSONObjectIDStringFormatter
@@ -283,40 +282,6 @@ class BatchOrderRequestsController @Inject()(
     }
   }
 
-  def isUserRequester(
-                        requestId: BSONObjectID
-                      )(
-                        deadboltUser: DeadboltUser,
-                        request: AuthenticatedRequest[Any]
-                      ): Future[Boolean] = {
-    for {
-      existingRequestOption <- repo.get(requestId)
-    } yield {
-      existingRequestOption.get.createdById.get == deadboltUser.id.get
-    }
-  }
-
-  def addItemsToRequest(requestId: BSONObjectID, dataSetId: String, items: Seq[String]) =
-    restrictAdminOrUserCustomAny(isUserRequester(requestId)) {
-    implicit request => {
-
-      for {
-        existingRequest <- repo.get(requestId)
-        user <- currentUser(request)
-        id <- {
-          val batchRequestWithState = user match {
-            case Some(currentUser) =>
-              existingRequest.get.copy(itemIds = items.map(id=> BSONObjectID.parse(id.replace("\"","")).get))
-            case None => throw new AdaException("No logged user found")
-          }
-          repo.update(batchRequestWithState)
-        }
-      } yield {
-        activeRequestsListRedirect.flashing("success" -> "items added successfully ")
-      }
-    }.recover(handleExceptions("request action"))
-  }
-
   def performAction(requestId: BSONObjectID, action: RequestAction.Value, role: Role.Value, description: Option[String]) = restrictAdminOrUserCustomAny(isRequestAllowed(requestId, Some(action), Some(role), false)) {
     implicit request => {
      actionNotificationService.cleanNotifications()
@@ -423,9 +388,7 @@ class BatchOrderRequestsController @Inject()(
     }
   }
 
-  override protected type EditViewData = ViewData
-
-  protected type ViewData = (
+  override protected type EditViewData = (
     IdForm[BSONObjectID, BatchOrderRequest],
       Option[TableViewData]
     )
@@ -435,7 +398,10 @@ class BatchOrderRequestsController @Inject()(
       Seq[FilterCondition]
     )
 
-  override protected type ShowViewData = ViewData
+  override protected type ShowViewData = (
+      BatchOrderRequest,
+      Option[TableViewData]
+    )
 
   protected type UserScopedListViewData = (
     Page[(BatchOrderRequest, String, Call)],
@@ -444,31 +410,30 @@ class BatchOrderRequestsController @Inject()(
 
   override protected def getFormEditViewData(requestId: BSONObjectID, form: Form[BatchOrderRequest]): AuthenticatedRequest[_] => Future[EditViewData] = {
     implicit request => {
-      getRequestWithItems(requestId, form)
+ getRequestWithItems(requestId, form).map(r=>(IdForm(requestId, r._1), r._2) )
     }
   }
 
-  override protected def getFormShowViewData(requestId: BSONObjectID, form: Form[BatchOrderRequest]): AuthenticatedRequest[_] => Future[ViewData]  =
+  override protected def getFormShowViewData(requestId: BSONObjectID, form: Form[BatchOrderRequest]): AuthenticatedRequest[_] => Future[ShowViewData]  =
     {
       implicit request => {
-       getRequestWithItems(requestId, form)
+        getRequestWithItems(requestId, form).map(r=>(r._1.get,r._2))
       }
     }
 
-  def getRequestWithItems(requestId: BSONObjectID, form: Form[BatchOrderRequest])(implicit request: AuthenticatedRequest[_]): Future[(IdForm[BSONObjectID, BatchOrderRequest], Option[TableViewData])] = {
+  def getRequestWithItems(requestId: BSONObjectID, form: Form[BatchOrderRequest])(implicit request: AuthenticatedRequest[_]): Future[ (Form[BatchOrderRequest], Option[TableViewData])] = {
 
       for {
         existingRequest <- repo.get(requestId)
         fieldNames <- fieldNamesProvider.getFieldNames(existingRequest.get.dataSetId)
         items <- itemsProvider.getItemsById(existingRequest.get.itemIds, existingRequest.get.dataSetId, fieldNames.toSeq)
       } yield {
-        (IdForm(requestId, form), items.map(i=>i._1))
+        (form, items.map(i=>i._1))
       }
     }
 
   protected def getUserScopedListViewData(page: Page[(BatchOrderRequest, String)], conditions: Seq[FilterCondition]): AuthenticatedRequest[_] => Future[UserScopedListViewData] = {
     request => {
-
       for {
         currentUser <- currentUser(request)
         userRolesByRequest <- roleService.getRolesMapping(page.items.map(_._1), currentUser)
@@ -525,10 +490,10 @@ class BatchOrderRequestsController @Inject()(
         existingRequest match {
           case None => NotFound(s"$entityName '${formatId(id)}' not found")
           case Some(_) =>
-            val form: IdForm[BSONObjectID, BatchOrderRequest] = IdForm(editViewData.get._1.id, editViewData.get._1.form)
+         //   val form: IdForm[BSONObjectID, BatchOrderRequest] = IdForm(editViewData.get._1.id, editViewData.get._1.form)
 
             render {
-              case Accepts.Html() => Ok(views.html.requests.actions(form, role, items))
+              case Accepts.Html() => Ok(views.html.requests.actions(editViewData.get._1.form.get, role, items))
               case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
             }
         }

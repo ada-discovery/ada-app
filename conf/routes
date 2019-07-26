@@ -20,7 +20,6 @@ GET         /requests/:id/edit                 controllers.requests.BatchOrderRe
 GET         /requests/:id/action               controllers.requests.BatchOrderRequestsController.action(id: BSONObjectID, role: models.Role.Value)
 POST        /requests/:id                      controllers.requests.BatchOrderRequestsController.update(id: BSONObjectID)
 POST        /requests/:id/delete               controllers.requests.BatchOrderRequestsController.delete(id: BSONObjectID)
-POST        /requests/:id/items/add            controllers.requests.BatchOrderRequestsController.addItemsToRequest(id: BSONObjectID, dataSetId: String, items: Seq[String])
 POST        /requests/:id/performAction        controllers.requests.BatchOrderRequestsController.performAction(id: BSONObjectID, action: models.RequestAction.Value, role: models.Role.Value, description: Option[String] ?= None)
 
 
