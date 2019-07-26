@@ -1,14 +1,14 @@
 package runnables.mpower
 
 import javax.inject.Inject
+import org.ada.server.dataaccess.StreamSpec
 import org.ada.server.models.StorageType
-import org.ada.server.models.datatrans.{DataSetLinkSpec, ResultDataSetSpec}
+import org.ada.server.models.datatrans.{LinkTwoDataSetsTransformation, ResultDataSetSpec}
 import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.ada.server.services.DataSetService
+import org.ada.server.services.ServiceTypes.DataSetCentralTransformer
 
-import scala.reflect.runtime.universe.typeOf
-
-class LinkMPowerMergedAndDemographicsDataSets @Inject()(dataSetService: DataSetService) extends InputFutureRunnableExt[LinkMPowerMergedAndDemographicsDataSetsSpec] {
+class LinkMPowerMergedAndDemographicsDataSets @Inject()(centralTransformer: DataSetCentralTransformer) extends InputFutureRunnableExt[LinkMPowerMergedAndDemographicsDataSetsSpec] {
 
   private val walkingFieldNames = Nil // take all
 
@@ -49,11 +49,13 @@ class LinkMPowerMergedAndDemographicsDataSets @Inject()(dataSetService: DataSetS
       "years-smoking"
     )
 
-  private def dataSetLinkSpec(input: LinkMPowerMergedAndDemographicsDataSetsSpec) = DataSetLinkSpec(
+  private def dataSetLinkSpec(
+    input: LinkMPowerMergedAndDemographicsDataSetsSpec
+  ) = LinkTwoDataSetsTransformation(
+    None,
     "mpower_challenge.walking_activity_2",
     "mpower_challenge.demographics_training_2",
-    Seq("healthCode"),
-    Seq("healthCode"),
+    Seq(("healthCode", "healthCode")),
     walkingFieldNames,
     demographicsFieldNames,
     false,
@@ -62,12 +64,13 @@ class LinkMPowerMergedAndDemographicsDataSets @Inject()(dataSetService: DataSetS
       "Merged Activity with Demographics",
       StorageType.Mongo
     ),
-    input.processingBatchSize,
-    input.saveBatchSize
+    input.streamSpec
   )
 
-  override def runAsFuture(input: LinkMPowerMergedAndDemographicsDataSetsSpec) =
-    dataSetService.linkDataSets(dataSetLinkSpec(input))
+  override def runAsFuture(
+    input: LinkMPowerMergedAndDemographicsDataSetsSpec
+  ) =
+    centralTransformer(dataSetLinkSpec(input))
 }
 
-case class LinkMPowerMergedAndDemographicsDataSetsSpec(processingBatchSize: Option[Int], saveBatchSize: Option[Int])
+case class LinkMPowerMergedAndDemographicsDataSetsSpec(streamSpec: StreamSpec)

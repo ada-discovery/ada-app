@@ -1,8 +1,5 @@
 package models
 
-import org.ada.web.controllers.EnumStringBindable
-
-
 object Role extends Enumeration {
   val Requester, Committee, Owner, Administrator = Value
 }

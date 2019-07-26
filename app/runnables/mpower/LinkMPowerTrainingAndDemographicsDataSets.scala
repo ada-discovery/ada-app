@@ -1,12 +1,13 @@
 package runnables.mpower
 
 import javax.inject.Inject
+import org.ada.server.dataaccess.StreamSpec
 import org.ada.server.models.StorageType
-import org.ada.server.models.datatrans.{DataSetLinkSpec, ResultDataSetSpec}
+import org.ada.server.models.datatrans.{LinkTwoDataSetsTransformation, ResultDataSetSpec}
 import org.incal.core.runnables.FutureRunnable
-import org.ada.server.services.DataSetService
+import org.ada.server.services.ServiceTypes.DataSetCentralTransformer
 
-class LinkMPowerTrainingAndDemographicsDataSets @Inject()(dataSetService: DataSetService) extends FutureRunnable {
+class LinkMPowerTrainingAndDemographicsDataSets @Inject()(centralTransformer: DataSetCentralTransformer) extends FutureRunnable {
 
   private val walkingFieldNames =
     Seq(
@@ -65,11 +66,11 @@ class LinkMPowerTrainingAndDemographicsDataSets @Inject()(dataSetService: DataSe
       "years-smoking"
     )
 
-  private val dataSetLinkSpec = DataSetLinkSpec(
+  private val dataSetLinkSpec = LinkTwoDataSetsTransformation(
+    None,
     "mpower_challenge.walking_activity_training",
     "mpower_challenge.demographics_training",
-    Seq("healthCode"),
-    Seq("healthCode"),
+    Seq(("healthCode", "healthCode")),
     walkingFieldNames,
     demographicsFieldNames,
     false,
@@ -78,9 +79,8 @@ class LinkMPowerTrainingAndDemographicsDataSets @Inject()(dataSetService: DataSe
       "Walking Activity Training with Demographics",
       StorageType.Mongo
     ),
-    Some(1),
-    Some(1)
+    StreamSpec()
   )
 
-  override def runAsFuture = dataSetService.linkDataSets(dataSetLinkSpec)
+  override def runAsFuture = centralTransformer(dataSetLinkSpec)
 }

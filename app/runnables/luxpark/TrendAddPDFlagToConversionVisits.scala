@@ -1,5 +1,6 @@
 package runnables.luxpark
 
+import akka.stream.Materializer
 import org.ada.server.dataaccess.StreamSpec
 import javax.inject.Inject
 import org.ada.server.models.{Field, FieldTypeId}
@@ -16,7 +17,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class TrendAddPDFlagToConversionVisits @Inject()(
     dsaf: DataSetAccessorFactory,
-    dss: DataSetService
+    dss: DataSetService)(
+    implicit materializer: Materializer
   ) extends InputFutureRunnableExt[TrendAddPDFlagToConversionVisitsSpec] {
 
   private val dataSetId = "trend.clinical_visit"

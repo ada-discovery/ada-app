@@ -1,14 +1,13 @@
 package runnables.luxpark
 
 import javax.inject.Inject
-
-import scala.concurrent.ExecutionContext.Implicits.global
+import org.ada.server.dataaccess.StreamSpec
 import org.ada.server.models.StorageType
-import org.ada.server.models.datatrans.{DataSetLinkSpec, ResultDataSetSpec}
+import org.ada.server.models.datatrans.{LinkTwoDataSetsTransformation, ResultDataSetSpec}
 import org.incal.core.runnables.FutureRunnable
-import org.ada.server.services.DataSetService
+import org.ada.server.services.ServiceTypes.DataSetCentralTransformer
 
-class LinkHarvardLdopaDataSets @Inject() (dataSetService: DataSetService) extends FutureRunnable {
+class LinkHarvardLdopaDataSets @Inject()(centralTransformer: DataSetCentralTransformer) extends FutureRunnable {
 
   private val walkingFieldNames =
     Seq(
@@ -47,11 +46,16 @@ class LinkHarvardLdopaDataSets @Inject() (dataSetService: DataSetService) extend
       "tremor_RightUpperLimb"
     )
 
-  private val dataSetLinkSpec = DataSetLinkSpec(
+  private val dataSetLinkSpec = LinkTwoDataSetsTransformation(
+    None,
     "harvard_ldopa.walking_data",
     "harvard_ldopa.scores",
-    Seq("patient", "visit", "session", "task"),
-    Seq("patient", "visit", "session", "task"),
+    Seq(
+      ("patient", "patient"),
+      ("visit", "visit"),
+      ("session", "session"),
+      ("task", "task")
+    ),
     walkingFieldNames,
     scoreFieldNames,
     false,
@@ -60,9 +64,8 @@ class LinkHarvardLdopaDataSets @Inject() (dataSetService: DataSetService) extend
       "Walking Data with Score",
       StorageType.Mongo
     ),
-    Some(4),
-    Some(1)
+    StreamSpec(batchSize = Some(4))
   )
 
-  override def runAsFuture = dataSetService.linkDataSets(dataSetLinkSpec)
+  override def runAsFuture = centralTransformer(dataSetLinkSpec)
 }
