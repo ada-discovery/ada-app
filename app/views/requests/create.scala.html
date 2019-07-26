@@ -37,41 +37,44 @@
 	}
 
 @elements = {
-@dataSetTypeahead("request", form)
 
-<input type="hidden" name="state" value="@BatchRequestState.Created" />
+@labelValue("request", "DataSet Id") {
+	<input type="text" id="dataSetId" name="dataSetId" class="form-control"/>
+}
+
+	<input type="hidden" name="state" value="@BatchRequestState.Created" />
 
 @dynamicTableJsImport()
 @typeaheadJsImport()
-	@helper.javascriptRouter("requestJsRoutes")(
+@helper.javascriptRouter("requestJsRoutes")(
 	controllers.requests.routes.javascript.BatchOrderRequestsController.findItems
 )
 
 	<div class="filter-div"> </div>
 	<div class="table-div"> </div>
-	
+
+
 	<script type="text/javascript">
-			$("#dataSetIdTypeahead").parent("div").on( "click", function() {
-				if(!$(this).find("div.tt-menu").hasClass("tt-open") &&  $("#dataSetIdTypeahead").val().length > 0)
-				{
-					$("#dataSetIdTypeahead").blur()
+			$("#dataSetIdTypeahead").parent("div").on("click", function () {
+				if (!$(this).find("div.tt-menu").hasClass("tt-open")) {
 					requestItems()
 				}
 			});
 
-			$('#dataSetIdTypeahead').on("change",function() {
-			//	requestItems()
+			//			$('#dataSetIdTypeahead').on("change type paste", function () {
+			$('#dataSetId').on("change type paste", function () {
+				requestItems()
 			});
 
-			$(".inner-content form").submit(function() {
+			$(".inner-content form").submit(function () {
 				addItemsToRequest()
 			});
 
 			function generateTable(data) {
 
-			// filter
+				// filter
 				var filterElement = $(".filter-div");
-			//	filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
+				//	filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
 
 				var tableDiv = $(".table-div")
 				tableDiv.html(data.table)
@@ -79,29 +82,31 @@
 
 			function requestItems() {
 				var dataSetId = $("#dataSetId").val()
-				requestJsRoutes.controllers.requests.BatchOrderRequestsController.findItems(dataSetId,0,"").ajax({
-      					type: 'GET',
+				console.log("datasetid " + dataSetId)
+				if (dataSetId.length > 0) {
+					requestJsRoutes.controllers.requests.BatchOrderRequestsController.findItems(dataSetId, 0, "").ajax({
+						type: 'GET',
 						success: function (data) {
 							generateTable(data)
 						},
-						error: function (err) {
-							alert("err "+ err)
-						}
+						error: showErrorResponse
 					})
 				}
+			}
 
-				function addItemsToRequest(){
-					var rows = $("tbody tr")
-					rows.each(function(){
-						var selected = $(this).find("td input").prop("checked")
-						var itemId = $(this).find("td span")[0].id;
+			function addItemsToRequest() {
+				var rows = $("tbody tr")
+				rows.each(function () {
+					var selected = $(this).find("td input").prop("checked")
+					var itemId = $(this).find("td span")[0].id;
 
-						if (selected){
-							$(".inner-content form").append('<input type="hidden" name="itemIds[]" value='+ itemId +'>')
-						}
-					})
-				}
+					if (selected) {
+						$(".inner-content form").append('<input type="hidden" name="itemIds[]" value=' + itemId + '>')
+					}
+				})
+			}
 	</script>
+	}
 }
 
 @layout.create(

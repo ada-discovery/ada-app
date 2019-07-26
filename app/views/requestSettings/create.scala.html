@@ -82,15 +82,14 @@
 			})
 
 			$("#dataSetIdTypeahead").parent("div").on( "click", function() {
-			if(!$(this).find("div.tt-menu").hasClass("tt-open") &&  $("#dataSetIdTypeahead").val().length > 0) {
- 	 					$("#dataSetIdTypeahead").blur()
-						updateTypeahead($('#dataSetIdTypeahead').val())
+			if (!$(this).find("div.tt-menu").hasClass("tt-open")) {
+		//				updateTypeahead()
 				}
 			});
 
 
-			$('#dataSetIdTypeahead').on("change paste type", function(){
-	//			updateTypeahead($(this).val())
+			$('#dataSetIdTypeahead').on("change paste type", function() {
+					updateTypeahead()
 			})
 
 			function clearTable(){
@@ -101,17 +100,21 @@
 				$('#displayFieldNameDiv').find('.tt-menu').remove()
 			}
 
-		    function updateTypeahead(dataSetId) {
+		    function updateTypeahead() {
 				clearTypeahead()
 				clearTable()
-				var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
-				populateFieldTypeahedFromUrl(
-						$('#displayFieldNameDiv').find('#fieldTypeahead'),
-						$('#displayFieldNameDiv').find('#fieldName'),
-						url,
-						@FilterShowFieldStyle.NamesOnly.id
-				)
-		}
+
+				var dataSetId = $("#dataSetIdTypeahead").val()
+				if (dataSetId.length > 0) {
+					var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
+					populateFieldTypeahedFromUrl(
+							$('#displayFieldNameDiv').find('#fieldTypeahead'),
+							$('#displayFieldNameDiv').find('#fieldName'),
+							url,
+							@FilterShowFieldStyle.NamesOnly.id
+					)
+				}
+			}
 
 			function addAllFields() {
 				var dataSetId = $('#dataSetIdTypeahead').val()
@@ -128,7 +131,8 @@
 
 							$('#displayFieldNameDiv').dynamicTable('addTableRow', values)
 						});
-					}
+					},
+					error: showErrorResponse
 				});
 			}
 	</script>
