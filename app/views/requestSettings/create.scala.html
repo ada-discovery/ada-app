@@ -82,8 +82,8 @@
 			})
 
 			$("#dataSetIdTypeahead").parent("div").on( "click", function() {
-			if (!$(this).find("div.tt-menu").hasClass("tt-open")) {
-						$("#dataSetIdTypeahead").blur()
+			if(!$(this).find("div.tt-menu").hasClass("tt-open") &&  $("#dataSetIdTypeahead").val().length > 0) {
+ 	 					$("#dataSetIdTypeahead").blur()
 						updateTypeahead($('#dataSetIdTypeahead').val())
 				}
 			});
