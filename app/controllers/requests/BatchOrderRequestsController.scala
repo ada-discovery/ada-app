@@ -490,8 +490,6 @@ class BatchOrderRequestsController @Inject()(
         existingRequest match {
           case None => NotFound(s"$entityName '${formatId(id)}' not found")
           case Some(_) =>
-         //   val form: IdForm[BSONObjectID, BatchOrderRequest] = IdForm(editViewData.get._1.id, editViewData.get._1.form)
-
             render {
               case Accepts.Html() => Ok(views.html.requests.actions(editViewData.get._1.form.get, role, items))
               case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")

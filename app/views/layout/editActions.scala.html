@@ -19,15 +19,14 @@
     displayName: String,
     messagePrefix: String,
     validActions: Traversable[Action],
-    role: Option[Role.Value],
-    requestId: BSONObjectID,
-    trackingHistory: Seq[ActionInfo],
-    elements: Html,
-    cancelCall: Call,
-    sideBar: Option[Html] = None,
-    topContentBar: Option[Html] = None,
-    bottomResources: Option[Html] = None,
-    formArgs: Seq[(Symbol, String)] = Nil
+        role: Option[Role.Value],
+        requestId: BSONObjectID,
+        trackingHistory: Seq[ActionInfo],
+        elements: Html,
+        cancelCall: Call,
+        sideBar: Option[Html] = None,
+        topContentBar: Option[Html] = None,
+        bottomResources: Option[Html] = None
 )(
     implicit context: WebContext
 )
