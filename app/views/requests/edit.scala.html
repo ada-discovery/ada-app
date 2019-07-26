@@ -6,24 +6,41 @@
 @import org.incal.play.controllers.WebContext._
 @import org.ada.web.controllers.routes
 @import views.html.elements._
-
+@import org.ada.web.util.typeColumns
+@import views.html.table.{displayTable, dynamicTable}
 @import reactivemongo.bson.BSONObjectID
-
+@import views.html.requests.itemsTable
+@import org.ada.web.controllers.dataset.TableViewData
+@import views.html.requests.historyTable
 @(
-        data: IdForm[BSONObjectID, BatchOrderRequest]
+        data: IdForm[BSONObjectID, BatchOrderRequest],
+        items: Option[TableViewData]
 )(
         implicit context: WebContext
 )
 
 @elements = {
-@inputText("request", "dataSetId", data.form)
-@inputText("request", "itemIds", data.form)
+@inputTextReadonly("request", "dataSetId", data.form)
+
 @select("request", "state", data.form, BatchRequestState.values.map(state=>(state.toString,state.toString)).toSeq, true)
+
+
+@labelValue("request", "Requested items") {
+@if(items.isDefined) {
+       @itemsTable(items.get)
+    }
+}
+
+@labelValue("request", "History") {
+    @historyTable(data.form.get.history)
+}
+
+
 }
 
 @layout.edit(
-    "Translation",
-    "translation",
+    "Request",
+    "request",
     errors = data.form.errors,
     elements = elements,
     updateCall = controllers.requests.routes.BatchOrderRequestsController.update(data.id),

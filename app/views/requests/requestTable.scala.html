@@ -1,0 +1,35 @@
+@import org.ada.server.models.{Field, Filter}
+@import org.incal.play.Page
+@import views.html.table.paginatedTable
+@import org.incal.core.FilterCondition
+@import org.ada.web.util.typeColumns
+
+@(
+        page: Page[(BatchOrderRequest, String, Call )],
+        conditions: Seq[FilterCondition],
+        refreshCall: (Int, String) => Call,
+        isAjaxRefresh : Boolean = false
+)(
+        implicit request: Request[_]
+)
+
+<div class="table-div">
+
+@{
+    paginatedTable(
+        page,
+        refreshCall,
+        typeColumns[(BatchOrderRequest, String, Call)](
+            (Some("createdby"), "Requester name", _._2),
+            (Some("timeCreated"), "Date", _._1.timeCreated),
+            (Some("state"), "Status", _._1.state)
+        ),
+        Some({ item: Any => item.asInstanceOf[(BatchOrderRequest, String, Call)]._3 }),
+        isAjaxRefresh = isAjaxRefresh
+    )
+}
+</div>
+
+<script type="text/javascript">
+        activateRowClickable();
+</script>

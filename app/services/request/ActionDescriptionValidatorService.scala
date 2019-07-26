@@ -4,8 +4,8 @@ class ActionDescriptionValidatorService {
 
   val LENGTH_MIN = 2
 
-   def validate(text: String) = {
-   text.length > LENGTH_MIN
+   def validate(text: Option[String]) = {
+   text.isDefined && text.get.length > LENGTH_MIN
   }
 }
 

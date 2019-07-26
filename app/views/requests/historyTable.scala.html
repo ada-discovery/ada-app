@@ -1,0 +1,22 @@
+@import play.api.libs.json.{JsObject, JsNull}
+@import views.html.table.{header, displayTable}
+@import views.html.table.paginatedTable
+@import org.ada.web.util.typeColumns
+@import org.ada.web.controllers.dataset.TableViewData
+@(
+        items: Seq[ActionInfo]
+)
+
+@{
+    displayTable(
+        items,
+        typeColumns[ActionInfo](
+            (None, "date", _.timestamp.format("yyyy-MM-dd HH:mm:ss")),
+            (None, "by user", _.performedByUser),
+            (None, "from state", _.fromState),
+            (None, "to state", _.toState),
+            (None, "comment", _.comment.getOrElse(""))
+        )
+    )
+
+}

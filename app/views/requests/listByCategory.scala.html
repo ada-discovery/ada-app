@@ -1,0 +1,66 @@
+@import org.ada.web.util.typeColumns
+@import org.incal.core.FilterCondition
+@import org.incal.play.Page
+@import org.incal.play.controllers.WebContext
+@import org.incal.play.controllers.WebContext._
+@import views.html.layout
+@import views.html.table.paginatedTable
+@import org.ada.server.models.{User,Field,FilterShowFieldStyle,Filter}
+@import views.html.filter.{filter, filterWithJs}
+@import views.html.requests.requestTable
+
+@(
+        page: Page[(BatchOrderRequest, String, Call)],
+        pageType: PageType.Value,
+        conditions: Seq[FilterCondition]
+)(
+        implicit context: WebContext
+)
+
+    @actions = {
+        <div class="row">
+            <div class="col-md-8">
+            @filterWithJs(
+                Filter(conditions),
+                controllers.requests.routes.BatchOrderRequestsController.findActive(),
+                Left(Seq(
+                    Field("state", Some("Status")),
+                    Field("dataSetId", Some("Dataset Id")),
+                    Field("timeCreated", Some("Time Created"))
+                )),
+                None,
+                Some(FilterShowFieldStyle.LabelsOnly)
+            )
+            </div>
+            }
+
+    @table = @{
+       pageType match {
+            case PageType.ToApprove => {
+                val refreshCall = (p: Int, o: String) => controllers.requests.routes.BatchOrderRequestsController.findActive(None, Some(p), o, conditions)
+                requestTable(page,conditions,refreshCall,  true)
+            }
+            case PageType.Created =>
+            {
+                val refreshCall = (p: Int, o: String) => controllers.requests.routes.BatchOrderRequestsController.findActive(Some(p), None, o, conditions)
+                requestTable(page,conditions,refreshCall, true)
+            }
+        }
+    }
+
+    <ul id="requestsSubMenu" class="nav nav-tabs">
+        <li { class="active" }>
+            <a href="@controllers.requests.routes.BatchOrderRequestsController.findActive(Some(0), None, "", conditions)">My own Requests</a>
+        </li>
+        <li { class="active" }>
+            <a href="@controllers.requests.routes.BatchOrderRequestsController.findActive(None, Some(0), "", conditions)">Requests to be responsible for</a>
+        </li>
+    </ul>
+
+    @layout.list(
+        "request",
+        None,
+        page.total,
+        Some(actions),
+        Some(table)
+    )

@@ -1,0 +1,145 @@
+@import views.html.layout
+@import views.html.elements.editableTextElements
+@import org.ada.server.models.Translation
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
+@import org.ada.web.util.typeColumns
+@import org.ada.web.controllers.routes
+@import controllers.requests.routes
+@import views.html.elements._
+@import org.incal.play.Page
+@import org.ada.web.controllers.dataset.routes
+@import org.ada.web.security.AdaAuthConfig
+@import views.html.table.{dynamicStringTable, dynamicTableJsImport, dynamicTable}
+@import views.html.helper.input
+@import views.html.table.dynamicStringTable
+@import views.html.table.paginatedTable
+@import views.html.dataset.{dynamicFieldTable, dataSetExportDropdown}
+@import views.html.table.dynamicTableJsImport
+@import reactivemongo.bson.BSONObjectID
+@import org.incal.play.controllers.{GenericJsRouter, GenericRouter}
+@import org.ada.web.controllers.dataset.datatrans.javascript.ReverseDataSetTransformationController
+@import org.ada.web.controllers.dataset.datatrans.DataSetTransformationController
+@import views.html.table.dynamicStringTable
+@import views.html.dataset.{dynamicFieldTable}
+@import views.html.dataSetTypeahead
+@import  org.ada.server.models.FilterShowFieldStyle
+@import org.ada.server.models.User
+@(
+	form: Form[BatchRequestSetting]
+)(
+    implicit context: WebContext
+)
+
+@extraFieldButtons = {
+	<a id="addAllFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllFields();" data-toggle="tooltip" title="Add All Fields">
+		<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All
+	</a>
+}
+
+@elements = {
+
+@dataSetTypeahead("requestSetting", form)
+
+@dynamicTableJsImport()
+@typeaheadJsImport()
+
+
+@labelValue("userNames", attributeLabel("requestSetting", "Committee users Ids")){
+	@dynamicFieldTable(
+		"userId",
+		Nil,
+		true,
+		5,
+		None,
+		None,
+		showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
+	)
+}
+
+@labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")){
+	@dynamicFieldTable(
+		"displayFieldName",
+		Nil,
+		true,
+		5,
+		Some(extraFieldButtons),
+		None,
+		showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
+	)
+}
+
+@helper.javascriptRouter("dataSetJsRoutes")(
+	org.ada.web.controllers.dataset.routes.javascript.DataSetDispatcher.getFields
+)
+
+	<script type="text/javascript">
+			$(function () {
+				populateIdNameTypeahedFromUrl(
+						$('#userIdDiv').find('#fieldTypeahead'),
+						$('#userIdDiv').find('#fieldName'),
+						'@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)', true)
+			})
+
+			$("#dataSetIdTypeahead").parent("div").on( "click", function() {
+			if (!$(this).find("div.tt-menu").hasClass("tt-open")) {
+						$("#dataSetIdTypeahead").blur()
+						updateTypeahead($('#dataSetIdTypeahead').val())
+				}
+			});
+
+
+			$('#dataSetIdTypeahead').on("change paste type", function(){
+	//			updateTypeahead($(this).val())
+			})
+
+			function clearTable(){
+				$('#displayFieldNameDiv').find('table tbody tr').remove()
+			}
+
+			function clearTypeahead(){
+				$('#displayFieldNameDiv').find('.tt-menu').remove()
+			}
+
+		    function updateTypeahead(dataSetId) {
+				clearTypeahead()
+				clearTable()
+				var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
+				populateFieldTypeahedFromUrl(
+						$('#displayFieldNameDiv').find('#fieldTypeahead'),
+						$('#displayFieldNameDiv').find('#fieldName'),
+						url,
+						@FilterShowFieldStyle.NamesOnly.id
+				)
+		}
+
+			function addAllFields() {
+				var dataSetId = $('#dataSetIdTypeahead').val()
+				clearTable()
+				var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
+
+				$.ajax({
+					url: url,
+					success: function (data) {
+						$.each(data, function(index, field) {
+							var values = {};
+							values["fieldName"] = field.name;
+							values["fieldTypeahead"] = field.label ? field.label : field.name;
+
+							$('#displayFieldNameDiv').dynamicTable('addTableRow', values)
+						});
+					}
+				});
+			}
+	</script>
+}
+
+@layout.create(
+    "Request setting",
+	"request setting",
+	form = form,
+	elements = elements,
+	saveCall = controllers.requestSetting.routes.RequestSettingController.save(),
+	listCall = controllers.requestSetting.routes.RequestSettingController.listAll()
+)
+

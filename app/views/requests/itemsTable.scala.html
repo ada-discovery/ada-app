@@ -1,0 +1,34 @@
+@import play.api.libs.json.{JsObject, JsNull}
+@import views.html.table.{header, displayTable}
+@import views.html.table.paginatedTable
+
+@import org.ada.web.controllers.dataset.TableViewData
+@(
+        items: TableViewData
+)
+
+@{
+    val columns: Traversable[(Option[String], String, Any => Html)] =
+        items.tableFields.map(f => {
+            val fieldName = f.name
+            (Some(fieldName), fieldName, (x: Any) => {
+                val item = x.asInstanceOf[JsObject]
+                val itemId = item.value.get("_id").get.as[JsObject].value.get("$oid").get
+                itemField(item.value.get(fieldName).get.toString(), itemId.toString())
+            })
+        })
+
+
+    displayTable(
+        items.page.items,
+        columns
+    )
+
+}
+
+@itemField(value: String, itemId: String) = {
+
+    <span id="@itemId">
+    @Html(value)
+    </span>
+}

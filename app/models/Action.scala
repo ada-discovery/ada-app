@@ -1,7 +1,7 @@
 package models
 
 object Role extends Enumeration {
-  val Requester, Committee, Owner = Value
+  val Requester, Committee, Owner, Administrator = Value
 }
 
 case class Action(

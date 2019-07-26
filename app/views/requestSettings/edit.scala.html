@@ -1,0 +1,48 @@
+@import views.html.layout
+@import views.html.elements.editableTextElements
+
+@import org.ada.server.models.Translation
+@import org.incal.play.controllers.{WebContext, IdForm}
+@import org.incal.play.controllers.WebContext._
+@import org.ada.web.controllers.routes
+@import views.html.elements._
+@import org.ada.web.util.typeColumns
+@import views.html.table.{displayTable, dynamicTable}
+@import reactivemongo.bson.BSONObjectID
+
+@(
+        data: IdForm[BSONObjectID, BatchRequestSetting],
+        committeeIds: Traversable[String]
+)(
+        implicit context: WebContext
+)
+
+@elements = {
+@inputText("requestSetting", "dataSetId", data.form)
+
+@displayTable(
+    committeeIds,
+    typeColumns[String](
+        (Some("commitee users"), "commitee users", u => u )
+    )
+)
+
+@displayTable(
+    data.form.get.displayFieldNames,
+    typeColumns[String](
+        (Some("field"), "field", s => s )
+    )
+)
+}
+
+@layout.edit(
+    "Request",
+    "request",
+    errors = data.form.errors,
+    elements = elements,
+    updateCall = controllers.requestSetting.routes.RequestSettingController.update(data.id),
+    cancelCall = controllers.requestSetting.routes.RequestSettingController.listAll(),
+    deleteCall = Some(controllers.requestSetting.routes.RequestSettingController.delete(data.id)),
+    None,
+    None
+)

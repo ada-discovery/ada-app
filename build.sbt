@@ -32,6 +32,7 @@ routesImport ++= Seq(
   "org.ada.web.controllers.QueryStringBinders._",
   "org.ada.web.controllers.pdchallenge.QueryStringBinders._",
   "controllers.QueryStringBinders._"
+
 )
 
 val playVersion = "2.5.9"
@@ -41,7 +42,8 @@ libraryDependencies ++= Seq(
   "org.adada" %% "ada-web" % "0.8.0" classifier "assets",
   "org.adada" %% "ada-dream-pd-challenge" % "0.0.6",
   "org.in-cal" %% "incal-dl4j" % "0.2.1",   // DL4J
-  "org.scalatest" %% "scalatest" % "3.0.0" % "test"
+  "org.scalatest" %% "scalatest" % "3.0.0" % "test",
+  "org.apache.pdfbox" % "pdfbox" % "2.0.1"
 ).map(_.exclude("org.slf4j", "slf4j-log4j12"))
 
 // excludeDependencies += SbtExclusionRule(organization = "com.typesafe.akka") // "com.typesafe.akka" %% "akka-stream"

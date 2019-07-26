@@ -19,32 +19,29 @@
     displayName: String,
     messagePrefix: String,
     validActions: Traversable[Action],
-    userRoleFuture: Future[Role.Value],
-    requestId: BSONObjectID,
-    trackingHistory: Seq[ActionInfo],
-    errors: Seq[FormError],
-    elements: Html,
-    updateCall: Call,
-    cancelCall: Call,
-    sideBar: Option[Html] = None,
-    topContentBar: Option[Html] = None,
-    bottomResources: Option[Html] = None,
-    formArgs: Seq[(Symbol, String)] = Nil
+        role: Option[Role.Value],
+        requestId: BSONObjectID,
+        trackingHistory: Seq[ActionInfo],
+        elements: Html,
+        cancelCall: Call,
+        sideBar: Option[Html] = None,
+        topContentBar: Option[Html] = None,
+        bottomResources: Option[Html] = None
 )(
     implicit context: WebContext
 )
 
 
 
-@main(Messages("edit.title", displayName), sideBar, topContentBar, None, bottomResources, Some(formErrors(messagePrefix, errors))) {
+@main(Messages(displayName), sideBar, topContentBar, None, bottomResources) {
 
     <div class="page-header">
-        <h3>@Messages("edit.title", displayName)</h3>
+        <h3>@Messages(displayName)</h3>
     </div>
 
     <div class="row">
         <div class="col-md-12">
-        @helper.form(action = updateCall) {
+
             <fieldset>
             @elements
             </fieldset>
@@ -69,22 +66,7 @@
 
                 <a href="@cancelCall" class="btn btn-default">Cancel</a>
        </div>
-        }
-        </div>
-    </div>
 
-    <div class="row">
-        <div class="col-md-12">
-            @displayTable(
-                trackingHistory,
-                typeColumns[ActionInfo](
-                    (None, "date", _.timestamp.format("yyyy-MM-dd HH:mm:ss")),
-                    (None, "by user", _.performedByUser),
-                    (None, "from state", _.fromState),
-                    (None, "to state", _.toState),
-                    (None, "comment", _.comment.getOrElse(""))
-                 )
-            )
         </div>
     </div>
 }
@@ -116,18 +98,18 @@
 
 
 @helper.javascriptRouter("requestJsRoutes")(
-    controllers.requests.routes.javascript.BatchOrderRequestsController.requestAction
+    controllers.requests.routes.javascript.BatchOrderRequestsController.performAction
 )
 
 <script type="text/javascript">
         function simpleSubmit(action) {
-         var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', action, '')
+         var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.performAction('@requestId.stringify', action, '@role')
             submit('post', requestAction.url)
         }
 
         function submitWithDescription(action) {
             var reasonDescription = $('#addDescriptionModal #decision-reason').val()
-            var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.requestAction('@requestId.stringify', action, reasonDescription)
+            var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.performAction('@requestId.stringify', action, '@role', reasonDescription)
             submit('post', requestAction.url)
         }
 </script>
