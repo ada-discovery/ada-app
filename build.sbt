@@ -5,7 +5,7 @@ organization := "org.adada"
 
 name := "ada-web-ncer"
 
-version := "0.8.0"
+version := "0.8.1.RC.1"
 
 scalaVersion := "2.11.12"
 
