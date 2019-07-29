@@ -22,9 +22,10 @@
 @import org.ada.web.controllers.dataset.datatrans.DataSetTransformationController
 @import views.html.table.dynamicStringTable
 @import views.html.dataset.{dynamicFieldTable}
-@import views.html.dataSetTypeahead
 @import  org.ada.server.models.FilterShowFieldStyle
 @import org.ada.server.models.User
+@import views.html.dataSetTypeahead
+
 @(
 	form: Form[BatchRequestSetting]
 )(
@@ -81,16 +82,9 @@
 						'@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)', true)
 			})
 
-			$("#dataSetIdTypeahead").parent("div").on( "click", function() {
-			if (!$(this).find("div.tt-menu").hasClass("tt-open")) {
-		//				updateTypeahead()
-				}
+			$('#dataSetIdTypeahead').on('typeahead:selected', function(e, data) {
+				updateTypeahead();
 			});
-
-
-			$('#dataSetIdTypeahead').on("change paste type", function() {
-					updateTypeahead()
-			})
 
 			function clearTable(){
 				$('#displayFieldNameDiv').find('table tbody tr').remove()

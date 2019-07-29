@@ -26,16 +26,18 @@
 
 
 @labelValue("request", "Requested items") {
-@if(items.isDefined) {
-       @itemsTable(items.get)
+    @if(items.isDefined) {
+        @itemsTable(items.get)
+    } else {
+        <div class="row">
+            No item included
+        </div>
     }
 }
 
 @labelValue("request", "History") {
     @historyTable(data.form.get.history)
 }
-
-
 }
 
 @layout.edit(
