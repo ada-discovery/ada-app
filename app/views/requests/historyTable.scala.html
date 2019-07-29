@@ -3,6 +3,8 @@
 @import views.html.table.paginatedTable
 @import org.ada.web.util.typeColumns
 @import org.ada.web.controllers.dataset.TableViewData
+@import org.ada.web.util.toHumanReadableCamel
+
 @(
         items: Seq[ActionInfo]
 )
@@ -13,8 +15,8 @@
         typeColumns[ActionInfo](
             (None, "date", _.timestamp.format("yyyy-MM-dd HH:mm:ss")),
             (None, "by user", _.performedByUser),
-            (None, "from state", _.fromState),
-            (None, "to state", _.toState),
+            (None, "from state", (a: ActionInfo) => toHumanReadableCamel(a.fromState.toString())),
+            (None, "to state", (a: ActionInfo) => toHumanReadableCamel(a.toState.toString())),
             (None, "comment", _.comment.getOrElse(""))
         )
     )

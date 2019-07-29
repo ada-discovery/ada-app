@@ -1,6 +1,4 @@
-
 @import views.html.elements.editableTextElements
-
 @import org.ada.server.models.Translation
 @import org.incal.play.controllers.{WebContext, IdForm}
 @import org.incal.play.controllers.WebContext._
@@ -18,6 +16,8 @@
 @import org.ada.web.controllers.dataset.TableViewData
 @import org.ada.server.models.{Field, FieldTypeId, Filter}
 @import views.html.requests.historyTable
+@import org.ada.web.util.toHumanReadableCamel
+
 @(
         data: BatchOrderRequest,
         role: Role.Value,
@@ -109,7 +109,7 @@
 @addConfirmModalBody(toState: BatchRequestState.Value) = {
     <div class="row">
         <div class="col-md-12">
-           You are about to change the status of this request to <i>@toState</i>, Please confirm.
+           You are about to change the status of this request to <i>@toHumanReadableCamel(toState.toString())</i>, Please confirm.
         </div>
     </div>
 }

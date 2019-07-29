@@ -1,5 +1,6 @@
 package services.request
 
+import org.ada.web.util.toHumanReadableCamel
 import models.{NotificationInfo, NotificationType}
 
 class MessageBuilder {
@@ -13,8 +14,8 @@ class MessageBuilder {
 
   def buildSubject(notification: NotificationInfo) = {
     notification.notificationType match {
-      case NotificationType.Solicitation => "action needed on request in state " + notification.toState
-      case NotificationType.Advice => "status of request updated to state " + notification.toState
+      case NotificationType.Solicitation => "action needed on request in state " +  toHumanReadableCamel(notification.toState.toString())
+      case NotificationType.Advice => "status of request updated to state " + toHumanReadableCamel(notification.toState.toString())
     }
   }
 
