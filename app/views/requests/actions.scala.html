@@ -26,31 +26,113 @@
         implicit context: WebContext
 )
 
+
+
+
 @elements = {
-@labelValue("request", "DataSet Id") {
-    <input type="text" class="form-control" value="@data.dataSetId" readonly="readonly"/>
-}
-
-@labelValue("request", "Requested items") {
-    @if(items.isDefined) {
-        @itemsTable(items.get._1)
+    @labelValue("request", "DataSet Id") {
+        <input type="text" class="form-control" value="@data.dataSetId" readonly="readonly"/>
     }
+
+
+    @labelValue("request", "Requested items") {
+        @if(items.isDefined) {
+            @itemsTable(items.get._1)
+        } else {
+        <div class="row">
+        No item included
+        </div>
+    }
+    }
+
+    @labelValue("request", "History") {
+        @historyTable(data.history)
+    }
+
+
+    <div class="actions pull-right">
+        @validActions.filter(a => a.commentNeeded /*&& a.allowed == userRole*/).map { action =>
+            <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addDescriptionModal" title="Add decision descr">
+            @action.action
+            </a>
+
+            @modal("addDescriptionModal", "Add a description of the decision", addDescriptionModalBody, None, Some(addDescriptionModalButtons(action.action)))
+        }
+
+
+          @validActions.filter(a => a.commentNeeded == false /*&& a.allowed == userRole*/).map { action =>
+            <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addConfirmModal" title="Add decision descr">
+            @action.action
+            </a>
+
+            @modal("addConfirmModal", "Confirm the decision", addConfirmModalBody(action.toState), None, Some(addConfirmModalButtons(action.action)))
+        }
+    </div>
 }
 
-@labelValue("request", "History") {
-    @historyTable(data.history)
-}
+
+@validActions = @{
+    ActionGraph.apply.get(data.state).orElse(Some(Traversable[Action]())).get
 }
 
-@layout.editActions(
-    "Update request status as " + role,
-    "request",
-    ActionGraph.apply.get(data.state).orElse(Some(Traversable[Action]())).get,
-    Some(role),
-    data._id.get,
-    data.history,
-    elements = elements,
-    cancelCall = controllers.requests.routes.BatchOrderRequestsController.findActive(),
-    None,
-    None
+
+
+@extraBottomResources={
+
+@helper.javascriptRouter("requestJsRoutes")(
+    controllers.requests.routes.javascript.BatchOrderRequestsController.performAction
 )
+
+    <script type="text/javascript">
+            function simpleSubmit(action) {
+                var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.performAction('@data._id.get.stringify', action, '@role')
+                submit('post', requestAction.url)
+            }
+
+            function submitWithDescription(action) {
+                var reasonDescription = $('#addDescriptionModal #decision-reason').val()
+                var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.performAction('@data._id.get.stringify', action, '@role', reasonDescription)
+                submit('post', requestAction.url)
+            }
+    </script>
+}
+
+
+@addDescriptionModalBody = {
+    <div class="row">
+    @labelValue("content", "Content") {
+        <textarea id="decision-reason" name="content" rows="15" cols="65" resize="none"></textarea>
+    }
+    </div>
+}
+
+@addConfirmModalBody(toState: BatchRequestState.Value) = {
+    <div class="row">
+        <div class="col-md-12">
+           You are about to change the status of this request to <i> @toState </i>, Please confirm.
+        </div>
+    </div>
+}
+
+
+@addDescriptionModalButtons(action: RequestAction.Value) = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" class="btn btn-primary" onclick="submitWithDescription('@action')" data-dismiss="modal">OK</button>
+}
+
+@addConfirmModalButtons(action: RequestAction.Value) = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" class="btn btn-primary" onclick="simpleSubmit('@action')" data-dismiss="modal">OK</button>
+}
+
+
+
+@layout.show(
+    "Request status",
+    elements = elements,
+    Some(controllers.requests.routes.BatchOrderRequestsController.findActive()),
+    None,
+    None,
+    Some(extraBottomResources)
+)
+
