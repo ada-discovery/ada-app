@@ -5,7 +5,7 @@ import java.util.Date
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
 import models.BatchOrderRequest.batchRequestFormat
-import models.{NotificationType, Role, _}
+import models.{NotificationInfo, NotificationType, Role, _}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.DataSetSettingRepo
 import org.ada.server.models.Filter.FilterOrId
@@ -31,6 +31,7 @@ import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, RequestSettingRepo}
 import services.UserProviderService
 import services.request.{ActionGraph, _}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -218,8 +219,26 @@ class BatchOrderRequestsController @Inject()(
         repo.save(batchRequestWithUser)
       }
     } yield {
-      addNotification(buildNotification(Some(batchRequestWithUser.copy(_id = Some(id))), user.get, Role.Requester, ActionGraph.createAction(), date,user.get, user.get, None, None))
-      actionNotificationService.sendNotifications()
+      val createAction = ActionGraph.createAction()
+
+      val notification = NotificationBuilder
+        .withCreationDate(date)
+        .withDataSetId(batchRequest.dataSetId)
+        .withUserRole(Role.Requester)
+        .withFromState(createAction.fromState)
+        .withToState(createAction.toState)
+        .withCreatedByUser(user.get.ldapDn)
+        .withTargetUser(user.get.ldapDn)
+        .withTargetUserEmail(user.get.email)
+        .withUpdateDate(date)
+        .withGetRequestUrl(urlProvider.getReadOnlyUrl(id))
+        .withNotificationType(NotificationType.Solicitation)
+        .withUpdatedByUser(user.get.ldapDn)
+        .build()
+
+       actionNotificationService.addNotification(Some(notification))
+       actionNotificationService.sendNotifications()
+
       id
     }
   }
@@ -307,10 +326,34 @@ class BatchOrderRequestsController @Inject()(
               val newState = allowedStateAction.toState
               val actionInfo = buildActionInfo(dateOfUpdate, currentUser.ldapDn, existingRequest.get.state, newState, description)
               val updatedHistory = buildHistory(existingRequest.get.history, actionInfo)
-              usersToNotify.map(userRoleMapping => userRoleMapping._2.foreach(userToNotify =>
+              usersToNotify.map(userRoleMapping => userRoleMapping._2.foreach(userToNotify => {
+
+                val notification = NotificationBuilder
+                  .withCreationDate(existingRequest.get.timeCreated)
+                  .withDataSetId(existingRequest.get.dataSetId)
+                  .withUserRole(userRoleMapping._1)
+                  .withFromState(allowedStateAction.fromState)
+                  .withToState(allowedStateAction.toState)
+                  .withCreatedByUser(user.get.ldapDn)
+                  .withTargetUser(userToNotify.ldapDn)
+                  .withTargetUserEmail(user.get.email)
+                  .withUpdateDate(dateOfUpdate)
+                  .withGetRequestUrl(urlProvider.getReadOnlyUrl(existingRequest.get._id.get))
+                  .withNotificationType(getNotificationType(allowedStateAction, userRoleMapping._1))
+                  .withUpdatedByUser(currentUser.ldapDn)
+                  .withItems(items.map(i => i._1))
+                  .withDescription(description)
+                  .build()
+
+                actionNotificationService.addNotification(Some(notification))
+
+                /*
                 addNotification(
                   buildNotification(existingRequest, userToNotify, userRoleMapping._1, allowedStateAction, dateOfUpdate, usersToNotify.get(Role.Requester).get.toSeq(0), currentUser, description, items.map(i=>i._1))
                 )))
+*/
+              }))
+
               existingRequest.get.copy(state = newState, createdById = existingRequest.get.createdById, history = updatedHistory)
             case None => throw new AdaException("No logged user found")
           }
@@ -370,6 +413,22 @@ class BatchOrderRequestsController @Inject()(
     actionNotificationService.addNotification(notification)
   }
 
+  def getNotificationType(action: models.Action, role: Role.Value)= {
+    action.notified.find(r => r == role) match {
+      case Some(role) => {
+       NotificationType.Advice
+      }
+      case None => {
+        action.solicited == role match {
+          case true => {
+            NotificationType.Solicitation
+          }
+          case _ =>  NotificationType.Advice
+        }
+      }
+    }
+  }
+  /*
   def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: models.Action, dateOfUpdate: Date,createdByUser: User, updatedByUser: User, description: Option[String], itemsOption: Option[TableViewData])(implicit request: RequestHeader) = {
     action.notified.find(r => r == role) match {
       case Some(role) => {
@@ -387,7 +446,7 @@ class BatchOrderRequestsController @Inject()(
       }
     }
   }
-
+*/
   override protected type EditViewData = (
     IdForm[BSONObjectID, BatchOrderRequest],
       Option[TableViewData]

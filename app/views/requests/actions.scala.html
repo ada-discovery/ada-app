@@ -128,11 +128,12 @@
 
 
 @layout.show(
-    "Request status",
+    "Update request status",
     elements = elements,
     Some(controllers.requests.routes.BatchOrderRequestsController.findActive()),
     None,
     None,
-    Some(extraBottomResources)
+    Some(extraBottomResources),
+    isFullDisplayName=true
 )
 
