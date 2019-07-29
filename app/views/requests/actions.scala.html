@@ -51,7 +51,7 @@
 
 
     <div class="actions pull-right">
-        @validActions.filter(a => a.commentNeeded /*&& a.allowed == userRole*/).map { action =>
+        @validActions.filter(a => a.commentNeeded).map { action =>
             <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addDescriptionModal" title="Add decision descr">
             @action.action
             </a>
@@ -60,7 +60,7 @@
         }
 
 
-          @validActions.filter(a => a.commentNeeded == false /*&& a.allowed == userRole*/).map { action =>
+          @validActions.filter(a => a.commentNeeded == false).map { action =>
             <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addConfirmModal" title="Add decision descr">
             @action.action
             </a>
@@ -100,16 +100,16 @@
 
 @addDescriptionModalBody = {
     <div class="row">
-    @labelValue("content", "Content") {
-        <textarea id="decision-reason" name="content" rows="15" cols="65" resize="none"></textarea>
-    }
+        <div class="col-md-12">
+            <textarea id="decision-reason" name="content" rows="15" cols="65" style="resize:none"></textarea>
+        </div>
     </div>
 }
 
 @addConfirmModalBody(toState: BatchRequestState.Value) = {
     <div class="row">
         <div class="col-md-12">
-           You are about to change the status of this request to <i> @toState </i>, Please confirm.
+           You are about to change the status of this request to <i>@toState</i>, Please confirm.
         </div>
     </div>
 }
