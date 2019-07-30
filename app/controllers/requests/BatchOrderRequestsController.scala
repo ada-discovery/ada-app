@@ -13,11 +13,11 @@ import org.ada.server.services.UserManager
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.FilterConditionExtraFormats.coreFilterConditionFormat
 import org.ada.web.controllers.core.AdaCrudControllerImpl
-import org.ada.web.controllers.dataset.{DataSetWebContext, TableViewData}
+import org.ada.web.controllers.dataset.TableViewData
 import org.ada.web.models.security.DeadboltUser
 import org.ada.web.security.AdaAuthConfig
 import org.incal.core.FilterCondition
-import org.incal.core.dataaccess.Criterion
+import org.incal.core.dataaccess.{Criterion, Sort}
 import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters.EnumFormatter
@@ -26,7 +26,7 @@ import org.incal.play.security.SecurityUtil.toAuthenticatedAction
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, Call, _}
+import play.api.mvc.{Action, AnyContent, Call}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, RequestSettingRepo}
 import services.UserProviderService
@@ -132,12 +132,14 @@ class BatchOrderRequestsController @Inject()(
   }
 
   def getPageWithCriteria(pageCreated: Option[Int] = None, pageToApprove: Option[Int] = None, orderBy: String, criteria: Seq[Criterion[Any]], user: Option[User], approverCriterion: Seq[Criterion[Any]]) = {
+   val requesterCreiteria = criteria ++ criterionBuilder.buildRequesterCriterion(user)
+   val approverCriteria = criteria ++ approverCriterion
 
     pageCreated.isDefined match {
-      case true => (pageCreated.get, criteria ++ criterionBuilder.buildRequesterCriterion(user), PageType.Created)
+      case true => (pageCreated.get, requesterCreiteria, PageType.Created, approverCriteria)
       case false => pageToApprove.isDefined match {
-        case true => (pageToApprove.get, criteria ++ approverCriterion, PageType.ToApprove)
-        case false => (0, criteria ++ criterionBuilder.buildRequesterCriterion(user), PageType.Created)
+        case true => (pageToApprove.get, approverCriteria, PageType.ToApprove, requesterCreiteria)
+        case false => (0, criteria ++ requesterCreiteria, PageType.Created, approverCriteria)
       }
     }
   }
@@ -147,13 +149,13 @@ class BatchOrderRequestsController @Inject()(
       user <- currentUser(request)
       approverCriterion <- criterionBuilder.buildApproverCriterion(user)
       criteria <- toCriteria(filter)
-      (page, userCriteria, pageType) = getPageWithCriteria(pageCreated, pageToApprove, orderBy, criteria, user, approverCriterion)
-      (items, count) <- getFutureUserScopedItemsAndCount(Some(page), orderBy, userCriteria)
+      (page, userCriteria, pageType, backgroundPageCriteria) = getPageWithCriteria(pageCreated, pageToApprove, orderBy, criteria, user, approverCriterion)
+      (items, count, backgroundPageCount) <- getFutureUserScopedItemsAndCounts(Some(page), orderBy, userCriteria, backgroundPageCriteria)
       viewData <- getUserScopedListViewData(Page(items, page, page * pageLimit, count, orderBy), filter)(request)
     } yield {
       request.method == "POST" match {
        case false => {
-         Ok((views.html.requests.listByCategory(viewData._1, pageType, filter)))
+         Ok((views.html.requests.listByCategory(viewData._1, pageType, filter, backgroundPageCount)))
        }
        case true => {
          pageToApprove match {
@@ -166,37 +168,42 @@ class BatchOrderRequestsController @Inject()(
   }.recover(handleFindExceptions)
   }
 
-  def getFutureUserScopedItemsAndCount(
+  def getFutureUserScopedItemsAndCounts(
                                         page: Option[Int],
                                         orderBy: String,
                                         criteria: Seq[Criterion[Any]],
+                                        backgroundPageCriteria: Seq[Criterion[Any]],
                                         limit: Option[Int] = Some(pageLimit),
                                         projection: Seq[String] = listViewColumns.getOrElse(Nil)
-                                      ): Future[(Traversable[(BatchOrderRequest, String)], Int)] = {
+                                      ): Future[(Traversable[(BatchOrderRequest, String)], Int, Int)] = {
     val sort = toSort(orderBy)
     val skip = page.zip(limit).headOption.map { case (page, limit) =>
       page * limit
     }
 
     for {
-      (items, count) <- {
-        val itemsFuture = repo.find(criteria, sort, projection, limit, skip)
-        val countFuture = repo.count(criteria)
-
-
-        for {items <- itemsFuture; count <- countFuture} yield
-         (items, count)
-      }
+      (items, count, backgroundPageCount) <- findItemsAndCounts(criteria, sort, projection, limit, skip, backgroundPageCriteria)
       users <- userProvider.getUsersByIds(items.map(_.createdById))
     } yield {
       val itemsWithName = items.map( i => (i, users.get(i.createdById.get).get.ldapDn))
       orderBy match  {
-        case "createdby" => (itemsWithName.toSeq.sortWith(_._2 < _._2), count)
-        case "-createdby" => (itemsWithName.toSeq.sortWith(_._2 > _._2), count)
-        case _ => (itemsWithName, count)
+        case "createdby" => (itemsWithName.toSeq.sortWith(_._2 < _._2), count, backgroundPageCount)
+        case "-createdby" => (itemsWithName.toSeq.sortWith(_._2 > _._2), count, backgroundPageCount)
+        case _ => (itemsWithName, count,  backgroundPageCount)
       }
     }
     }
+
+
+  def findItemsAndCounts(criteria: Seq[Criterion[Any]], sort: Seq[Sort],  projection: Seq[String], limit: Option[Int], skip: Option[Int],backgroundPageCriteria :Seq[Criterion[Any]] )={
+    for{
+     items <- repo.find(criteria, sort, projection, limit, skip)
+      count <- repo.count(criteria)
+      backgroundCount <- repo.count(backgroundPageCriteria)
+    } yield{
+      (items, count, backgroundCount)
+    }
+  }
 
   override def saveCall(
                          batchRequest: BatchOrderRequest)(
