@@ -149,13 +149,13 @@ class BatchOrderRequestsController @Inject()(
       user <- currentUser(request)
       approverCriterion <- criterionBuilder.buildApproverCriterion(user)
       criteria <- toCriteria(filter)
-      (page, userCriteria, pageType, backgroundPageCriteria) = getPageWithCriteria(pageCreated, pageToApprove, orderBy, criteria, user, approverCriterion)
-      (items, count, backgroundPageCount) <- getFutureUserScopedItemsAndCounts(Some(page), orderBy, userCriteria, backgroundPageCriteria)
+      (page, userCriteria, pageType, backgroundListCriteria) = getPageWithCriteria(pageCreated, pageToApprove, orderBy, criteria, user, approverCriterion)
+      (items, count, backgroundListCount) <- getFutureUserScopedItemsAndCounts(Some(page), orderBy, userCriteria, backgroundListCriteria)
       viewData <- getUserScopedListViewData(Page(items, page, page * pageLimit, count, orderBy), filter)(request)
     } yield {
       request.method == "POST" match {
        case false => {
-         Ok((views.html.requests.listByCategory(viewData._1, pageType, filter, backgroundPageCount)))
+         Ok((views.html.requests.listByCategory(viewData._1, pageType, filter, backgroundListCount)))
        }
        case true => {
          pageToApprove match {
@@ -281,7 +281,14 @@ class BatchOrderRequestsController @Inject()(
       allowedRoles = determineValidRoles(action, assumedRole, readOnly, existingRequestOption.get)
       userIdsMapping <- userIdByRoleProvider.getIdByRole(existingRequestOption.get, None)
     } yield {
-      actionPermissionService.checkUserHasRoles(Some(deadboltUser.user), assumedRole, allowedRoles, userIdsMapping)
+      val isIncluded =  userIdsMapping.values.flatMap(ids => ids.toSeq).toSeq.contains(deadboltUser.id.get)
+
+      assumedRole match {
+        case Some(role) => {
+          userIdsMapping.get(role).get.toSeq.contains(deadboltUser.id.get)
+        }
+        case None => isIncluded
+      }
     }
   }
 
@@ -308,6 +315,13 @@ class BatchOrderRequestsController @Inject()(
     }
   }
 
+  def checkAssumedRoleCanDoAction(assumedRole: Role.Value, allowedRole: Role.Value): Unit ={
+    assumedRole == allowedRole match {
+      case true =>
+      case false => throw new AdaException("Action not allowed")
+    }
+  }
+
   def performAction(requestId: BSONObjectID, action: RequestAction.Value, role: Role.Value, description: Option[String]) = restrictAdminOrUserCustomAny(isRequestAllowed(requestId, Some(action), Some(role), false)) {
     implicit request => {
      actionNotificationService.cleanNotifications()
@@ -319,6 +333,7 @@ class BatchOrderRequestsController @Inject()(
         allowedStateAction = {
           getNextState(existingRequest.get.state, action)
         }
+       userHasAllowedRole =  checkAssumedRoleCanDoAction(role, allowedStateAction.allowed)
         descriptionExists = {
           checkDescriptionExists(allowedStateAction, description)
         }
@@ -531,6 +546,7 @@ class BatchOrderRequestsController @Inject()(
     implicit request => {
       for {
         existingRequest <- repo.get(id)
+        validActions = ActionGraph.apply.get(existingRequest.get.state).getOrElse(Traversable[models.Action]()).filter(_.allowed == role)
         editViewData <- existingRequest.fold(
           throw new AdaException("request with id '" + id.stringify + "' not found")
         ) { entity =>
@@ -539,14 +555,29 @@ class BatchOrderRequestsController @Inject()(
         fieldNames <- fieldNamesProvider.getFieldNames(existingRequest.get.dataSetId)
         items <- itemsProvider.getItemsById(existingRequest.get.itemIds, existingRequest.get.dataSetId,fieldNames.toSeq)
       } yield
+      {
         existingRequest match {
           case None => NotFound(s"$entityName '${formatId(id)}' not found")
           case Some(_) =>
-            render {
-              case Accepts.Html() => Ok(views.html.requests.actions(editViewData.get._1.form.get, role, items))
-              case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
-            }
+
+            validActions.size>0 match {
+                  case true => {
+                    render {
+                      case Accepts.Html() => Ok(views.html.requests.actions(editViewData.get._1.form.get, validActions, role, items))
+                      case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
+                    }
+                  }
+                    case false =>
+                    {
+                      render {
+                        case Accepts.Html() =>
+                          Redirect(routes.BatchOrderRequestsController.get(id)).flashing("error" -> "No action can be performed at the moment.")
+                        case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
+                      }
+                    }
+                  }
         }
+      }
     }.recover(handleEditExceptions(id))
   }
 

@@ -20,6 +20,7 @@
 
 @(
         data: BatchOrderRequest,
+        validActions: Traversable[Action],
         role: Role.Value,
         items: Option[(TableViewData, Filter)]
 )(
@@ -69,13 +70,6 @@
         }
     </div>
 }
-
-
-@validActions = @{
-    ActionGraph.apply.get(data.state).orElse(Some(Traversable[Action]())).get
-}
-
-
 
 @extraBottomResources={
 

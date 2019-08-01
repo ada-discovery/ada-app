@@ -56,7 +56,7 @@
             <li @if(pageType == PageType.Created) {
                 class="active" }>
                 <a href="@controllers.requests.routes.BatchOrderRequestsController.findActive(Some(0), None, "", conditions)">
-                    My own Requests</a>
+                    My own Requests@if(pageType == PageType.ToApprove) {(@countBackground)}</a>
             </li>
         }
 
@@ -64,7 +64,7 @@
             <li @if(pageType == PageType.ToApprove) {
                 class="active" }>
                 <a href="@controllers.requests.routes.BatchOrderRequestsController.findActive(None, Some(0), "", conditions)">
-                    Requests to be responsible for</a>
+                    Requests to be responsible for@if(pageType == PageType.Created) {(@countBackground)}</a>
             </li>
         }
     </ul>
