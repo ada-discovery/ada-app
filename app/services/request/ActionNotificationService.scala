@@ -5,17 +5,17 @@ import java.io.File
 import javax.inject.Inject
 import models.{NotificationInfo, NotificationType, Role}
 import org.apache.commons.mail.EmailException
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import play.api.libs.mailer.{AttachmentFile, Email, MailerClient}
 
 import scala.collection.mutable.ListBuffer
 
-class ActionNotificationService @Inject()(mailerClient: MailerClient, pdfBuilder: PdfBuilder, messageBuilder: MessageBuilder) {
+class ActionNotificationService @Inject()(configuration: Configuration, mailerClient: MailerClient, pdfBuilder: PdfBuilder, messageBuilder: MessageBuilder) {
   protected val logger = Logger
 
   var notifications = ListBuffer[Option[NotificationInfo]]()
   var tempFiles = ListBuffer[File]()
-  val fromEmail="emanuele.raffero@uni.lu"
+  val fromEmail= configuration.getString("notification-admin-email").getOrElse("no-reply@uni.lu")
 
  def addNotification(notification: Option[NotificationInfo]) = {
    notifications+=notification

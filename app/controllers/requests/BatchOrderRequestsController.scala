@@ -13,11 +13,11 @@ import org.ada.server.services.UserManager
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.FilterConditionExtraFormats.coreFilterConditionFormat
 import org.ada.web.controllers.core.AdaCrudControllerImpl
-import org.ada.web.controllers.dataset.{DataSetWebContext, TableViewData}
+import org.ada.web.controllers.dataset.TableViewData
 import org.ada.web.models.security.DeadboltUser
 import org.ada.web.security.AdaAuthConfig
 import org.incal.core.FilterCondition
-import org.incal.core.dataaccess.Criterion
+import org.incal.core.dataaccess.{Criterion, Sort}
 import org.incal.play.Page
 import org.incal.play.controllers._
 import org.incal.play.formatters.EnumFormatter
@@ -26,7 +26,7 @@ import org.incal.play.security.SecurityUtil.toAuthenticatedAction
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, Call, _}
+import play.api.mvc.{Action, AnyContent, Call}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, RequestSettingRepo}
 import services.UserProviderService
@@ -132,12 +132,14 @@ class BatchOrderRequestsController @Inject()(
   }
 
   def getPageWithCriteria(pageCreated: Option[Int] = None, pageToApprove: Option[Int] = None, orderBy: String, criteria: Seq[Criterion[Any]], user: Option[User], approverCriterion: Seq[Criterion[Any]]) = {
+   val requesterCreiteria = criteria ++ criterionBuilder.buildRequesterCriterion(user)
+   val approverCriteria = criteria ++ approverCriterion
 
     pageCreated.isDefined match {
-      case true => (pageCreated.get, criteria ++ criterionBuilder.buildRequesterCriterion(user), PageType.Created)
+      case true => (pageCreated.get, requesterCreiteria, PageType.Created, approverCriteria)
       case false => pageToApprove.isDefined match {
-        case true => (pageToApprove.get, criteria ++ approverCriterion, PageType.ToApprove)
-        case false => (0, criteria ++ criterionBuilder.buildRequesterCriterion(user), PageType.Created)
+        case true => (pageToApprove.get, approverCriteria, PageType.ToApprove, requesterCreiteria)
+        case false => (0, criteria ++ requesterCreiteria, PageType.Created, approverCriteria)
       }
     }
   }
@@ -147,13 +149,13 @@ class BatchOrderRequestsController @Inject()(
       user <- currentUser(request)
       approverCriterion <- criterionBuilder.buildApproverCriterion(user)
       criteria <- toCriteria(filter)
-      (page, userCriteria, pageType) = getPageWithCriteria(pageCreated, pageToApprove, orderBy, criteria, user, approverCriterion)
-      (items, count) <- getFutureUserScopedItemsAndCount(Some(page), orderBy, userCriteria)
+      (page, userCriteria, pageType, backgroundListCriteria) = getPageWithCriteria(pageCreated, pageToApprove, orderBy, criteria, user, approverCriterion)
+      (items, count, backgroundListCount) <- getFutureUserScopedItemsAndCounts(Some(page), orderBy, userCriteria, backgroundListCriteria)
       viewData <- getUserScopedListViewData(Page(items, page, page * pageLimit, count, orderBy), filter)(request)
     } yield {
       request.method == "POST" match {
        case false => {
-         Ok((views.html.requests.listByCategory(viewData._1, pageType, filter)))
+         Ok((views.html.requests.listByCategory(viewData._1, pageType, filter, backgroundListCount)))
        }
        case true => {
          pageToApprove match {
@@ -166,37 +168,42 @@ class BatchOrderRequestsController @Inject()(
   }.recover(handleFindExceptions)
   }
 
-  def getFutureUserScopedItemsAndCount(
+  def getFutureUserScopedItemsAndCounts(
                                         page: Option[Int],
                                         orderBy: String,
                                         criteria: Seq[Criterion[Any]],
+                                        backgroundPageCriteria: Seq[Criterion[Any]],
                                         limit: Option[Int] = Some(pageLimit),
                                         projection: Seq[String] = listViewColumns.getOrElse(Nil)
-                                      ): Future[(Traversable[(BatchOrderRequest, String)], Int)] = {
+                                      ): Future[(Traversable[(BatchOrderRequest, String)], Int, Int)] = {
     val sort = toSort(orderBy)
     val skip = page.zip(limit).headOption.map { case (page, limit) =>
       page * limit
     }
 
     for {
-      (items, count) <- {
-        val itemsFuture = repo.find(criteria, sort, projection, limit, skip)
-        val countFuture = repo.count(criteria)
-
-
-        for {items <- itemsFuture; count <- countFuture} yield
-         (items, count)
-      }
+      (items, count, backgroundPageCount) <- findItemsAndCounts(criteria, sort, projection, limit, skip, backgroundPageCriteria)
       users <- userProvider.getUsersByIds(items.map(_.createdById))
     } yield {
       val itemsWithName = items.map( i => (i, users.get(i.createdById.get).get.ldapDn))
       orderBy match  {
-        case "createdby" => (itemsWithName.toSeq.sortWith(_._2 < _._2), count)
-        case "-createdby" => (itemsWithName.toSeq.sortWith(_._2 > _._2), count)
-        case _ => (itemsWithName, count)
+        case "createdby" => (itemsWithName.toSeq.sortWith(_._2 < _._2), count, backgroundPageCount)
+        case "-createdby" => (itemsWithName.toSeq.sortWith(_._2 > _._2), count, backgroundPageCount)
+        case _ => (itemsWithName, count,  backgroundPageCount)
       }
     }
     }
+
+
+  def findItemsAndCounts(criteria: Seq[Criterion[Any]], sort: Seq[Sort],  projection: Seq[String], limit: Option[Int], skip: Option[Int],backgroundPageCriteria :Seq[Criterion[Any]] )={
+    for{
+     items <- repo.find(criteria, sort, projection, limit, skip)
+      count <- repo.count(criteria)
+      backgroundCount <- repo.count(backgroundPageCriteria)
+    } yield{
+      (items, count, backgroundCount)
+    }
+  }
 
   override def saveCall(
                          batchRequest: BatchOrderRequest)(
@@ -274,7 +281,14 @@ class BatchOrderRequestsController @Inject()(
       allowedRoles = determineValidRoles(action, assumedRole, readOnly, existingRequestOption.get)
       userIdsMapping <- userIdByRoleProvider.getIdByRole(existingRequestOption.get, None)
     } yield {
-      actionPermissionService.checkUserHasRoles(Some(deadboltUser.user), assumedRole, allowedRoles, userIdsMapping)
+      val isIncluded =  userIdsMapping.values.flatMap(ids => ids.toSeq).toSeq.contains(deadboltUser.id.get)
+
+      assumedRole match {
+        case Some(role) => {
+          userIdsMapping.get(role).get.toSeq.contains(deadboltUser.id.get)
+        }
+        case None => isIncluded
+      }
     }
   }
 
@@ -301,6 +315,13 @@ class BatchOrderRequestsController @Inject()(
     }
   }
 
+  def checkAssumedRoleCanDoAction(assumedRole: Role.Value, allowedRole: Role.Value): Unit ={
+    assumedRole == allowedRole match {
+      case true =>
+      case false => throw new AdaException("Action not allowed")
+    }
+  }
+
   def performAction(requestId: BSONObjectID, action: RequestAction.Value, role: Role.Value, description: Option[String]) = restrictAdminOrUserCustomAny(isRequestAllowed(requestId, Some(action), Some(role), false)) {
     implicit request => {
      actionNotificationService.cleanNotifications()
@@ -312,6 +333,7 @@ class BatchOrderRequestsController @Inject()(
         allowedStateAction = {
           getNextState(existingRequest.get.state, action)
         }
+       userHasAllowedRole =  checkAssumedRoleCanDoAction(role, allowedStateAction.allowed)
         descriptionExists = {
           checkDescriptionExists(allowedStateAction, description)
         }
@@ -328,6 +350,8 @@ class BatchOrderRequestsController @Inject()(
               val updatedHistory = buildHistory(existingRequest.get.history, actionInfo)
               usersToNotify.map(userRoleMapping => userRoleMapping._2.foreach(userToNotify => {
 
+                val notificationType = getNotificationType(allowedStateAction, userRoleMapping._1)
+
                 val notification = NotificationBuilder
                   .withCreationDate(existingRequest.get.timeCreated)
                   .withDataSetId(existingRequest.get.dataSetId)
@@ -338,8 +362,8 @@ class BatchOrderRequestsController @Inject()(
                   .withTargetUser(userToNotify.ldapDn)
                   .withTargetUserEmail(user.get.email)
                   .withUpdateDate(dateOfUpdate)
-                  .withGetRequestUrl(urlProvider.getReadOnlyUrl(existingRequest.get._id.get))
-                  .withNotificationType(getNotificationType(allowedStateAction, userRoleMapping._1))
+                  .withGetRequestUrl(getUrlType(notificationType, requestId, userRoleMapping._1))
+                  .withNotificationType(notificationType)
                   .withUpdatedByUser(currentUser.ldapDn)
                   .withItems(items.map(i => i._1))
                   .withDescription(description)
@@ -347,12 +371,7 @@ class BatchOrderRequestsController @Inject()(
 
                 actionNotificationService.addNotification(Some(notification))
 
-                /*
-                addNotification(
-                  buildNotification(existingRequest, userToNotify, userRoleMapping._1, allowedStateAction, dateOfUpdate, usersToNotify.get(Role.Requester).get.toSeq(0), currentUser, description, items.map(i=>i._1))
-                )))
-*/
-              }))
+                }))
 
               existingRequest.get.copy(state = newState, createdById = existingRequest.get.createdById, history = updatedHistory)
             case None => throw new AdaException("No logged user found")
@@ -428,26 +447,15 @@ class BatchOrderRequestsController @Inject()(
       }
     }
   }
-  /*
-  def buildNotification(existingRequest: Option[BatchOrderRequest], targetUser: User, role: Role.Value, action: models.Action, dateOfUpdate: Date,createdByUser: User, updatedByUser: User, description: Option[String], itemsOption: Option[TableViewData])(implicit request: RequestHeader) = {
-    action.notified.find(r => r == role) match {
-      case Some(role) => {
-        Some(NotificationInfo(NotificationType.Advice, existingRequest.get.dataSetId, existingRequest.get.timeCreated, createdByUser.ldapDn, targetUser.ldapDn, role,
-          targetUser.email, action.fromState, action.toState, dateOfUpdate, updatedByUser.ldapDn, urlProvider.getReadOnlyUrl(existingRequest.get._id.get), description, itemsOption))
-      }
-      case None => {
-        action.solicited == role match {
-          case true => {
-            Some(NotificationInfo(NotificationType.Solicitation, existingRequest.get.dataSetId, existingRequest.get.timeCreated, createdByUser.ldapDn, targetUser.ldapDn, role,
-              targetUser.email, action.fromState, action.toState, dateOfUpdate, updatedByUser.ldapDn, urlProvider.getActionUrl(existingRequest.get._id.get, role), description, itemsOption))
-          }
-          case _ => None
-        }
-      }
+
+  def getUrlType(notificationType : NotificationType.Value, requestId: BSONObjectID, role: Role.Value)(implicit request: AuthenticatedRequest[_]) = {
+    notificationType match {
+      case NotificationType.Advice => urlProvider.getReadOnlyUrl(requestId)
+      case NotificationType.Solicitation => urlProvider.getActionUrl(requestId, role)
     }
   }
-*/
-  override protected type EditViewData = (
+
+    override protected type EditViewData = (
     IdForm[BSONObjectID, BatchOrderRequest],
       Option[TableViewData]
     )
@@ -538,6 +546,7 @@ class BatchOrderRequestsController @Inject()(
     implicit request => {
       for {
         existingRequest <- repo.get(id)
+        validActions = ActionGraph.apply.get(existingRequest.get.state).getOrElse(Traversable[models.Action]()).filter(_.allowed == role)
         editViewData <- existingRequest.fold(
           throw new AdaException("request with id '" + id.stringify + "' not found")
         ) { entity =>
@@ -546,14 +555,29 @@ class BatchOrderRequestsController @Inject()(
         fieldNames <- fieldNamesProvider.getFieldNames(existingRequest.get.dataSetId)
         items <- itemsProvider.getItemsById(existingRequest.get.itemIds, existingRequest.get.dataSetId,fieldNames.toSeq)
       } yield
+      {
         existingRequest match {
           case None => NotFound(s"$entityName '${formatId(id)}' not found")
           case Some(_) =>
-            render {
-              case Accepts.Html() => Ok(views.html.requests.actions(editViewData.get._1.form.get, role, items))
-              case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
-            }
+
+            validActions.size>0 match {
+                  case true => {
+                    render {
+                      case Accepts.Html() => Ok(views.html.requests.actions(editViewData.get._1.form.get, validActions, role, items))
+                      case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
+                    }
+                  }
+                    case false =>
+                    {
+                      render {
+                        case Accepts.Html() =>
+                          Redirect(routes.BatchOrderRequestsController.get(id)).flashing("error" -> "No action can be performed at the moment.")
+                        case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
+                      }
+                    }
+                  }
         }
+      }
     }.recover(handleEditExceptions(id))
   }
 

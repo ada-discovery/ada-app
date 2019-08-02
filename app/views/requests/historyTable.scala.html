@@ -3,6 +3,8 @@
 @import views.html.table.paginatedTable
 @import org.ada.web.util.typeColumns
 @import org.ada.web.controllers.dataset.TableViewData
+@import org.ada.web.util.toHumanReadableCamel
+
 @(
         items: Seq[ActionInfo]
 )
@@ -13,10 +15,47 @@
         typeColumns[ActionInfo](
             (None, "date", _.timestamp.format("yyyy-MM-dd HH:mm:ss")),
             (None, "by user", _.performedByUser),
-            (None, "from state", _.fromState),
-            (None, "to state", _.toState),
-            (None, "comment", _.comment.getOrElse(""))
+            (None, "state", (a: ActionInfo) => toHumanReadableCamel(a.toState.toString())),
+            (None, "comment", (a: ActionInfo) => commentArea(a.comment))
         )
     )
-
 }
+
+
+    @commentArea(comment: Option[String]) = {
+
+
+
+    @if(comment.isDefined){
+
+
+        @if(comment.get.size >= 50) {
+            <div id="commentArea" >@comment.get.substring(0, 50)...
+                <span style="visibility: hidden;
+                    position: absolute;
+                    display: block;
+                    background: white">
+                @comment.get.substring(51, comment.get.size - 1)
+                </span>
+            </div>
+        } else{
+            <div id="commentArea" >
+            @comment.get
+            </div>
+        }
+
+                <script>
+                    $("#commentArea").on('mouseover',
+                    function showFull() {
+                        $(this).find("span").css("visibility", "visible");
+                    })
+
+                    $("#commentArea").on('mouseout',
+                            function showTruncted() {
+                                $(this).find("span").css("visibility", "hidden");
+                            })
+                    </script>
+            }
+
+
+    }

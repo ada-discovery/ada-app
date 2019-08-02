@@ -12,7 +12,8 @@
 @(
         page: Page[(BatchOrderRequest, String, Call)],
         pageType: PageType.Value,
-        conditions: Seq[FilterCondition]
+        conditions: Seq[FilterCondition],
+        countBackground: Int
 )(
         implicit context: WebContext
 )
@@ -32,6 +33,7 @@
                 Some(FilterShowFieldStyle.LabelsOnly)
             )
             </div>
+        </div>
             }
 
     @table = @{
@@ -48,19 +50,31 @@
         }
     }
 
+    @requestsSelector = {
     <ul id="requestsSubMenu" class="nav nav-tabs">
-        <li { class="active" }>
-            <a href="@controllers.requests.routes.BatchOrderRequestsController.findActive(Some(0), None, "", conditions)">My own Requests</a>
-        </li>
-        <li { class="active" }>
-            <a href="@controllers.requests.routes.BatchOrderRequestsController.findActive(None, Some(0), "", conditions)">Requests to be responsible for</a>
-        </li>
+        @if((pageType == PageType.ToApprove && countBackground>0) || pageType == PageType.Created) {
+            <li @if(pageType == PageType.Created) {
+                class="active" }>
+                <a href="@controllers.requests.routes.BatchOrderRequestsController.findActive(Some(0), None, "", conditions)">
+                    My own Requests@if(pageType == PageType.ToApprove) {(@countBackground)}</a>
+            </li>
+        }
+
+        @if((pageType == PageType.Created && countBackground>0) || pageType == PageType.ToApprove) {
+            <li @if(pageType == PageType.ToApprove) {
+                class="active" }>
+                <a href="@controllers.requests.routes.BatchOrderRequestsController.findActive(None, Some(0), "", conditions)">
+                    Requests to be responsible for@if(pageType == PageType.Created) {(@countBackground)}</a>
+            </li>
+        }
     </ul>
+}
 
     @layout.list(
         "request",
         None,
         page.total,
         Some(actions),
-        Some(table)
+        Some(table),
+        topContentBar = Some(requestsSelector)
     )
