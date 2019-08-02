@@ -31,8 +31,7 @@
 
     @dynamicFieldTable(
         "userId",
-       Nil,
-        //committees.map(c => Field(c._1.stringify, Some(c._1.stringify))),
+        Nil,
         true,
         5,
         None,
@@ -44,7 +43,8 @@
 @labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")){
     @dynamicFieldTable(
         "displayFieldName",
-        Nil,
+        //Nil,
+        data.form.value.map(_.displayFieldNames.map(f => Field(f,Some(f)))).getOrElse(Nil),
         true,
         5,
         Some(extraFieldButtons),
@@ -112,8 +112,8 @@
 }
 
 @layout.edit(
-    "Request",
-    "request",
+    "Request setting",
+    "request setting",
     errors = data.form.errors,
     elements = elements,
     updateCall = controllers.requestSetting.routes.RequestSettingController.update(data.id),
