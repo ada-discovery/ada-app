@@ -1,7 +1,7 @@
 @import views.html.layout
 @import views.html.elements.editableTextElements
 
-@import org.ada.server.models.Translation
+@import views.html.table.dynamicTableJsImport
 @import org.incal.play.controllers.{WebContext, IdForm}
 @import org.incal.play.controllers.WebContext._
 @import org.ada.web.controllers.routes
@@ -9,30 +9,106 @@
 @import org.ada.web.util.typeColumns
 @import views.html.table.{displayTable, dynamicTable}
 @import reactivemongo.bson.BSONObjectID
+@import  org.ada.server.models._
+@import views.html.table.dynamicStringTable
+@import views.html.dataset.{dynamicFieldTable}
 
 @(
         data: IdForm[BSONObjectID, BatchRequestSetting],
-        committeeIds: Traversable[String]
+        committees: Map[BSONObjectID, String]
 )(
         implicit context: WebContext
 )
 
 @elements = {
-@inputText("requestSetting", "dataSetId", data.form)
 
-@displayTable(
-    committeeIds,
-    typeColumns[String](
-        (Some("commitee users"), "commitee users", u => u )
+@inputTextReadonly("requestSetting", "dataSetId", data.form)
+
+@dynamicTableJsImport()
+@typeaheadJsImport()
+
+@labelValue("userIds", attributeLabel("requestSetting", "userIds")) {
+
+    @dynamicFieldTable(
+        "userId",
+       Nil,
+        //committees.map(c => Field(c._1.stringify, Some(c._1.stringify))),
+        true,
+        5,
+        None,
+        None,
+        showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
     )
+}
+
+@labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")){
+    @dynamicFieldTable(
+        "displayFieldName",
+        Nil,
+        true,
+        5,
+        Some(extraFieldButtons),
+        None,
+        showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
+    )
+}
+
+
+@helper.javascriptRouter("dataSetJsRoutes")(
+    org.ada.web.controllers.dataset.routes.javascript.DataSetDispatcher.getFields
 )
 
-@displayTable(
-    data.form.get.displayFieldNames,
-    typeColumns[String](
-        (Some("field"), "field", s => s )
-    )
-)
+    <script type="text/javascript">
+            $(function () {
+                populateIdNameTypeahedFromUrl(
+                        $('#userIdDiv').find('#fieldTypeahead'),
+                        $('#userIdDiv').find('#fieldName'),
+                        '@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)', true)
+
+                var dataSetId = $("#dataSetId").val()
+
+
+                if (dataSetId.length > 0) {
+                    var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
+                    populateFieldTypeahedFromUrl(
+                            $('#displayFieldNameDiv').find('#fieldTypeahead'),
+                            $('#displayFieldNameDiv').find('#fieldName'),
+                            url,
+                            @FilterShowFieldStyle.NamesOnly.id
+                    )
+                }
+            })
+
+            function clearTable(){
+                $('#displayFieldNameDiv').find('table tbody tr').remove()
+            }
+
+            function addAllFields() {
+                var dataSetId = $('#dataSetId').val()
+                clearTable()
+                var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
+
+                $.ajax({
+                    url: url,
+                    success: function (data) {
+                        $.each(data, function(index, field) {
+                            var values = {};
+                            values["fieldName"] = field.name;
+                            values["fieldTypeahead"] = field.label ? field.label : field.name;
+
+                            $('#displayFieldNameDiv').dynamicTable('addTableRow', values)
+                        });
+                    },
+                    error: showErrorResponse
+                });
+            }
+    </script>
+}
+
+@extraFieldButtons = {
+    <a id="addAllFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllFields();" data-toggle="tooltip" title="Add All Fields">
+        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All
+    </a>
 }
 
 @layout.edit(
