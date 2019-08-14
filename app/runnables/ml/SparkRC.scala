@@ -3,8 +3,8 @@ package runnables.ml
 import javax.inject.Inject
 import java.{lang => jl}
 
-import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
-import com.banda.network.domain.{ActivationFunctionType, ReservoirSetting}
+import com.bnd.math.domain.rand.{RandomDistribution, RepeatedDistribution}
+import com.bnd.network.domain.{ActivationFunctionType, ReservoirSetting}
 import org.apache.spark.ml.linalg.Vectors
 import org.ada.server.services.SparkApp
 

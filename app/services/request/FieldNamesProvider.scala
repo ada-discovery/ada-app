@@ -7,12 +7,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class FieldNamesProvider @Inject()(requestSettingRepo: RequestSettingRepo) {
 
- def getFieldNames(dataSetId: String) = {
-    for{
-      fieldNamesByDataSet <- requestSettingRepo.find(Seq("dataSetId" #== dataSetId)).map { _.flatMap(_.displayFieldNames) }
+  def getFieldNames(dataSetId: String) =
+    for {
+      fieldNamesByDataSet <- requestSettingRepo.find(Seq("dataSetId" #== dataSetId)).map{ _.flatMap(_.displayFieldNames)}
     } yield
-      {
-        fieldNamesByDataSet
-      }
-  }
- }
+      fieldNamesByDataSet
+}

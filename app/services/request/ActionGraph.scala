@@ -9,28 +9,80 @@ object ActionGraph {
 
   private val actions: Traversable[Action] = Seq(
     Action(
-      BatchRequestState.Created, RequestAction.Submit, BatchRequestState.SentForApproval,Role.Requester, Role.Committee ,Seq(Role.Requester), needsDescription
+      BatchRequestState.Created,
+      RequestAction.Submit,
+      BatchRequestState.SentForApproval,
+      Role.Requester,
+      Role.Committee,
+      Seq(Role.Requester),
+      needsDescription
     ),
+
     Action(
-      BatchRequestState.SentForApproval, RequestAction.Approve, BatchRequestState.Approved, Role.Committee, Role.Owner, Seq(Role.Requester, Role.Committee)
+      BatchRequestState.SentForApproval,
+      RequestAction.Approve,
+      BatchRequestState.Approved,
+      Role.Committee,
+      Role.Owner,
+      Seq(Role.Requester, Role.Committee)
     ),
+
     Action(
-      BatchRequestState.SentForApproval, RequestAction.Reject, BatchRequestState.Rejected, Role.Committee,Role.Requester, Seq(Role.Committee),needsDescription
+      BatchRequestState.SentForApproval,
+      RequestAction.Reject,
+      BatchRequestState.Rejected,
+      Role.Committee,
+      Role.Requester,
+      Seq(Role.Committee),
+      needsDescription
     ),
+
     Action(
-      BatchRequestState.Approved, RequestAction.Approve, BatchRequestState.OwnerAcknowledged, Role.Owner,Role.Owner, Seq(Role.Requester)
+      BatchRequestState.Approved,
+      RequestAction.Approve,
+      BatchRequestState.OwnerAcknowledged,
+      Role.Owner,
+      Role.Owner,
+      Seq(Role.Requester)
     ),
+
     Action(
-      BatchRequestState.Approved, RequestAction.NotAvailable, BatchRequestState.Unavailable,Role.Owner,Role.Requester, Seq(Role.Owner), needsDescription
+      BatchRequestState.Approved,
+      RequestAction.NotAvailable,
+      BatchRequestState.Unavailable,
+      Role.Owner,
+      Role.Requester,
+      Seq(Role.Owner),
+      needsDescription
     ),
+
     Action(
-      BatchRequestState.OwnerAcknowledged, RequestAction.Send, BatchRequestState.Sent,Role.Owner,Role.Requester, Seq(Role.Owner), needsDescription
+      BatchRequestState.OwnerAcknowledged,
+      RequestAction.Send,
+      BatchRequestState.Sent,
+      Role.Owner,
+      Role.Requester,
+      Seq(Role.Owner),
+      needsDescription
     ),
+
     Action(
-      BatchRequestState.Sent, RequestAction.Receive, BatchRequestState.UserReceived,Role.Requester,Role.Requester, Seq(Role.Owner, Role.Requester)
+      BatchRequestState.Sent,
+      RequestAction.Receive,
+      BatchRequestState.UserReceived,
+      Role.Requester,
+      Role.Requester,
+      Seq(Role.Owner, Role.Requester)
     ),
+
     Action(
-      BatchRequestState.Sent, RequestAction.NotReceive, BatchRequestState.NotReceived, Role.Requester,Role.Owner, Seq(Role.Owner), needsDescription
+      BatchRequestState.Sent,
+      RequestAction.NotReceive,
+      BatchRequestState.NotReceived,
+      Role.Requester,
+      Role.Owner,
+      Seq(Role.Owner),
+      needsDescription
     )
   )
 
@@ -39,7 +91,11 @@ object ActionGraph {
 
   def createAction() = {
     Action(
-      BatchRequestState.None, RequestAction.Create, BatchRequestState.Created, Role.Requester, Role.Requester ,Seq()
+      BatchRequestState.None,
+      RequestAction.Create,
+      BatchRequestState.Created,
+      Role.Requester,
+      Role.Requester
     )
   }
 }

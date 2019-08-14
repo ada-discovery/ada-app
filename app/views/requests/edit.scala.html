@@ -1,6 +1,5 @@
 @import views.html.layout
 @import views.html.elements.editableTextElements
-
 @import org.ada.server.models.Translation
 @import org.incal.play.controllers.{WebContext, IdForm}
 @import org.incal.play.controllers.WebContext._
@@ -12,32 +11,32 @@
 @import views.html.requests.itemsTable
 @import org.ada.web.controllers.dataset.TableViewData
 @import views.html.requests.historyTable
+
 @(
-        data: IdForm[BSONObjectID, BatchOrderRequest],
-        items: Option[TableViewData]
+    data: IdForm[BSONObjectID, BatchOrderRequest],
+    items: Option[TableViewData]
 )(
-        implicit context: WebContext
+    implicit context: WebContext
 )
 
 @elements = {
-@inputTextReadonly("request", "dataSetId", data.form)
+    @inputTextReadonly("request", "dataSetId", data.form)
 
-@select("request", "state", data.form, BatchRequestState.values.map(state=>(state.toString,state.toString)).toSeq, true)
+    @select("request", "state", data.form, BatchRequestState.values.map(state => (state.toString, state.toString)).toSeq, true)
 
-
-@labelValue("request", "Requested items") {
-    @if(items.isDefined) {
-        @itemsTable(items.get)
-    } else {
-        <div class="row">
-            No item included
-        </div>
+    @labelValue("request", "Requested items") {
+        @if(items.isDefined) {
+            @itemsTable(items.get)
+        } else {
+            <div class="row">
+                No item included
+            </div>
+        }
     }
-}
 
-@labelValue("request", "History") {
-    @historyTable(data.form.get.history)
-}
+    @labelValue("request", "History") {
+        @historyTable(data.form.get.history)
+    }
 }
 
 @layout.edit(

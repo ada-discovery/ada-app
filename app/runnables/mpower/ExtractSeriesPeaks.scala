@@ -1,12 +1,12 @@
 package runnables.mpower
 
 import javax.inject.Inject
-import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import org.incal.core.dataaccess.Criterion.Infix
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
 import org.ada.server.services.DataSetService
 import org.ada.server.dataaccess.JsonUtil
+import org.incal.core.{PlotSetting, PlotlyPlotter}
 import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.writeStringAsStream
 
@@ -24,8 +24,6 @@ class ExtractSeriesPeaks @Inject() (
   private val recordId = "602681c6-fb35-4513-be00-4992ad00c215"
 
   private val dsa = dsaf(dataSetId).get
-
-  private val plotter = Plotter("svg")
 
   // helper method to extract series
   def extractSeries(json: JsObject): Seq[Double] = {
@@ -54,14 +52,12 @@ class ExtractSeriesPeaks @Inject() (
     series: Seq[Double],
     title: String,
     fileName: String
-  ) = {
-    val output = plotter.plotSingleSeries(
-      series,
-      new SeriesPlotSetting().setTitle(title)
+  ) =
+    PlotlyPlotter.plotLines(
+      data = Seq(series),
+      setting = PlotSetting(title = Some(title)),
+      outputFileName = fileName
     )
-
-    writeStringAsStream(output, new java.io.File(fileName))
-  }
 }
 
 case class ExtractSeriesPeaksSpec(peakNum: Int, peakSelectionRatio: Option[Double])

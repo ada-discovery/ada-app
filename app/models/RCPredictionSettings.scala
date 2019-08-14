@@ -8,7 +8,7 @@ import reactivemongo.bson.BSONObjectID
 import org.ada.server.field.FieldUtil
 import java.{util => ju}
 
-import com.banda.network.domain.{ActivationFunctionType, ReservoirLearningSetting}
+import com.bnd.network.domain.{ActivationFunctionType, ReservoirLearningSetting}
 import org.incal.spark_ml.models.VectorScalerType
 
 @Deprecated

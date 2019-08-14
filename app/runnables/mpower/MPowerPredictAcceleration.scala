@@ -3,18 +3,17 @@ package runnables.mpower
 import java.{lang => jl, util => ju}
 
 import javax.inject.Inject
-import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
-import com.banda.math.business.rand.RandomDistributionProviderFactory
-import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
-import com.banda.network.business.TopologyFactory
-import com.banda.network.business.learning.ReservoirTrainerFactory
-import com.banda.network.domain.ActivationFunctionType
-import org.ada.server.models.ExtendedReservoirLearningSetting
+import com.bnd.math.business.rand.RandomDistributionProviderFactory
+import com.bnd.math.domain.rand.{RandomDistribution, RepeatedDistribution}
+import com.bnd.network.business.TopologyFactory
+import com.bnd.network.business.learning.ReservoirTrainerFactory
+import com.bnd.network.domain.ActivationFunctionType
 import org.incal.core.dataaccess.Criterion.Infix
 import org.ada.server.models.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec}
 import org.incal.core.runnables.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
+import org.incal.core.{PlotSetting, PlotlyPlotter}
 import play.api.libs.json.JsObject
 import services.ml.{RCPredictionResults, RCPredictionService}
 import org.incal.core.util.writeStringAsStream
@@ -46,8 +45,6 @@ class MPowerPredictAcceleration @Inject() (
   private val _predictAhead = 1
   private val washoutPeriod = 500
   private val weightAdaptationIterationNum = 100
-
-  private val plotter = Plotter("svg")
 
   private val ioSpec = RCPredictionInputOutputSpec(
     inputSeriesFieldPaths = Seq(fieldName + ".x", fieldName + ".y", fieldName + ".z"),
@@ -102,16 +99,18 @@ class MPowerPredictAcceleration @Inject() (
     }
   }
 
-  private def plotResults(results: RCPredictionResults, fileName: String) = {
-    val output = plotter.plotSeries(
-      Seq(results.outputs.takeRight(weightAdaptationIterationNum): Seq[jl.Double], results.desiredOutputs.takeRight(weightAdaptationIterationNum): Seq[jl.Double]),
-      new SeriesPlotSetting()
-        .setCaptions(Seq("Predicted", "Acceleration (x)"))
-        .setTitle("Output vs Desired Output")
+  private def plotResults(results: RCPredictionResults, fileName: String) =
+    PlotlyPlotter.plotLines(
+      data = Seq(
+        results.outputs.takeRight(weightAdaptationIterationNum).map(_.doubleValue()),
+        results.desiredOutputs.takeRight(weightAdaptationIterationNum).map(_.doubleValue())
+      ),
+      setting = PlotSetting(
+        title = Some("Output vs Desired Output"),
+        captions = Seq("Predicted", "Acceleration (x)")
+      ),
+      outputFileName = fileName
     )
-
-    writeStringAsStream(output, new java.io.File(fileName))
-  }
 
   private def checkResults(results: Traversable[RCPredictionResults]) = {
     def checkResultsAux(name: String, fun: RCPredictionResults => Seq[Double]): Unit =

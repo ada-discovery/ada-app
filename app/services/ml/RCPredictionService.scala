@@ -3,14 +3,14 @@ package services.ml
 import java.util.Collections
 import java.{lang => jl, util => ju}
 
-import javax.inject.Inject
-import com.banda.math.business.MathUtil
-import com.banda.math.business.learning.{IOStream, IOStreamFactory}
-import com.banda.math.domain.rand._
-import com.banda.network.business._
-import com.banda.network.business.learning.{ErrorMeasures, ReservoirTrainerFactory}
-import com.banda.network.domain._
-import com.google.inject.{ImplementedBy, Singleton}
+import javax.inject.{Inject, Singleton}
+import com.bnd.math.business.MathUtil
+import com.bnd.math.business.learning.{IOStream, IOStreamFactory}
+import com.bnd.math.domain.rand._
+import com.bnd.network.business._
+import com.bnd.network.business.learning.{ErrorMeasures, ReservoirTrainerFactory}
+import com.bnd.network.domain._
+import com.google.inject.ImplementedBy
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.models._
 import org.ada.server.models.RCPredictionSettingAndResults.rcPredictionSettingAndResultsFormat

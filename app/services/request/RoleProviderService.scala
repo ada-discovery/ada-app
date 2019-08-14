@@ -21,8 +21,11 @@ trait RoleProviderService {
 }
 
 @Singleton
-class RoleProviderServiceImpl @Inject() (committeeRepo: RequestSettingRepo, requestRepo: BatchOrderRequestRepo, dataSetRepo: DataSetSettingRepo)
-  extends UserIdByRoleProvider[Traversable[Role.Value]](committeeRepo: RequestSettingRepo, dataSetRepo: DataSetSettingRepo) with RoleProviderService {
+class RoleProviderServiceImpl @Inject() (
+  committeeRepo: RequestSettingRepo,
+  requestRepo: BatchOrderRequestRepo,
+  dataSetRepo: DataSetSettingRepo
+) extends UserIdByRoleProvider[Traversable[Role.Value]](committeeRepo: RequestSettingRepo, dataSetRepo: DataSetSettingRepo) with RoleProviderService {
 
   def getRoleIfApplicable(ids: Traversable[BSONObjectID], role: Role.Value, batchRequest: BatchOrderRequest, user: Option[User]): Option[Role.Value] = {
     ids.find(u => u == user.get._id.get) match {
@@ -38,9 +41,14 @@ class RoleProviderServiceImpl @Inject() (committeeRepo: RequestSettingRepo, requ
     }
   }
 
-  override def processIds(requesterId: Traversable[BSONObjectID], committeeIds: Traversable[BSONObjectID], ownerIds:  Traversable[BSONObjectID], batchRequest: BatchOrderRequest, user: Option[User]): Traversable[Role.Value] = {
-
-   val roleOptions= Traversable (
+  override def processIds(
+    requesterId: Traversable[BSONObjectID],
+    committeeIds: Traversable[BSONObjectID],
+    ownerIds: Traversable[BSONObjectID],
+    batchRequest: BatchOrderRequest,
+    user: Option[User]
+  ): Traversable[Role.Value] = {
+   val roleOptions = Traversable (
       getRoleIfApplicable(committeeIds, Role.Committee, batchRequest, user),
       getRoleIfApplicable(requesterId, Role.Requester, batchRequest, user),
       getRoleIfApplicable(ownerIds, Role.Owner, batchRequest, user),
@@ -50,20 +58,22 @@ class RoleProviderServiceImpl @Inject() (committeeRepo: RequestSettingRepo, requ
     roleOptions.filter(_.isDefined).map(_.get)
   }
 
-  override def getRoles(request: BatchOrderRequest, user: Option[User]) = {
+  override def getRoles(
+    request: BatchOrderRequest,
+    user: Option[User]
+  ) =
     getIdByRole(request, user).map( roles =>  (request._id.get, roles))
-  }
 
-  override def getRolesMapping(requests: Traversable[BatchOrderRequest], user: Option[User])= {
-  for {
-     entries <- Future.sequence(requests.map(r => getRoles(r, user)))
-   }
-     yield {
-       entries.map{e => (e._1, e._2)}.toMap
-     }
-  }
+  override def getRolesMapping(
+    requests: Traversable[BatchOrderRequest],
+    user: Option[User]
+  )=
+    for {
+       entries <- Future.sequence(requests.map(r => getRoles(r, user)))
+    } yield {
+      entries.map{e => (e._1, e._2)}.toMap
+    }
 
-  override def isAdmin(user : Option[User]) = {
-      user.get.roles.contains(SecurityRole.admin)
-  }
+  override def isAdmin(user : Option[User]) =
+    user.get.roles.contains(SecurityRole.admin)
 }

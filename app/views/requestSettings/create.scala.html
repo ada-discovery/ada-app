@@ -40,39 +40,39 @@
 
 @elements = {
 
-@dataSetTypeahead("requestSetting", form)
+	@dataSetTypeahead("requestSetting", form)
 
-@dynamicTableJsImport()
-@typeaheadJsImport()
+	@dynamicTableJsImport()
+	@typeaheadJsImport()
 
 
-@labelValue("userNames", attributeLabel("requestSetting", "Committee users Ids")){
-	@dynamicFieldTable(
-		"userId",
-		Nil,
-		true,
-		5,
-		None,
-		None,
-		showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
+	@labelValue("userNames", attributeLabel("requestSetting", "Committee users Ids")){
+		@dynamicFieldTable(
+			"userId",
+			Nil,
+			true,
+			5,
+			None,
+			None,
+			showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
+		)
+	}
+
+	@labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")){
+		@dynamicFieldTable(
+			"displayFieldName",
+			Nil,
+			true,
+			5,
+			Some(extraFieldButtons),
+			None,
+			showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
+		)
+	}
+
+	@helper.javascriptRouter("dataSetJsRoutes")(
+		org.ada.web.controllers.dataset.routes.javascript.DataSetDispatcher.getFields
 	)
-}
-
-@labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")){
-	@dynamicFieldTable(
-		"displayFieldName",
-		Nil,
-		true,
-		5,
-		Some(extraFieldButtons),
-		None,
-		showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
-	)
-}
-
-@helper.javascriptRouter("dataSetJsRoutes")(
-	org.ada.web.controllers.dataset.routes.javascript.DataSetDispatcher.getFields
-)
 
 	<script type="text/javascript">
 			$(function () {
@@ -140,4 +140,3 @@
 	saveCall = controllers.requestSetting.routes.RequestSettingController.save(),
 	listCall = controllers.requestSetting.routes.RequestSettingController.listAll()
 )
-

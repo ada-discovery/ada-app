@@ -24,10 +24,10 @@ import scala.concurrent.Future
 
 @Deprecated
 class RequestSettingController @Inject()(
-                                              requestSettingRepo: RequestSettingRepo,
-                                              val userManager: UserManager,
-                                              userProvider: UserProviderService
-                                            ) extends AdaCrudControllerImpl[BatchRequestSetting, BSONObjectID](requestSettingRepo)
+  requestSettingRepo: RequestSettingRepo,
+  val userManager: UserManager,
+  userProvider: UserProviderService
+) extends AdaCrudControllerImpl[BatchRequestSetting, BSONObjectID](requestSettingRepo)
   with SubjectPresentRestrictedCrudController[BSONObjectID]
   with HasShowView[BatchRequestSetting, BSONObjectID]
   with HasEditView[BatchRequestSetting, BSONObjectID]
@@ -106,23 +106,23 @@ class RequestSettingController @Inject()(
   }
 
   override def saveCall(
-                         requestSetting: BatchRequestSetting)(
-                         implicit request: AuthenticatedRequest[AnyContent]
-                       ): Future[BSONObjectID] = {
+    requestSetting: BatchRequestSetting)(
+    implicit request: AuthenticatedRequest[AnyContent]
+  ): Future[BSONObjectID] =
     for {
       dataSetIdExists <- repo.find(Seq("dataSetId" #== requestSetting.dataSetId))
-      id <- {
+
+      id <-
         dataSetIdExists.size == 0 match {
           case false => throw new AdaException("A configuration already exists for dataset id " + requestSetting.dataSetId)
           case true => repo.save(requestSetting)
         }
-      }
-    } yield {
+    } yield
       id
-    }
-  }
 
-  override protected def createView = { implicit ctx => views.html.requestSettings.create(_) }
+  override protected def createView = { implicit ctx =>
+    views.html.requestSettings.create(_)
+  }
 
   override protected def showView = { implicit ctx =>
     (views.html.requestSettings.show(_, _)).tupled

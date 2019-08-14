@@ -1,7 +1,7 @@
 package services.request
 
-import org.ada.web.util.toHumanReadableCamel
 import models.{NotificationInfo, NotificationType}
+import org.incal.core.util.toHumanReadableCamel
 
 class MessageBuilder {
 

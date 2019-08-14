@@ -5,11 +5,11 @@ object Role extends Enumeration {
 }
 
 case class Action(
-                   fromState: BatchRequestState.Value,
-                   action: RequestAction.Value,
-                   toState: BatchRequestState.Value,
-                   allowed: Role.Value,
-                   solicited: Role.Value,
-                   notified: Seq[Role.Value] = Nil,
-                   commentNeeded: Boolean = false
-                 )
+  fromState: BatchRequestState.Value,
+  action: RequestAction.Value,
+  toState: BatchRequestState.Value,
+  allowed: Role.Value,
+  solicited: Role.Value,
+  notified: Seq[Role.Value] = Nil,
+  commentNeeded: Boolean = false
+)

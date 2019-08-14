@@ -1,5 +1,6 @@
 @import views.html.elements.editableTextElements
 @import org.ada.server.models.Translation
+@import org.incal.core.util.toHumanReadableCamel
 @import org.incal.play.controllers.{WebContext, IdForm}
 @import org.incal.play.controllers.WebContext._
 @import org.ada.web.controllers.routes
@@ -16,7 +17,6 @@
 @import org.ada.web.controllers.dataset.TableViewData
 @import org.ada.server.models.{Field, FieldTypeId, Filter}
 @import views.html.requests.historyTable
-@import org.ada.web.util.toHumanReadableCamel
 
 @(
         data: BatchOrderRequest,

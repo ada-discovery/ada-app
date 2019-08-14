@@ -1,6 +1,6 @@
 package runnables.mpower
 
-import com.banda.network.domain.ActivationFunctionType
+import com.bnd.network.domain.ActivationFunctionType
 import play.api.libs.json.{JsNull, JsNumber}
 import runnables.DsaInputFutureRunnable
 

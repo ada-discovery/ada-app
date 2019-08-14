@@ -37,21 +37,21 @@ import scala.concurrent.Future
 
 @Deprecated
 class BatchOrderRequestsController @Inject()(
-                                              requestsRepo: BatchOrderRequestRepo,
-                                              committeeRepo: RequestSettingRepo,
-                                              dataSetSettingRepo: DataSetSettingRepo,
-                                              val userManager: UserManager,
-                                              val actionPermissionService: ActionPermissionService,
-                                              val actionNotificationService: ActionNotificationService,
-                                              roleService: RoleProviderService,
-                                              userIdByRoleProvider: UserIdByRoleProviderImpl,
-                                              val validatorService: ActionDescriptionValidatorService,
-                                              val urlProvider: AbsoluteUrlProvider,
-                                              criterionBuilder: ListCriterionBuilder,
-                                              itemsProvider: DataSetItemsProvider,
-                                              fieldNamesProvider: FieldNamesProvider,
-                                              userProvider: UserProviderService
-                                            ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
+  requestsRepo: BatchOrderRequestRepo,
+  committeeRepo: RequestSettingRepo,
+  dataSetSettingRepo: DataSetSettingRepo,
+  val userManager: UserManager,
+  val actionPermissionService: ActionPermissionService,
+  val actionNotificationService: ActionNotificationService,
+  roleService: RoleProviderService,
+  userIdByRoleProvider: UserIdByRoleProviderImpl,
+  val validatorService: ActionDescriptionValidatorService,
+  val urlProvider: AbsoluteUrlProvider,
+  criterionBuilder: ListCriterionBuilder,
+  itemsProvider: DataSetItemsProvider,
+  fieldNamesProvider: FieldNamesProvider,
+  userProvider: UserProviderService
+) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo)
   with SubjectPresentRestrictedCrudController[BSONObjectID]
   with HasBasicFormCreateView[BatchOrderRequest]
   with HasEditView[BatchOrderRequest, BSONObjectID]
@@ -61,9 +61,7 @@ class BatchOrderRequestsController @Inject()(
    private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
    private val activeRequestsListRedirect = Redirect(routes.BatchOrderRequestsController.findActive())
 
-  override protected val homeCall = {
-    routes.BatchOrderRequestsController.findActive()
-  }
+  override protected val homeCall = routes.BatchOrderRequestsController.findActive()
 
   override protected[controllers] val form = Form(
     mapping(
@@ -78,10 +76,10 @@ class BatchOrderRequestsController @Inject()(
 
 //  def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
-  override def get(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
+  override def get(id: BSONObjectID) =
     restrictAdminOrUserCustomAny(isRequestAllowed(id,None, None ,true))(toAuthenticatedAction(super.get(id)))
 
-  override def edit(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
+  override def edit(id: BSONObjectID) =
     restrictAdminAny(noCaching = true) {
       toAuthenticatedAction(super.edit(id))
     }
@@ -292,7 +290,12 @@ class BatchOrderRequestsController @Inject()(
     }
   }
 
-  def determineValidRoles(action: Option[RequestAction.Value],role: Option[Role.Value], readOnly: Boolean, existingRequest: BatchOrderRequest): Set[Role.Value] = {
+  def determineValidRoles(
+    action: Option[RequestAction.Value],
+    role: Option[Role.Value],
+    readOnly: Boolean,
+    existingRequest: BatchOrderRequest
+  ): Set[Role.Value] = {
     readOnly match {
       case false => {
         action match {
@@ -315,12 +318,14 @@ class BatchOrderRequestsController @Inject()(
     }
   }
 
-  def checkAssumedRoleCanDoAction(assumedRole: Role.Value, allowedRole: Role.Value): Unit ={
+  def checkAssumedRoleCanDoAction(
+    assumedRole: Role.Value,
+    allowedRole: Role.Value
+  ) =
     assumedRole == allowedRole match {
       case true =>
       case false => throw new AdaException("Action not allowed")
     }
-  }
 
   def performAction(requestId: BSONObjectID, action: RequestAction.Value, role: Role.Value, description: Option[String]) = restrictAdminOrUserCustomAny(isRequestAllowed(requestId, Some(action), Some(role), false)) {
     implicit request => {
@@ -455,51 +460,57 @@ class BatchOrderRequestsController @Inject()(
     }
   }
 
-    override protected type EditViewData = (
+  override protected type EditViewData = (
     IdForm[BSONObjectID, BatchOrderRequest],
-      Option[TableViewData]
-    )
+    Option[TableViewData]
+  )
 
   override protected type ListViewData = (
     Page[(BatchOrderRequest, String, Call)],
-      Seq[FilterCondition]
-    )
+    Seq[FilterCondition]
+  )
 
   override protected type ShowViewData = (
-      BatchOrderRequest,
-      Option[TableViewData]
-    )
+    BatchOrderRequest,
+    Option[TableViewData]
+  )
 
   protected type UserScopedListViewData = (
     Page[(BatchOrderRequest, String, Call)],
-      Seq[FilterCondition]
-    )
+    Seq[FilterCondition]
+  )
 
-  override protected def getFormEditViewData(requestId: BSONObjectID, form: Form[BatchOrderRequest]): AuthenticatedRequest[_] => Future[EditViewData] = {
-    implicit request => {
- getRequestWithItems(requestId, form).map(r=>(IdForm(requestId, r._1), r._2) )
-    }
+  override protected def getFormEditViewData(
+    requestId: BSONObjectID,
+    form: Form[BatchOrderRequest]
+  ) = { implicit request =>
+    getRequestWithItems(requestId, form).map(r => (IdForm(requestId, r._1), r._2))
   }
 
-  override protected def getFormShowViewData(requestId: BSONObjectID, form: Form[BatchOrderRequest]): AuthenticatedRequest[_] => Future[ShowViewData]  =
-    {
-      implicit request => {
-        getRequestWithItems(requestId, form).map(r=>(r._1.get,r._2))
-      }
+  override protected def getFormShowViewData(
+    requestId: BSONObjectID,
+    form: Form[BatchOrderRequest]
+  ) = { implicit request =>
+    getRequestWithItems(requestId, form).map(r=>(r._1.get,r._2))
+  }
+
+  def getRequestWithItems(
+    requestId: BSONObjectID,
+    form: Form[BatchOrderRequest])(
+    implicit request: AuthenticatedRequest[_]
+  ): Future[(Form[BatchOrderRequest], Option[TableViewData])] =
+    for {
+      existingRequest <- repo.get(requestId)
+      fieldNames <- fieldNamesProvider.getFieldNames(existingRequest.get.dataSetId)
+      items <- itemsProvider.getItemsById(existingRequest.get.itemIds, existingRequest.get.dataSetId, fieldNames.toSeq)
+    } yield {
+      (form, items.map(i=>i._1))
     }
 
-  def getRequestWithItems(requestId: BSONObjectID, form: Form[BatchOrderRequest])(implicit request: AuthenticatedRequest[_]): Future[ (Form[BatchOrderRequest], Option[TableViewData])] = {
-
-      for {
-        existingRequest <- repo.get(requestId)
-        fieldNames <- fieldNamesProvider.getFieldNames(existingRequest.get.dataSetId)
-        items <- itemsProvider.getItemsById(existingRequest.get.itemIds, existingRequest.get.dataSetId, fieldNames.toSeq)
-      } yield {
-        (form, items.map(i=>i._1))
-      }
-    }
-
-  protected def getUserScopedListViewData(page: Page[(BatchOrderRequest, String)], conditions: Seq[FilterCondition]): AuthenticatedRequest[_] => Future[UserScopedListViewData] = {
+  protected def getUserScopedListViewData(
+    page: Page[(BatchOrderRequest, String)],
+    conditions: Seq[FilterCondition]
+  ): AuthenticatedRequest[_] => Future[UserScopedListViewData] = {
     request => {
       for {
         currentUser <- currentUser(request)

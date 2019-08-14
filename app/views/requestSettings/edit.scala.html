@@ -1,6 +1,5 @@
 @import views.html.layout
 @import views.html.elements.editableTextElements
-
 @import views.html.table.dynamicTableJsImport
 @import org.incal.play.controllers.{WebContext, IdForm}
 @import org.incal.play.controllers.WebContext._
@@ -14,94 +13,93 @@
 @import views.html.dataset.{dynamicFieldTable}
 
 @(
-        data: IdForm[BSONObjectID, BatchRequestSetting],
-        committees: Map[BSONObjectID, String]
+    data: IdForm[BSONObjectID, BatchRequestSetting],
+    committees: Map[BSONObjectID, String]
 )(
-        implicit context: WebContext
+    implicit context: WebContext
 )
 
 @elements = {
 
-@inputTextReadonly("requestSetting", "dataSetId", data.form)
+    @inputTextReadonly("requestSetting", "dataSetId", data.form)
 
-@dynamicTableJsImport()
-@typeaheadJsImport()
+    @dynamicTableJsImport()
+    @typeaheadJsImport()
 
-@labelValue("userIds", attributeLabel("requestSetting", "userIds")) {
+    @labelValue("userIds", attributeLabel("requestSetting", "userIds")) {
+        @dynamicFieldTable(
+            "userId",
+            Nil,
+            true,
+            5,
+            None,
+            None,
+            showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
+        )
+    }
 
-    @dynamicFieldTable(
-        "userId",
-        Nil,
-        true,
-        5,
-        None,
-        None,
-        showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
+    @labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")){
+        @dynamicFieldTable(
+            "displayFieldName",
+            //Nil,
+            data.form.value.map(_.displayFieldNames.map(f => Field(f,Some(f)))).getOrElse(Nil),
+            true,
+            5,
+            Some(extraFieldButtons),
+            None,
+            showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
+        )
+    }
+
+    @helper.javascriptRouter("dataSetJsRoutes")(
+        org.ada.web.controllers.dataset.routes.javascript.DataSetDispatcher.getFields
     )
-}
-
-@labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")){
-    @dynamicFieldTable(
-        "displayFieldName",
-        //Nil,
-        data.form.value.map(_.displayFieldNames.map(f => Field(f,Some(f)))).getOrElse(Nil),
-        true,
-        5,
-        Some(extraFieldButtons),
-        None,
-        showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
-    )
-}
-
-
-@helper.javascriptRouter("dataSetJsRoutes")(
-    org.ada.web.controllers.dataset.routes.javascript.DataSetDispatcher.getFields
-)
 
     <script type="text/javascript">
-            $(function () {
-                populateIdNameTypeahedFromUrl(
-                        $('#userIdDiv').find('#fieldTypeahead'),
-                        $('#userIdDiv').find('#fieldName'),
-                        '@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)', true)
+        $(function () {
+            populateIdNameTypeahedFromUrl(
+                $('#userIdDiv').find('#fieldTypeahead'),
+                $('#userIdDiv').find('#fieldName'),
+                '@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)',
+                true
+            )
 
-                var dataSetId = $("#dataSetId").val()
+            var dataSetId = $("#dataSetId").val()
 
-
-                if (dataSetId.length > 0) {
-                    var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
-                    populateFieldTypeahedFromUrl(
-                            $('#displayFieldNameDiv').find('#fieldTypeahead'),
-                            $('#displayFieldNameDiv').find('#fieldName'),
-                            url,
-                            @FilterShowFieldStyle.NamesOnly.id
-                    )
-                }
-            })
-
-            function clearTable(){
-                $('#displayFieldNameDiv').find('table tbody tr').remove()
-            }
-
-            function addAllFields() {
-                var dataSetId = $('#dataSetId').val()
-                clearTable()
+            if (dataSetId.length > 0) {
                 var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
-
-                $.ajax({
-                    url: url,
-                    success: function (data) {
-                        $.each(data, function(index, field) {
-                            var values = {};
-                            values["fieldName"] = field.name;
-                            values["fieldTypeahead"] = field.label ? field.label : field.name;
-
-                            $('#displayFieldNameDiv').dynamicTable('addTableRow', values)
-                        });
-                    },
-                    error: showErrorResponse
-                });
+                populateFieldTypeahedFromUrl(
+                    $('#displayFieldNameDiv').find('#fieldTypeahead'),
+                    $('#displayFieldNameDiv').find('#fieldName'),
+                    url,
+                    @FilterShowFieldStyle.NamesOnly.id
+                )
             }
+        })
+
+        function clearTable(){
+            $('#displayFieldNameDiv').find('table tbody tr').remove()
+        }
+
+        function addAllFields() {
+            var dataSetId = $('#dataSetId').val()
+            clearTable()
+            var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
+
+            $.ajax({
+                url: url,
+                success: function (data) {
+                    $.each(data, function(index, field) {
+                        var values = {};
+                        values["fieldName"] = field.name;
+                        values["fieldTypeahead"] = field.label ? field.label : field.name;
+
+                        $('#displayFieldNameDiv').dynamicTable('addTableRow', values)
+                    });
+                },
+                error: showErrorResponse
+            });
+        }
     </script>
 }
 

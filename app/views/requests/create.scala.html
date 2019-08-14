@@ -31,10 +31,10 @@
 )
 
 @actions = {
-<div class="row">
-	<div id="singleFilterDiv" class="col-md-10">
+	<div class="row">
+		<div id="singleFilterDiv" class="col-md-10">
 	</div>
-	}
+}
 
 @elements = {
 
@@ -42,10 +42,11 @@
 	<input type="text" id="dataSetId" name="dataSetId" class="form-control"/>
 }
 
-	<input type="hidden" name="state" value="@BatchRequestState.Created" />
+<input type="hidden" name="state" value="@BatchRequestState.Created" />
 
 @dynamicTableJsImport()
 @typeaheadJsImport()
+
 @helper.javascriptRouter("requestJsRoutes")(
 	controllers.requests.routes.javascript.BatchOrderRequestsController.findItems
 )
@@ -117,4 +118,3 @@
 	saveCall = controllers.requests.routes.BatchOrderRequestsController.save(),
 	listCall = controllers.requests.routes.BatchOrderRequestsController.findActive()
 )
-

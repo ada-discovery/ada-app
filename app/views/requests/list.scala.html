@@ -13,32 +13,32 @@
 @import views.html.requests.requestTable
 
 @(
-        page: Page[(BatchOrderRequest, String, Call )],
-        conditions: Seq[FilterCondition]
+    page: Page[(BatchOrderRequest, String, Call )],
+    conditions: Seq[FilterCondition]
 )(
-        implicit context: WebContext
+    implicit context: WebContext
 )
 
 @actions = {
     <div class="row">
         <div class="col-md-8">
-        @filterWithJs(
-            Filter(conditions),
-            controllers.requests.routes.BatchOrderRequestsController.findActive(),
-            Left(Seq(
-                Field("Status", Some("Status"))
-            )),
-            None,
-            Some(FilterShowFieldStyle.LabelsOnly)
-        )
-        </div>
+            @filterWithJs(
+                Filter(conditions),
+                controllers.requests.routes.BatchOrderRequestsController.findActive(),
+                Left(Seq(
+                    Field("Status", Some("Status"))
+                )),
+                None,
+                Some(FilterShowFieldStyle.LabelsOnly)
+            )
+    </div>
 }
 
-    @layout.list(
-        "request",
-        None,
-        page.total,
-        Some(actions),
-        Some(requestTable(page,conditions,controllers.requests.routes.BatchOrderRequestsController.find(_, _, conditions))),
-        None
-    )
+@layout.list(
+    "request",
+    None,
+    page.total,
+    Some(actions),
+    Some(requestTable(page,conditions,controllers.requests.routes.BatchOrderRequestsController.find(_, _, conditions))),
+    None
+)

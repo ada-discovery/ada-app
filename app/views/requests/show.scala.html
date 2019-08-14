@@ -1,4 +1,3 @@
-
 @import views.html.elements.editableTextElements
 
 @import org.ada.server.models.Translation
@@ -17,15 +16,16 @@
 @import play.api.libs.json.JsObject
 @import views.html.requests.itemsTable
 @import views.html.requests.historyTable
+
 @(
-        request: BatchOrderRequest,
-        items: Option[TableViewData]
+    request: BatchOrderRequest,
+    items: Option[TableViewData]
 )(
-        implicit context: WebContext
+    implicit context: WebContext
 )
 
-    @elements = {
-   @labelValue("request", "DataSet Id") {
+@elements = {
+    @labelValue("request", "DataSet Id") {
         <input type="text" class="form-control" value="@request.dataSetId" readonly="readonly"/>
     }
 
@@ -42,11 +42,10 @@
     @labelValue("request", "History") {
        @historyTable(request.history)
     }
-    }
+}
 
-    @layout.show(
-        "Request status",
-        elements = elements,
-        Some(controllers.requests.routes.BatchOrderRequestsController.findActive())
-    )
-
+@layout.show(
+    "Request status",
+    elements = elements,
+    Some(controllers.requests.routes.BatchOrderRequestsController.findActive())
+)

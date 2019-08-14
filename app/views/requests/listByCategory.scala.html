@@ -10,17 +10,17 @@
 @import views.html.requests.requestTable
 
 @(
-        page: Page[(BatchOrderRequest, String, Call)],
-        pageType: PageType.Value,
-        conditions: Seq[FilterCondition],
-        countBackground: Int
+    page: Page[(BatchOrderRequest, String, Call)],
+    pageType: PageType.Value,
+    conditions: Seq[FilterCondition],
+    countBackground: Int
 )(
-        implicit context: WebContext
+    implicit context: WebContext
 )
 
-    @actions = {
-        <div class="row">
-            <div class="col-md-8">
+@actions = {
+    <div class="row">
+        <div class="col-md-8">
             @filterWithJs(
                 Filter(conditions),
                 controllers.requests.routes.BatchOrderRequestsController.findActive(),
@@ -32,25 +32,23 @@
                 None,
                 Some(FilterShowFieldStyle.LabelsOnly)
             )
-            </div>
         </div>
-            }
+    </div>
+}
 
-    @table = @{
-       pageType match {
-            case PageType.ToApprove => {
-                val refreshCall = (p: Int, o: String) => controllers.requests.routes.BatchOrderRequestsController.findActive(None, Some(p), o, conditions)
-                requestTable(page,conditions,refreshCall,  true)
-            }
-            case PageType.Created =>
-            {
-                val refreshCall = (p: Int, o: String) => controllers.requests.routes.BatchOrderRequestsController.findActive(Some(p), None, o, conditions)
-                requestTable(page,conditions,refreshCall, true)
-            }
-        }
+@table = @{
+    pageType match {
+         case PageType.ToApprove =>
+            val refreshCall = (p: Int, o: String) => controllers.requests.routes.BatchOrderRequestsController.findActive(None, Some(p), o, conditions)
+            requestTable(page,conditions,refreshCall,  true)
+
+         case PageType.Created =>
+            val refreshCall = (p: Int, o: String) => controllers.requests.routes.BatchOrderRequestsController.findActive(Some(p), None, o, conditions)
+            requestTable(page,conditions,refreshCall, true)
     }
+}
 
-    @requestsSelector = {
+@requestsSelector = {
     <ul id="requestsSubMenu" class="nav nav-tabs">
         @if((pageType == PageType.ToApprove && countBackground>0) || pageType == PageType.Created) {
             <li @if(pageType == PageType.Created) {
@@ -70,11 +68,11 @@
     </ul>
 }
 
-    @layout.list(
-        "request",
-        None,
-        page.total,
-        Some(actions),
-        Some(table),
-        topContentBar = Some(requestsSelector)
-    )
+@layout.list(
+    "request",
+    None,
+    page.total,
+    Some(actions),
+    Some(table),
+    topContentBar = Some(requestsSelector)
+)

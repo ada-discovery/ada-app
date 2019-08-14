@@ -3,21 +3,19 @@
 @import views.html.table.paginatedTable
 @import org.incal.core.FilterCondition
 @import org.ada.web.util.typeColumns
-@import org.ada.web.util.toHumanReadableCamel
+@import org.incal.core.util.toHumanReadableCamel
 
 @(
-        page: Page[(BatchOrderRequest, String, Call )],
-        conditions: Seq[FilterCondition],
-        refreshCall: (Int, String) => Call,
-        isAjaxRefresh : Boolean = false
+    page: Page[(BatchOrderRequest, String, Call )],
+    conditions: Seq[FilterCondition],
+    refreshCall: (Int, String) => Call,
+    isAjaxRefresh : Boolean = false
 )(
-        implicit request: Request[_]
+    implicit request: Request[_]
 )
 
 <div class="table-div">
-
-@{
-    paginatedTable(
+    @paginatedTable(
         page,
         refreshCall,
         typeColumns[(BatchOrderRequest, String, Call)](
@@ -28,9 +26,8 @@
         Some({ item: Any => item.asInstanceOf[(BatchOrderRequest, String, Call)]._3 }),
         isAjaxRefresh = isAjaxRefresh
     )
-}
 </div>
 
 <script type="text/javascript">
-        activateRowClickable();
+    activateRowClickable();
 </script>
