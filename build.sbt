@@ -5,7 +5,7 @@ organization := "org.adada"
 
 name := "ada-web-ncer"
 
-version := "0.8.1.RC.6"
+version := "0.8.1.RC.7"
 
 scalaVersion := "2.11.12"
 
@@ -38,14 +38,13 @@ routesImport ++= Seq(
 val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-web" % "0.8.1.RC.6",
-  "org.adada" %% "ada-web" % "0.8.1.RC.6" classifier "assets",
+  "org.adada" %% "ada-web" % "0.8.1.RC.7",
+  "org.adada" %% "ada-web" % "0.8.1.RC.7" classifier "assets",
   "org.adada" %% "ada-dream-pd-challenge" % "0.0.6",
-  "org.in-cal" %% "incal-dl4j" % "0.2.1",   // DL4J
+  "org.in-cal" %% "incal-dl4j" % "0.2.2",   // DL4J
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
   "org.apache.pdfbox" % "pdfbox" % "2.0.1",
-  "org.irods.jargon" % "jargon-core" % "4.3.0.2-RELEASE"  // iRODS stuff (outdated) - installed locally from https://github.com/DICE-UNC/jargon/releases/tag/4.3.0.2-RELEASE
-//  "org.irods.jargon" % "jargon-core" % "3.3.1.1"  // iRODS stuff (outdated)
+  "org.irods.jargon" % "jargon-core" % "4.3.0.2-RELEASE"  // iRODS stuff - installed locally from https://github.com/DICE-UNC/jargon/releases/tag/4.3.0.2-RELEASE
 ).map(_.exclude("org.slf4j", "slf4j-log4j12"))
 
 // excludeDependencies += SbtExclusionRule(organization = "com.typesafe.akka") // "com.typesafe.akka" %% "akka-stream"

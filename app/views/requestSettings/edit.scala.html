@@ -14,7 +14,7 @@
 
 @(
     data: IdForm[BSONObjectID, BatchRequestSetting],
-    committees: Map[BSONObjectID, String]
+    committees: Map[BSONObjectID, String] // TODO: Not used
 )(
     implicit context: WebContext
 )
@@ -27,6 +27,7 @@
     @typeaheadJsImport()
 
     @labelValue("userIds", attributeLabel("requestSetting", "userIds")) {
+        @* TODO: How come a user-id table is a field table? Looks like an abuse *@
         @dynamicFieldTable(
             "userId",
             Nil,
@@ -41,13 +42,12 @@
     @labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")){
         @dynamicFieldTable(
             "displayFieldName",
-            //Nil,
-            data.form.value.map(_.displayFieldNames.map(f => Field(f,Some(f)))).getOrElse(Nil),
+            data.form.value.map(_.displayFieldNames.map(f => Field(f,Some(f)))).getOrElse(Nil), // TODO: I would probably load the fields with labels and everything first and pass to the view
             true,
             5,
             Some(extraFieldButtons),
             None,
-            showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
+            showFieldStyle = Some(FilterShowFieldStyle.NamesOnly) //TODO: NamesOnly?
         )
     }
 
@@ -67,6 +67,7 @@
             var dataSetId = $("#dataSetId").val()
 
             if (dataSetId.length > 0) {
+                @* TODO: This is bad, actually very very bad... at too many levels: 1) Passing param like this is hacky, 2) You should never access DataSetDispatcher directly but use DataSetRouter or DataSetJsRouter that does exactly what you need, 3) The param "dataSetId" is set to a readonly field, then read in js, and passed to a function. You can just pass it as a view attribute if you ever need it. *@
                 var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
                 populateFieldTypeahedFromUrl(
                     $('#displayFieldNameDiv').find('#fieldTypeahead'),
@@ -77,6 +78,7 @@
             }
         })
 
+        @* TODO: Might work but risky... *@
         function clearTable(){
             $('#displayFieldNameDiv').find('table tbody tr').remove()
         }
@@ -84,6 +86,7 @@
         function addAllFields() {
             var dataSetId = $('#dataSetId').val()
             clearTable()
+            @* TODO: Same as above... use DataSetRouter or DataSetJsRouter *@
             var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
 
             $.ajax({

@@ -38,22 +38,23 @@
 
 @elements = {
 
-@labelValue("request", "DataSet Id") {
-	<input type="text" id="dataSetId" name="dataSetId" class="form-control"/>
-}
+	@labelValue("request", "DataSet Id") {
+		<input type="text" id="dataSetId" name="dataSetId" class="form-control"/>
+	}
 
-<input type="hidden" name="state" value="@BatchRequestState.Created" />
+	<input type="hidden" name="state" value="@BatchRequestState.Created"/>
 
-@dynamicTableJsImport()
-@typeaheadJsImport()
+	<div class="filter-div"></div>
+	<div class="table-div"></div>
 
-@helper.javascriptRouter("requestJsRoutes")(
-	controllers.requests.routes.javascript.BatchOrderRequestsController.findItems
-)
+	@dynamicTableJsImport()
+	@typeaheadJsImport()
 
-	<div class="filter-div"> </div>
-	<div class="table-div"> </div>
+	@* TODO: All js stuff should be used put to "bottomResources" *@
 
+	@helper.javascriptRouter("requestJsRoutes")(
+		controllers.requests.routes.javascript.BatchOrderRequestsController.findItems
+	)
 
 	<script type="text/javascript">
 			$("#dataSetIdTypeahead").parent("div").on("click", function () {

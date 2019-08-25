@@ -36,6 +36,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 @Deprecated
+// TODO: whooooo, 17 dependent components, that's a bit too much, most of the funs from the "providers" should be put inside the controller since there are merely util funds (single caller, not general enough)
+// TODO: For truly general funs you can create a single service called BatchOrderService and put everything there (rather than spliting it to 10 dummy classes)
 class BatchOrderRequestsController @Inject()(
   requestsRepo: BatchOrderRequestRepo,
   committeeRepo: RequestSettingRepo,
@@ -56,7 +58,7 @@ class BatchOrderRequestsController @Inject()(
   with HasBasicFormCreateView[BatchOrderRequest]
   with HasEditView[BatchOrderRequest, BSONObjectID]
   with HasListView[BatchOrderRequest]
-  with AdaAuthConfig {
+  with AdaAuthConfig { // TODO: No need for AdaAuthConfig
    private implicit val idsFormatter = BSONObjectIDStringFormatter
    private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
    private val activeRequestsListRedirect = Redirect(routes.BatchOrderRequestsController.findActive())
@@ -105,6 +107,7 @@ class BatchOrderRequestsController @Inject()(
         val conditionPanel = views.html.filter.conditionPanel(Some(newFilter))
         val filterModel = Json.toJson( tableViewData.filter.get.conditions)
 
+        // TODO: ouch that hurts :) abusing a single action depending on a "method" should never happen
         request.method == "POST" match {
           case false => {
             Ok(Json.obj(
@@ -184,6 +187,7 @@ class BatchOrderRequestsController @Inject()(
       users <- userProvider.getUsersByIds(items.map(_.createdById))
     } yield {
       val itemsWithName = items.map( i => (i, users.get(i.createdById.get).get.ldapDn))
+      // TODO: What is this??? you've already passed 'sort' to get sorted data (obtained from 'orderBy')
       orderBy match  {
         case "createdby" => (itemsWithName.toSeq.sortWith(_._2 < _._2), count, backgroundPageCount)
         case "-createdby" => (itemsWithName.toSeq.sortWith(_._2 > _._2), count, backgroundPageCount)
@@ -193,6 +197,7 @@ class BatchOrderRequestsController @Inject()(
     }
 
 
+  // TODO: move inners of the fun to the caller
   def findItemsAndCounts(criteria: Seq[Criterion[Any]], sort: Seq[Sort],  projection: Seq[String], limit: Option[Int], skip: Option[Int],backgroundPageCriteria :Seq[Criterion[Any]] )={
     for{
      items <- repo.find(criteria, sort, projection, limit, skip)
@@ -204,9 +209,9 @@ class BatchOrderRequestsController @Inject()(
   }
 
   override def saveCall(
-                         batchRequest: BatchOrderRequest)(
-                         implicit request: AuthenticatedRequest[AnyContent]
-                       ): Future[BSONObjectID] = {
+    batchRequest: BatchOrderRequest)(
+    implicit request: AuthenticatedRequest[AnyContent]
+  ): Future[BSONObjectID] = {
     val date = new Date()
     actionNotificationService.cleanNotifications()
     for {
@@ -391,13 +396,12 @@ class BatchOrderRequestsController @Inject()(
     }.recover(handleExceptions("request action"))
   }
 
-  def checkItemsExist(request: BatchOrderRequest)={
-    request.itemIds.size > 0 match
-    {
+  def checkItemsExist(request: BatchOrderRequest)=
+    // TODO: As I wrote before... never case matching on a boolean condition
+    request.itemIds.size > 0 match {
       case false => throw new AdaException("No item in this request, please select items before submitting")
       case _ =>
     }
-  }
 
   def checkDescriptionExists(action: models.Action, description: Option[String]) = {
     action.commentNeeded match {

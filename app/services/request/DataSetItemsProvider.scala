@@ -22,11 +22,22 @@ import reactivemongo.bson.BSONObjectID
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class DataSetItemsProvider @Inject() (dsaf: DataSetAccessorFactory,   dataSpaceService: DataSpaceService) {
+// TODO: What the heck is this about?
+class DataSetItemsProvider @Inject() (dsaf: DataSetAccessorFactory, dataSpaceService: DataSpaceService) {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
-  def retrieveTableWithFilterForSelection(page: Int, dataSetId: String, orderBy: String, filterOrIds: Seq[FilterOrId],filterOrId: Option[FilterOrId], fieldNames: Seq[String], itemIds: Option[Seq[Option[BSONObjectID]]], tablePages: Seq[PageOrder] = Nil)(implicit request: AuthenticatedRequest[_]) = {
+  def retrieveTableWithFilterForSelection(
+    page: Int,
+    dataSetId: String,
+    orderBy: String,
+    filterOrIds: Seq[FilterOrId],
+    filterOrId: Option[FilterOrId],
+    fieldNames: Seq[String],
+    itemIds: Option[Seq[Option[BSONObjectID]]],
+    tablePages: Seq[PageOrder] = Nil)(
+    implicit request: AuthenticatedRequest[_]
+  ) = {
 
     val dsa: DataSetAccessor = dsaf(dataSetId).get
     val fieldRepo = dsa.fieldRepo

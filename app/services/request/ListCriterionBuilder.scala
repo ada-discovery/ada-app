@@ -8,6 +8,7 @@ import services.BatchOrderRequestRepoTypes.RequestSettingRepo
 import org.incal.core.dataaccess.Criterion.Infix
 import scala.concurrent.ExecutionContext.Implicits.global
 
+// TODO: Remove
 class ListCriterionBuilder @Inject()(committeeRepo: RequestSettingRepo, dataSetSettingRepo: DataSetSettingRepo){
 
   def buildApproverCriterion(user: Option[User]) = {
@@ -29,5 +30,4 @@ class ListCriterionBuilder @Inject()(committeeRepo: RequestSettingRepo, dataSetS
   def buildRequesterCriterion(user: Option[User]) = {
     Seq("createdById" #== user.get._id)
   }
-
 }

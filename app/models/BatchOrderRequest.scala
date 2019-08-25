@@ -10,21 +10,26 @@ import reactivemongo.play.json.BSONFormats._
 import reactivemongo.play.json.JSONSerializationPack._
 
 case class BatchOrderRequest(
-                              _id: Option[BSONObjectID] = None,
-                              dataSetId: String,
-                              itemIds: Seq[BSONObjectID],
-                              state: BatchRequestState.Value = BatchRequestState.Created,
-                              createdById: Option[BSONObjectID] = None,
-                              timeCreated: Date = new Date(),
-                              history: Seq[ActionInfo] = Nil
-                            )
+  _id: Option[BSONObjectID] = None,
+  dataSetId: String,
+  itemIds: Seq[BSONObjectID],
+  state: BatchRequestState.Value = BatchRequestState.Created,
+  createdById: Option[BSONObjectID] = None,
+  timeCreated: Date = new Date(),
+  history: Seq[ActionInfo] = Nil
+)
 
-case class ActionInfo(timestamp: Date, performedByUser: String, fromState:BatchRequestState.Value, toState: BatchRequestState.Value, comment: Option[String])
+case class ActionInfo(
+  timestamp: Date,
+  performedByUser: String,
+  fromState:BatchRequestState.Value,
+  toState: BatchRequestState.Value,
+  comment: Option[String]
+)
 
 object BatchRequestState extends Enumeration {
   val SentForApproval, Rejected, Created, Approved, OwnerAcknowledged, Unavailable, Sent, UserReceived, NotReceived, Error, None = Value
 }
-
 
 object BatchOrderRequest {
   implicit val stateFormat = EnumFormat(BatchRequestState)

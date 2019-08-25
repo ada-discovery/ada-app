@@ -13,11 +13,14 @@ import scala.collection.mutable.ListBuffer
 class ActionNotificationService @Inject()(configuration: Configuration, mailerClient: MailerClient, pdfBuilder: PdfBuilder, messageBuilder: MessageBuilder) {
   protected val logger = Logger
 
+  // TODO: This service is stateful, which is extremely dangerous and by looking at the code also not needed. The caller can create a list of notifications himself
+  // TODO: Also using "var" must be super justified and normally should be avoided at any cost
+  // TODO: Finally, having "tempFiles" as a "var" is a crime :)
   var notifications = ListBuffer[Option[NotificationInfo]]()
   var tempFiles = ListBuffer[File]()
   val fromEmail= configuration.getString("notification-admin-email").getOrElse("no-reply@uni.lu")
 
- def addNotification(notification: Option[NotificationInfo]) = {
+  def addNotification(notification: Option[NotificationInfo]) = {
    notifications+=notification
   }
 
@@ -49,21 +52,19 @@ class ActionNotificationService @Inject()(configuration: Configuration, mailerCl
 
     try {
       mailerClient.send(email)
+    } catch {
+      case e: EmailException => logger.error(message, e)
     }
-    catch {
-      case e: EmailException => {
-        logger.error(message, e)
-      }
-    }
-
   }
 
-def isResumeRequired(role: Role.Value, notificationType: NotificationType.Value)={
-  (role == Role.Committee || role ==  Role.Owner) && (notificationType == NotificationType.Solicitation)
-}
+  // TODO: why to introduce a single-line function for a single caller?
+  def isResumeRequired(role: Role.Value, notificationType: NotificationType.Value)={
+    (role == Role.Committee || role ==  Role.Owner) && (notificationType == NotificationType.Solicitation)
+  }
 
   def getAttachments(notificationInfo: NotificationInfo)= {
-      val requestResume = isResumeRequired(notificationInfo.userRole, notificationInfo.notificationType) match {
+    // TODO: I've seen it used xx times in the code but pls. never use matching on a boolean condition... super redundant and beats the purpose of pattern matching
+    val requestResume = isResumeRequired(notificationInfo.userRole, notificationInfo.notificationType) match {
       case true => Some(buildResumeDocument(notificationInfo))
       case false => None
     }

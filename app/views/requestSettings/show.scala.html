@@ -1,7 +1,5 @@
 @import views.html.layout
 @import views.html.elements.editableTextElements
-
-
 @import org.incal.play.controllers.{WebContext, IdForm}
 @import org.incal.play.controllers.WebContext._
 @import org.ada.web.controllers.routes
@@ -14,33 +12,30 @@
 @import views.html.dataset.{dynamicFieldTable}
 
 @(
-        data: BatchRequestSetting,
-        committees: Traversable[String]
+    data: BatchRequestSetting,
+    committees: Traversable[String]
 )(
-        implicit context: WebContext
+    implicit context: WebContext
 )
 
 @elements = {
 
-@labelValue("request", "DataSet Id") {
-    <input type="text" class="form-control" value="@data.dataSetId" readonly="readonly"/>
-}
+    @labelValue("request", "DataSet Id") {
+        <input type="text" class="form-control" value="@data.dataSetId" readonly="readonly"/>
+    }
 
-@displayTable(
-    committees,
-    typeColumns[String](
-        (Some("commitee users"), "commitee users", u => u )
+    @displayTable(
+        committees,
+        typeColumns[String]((None, "committee users", identity))
     )
-)
 
-@displayTable(
-    data.displayFieldNames,
-    typeColumns[String](
-        (Some("field"), "field", s => s )
+    @displayTable(
+        data.displayFieldNames,
+        typeColumns[String](
+            (None, "field", identity)
+        )
     )
-)
 }
-
 
 @layout.show(
     "Request setting",

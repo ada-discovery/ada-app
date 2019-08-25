@@ -21,7 +21,7 @@
         controllers.requestSetting.routes.RequestSettingController.find(_, _, conditions),
         typeColumns[BatchRequestSetting](
             (Some("dataSetId"), "Dataset id", _.dataSetId),
-            (Some("timecreated"), "Date", _.timeCreated)
+            (Some("timeCreated"), "Date", _.timeCreated)
         ),
         Some({ item: Any => controllers.requestSetting.routes.RequestSettingController.edit(item.asInstanceOf[BatchRequestSetting]._id.get) })
     )

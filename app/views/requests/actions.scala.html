@@ -19,16 +19,13 @@
 @import views.html.requests.historyTable
 
 @(
-        data: BatchOrderRequest,
-        validActions: Traversable[Action],
-        role: Role.Value,
-        items: Option[(TableViewData, Filter)]
+    data: BatchOrderRequest,
+    validActions: Traversable[Action],
+    role: Role.Value,
+    items: Option[(TableViewData, Filter)]
 )(
-        implicit context: WebContext
+    implicit context: WebContext
 )
-
-
-
 
 @elements = {
     @labelValue("request", "DataSet Id") {
@@ -41,7 +38,7 @@
             @itemsTable(items.get._1)
         } else {
         <div class="row">
-        No item included
+            No item included
         </div>
     }
     }
@@ -61,7 +58,7 @@
         }
 
 
-          @validActions.filter(a => a.commentNeeded == false).map { action =>
+        @validActions.filter(a => a.commentNeeded == false).map { action =>
             <a href="#" class="btn btn-default" data-toggle="modal" data-target="#addConfirmModal" title="Add decision descr">
             @action.action
             </a>
@@ -71,23 +68,23 @@
     </div>
 }
 
-@extraBottomResources={
+@extraBottomResources = {
 
-@helper.javascriptRouter("requestJsRoutes")(
-    controllers.requests.routes.javascript.BatchOrderRequestsController.performAction
-)
+    @helper.javascriptRouter("requestJsRoutes")(
+        controllers.requests.routes.javascript.BatchOrderRequestsController.performAction
+    )
 
     <script type="text/javascript">
-            function simpleSubmit(action) {
-                var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.performAction('@data._id.get.stringify', action, '@role')
-                submit('post', requestAction.url)
-            }
+        function simpleSubmit(action) {
+            var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.performAction('@data._id.get.stringify', action, '@role')
+            submit('post', requestAction.url)
+        }
 
-            function submitWithDescription(action) {
-                var reasonDescription = $('#addDescriptionModal #decision-reason').val()
-                var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.performAction('@data._id.get.stringify', action, '@role', reasonDescription)
-                submit('post', requestAction.url)
-            }
+        function submitWithDescription(action) {
+            var reasonDescription = $('#addDescriptionModal #decision-reason').val()
+            var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.performAction('@data._id.get.stringify', action, '@role', reasonDescription)
+            submit('post', requestAction.url)
+        }
     </script>
 }
 
@@ -119,8 +116,6 @@
     <button type="button" class="btn btn-primary" onclick="simpleSubmit('@action')" data-dismiss="modal">OK</button>
 }
 
-
-
 @layout.show(
     "Update request status",
     elements = elements,
@@ -128,6 +123,5 @@
     None,
     None,
     Some(extraBottomResources),
-    isFullDisplayName=true
+    isFullDisplayName = true
 )
-

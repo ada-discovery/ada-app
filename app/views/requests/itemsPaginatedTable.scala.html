@@ -8,14 +8,14 @@
 @import org.ada.web.controllers.dataset.TableViewData
 
 @(
-        dataSetId: String,
-        items: TableViewData,
-        page: Page[JsObject],
-        filter: Option[Filter],
-        tableFields: Traversable[Field],
-        isAjaxRefresh: Boolean = false
+    dataSetId: String,
+    items: TableViewData,
+    page: Page[JsObject],
+    filter: Option[Filter],
+    tableFields: Traversable[Field],
+    isAjaxRefresh: Boolean = false
 )(
-        implicit request: Request[_]
+    implicit request: Request[_]
 )
 
 @scheduleCheckbox = {

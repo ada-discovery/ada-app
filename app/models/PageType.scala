@@ -1,5 +1,5 @@
 package models
 
-  object PageType extends Enumeration {
-    val ToApprove, Created = Value
+object PageType extends Enumeration {
+  val ToApprove, Created = Value
 }
