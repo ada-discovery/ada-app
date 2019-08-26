@@ -9,9 +9,14 @@ POST        /admin/runRCPrediction            controllers.ml.RCPredictionControl
 
 # Item requests
 # GET         /requests/items/select             controllers.requests.BatchOrderRequestsController.select(id: Option[BSONObjectID]?= None, dataSetId: String, p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil, filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil), filterOrIds: Seq[Either[Seq[org.incal.core.FilterCondition], BSONObjectID]] ?= Nil)
+
+
+GET         /requests/new2                     controllers.requests.BatchOrderRequestsController.createNew(dataSet: String)
+POST        /requests/saveNew                  controllers.requests.BatchOrderRequestsController.saveNew(dataSet: String)
+
 GET         /requests                          controllers.requests.BatchOrderRequestsController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /requests/active                   controllers.requests.BatchOrderRequestsController.findActive(p1: Option[Int] ?= None, p2: Option[Int] ?= None, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
-POST        /requests/active                  controllers.requests.BatchOrderRequestsController.findActive(p1: Option[Int] ?= None, p2: Option[Int] ?= None, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+POST        /requests/active                   controllers.requests.BatchOrderRequestsController.findActive(p1: Option[Int] ?= None, p2: Option[Int] ?= None, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /requests/all                      controllers.requests.BatchOrderRequestsController.listAll(s: String ?= "original")
 GET         /requests/new                      controllers.requests.BatchOrderRequestsController.create
 POST        /requests/save                     controllers.requests.BatchOrderRequestsController.save
