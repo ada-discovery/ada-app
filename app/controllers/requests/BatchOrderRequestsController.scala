@@ -8,14 +8,18 @@ import models.BatchOrderRequest.batchRequestFormat
 import models.{NotificationInfo, NotificationType, Role, _}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.DataSetSettingRepo
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, Filter}
 import org.ada.server.models.Filter.FilterOrId
 import org.ada.server.services.UserManager
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.FilterConditionExtraFormats.coreFilterConditionFormat
 import org.ada.web.controllers.core.AdaCrudControllerImpl
-import org.ada.web.controllers.dataset.TableViewData
+import org.ada.web.controllers.dataset.{DataSetWebContext, TableViewData}
 import org.ada.web.models.security.DeadboltUser
 import org.ada.web.security.AdaAuthConfig
+import org.ada.web.services.DataSpaceService
+import org.incal.core.dataaccess.Criterion._
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.{Criterion, Sort}
 import org.incal.play.Page
@@ -31,6 +35,7 @@ import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, RequestSettingRepo}
 import services.UserProviderService
 import services.request.{ActionGraph, _}
+import views.html.dataset.actionTable
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -40,8 +45,10 @@ import scala.concurrent.Future
 // TODO: For truly general funs you can create a single service called BatchOrderService and put everything there (rather than spliting it to 10 dummy classes)
 class BatchOrderRequestsController @Inject()(
   requestsRepo: BatchOrderRequestRepo,
-  committeeRepo: RequestSettingRepo,
+  requestSettingRepo: RequestSettingRepo,
   dataSetSettingRepo: DataSetSettingRepo,
+  dataSpaceService: DataSpaceService,
+  dsaf: DataSetAccessorFactory,
   val userManager: UserManager,
   val actionPermissionService: ActionPermissionService,
   val actionNotificationService: ActionNotificationService,
@@ -76,7 +83,69 @@ class BatchOrderRequestsController @Inject()(
       "history" -> ignored(Seq[ActionInfo]())
     )(BatchOrderRequest.apply)(BatchOrderRequest.unapply))
 
-//  def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
+  private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
+
+  def createNew(dataSet: String) = AuthAction {
+    implicit request =>
+      dsaf(dataSet).map { dsa =>
+
+        for {
+          // get the batch-order setting for a given data set
+          setting <- requestSettingRepo.find(Seq("dataSetId" #== dataSet)).map(_.headOption)
+
+          // handy things for a view: data set name, data space tree, and data set setting
+          (dataSetName, dataSpaceTree, dataSetSetting) <- getDataSetNameTreeAndSetting(dsa)
+        } yield
+          setting match {
+            case None =>
+              NotFound(s"Batch-order setting for the data set '${dataSet}' not found.")
+
+            case Some(setting) =>
+              implicit val context = dataSetWebContext(dataSet)
+
+              Ok(
+                actionTable(
+                  setting.displayFieldNames,
+                  routes.BatchOrderRequestsController.saveNew(dataSet),
+                  "Request Items",
+                  dataSetName + " Batch Order Request",
+                  Filter(),
+                  dataSetSetting,
+                  dataSpaceTree
+                )
+              )
+          }
+      }.getOrElse(
+        Future(NotFound(s"Data set '${dataSet}' doesn't exist."))
+      )
+  }
+
+  private val selectedIdsForm = Form(single("selectedIds" -> seq(of[BSONObjectID])))
+
+  def saveNew(
+    dataSet: String
+  ) = AuthAction { implicit request =>
+    selectedIdsForm.bindFromRequest.fold(
+      _ =>
+        Future(BadRequest(s"Cannot parse selected ids.")),
+
+      selectedIds =>
+        for {
+          // get a currently-logged user
+          user <- currentUser(request)
+
+          // create a new batch-order request and save
+          id <- repo.save(BatchOrderRequest(
+            dataSetId = dataSet,
+            itemIds = selectedIds,
+            state = BatchRequestState.Created,
+            createdById = user.flatMap(_._id)
+          ))
+        } yield {
+          Redirect(homeCall).flashing("success" -> s"New batch-order request '${id.stringify}' has been created.")
+        }
+    )
+  }
 
   override def get(id: BSONObjectID) =
     restrictAdminOrUserCustomAny(isRequestAllowed(id,None, None ,true))(toAuthenticatedAction(super.get(id)))
@@ -86,7 +155,7 @@ class BatchOrderRequestsController @Inject()(
       toAuthenticatedAction(super.edit(id))
     }
 
-  override def update(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
+  override def update(id: BSONObjectID) =
     restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.update(id)))
 
   override def delete(id: BSONObjectID): Action[AnyContent] =
@@ -94,10 +163,16 @@ class BatchOrderRequestsController @Inject()(
       toAuthenticatedAction(super.delete(id))
     }
 
-  override def find(page: Int, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent] =
+  override def find(page: Int, orderBy: String, filter: Seq[FilterCondition]) =
     restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.find(page, orderBy, filter)))
 
-  def findItems(dataSetId: String, page: Int, orderBy: String, filterOrId: FilterOrId, filterOrIds: Seq[FilterOrId]) =  restrictSubjectPresentAny(noCaching = true) {
+  def findItems(
+    dataSetId: String,
+    page: Int,
+    orderBy: String,
+    filterOrId: FilterOrId,
+    filterOrIds: Seq[FilterOrId]
+  ) =  restrictSubjectPresentAny(noCaching = true) {
     implicit request => {
       for {
         fieldNames <- fieldNamesProvider.getFieldNames(dataSetId)
@@ -615,5 +690,26 @@ class BatchOrderRequestsController @Inject()(
 
   override protected def listView = { implicit ctx =>
     (views.html.requests.list(_, _)).tupled
+  }
+
+  private def getDataSetNameTreeAndSetting(
+    dsa: DataSetAccessor)(
+    implicit request: AuthenticatedRequest[_]
+  ): Future[(String, Traversable[DataSpaceMetaInfo], DataSetSetting)] = {
+    val dataSetNameFuture = dsa.dataSetName
+    val treeFuture = dataSpaceService.getTreeForCurrentUser
+    val settingFuture = dsa.setting
+
+    for {
+      // get the data set name
+      dataSetName <- dataSetNameFuture
+
+      // get the data space tree
+      dataSpaceTree <- treeFuture
+
+      // get the data set setting
+      setting <- settingFuture
+    } yield
+      (dataSetName, dataSpaceTree, setting)
   }
 }
