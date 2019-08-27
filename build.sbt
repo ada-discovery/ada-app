@@ -5,7 +5,7 @@ organization := "org.adada"
 
 name := "ada-web-ncer"
 
-version := "0.8.1.RC.7"
+version := "0.8.1.RC.8"
 
 scalaVersion := "2.11.12"
 
@@ -22,7 +22,6 @@ PlayKeys.devSettings := Seq(
 )
 
 resolvers ++= Seq(
-  "bnd libs" at "https://peterbanda.net/maven2",
   Resolver.mavenLocal
 )
 
@@ -32,14 +31,13 @@ routesImport ++= Seq(
   "org.ada.web.controllers.QueryStringBinders._",
   "org.ada.web.controllers.pdchallenge.QueryStringBinders._",
   "controllers.QueryStringBinders._"
-
 )
 
 val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-web" % "0.8.1.RC.7",
-  "org.adada" %% "ada-web" % "0.8.1.RC.7" classifier "assets",
+  "org.adada" %% "ada-web" % "0.8.1.RC.8",
+  "org.adada" %% "ada-web" % "0.8.1.RC.8" classifier "assets",
   "org.adada" %% "ada-dream-pd-challenge" % "0.0.6",
   "org.in-cal" %% "incal-dl4j" % "0.2.2",   // DL4J
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
