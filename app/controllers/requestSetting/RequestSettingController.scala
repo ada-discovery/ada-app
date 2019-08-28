@@ -1,6 +1,7 @@
 package controllers.requestSetting
 
 import java.util.Date
+
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
 import models._
@@ -8,6 +9,7 @@ import org.ada.server.AdaException
 import org.ada.server.services.UserManager
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaCrudControllerImpl
+import org.ada.web.controllers.dataset.{DataSetJsRouter, DataSetWebContext}
 import org.ada.web.security.AdaAuthConfig
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion.Infix
@@ -19,6 +21,7 @@ import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.RequestSettingRepo
 import services.UserProviderService
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -55,6 +58,8 @@ class RequestSettingController @Inject()(
       toAuthenticatedAction(super.get(id))
     }
 
+  private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
+
   override def edit(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
     restrictAdminAny(noCaching = true) {
       toAuthenticatedAction(super.edit(id))
@@ -76,7 +81,7 @@ class RequestSettingController @Inject()(
   }
 
   override protected type EditViewData = (
-    IdForm[BSONObjectID, BatchRequestSetting],  Map[BSONObjectID, String]
+    IdForm[BSONObjectID, BatchRequestSetting]
     )
 
   override protected type ShowViewData = (
@@ -88,8 +93,9 @@ class RequestSettingController @Inject()(
       for {
         existingSetting <- repo.get(requestId)
         users <- userProvider.getUsersByIds(existingSetting.get.userIds.map(Some(_)))
+        dataSetJsRouter = new DataSetJsRouter(existingSetting.get.dataSetId)
       } yield {
-        (IdForm(requestId, form), users.map(u=>(u._1,u._2.ldapDn)))
+        (IdForm(requestId, form))
       }
     }
   }
@@ -113,9 +119,10 @@ class RequestSettingController @Inject()(
       dataSetIdExists <- repo.find(Seq("dataSetId" #== requestSetting.dataSetId))
 
       id <-
-        dataSetIdExists.size == 0 match {
-          case false => throw new AdaException("A configuration already exists for dataset id " + requestSetting.dataSetId)
-          case true => repo.save(requestSetting)
+        if(dataSetIdExists.size == 0) {
+          repo.save(requestSetting)
+        } else {
+          throw new AdaException("A configuration already exists for dataset id " + requestSetting.dataSetId)
         }
     } yield
       id
@@ -129,7 +136,9 @@ class RequestSettingController @Inject()(
   }
 
   override protected def editView = { implicit ctx =>
-    (views.html.requestSettings.edit(_, _)).tupled
+
+  views.html.requestSettings.edit(_)
+
   }
 
   override protected def listView = { implicit ctx =>

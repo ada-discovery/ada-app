@@ -7,40 +7,36 @@ import models.{NotificationInfo, NotificationType, Role}
 import org.apache.commons.mail.EmailException
 import play.api.{Configuration, Logger}
 import play.api.libs.mailer.{AttachmentFile, Email, MailerClient}
-
+import org.incal.core.util.toHumanReadableCamel
 import scala.collection.mutable.ListBuffer
 
-class ActionNotificationService @Inject()(configuration: Configuration, mailerClient: MailerClient, pdfBuilder: PdfBuilder, messageBuilder: MessageBuilder) {
+class ActionNotificationService @Inject()(configuration: Configuration, mailerClient: MailerClient, pdfBuilder: PdfBuilder) {
   protected val logger = Logger
 
-  // TODO: This service is stateful, which is extremely dangerous and by looking at the code also not needed. The caller can create a list of notifications himself
-  // TODO: Also using "var" must be super justified and normally should be avoided at any cost
-  // TODO: Finally, having "tempFiles" as a "var" is a crime :)
-  var notifications = ListBuffer[Option[NotificationInfo]]()
-  var tempFiles = ListBuffer[File]()
   val fromEmail= configuration.getString("notification-admin-email").getOrElse("no-reply@uni.lu")
 
-  def addNotification(notification: Option[NotificationInfo]) = {
-   notifications+=notification
-  }
+  def sendNotifications(notifications: Option[Traversable[NotificationInfo]])= {
 
-  def cleanNotifications() = {
-    notifications.clear()
-  }
+    val attachmentsByUser : Map[String, Option[AttachmentFile]] = notifications.map {
+      notification =>
+        notification.map(n => (n.targetUser, buildAttachment(n)))
+    }.get.toMap
 
-  def sendNotifications()= {
     notifications.map {
-     _.foreach { n =>
-        sendNotification(n)
+      _.foreach { n =>
+        sendNotification(n, attachmentsByUser.get(n.targetUser).flatten)
       }
     }
-    tempFiles.foreach(_.delete())
+
+    attachmentsByUser.values.map{
+      _.foreach { a => a.file.delete()}
+    }
   }
 
-  def sendNotification(notification:NotificationInfo)={
-    val subject = messageBuilder.buildSubject(notification)
-    val attachments = getAttachments(notification)
-    val message = messageBuilder.buildBody(notification)
+  def sendNotification(notification:NotificationInfo, attachmentOption: Option[AttachmentFile])= {
+    val subject = buildSubject(notification)
+    val attachments = attachmentOption.toSeq
+    val message = buildMessage(notification)
 
     val email = Email(
       from = fromEmail,
@@ -63,17 +59,36 @@ class ActionNotificationService @Inject()(configuration: Configuration, mailerCl
   }
 
   def getAttachments(notificationInfo: NotificationInfo)= {
-    // TODO: I've seen it used xx times in the code but pls. never use matching on a boolean condition... super redundant and beats the purpose of pattern matching
-    val requestResume = isResumeRequired(notificationInfo.userRole, notificationInfo.notificationType) match {
-      case true => Some(buildResumeDocument(notificationInfo))
-      case false => None
+    if(isResumeRequired(notificationInfo.userRole, notificationInfo.notificationType) ) {
+      Some(buildResumeDocument(notificationInfo))
+    }  else {
+      None
     }
-    Seq(requestResume).filter(a=>a.isDefined).map(a=>a.get)
+  }
+
+  def buildAttachment(notificationInfo: NotificationInfo)= {
+    if(isResumeRequired(notificationInfo.userRole, notificationInfo.notificationType) ) {
+      Some(buildResumeDocument(notificationInfo))
+    }  else {
+      None
+    }
   }
 
   def buildResumeDocument(notificationInfo: NotificationInfo)= {
     val resumeFile =  pdfBuilder.getFile(notificationInfo)
-    tempFiles += resumeFile
     AttachmentFile("request-resume.pdf", resumeFile)
   }
+
+  def buildMessage(notification: NotificationInfo)={
+    notification.notificationType match {
+      case NotificationType.Solicitation =>  views.html.requests.notification.solicitationTemplate(notification).toString()
+      case NotificationType.Advice => views.html.requests.notification.adviceTemplate(notification).toString()
+    }
+  }
+
+  def buildSubject(notification: NotificationInfo) =
+    notification.notificationType match {
+      case NotificationType.Solicitation => "action needed on request in state " +  toHumanReadableCamel(notification.toState.toString())
+      case NotificationType.Advice => "status of request updated to state " + toHumanReadableCamel(notification.toState.toString())
+    }
 }

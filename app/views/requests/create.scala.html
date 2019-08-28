@@ -38,23 +38,21 @@
 
 @elements = {
 
-	@labelValue("request", "DataSet Id") {
-		<input type="text" id="dataSetId" name="dataSetId" class="form-control"/>
-	}
+@labelValue("request", "DataSet Id") {
+	<input type="text" id="dataSetId" name="dataSetId" class="form-control"/>
+}
 
 	<input type="hidden" name="state" value="@BatchRequestState.Created"/>
 
 	<div class="filter-div"></div>
 	<div class="table-div"></div>
 
-	@dynamicTableJsImport()
-	@typeaheadJsImport()
-
-	@* TODO: All js stuff should be used put to "bottomResources" *@
-
-	@helper.javascriptRouter("requestJsRoutes")(
-		controllers.requests.routes.javascript.BatchOrderRequestsController.findItems
-	)
+@dynamicTableJsImport()
+@typeaheadJsImport()
+	@* TODO: All js stuff should be used put to "bottomResources" --> not available for create layout *@
+@helper.javascriptRouter("requestJsRoutes")(
+	controllers.requests.routes.javascript.BatchOrderRequestsController.findItemsWithFilter
+)
 
 	<script type="text/javascript">
 			$("#dataSetIdTypeahead").parent("div").on("click", function () {
@@ -84,9 +82,8 @@
 
 			function requestItems() {
 				var dataSetId = $("#dataSetId").val()
-				console.log("datasetid " + dataSetId)
 				if (dataSetId.length > 0) {
-					requestJsRoutes.controllers.requests.BatchOrderRequestsController.findItems(dataSetId, 0, "").ajax({
+					requestJsRoutes.controllers.requests.BatchOrderRequestsController.findItemsWithFilter(dataSetId, 0, "").ajax({
 						type: 'GET',
 						success: function (data) {
 							generateTable(data)

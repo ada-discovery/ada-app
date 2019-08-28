@@ -15,7 +15,7 @@ GET         /requests/new2                     controllers.requests.BatchOrderRe
 POST        /requests/saveNew                  controllers.requests.BatchOrderRequestsController.saveNew(dataSet: String)
 
 GET         /requests                          controllers.requests.BatchOrderRequestsController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
-GET         /requests/active                   controllers.requests.BatchOrderRequestsController.findActive(p1: Option[Int] ?= None, p2: Option[Int] ?= None, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /requests/active                   controllers.requests.BatchOrderRequestsController.findActiveWithFilter(p1: Option[Int] ?= None, p2: Option[Int] ?= None, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
 POST        /requests/active                   controllers.requests.BatchOrderRequestsController.findActive(p1: Option[Int] ?= None, p2: Option[Int] ?= None, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /requests/all                      controllers.requests.BatchOrderRequestsController.listAll(s: String ?= "original")
 GET         /requests/new                      controllers.requests.BatchOrderRequestsController.create
@@ -26,6 +26,7 @@ GET         /requests/:id/action               controllers.requests.BatchOrderRe
 POST        /requests/:id                      controllers.requests.BatchOrderRequestsController.update(id: BSONObjectID)
 POST        /requests/:id/delete               controllers.requests.BatchOrderRequestsController.delete(id: BSONObjectID)
 POST        /requests/:id/performAction        controllers.requests.BatchOrderRequestsController.performAction(id: BSONObjectID, action: models.RequestAction.Value, role: models.Role.Value, description: Option[String] ?= None)
+
 
 
 # Requests Settings
@@ -39,8 +40,6 @@ POST        /requestSettings/:id               controllers.requestSetting.Reques
 POST        /requestSettings/:id/delete        controllers.requestSetting.RequestSettingController.delete(id: BSONObjectID)
 
 
-
-
 # Dataset Items
-GET         /dataSets/:id                       controllers.requests.BatchOrderRequestsController.findItems(id: String, page: Int, orderBy: String, filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil), filterOrIds: Seq[Either[Seq[org.incal.core.FilterCondition], BSONObjectID]] ?= Nil)
+GET         /dataSets/:id                       controllers.requests.BatchOrderRequestsController.findItemsWithFilter(id: String, page: Int, orderBy: String, filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil), filterOrIds: Seq[Either[Seq[org.incal.core.FilterCondition], BSONObjectID]] ?= Nil)
 POST        /dataSets/:id                       controllers.requests.BatchOrderRequestsController.findItems(id: String, page: Int, orderBy: String, filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil), filterOrIds: Seq[Either[Seq[org.incal.core.FilterCondition], BSONObjectID]] ?= Nil)

@@ -60,7 +60,8 @@ class PdfBuilder {
 
     val itemsToPrint = notification.items.get.page.items.map(i=>i.fields.filter(f=>f._1 != "_id"))
     // TODO: long line; introduce intermediates
-    val table = "table\n \n" + itemsToPrint.toSeq(0).map(item => item._1).mkString(" ") + "\n"  + itemsToPrint.map(item => "-> " + buildListLine(item)).mkString("\n")
+    val table = buildTable(itemsToPrint)
+    //"table\n \n" + itemsToPrint.toSeq(0).map(item => item._1).mkString(" ") + "\n"  + itemsToPrint.map(item => "-> " + buildListLine(item)).mkString("\n")
 
     buildLines(text + table, content)
     content.close()
@@ -69,4 +70,13 @@ class PdfBuilder {
   // TODO: remove this function
   def buildListLine(item: Seq[(String, JsValue)])=
     item.map(_._2.toString()).mkString(" ")
+
+
+
+  def buildTable(itemsToPrint: Traversable[Seq[(String, JsValue)]])={
+    val header = itemsToPrint.toSeq(0).map(item => item._1).mkString(" ") + "\n"
+    val rows = itemsToPrint.map(item => "-> " + buildListLine(item)).mkString("\n")
+
+    "table\n \n" + header  + rows
+  }
 }

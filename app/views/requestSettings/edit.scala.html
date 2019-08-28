@@ -13,8 +13,9 @@
 @import views.html.dataset.{dynamicFieldTable}
 
 @(
-    data: IdForm[BSONObjectID, BatchRequestSetting],
-    committees: Map[BSONObjectID, String] // TODO: Not used
+    data: IdForm[BSONObjectID, BatchRequestSetting]
+
+   // committees: Map[BSONObjectID, String] // TODO: Not used
 )(
     implicit context: WebContext
 )

@@ -27,22 +27,25 @@ class RoleProviderServiceImpl @Inject() (
 
   // TODO: Move as an aux inner function of "processIds"
   def getRoleIfApplicable(
-    ids: Traversable[BSONObjectID],
-    role: Role.Value,
-    batchRequest: BatchOrderRequest, // TODO: Not used
-    user: Option[User] // TODO: You're expecting a "userId"
-  ): Option[Role.Value] =
-    // TODO: replace with "exists"
-    ids.find(u => u == user.get._id.get) match { // TODO: education note: if you do match on Option with None and Some you can replace it with "map"
-      case None => None
-      case Some(id) => Some(role)
-    }
+                           ids: Traversable[BSONObjectID],
+                           role: Role.Value,
+                           userId: Option[BSONObjectID]
+                         ): Option[Role.Value] = {
 
-  // TODO: never do a pattern matching on a boolean condition... also too primitive to be a function on its own
+   // user.get._id.map(ids.exists(_))
+
+    if (ids.exists(_ == userId.get)) { // TODO: education note: if you do match on Option with None and Some you can replace it with "map"
+      Some(role)
+    } else {
+      None
+    }
+  }
+
   def getAdminRoleIfApplicable(user: Option[User]): Option[Role.Value] =
-    isAdmin(user) match {
-      case true => Some(Role.Administrator)
-      case false => None
+    if (isAdmin(user)) {
+      Some(Role.Administrator)
+    } else {
+      None
     }
 
   override def processIds(
@@ -52,14 +55,14 @@ class RoleProviderServiceImpl @Inject() (
     batchRequest: BatchOrderRequest,
     user: Option[User]
   ): Traversable[Role.Value] = {
-   val roleOptions = Seq(
-      getRoleIfApplicable(committeeIds, Role.Committee, batchRequest, user),
-      getRoleIfApplicable(requesterId, Role.Requester, batchRequest, user),
-      getRoleIfApplicable(ownerIds, Role.Owner, batchRequest, user),
+    val roleOptions = Seq(
+      getRoleIfApplicable(committeeIds, Role.Committee, user.get._id),
+      getRoleIfApplicable(requesterId, Role.Requester, user.get._id),
+      getRoleIfApplicable(ownerIds, Role.Owner, user.get._id),
       getAdminRoleIfApplicable(user)
     )
 
-    roleOptions.filter(_.isDefined).map(_.get) // TODO: Do you mean flatten?
+    roleOptions.flatten
   }
 
   override def getRoles(
@@ -75,7 +78,7 @@ class RoleProviderServiceImpl @Inject() (
     for {
        entries <- Future.sequence(requests.map(r => getRoles(r, user)))
     } yield {
-      entries.map{ e => (e._1, e._2)}.toMap // TODO: this should be "entries.toMap"
+      entries.toMap
     }
 
   override def isAdmin(user: Option[User]) =
