@@ -4,25 +4,25 @@
 @import org.ada.web.controllers.dataset.TableViewData
 
 @(
-    items: TableViewData
+    items: Traversable[JsObject],
+    fieldNames: Traversable[String]
 )
 
 @{
     val columns: Traversable[(Option[String], String, Any => Html)] =
-        items.tableFields.map { f =>
-            val fieldName = f.name
+        fieldNames.map { fieldName =>
             (Some(fieldName), fieldName, (x: Any) => {
                 val item = x.asInstanceOf[JsObject]
-                val itemId = item.value.get("_id").get.as[JsObject].value.get("$oid").get
-                itemField(item.value.get(fieldName).get.toString(), itemId.toString())
+
+                itemField(item.value.get(fieldName).get.toString())
             })
         }
 
-    displayTable(items.page.items, columns)
+    displayTable(items, columns)
 }
 
-@itemField(value: String, itemId: String) = {
-    <span id="@itemId">
+@itemField(value: String) = {
+    <span>
         @Html(value)
     </span>
 }

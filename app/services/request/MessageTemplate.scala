@@ -9,6 +9,8 @@ import reactivemongo.bson.BSONObjectID
 object MessageTemplate {
 
   //TODO: To be on a safe side you would avoid using format with 10 params (in the order) and rather have named substitution with $
+  //this object will probably be deleted when the final form of the pdf attachment will be defined (the email is already using the html templates)
+
   val adviceMessage = "Dear %s,\nas %s member, please be informed that the status of a request changed,\nyou can see the request in Ada at the following url %s\n\n" +
     "please find below the current status:" +
     " \nrequester: %s\ndataset Id: %s\non date: %s\nstatus change: from %s to %s\ndate of status change :%s\nupdated by user: %s\n\n" +

@@ -18,7 +18,7 @@ GET         /requests                          controllers.requests.BatchOrderRe
 GET         /requests/active                   controllers.requests.BatchOrderRequestsController.findActiveWithFilter(p1: Option[Int] ?= None, p2: Option[Int] ?= None, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
 POST        /requests/active                   controllers.requests.BatchOrderRequestsController.findActive(p1: Option[Int] ?= None, p2: Option[Int] ?= None, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /requests/all                      controllers.requests.BatchOrderRequestsController.listAll(s: String ?= "original")
-GET         /requests/new                      controllers.requests.BatchOrderRequestsController.create
+
 POST        /requests/save                     controllers.requests.BatchOrderRequestsController.save
 GET         /requests/:id/get                  controllers.requests.BatchOrderRequestsController.get(id: BSONObjectID)
 GET         /requests/:id/edit                 controllers.requests.BatchOrderRequestsController.edit(id: BSONObjectID)
@@ -39,7 +39,3 @@ GET         /requestSettings/:id/edit          controllers.requestSetting.Reques
 POST        /requestSettings/:id               controllers.requestSetting.RequestSettingController.update(id: BSONObjectID)
 POST        /requestSettings/:id/delete        controllers.requestSetting.RequestSettingController.delete(id: BSONObjectID)
 
-
-# Dataset Items
-GET         /dataSets/:id                       controllers.requests.BatchOrderRequestsController.findItemsWithFilter(id: String, page: Int, orderBy: String, filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil), filterOrIds: Seq[Either[Seq[org.incal.core.FilterCondition], BSONObjectID]] ?= Nil)
-POST        /dataSets/:id                       controllers.requests.BatchOrderRequestsController.findItems(id: String, page: Int, orderBy: String, filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil), filterOrIds: Seq[Either[Seq[org.incal.core.FilterCondition], BSONObjectID]] ?= Nil)

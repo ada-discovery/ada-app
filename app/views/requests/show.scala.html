@@ -1,17 +1,14 @@
 @import views.html.elements.editableTextElements
-
 @import org.ada.server.models.Translation
-@import org.incal.play.controllers.{WebContext, IdForm}
+@import org.incal.play.controllers.{IdForm, WebContext}
 @import org.incal.play.controllers.WebContext._
 @import org.ada.web.controllers.routes
 @import views.html.elements._
-@import services.request.ActionGraph
 @import models.Action
 @import org.ada.web.util.typeColumns
 @import views.html.table.{displayTable, dynamicTable}
 @import reactivemongo.bson.BSONObjectID
 @import views.html.table.paginatedTable
-@import services.request.RoleProviderService
 @import org.ada.web.controllers.dataset.TableViewData
 @import play.api.libs.json.JsObject
 @import views.html.requests.itemsTable
@@ -19,7 +16,8 @@
 
 @(
     request: BatchOrderRequest,
-    items: Option[TableViewData]
+    items: Traversable[JsObject],
+    fieldNames: Traversable[String]
 )(
     implicit context: WebContext
 )
@@ -30,14 +28,8 @@
     }
 
     @labelValue("request", "Requested items") {
-        @if(items.isDefined) {
-            @itemsTable(items.get)
-        } else {
-            <div class="row">
-                No item included
-            </div>
-        }
-    }
+        @itemsTable(items, fieldNames)
+     }
 
     @labelValue("request", "History") {
        @historyTable(request.history)
