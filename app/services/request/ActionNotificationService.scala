@@ -7,6 +7,7 @@ import org.apache.commons.mail.EmailException
 import play.api.libs.mailer.{AttachmentFile, Email, MailerClient}
 import play.api.{Configuration, Logger}
 import org.incal.core.util.toHumanReadableCamel
+import util.PdfHelper
 
 @ImplementedBy(classOf[ActionNotificationServiceImpl])
 trait ActionNotificationService {
@@ -16,8 +17,7 @@ trait ActionNotificationService {
 @Singleton
 class ActionNotificationServiceImpl @Inject()(
     configuration: Configuration,
-    mailerClient: MailerClient,
-    pdfBuilder: PdfBuilder
+    mailerClient: MailerClient
 ) extends ActionNotificationService {
     protected val logger = Logger
 
@@ -68,7 +68,7 @@ class ActionNotificationServiceImpl @Inject()(
     }
 
     private def buildResumeDocument(notificationInfo: NotificationInfo) = {
-        val resumeFile = pdfBuilder.getFile(notificationInfo)
+        val resumeFile = PdfHelper.getFile(notificationInfo)
         AttachmentFile("request-resume.pdf", resumeFile)
     }
 

@@ -14,7 +14,7 @@
             (Some(fieldName), fieldName, (x: Any) => {
                 val item = x.asInstanceOf[JsObject]
 
-                itemField(item.value.get(fieldName).get.toString())
+                itemField(item.value.get(fieldName).getOrElse("").toString())
             })
         }
 

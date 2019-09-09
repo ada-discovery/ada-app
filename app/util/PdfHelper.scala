@@ -1,4 +1,4 @@
-package services.request
+package util
 
 import java.io.File
 
@@ -6,8 +6,9 @@ import models.NotificationInfo
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.apache.pdfbox.pdmodel.{PDDocument, PDPage, PDPageContentStream}
 import play.api.libs.json.JsValue
+import services.request.MessageTemplate
 
-class PdfBuilder {
+object PdfHelper {
 
     def getFile(notificationInfo: NotificationInfo): File = {
 
@@ -38,12 +39,9 @@ class PdfBuilder {
             notification.updateDate,
             notification.updatedByUser,
             notification.getRequestUrl
-        ) + "\nDescription:\n \n" + notification.description + "\n \n"
+        ) + "\nDescription:\n \n" + notification.description.getOrElse("") + "\n \n"
 
         val itemsToPrint = notification.items.get.map(_.fields)
-
-        //      notification.items.map(i=>i.fields.filter(f=>f._1 != "_id"))
-
         val table = buildTable(itemsToPrint)
 
         buildLines(text + table, content)

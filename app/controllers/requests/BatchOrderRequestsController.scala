@@ -31,8 +31,10 @@ import play.api.libs.json.JsObject
 import play.api.mvc.{Action, AnyContent, Call, RequestHeader}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, RequestSettingRepo}
-import services.request.{ActionGraph, ActionNotificationService, BatchOrderService}
+import services.request.{ActionNotificationService, BatchOrderService}
+import services.request.ActionGraph
 import views.html.dataset.actionTable
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -185,6 +187,7 @@ class BatchOrderRequestsController @Inject()(
                                     userRole = Role.Requester,
                                     fromState = createAction.fromState,
                                     toState = createAction.toState,
+                                    possibleActions =  ActionGraph.apply.get(createAction.toState).get.map(_.action),
                                     createdByUser = user.get.user.ldapDn,
                                     targetUser = user.get.user.ldapDn,
                                     description = None,
@@ -277,16 +280,13 @@ class BatchOrderRequestsController @Inject()(
         for {
             committees <- requestSettingRepo.find()
             dataSetSettings <- dataSetSettingRepo.find(Seq("ownerId" #== user.get.user._id))
+        } yield {
+            val userCommittee = committees.filter(c => c.userIds.contains(user.get.user._id.get))
+            val committeeDataSetIds = userCommittee.map(c => c.dataSetId).toSeq
+            val ownedDataSetIds = dataSetSettings.map(s => s.dataSetId).toSeq
+            val dataSetIds = ownedDataSetIds ++ committeeDataSetIds
+            Seq("dataSetId" #-> dataSetIds, "state" #!= BatchRequestState.Created.toString)
         }
-            yield {
-                val userCommittee = committees.filter(c => c.userIds.contains(user.get.user._id.get))
-                val committeeDataSetIds = userCommittee.map(c => c.dataSetId).toSeq
-                val ownedDataSetIds = dataSetSettings.map(s => s.dataSetId).toSeq
-
-                val dataSetIds = ownedDataSetIds ++ committeeDataSetIds
-
-                Seq("dataSetId" #-> dataSetIds, "state" #!= BatchRequestState.Created.toString)
-            }
     }
 
     private def getFutureUserScopedItemsAndCounts(
@@ -418,6 +418,7 @@ class BatchOrderRequestsController @Inject()(
                 userRole = Role.Requester,
                 fromState = createAction.fromState,
                 toState = createAction.toState,
+                possibleActions =  ActionGraph.apply.get(createAction.toState).get.map(_.action),
                 createdByUser = user.get.user.ldapDn,
                 targetUser = user.get.user.ldapDn,
                 description = None,
@@ -468,6 +469,7 @@ class BatchOrderRequestsController @Inject()(
                                         userRole = role,
                                         fromState = allowedStateAction.fromState,
                                         toState = allowedStateAction.toState,
+                                        possibleActions =  ActionGraph.apply.get(allowedStateAction.toState).get.map(_.action),
                                         createdByUser = usersToNotify.get(Role.Requester).get.toSeq(0).ldapDn,
                                         targetUser = user.ldapDn,
                                         description = description,
@@ -545,7 +547,7 @@ class BatchOrderRequestsController @Inject()(
     private def getReadOnlyUrl(requestId: BSONObjectID)(implicit request: RequestHeader) =
         routes.BatchOrderRequestsController.get(requestId).absoluteURL()
 
-    def getRequestSettingsFieldNames(dataSetId: String) =
+    private def getRequestSettingsFieldNames(dataSetId: String) =
         for {
             fieldNamesByDataSet <- requestSettingRepo.find(Seq("dataSetId" #== dataSetId)).map {
                 _.flatMap(_.displayFieldNames)

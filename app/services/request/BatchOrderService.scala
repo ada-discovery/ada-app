@@ -74,7 +74,7 @@ class BatchOrderServiceImpl @Inject()(
         role: Role.Value,
         userId: Option[BSONObjectID]
     ): Option[Role.Value] = {
-        ids.find(_ == userId).map(id => role)
+        ids.find(_ == userId.get).map(id => role)
     }
 
     def getAllowedUserIds(existingRequest: BatchOrderRequest, user: Option[User]) =
