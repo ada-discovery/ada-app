@@ -9,16 +9,21 @@
 )
 
 @{
-    val columns: Traversable[(Option[String], String, Any => Html)] =
-        fieldNames.map { fieldName =>
-            (Some(fieldName), fieldName, (x: Any) => {
-                val item = x.asInstanceOf[JsObject]
+  //  if(items.size > 0) {
+   //     val fieldNames = items.toSeq(0).fields.map(_.1)
 
-                itemField(item.value.get(fieldName).getOrElse("").toString())
-            })
-        }
+        val columns: Traversable[(Option[String], String, Any => Html)] =
+            fieldNames.map { fieldName =>
+                (Some(fieldName), fieldName, (x: Any) => {
+                    val item = x.asInstanceOf[JsObject]
 
-    displayTable(items, columns)
+                //    item.value.get(fieldName).map(value => itemField(value.toString()))
+                    itemField(item.value.get(fieldName).getOrElse("").toString())
+                })
+            }
+
+        displayTable(items, columns)
+ //   }
 }
 
 @itemField(value: String) = {

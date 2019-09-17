@@ -41,9 +41,7 @@ class DocumentationController @Inject()(
     with HasBasicFormCreateView[SampleDocumentation] {
 
     private implicit val idsFormatter = BSONObjectIDStringFormatter
-    override protected type ShowViewData = (
-        SampleDocumentation
-        )
+
     private lazy val importFolder = configuration.getString("datasetimport.import.folder").getOrElse {
         val folder = new java.io.File("sampleDocs/").getAbsolutePath
         val path = Paths.get(folder)
@@ -224,6 +222,10 @@ class DocumentationController @Inject()(
 
         Seq(pathKeyValue("samples-document", "samples-document")).toMap
     }
+
+    override protected type ShowViewData = (
+        SampleDocumentation
+        )
 
     override protected def getFormShowViewData(requestId: BSONObjectID, form: Form[SampleDocumentation]): AuthenticatedRequest[_] => Future[ShowViewData] = {
         implicit request => {

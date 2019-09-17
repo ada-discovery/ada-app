@@ -1,0 +1,124 @@
+@import views.html.layout
+@import views.html.elements.editableTextElements
+@import org.ada.server.models.Translation
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
+@import org.ada.web.util.typeColumns
+@import org.ada.web.controllers.routes
+@import controllers.requests.routes
+@import views.html.elements._
+@import org.incal.play.Page
+@import org.ada.web.controllers.dataset.routes
+@import org.ada.web.security.AdaAuthConfig
+@import views.html.table.{dynamicStringTable, dynamicTableJsImport, dynamicTable}
+@import views.html.helper.input
+@import views.html.table.dynamicStringTable
+@import views.html.table.paginatedTable
+@import views.html.dataset.{dynamicFieldTable, dataSetExportDropdown}
+@import views.html.table.dynamicTableJsImport
+@import reactivemongo.bson.BSONObjectID
+@import org.incal.play.controllers.{GenericJsRouter, GenericRouter}
+@import org.ada.web.controllers.dataset.datatrans.javascript.ReverseDataSetTransformationController
+@import org.ada.web.controllers.dataset.datatrans.DataSetTransformationController
+@import views.html.table.dynamicStringTable
+@import views.html.dataset.{dynamicFieldTable}
+@import  org.ada.server.models.FilterShowFieldStyle
+@import org.ada.server.models.User
+@import views.html.dataSetTypeahead
+
+@(
+)(
+    implicit context: WebContext
+)
+
+@elements = {
+@dynamicTableJsImport()
+@typeaheadJsImport()
+
+@labelValue("requestSetting", "From setting") {
+	@typeahead("sourceDataSetIdTypeahead", "sourceDataSetId", placeholder = "Source dataset")
+}
+
+@labelValue("requestSetting", "To Data Group") {
+	@typeahead("dataGroupTypeahead", "dataGroup", placeholder = "Data group")
+}
+
+@labelValue("requestSetting", attributeLabel("requestSetting", "Data Set Ids")){
+	@dynamicStringTable(
+		"dataSetId",
+		Nil,
+		false,
+		None,
+		None,
+		true,
+		8)
+}
+
+
+<div class="actions pull-right">
+<button type="button" class="btn btn-primary" onclick="submitCopy()">Copy</button>
+</div>
+
+
+@helper.javascriptRouter("settingsJsRoutes")(
+	controllers.requestSetting.routes.javascript.RequestSettingController.copyBatch,
+    controllers.requestSetting.routes.javascript.RequestSettingController.getDatasetOptionsByGroup
+)
+
+	<script type="text/javascript">
+	$(function () {
+		populateFieldTypeahedFromUrl(
+				$('#sourceDataSetIdTypeahead'),
+				$('#sourceDataSetId'),
+				'@Html(controllers.requestSetting.routes.RequestSettingController.getDataSetIdsWithRequestSettings().url)',
+				@FilterShowFieldStyle.LabelsOnly.id
+		)
+
+		populateFieldTypeahedFromUrl(
+				$('#dataGroupTypeahead'),
+				$('#dataGroup'),
+				'@Html(controllers.requestSetting.routes.RequestSettingController.getDataGroups().url)',
+				@FilterShowFieldStyle.LabelsOnly.id
+		)
+
+
+		$('#dataGroupTypeahead').on('typeahead:selected', function(e, data) {
+			var dataSetGroup = $('#dataGroupTypeahead').val()
+			var getDataSetsByDataGroup = settingsJsRoutes.controllers.requestSetting.RequestSettingController.getDatasetOptionsByGroup(dataSetGroup)
+
+			$.ajax({
+				url:  getDataSetsByDataGroup.url,
+				success: function (data) {
+					$.each(data, function(index, field) {
+						var values = {};
+						values["newItem"] = field.name;
+						$('#dataSetIdDiv').dynamicTable('addTableRow', values)
+					});
+				},
+				error: showErrorResponse
+			});
+		});
+	})
+
+	function submitCopy() {
+        var sourceDataSetId = $('#sourceDataSetIdTypeahead').val()
+		var datasets = []
+		var rows = $("#dataSetIdDiv").find("tbody tr")
+		rows.each(function () {
+			datasets.push($(this).find("td").text())
+		})
+
+		var copyAction = settingsJsRoutes.controllers.requestSetting.RequestSettingController.copyBatch(sourceDataSetId, datasets)
+    	submit('post', copyAction.url)
+	}
+
+	</script>
+}
+
+
+@layout.show(
+	"Copy Request setting",
+	elements = elements,
+	Some(controllers.requestSetting.routes.RequestSettingController.listAll()),
+	isFullDisplayName = true
+)

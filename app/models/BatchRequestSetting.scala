@@ -18,7 +18,7 @@ case class BatchRequestSetting(
 object BatchRequestSetting {
   implicit val approvalCommitteeFormat = Json.format[BatchRequestSetting]
 
-  implicit object ApprovalCommitteeIdentity extends BSONObjectIdentity[BatchRequestSetting] {
+  implicit object BatchRequestSettingIdentity extends BSONObjectIdentity[BatchRequestSetting] {
     def of(entity: BatchRequestSetting): Option[BSONObjectID] = entity._id
     protected def set(entity: BatchRequestSetting, id: Option[BSONObjectID]) = entity.copy(_id = id)
   }

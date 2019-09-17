@@ -29,6 +29,5 @@ class BatchOrderRequestModule extends ScalaModule {
 object BatchOrderRequestRepoTypes {
   type BatchOrderRequestRepo = AsyncCrudRepo[BatchOrderRequest, BSONObjectID]
   type RequestSettingRepo = AsyncCrudRepo[BatchRequestSetting, BSONObjectID]
-
   type SampleDocumentationRepo = AsyncCrudRepo[SampleDocumentation, BSONObjectID]
 }
