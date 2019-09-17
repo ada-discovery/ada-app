@@ -1,0 +1,37 @@
+@import views.html.elements.editableTextElements
+@import org.ada.server.models.Translation
+@import org.incal.play.controllers.{IdForm, WebContext}
+@import org.incal.play.controllers.WebContext._
+@import org.ada.web.controllers.routes
+@import views.html.elements._
+@import models.Action
+@import org.ada.web.util.typeColumns
+@import views.html.table.{displayTable, dynamicTable}
+@import reactivemongo.bson.BSONObjectID
+@import views.html.table.paginatedTable
+@import org.ada.web.controllers.dataset.TableViewData
+@import play.api.libs.json.JsObject
+@import views.html.requests.itemsTable
+@import views.html.requests.historyTable
+
+@(
+    documentation: SampleDocumentation
+)(
+    implicit context: WebContext
+)
+
+@elements = {
+    @labelValue("sampleDocument", "DataSet Id") {
+        <input type="text" class="form-control" value="@documentation.dataSetId" readonly="readonly"/>
+    }
+
+    @labelValue("sampleDocument", "Current document") {
+        <iframe src="@controllers.samplesDocumentation.routes.DocumentationController.download(documentation.dataSetId)" style="width:718px; height:700px;" frameborder="0"></iframe>
+    }
+}
+
+@layout.show(
+    "Sample document",
+    elements = elements,
+    Some(controllers.samplesDocumentation.routes.DocumentationController.listAll())
+)
