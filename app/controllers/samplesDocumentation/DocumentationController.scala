@@ -6,16 +6,20 @@ import java.util.Date
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
-import models.SampleDocumentation
+import models.{SampleDocumentation}
 import org.ada.server.AdaException
-import org.ada.server.dataaccess.RepoTypes.UserRepo
+import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.services.UserManager
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaCrudControllerImpl
+import org.ada.web.models.security.DeadboltUser
 import org.incal.core.FilterCondition
+import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion.Infix
+import org.incal.play.Page
 import org.incal.play.controllers._
+import org.incal.play.security.AuthAction
 import org.incal.play.security.SecurityUtil.toAuthenticatedAction
 import org.incal.play.util.WebUtil.getRequestParamValueOptional
 import play.api.data.Forms.{ignored, mapping, nonEmptyText}
@@ -31,15 +35,15 @@ import scala.concurrent.Future
 class DocumentationController @Inject()(
     repo: SampleDocumentationRepo,
     val userManager: UserManager,
+    dataSetSettingRepo: DataSetSettingRepo,
     dsaf: DataSetAccessorFactory,
     userRepo: UserRepo
 ) extends AdaCrudControllerImpl[SampleDocumentation, BSONObjectID](repo)
     with SubjectPresentRestrictedCrudController[BSONObjectID]
     with HasFormShowView[SampleDocumentation, BSONObjectID]
     with HasBasicFormEditView[SampleDocumentation, BSONObjectID]
-    with HasBasicListView[SampleDocumentation]
+    with HasListView[SampleDocumentation]
     with HasBasicFormCreateView[SampleDocumentation] {
-
     private implicit val idsFormatter = BSONObjectIDStringFormatter
 
     private lazy val importFolder = configuration.getString("datasetimport.import.folder").getOrElse {
@@ -60,18 +64,42 @@ class DocumentationController @Inject()(
     )
 
     override def get(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
-        restrictAdminAny(noCaching = true) {
-            toAuthenticatedAction(super.get(id))
-        }
+        restrictAdminOrUserCustomAny(isSamplesOwner(id))(toAuthenticatedAction(super.get(id)))
 
     override def edit(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
-        restrictAdminAny(noCaching = true) {
-            toAuthenticatedAction(super.edit(id))
+        restrictAdminOrUserCustomAny(isSamplesOwner(id))(toAuthenticatedAction(super.edit(id)))
+
+    private def isSamplesOwner(
+        documentationId: BSONObjectID
+    )(
+        deadboltUser: DeadboltUser,
+        request: AuthenticatedRequest[Any]
+    ): Future[Boolean] = {
+        for{
+            existingDocumentation <- repo.get(documentationId)
+            dataSetSettings <- dataSetSettingRepo.find(Seq("dataSetId" #== existingDocumentation.get.dataSetId))
+        } yield {
+           dataSetSettings.map(_.ownerId.get).toSeq.contains(deadboltUser.id.get)
         }
+    }
+
+    private def isSampleOwnerOrHasCreateRequestPermission(
+        dataSetId: String
+    )(
+        deadboltUser: DeadboltUser,
+        request: AuthenticatedRequest[Any]
+    ): Future[Boolean] = {
+        for{
+            existingDocumentation <- repo.find(Seq("dataSetId" #== dataSetId))
+            dataSetSettings <- dataSetSettingRepo.find(Seq("dataSetId" #== dataSetId))
+        } yield {
+            dataSetSettings.map(_.ownerId.get).toSeq.contains(deadboltUser.id.get) || deadboltUser.permissions.map(_.value).contains(s"DS:$dataSetId:createRequest")
+        }
+    }
 
     def download(dataSetId: String): play.api.mvc.Action[AnyContent] =
-        restrictAdminAny(noCaching = true) {
-            implicit request => {
+        restrictAdminOrUserCustomAny(isSampleOwnerOrHasCreateRequestPermission(dataSetId)) {
+                implicit request => {
                 val folder = new java.io.File("sampleDocs/" + dataSetId)
                 folder.listFiles().head
                 val file = folder.listFiles().head
@@ -82,12 +110,19 @@ class DocumentationController @Inject()(
         }
 
     def getByDataSetId(dataSetId: String): play.api.mvc.Action[AnyContent] =
-        restrictAdminAny(noCaching = true) {
+        restrictAdminOrPermissionAny(s"DS:$dataSetId:createRequest") {
             implicit request => {
                 for {
                     existingDocumentation <- repo.find(Seq("dataSetId" #== dataSetId))
                 } yield {
-                    Ok(views.html.samplesDocumentation.show(existingDocumentation.head))
+                    if(existingDocumentation.size > 0)
+                   {
+                       Ok(views.html.samplesDocumentation.show(existingDocumentation.head))
+                   } else
+                    {
+                        Redirect(org.ada.web.controllers.routes.AppController.index()).flashing("errors" -> s"Sample Document for dataSet $dataSetId not available")
+                   }
+
                 }
             }
         }
@@ -100,15 +135,76 @@ class DocumentationController @Inject()(
     }
 
     override def delete(id: BSONObjectID): Action[AnyContent] =
-        restrictAdminAny(noCaching = true) {
-            toAuthenticatedAction(super.delete(id))
+        restrictAdminOrUserCustomAny(isSamplesOwner(id))(toAuthenticatedAction(super.delete(id)))
+
+    override def find(
+        page: Int,
+        orderBy: String,
+        conditions: Seq[FilterCondition]
+    ) = AuthAction { implicit request =>
+        {
+            for {
+                user <- currentUser()
+                dataSetSettings <- dataSetSettingRepo.find(Seq("ownerId" #== user.get.id))
+                userCriteria = Seq("dataSetId" #-> dataSetSettings.map(_.dataSetId).toSeq)
+                (items, count) <- getFutureItemsAndCountByUserCriteria(Some(page), orderBy, conditions, Nil,Some(pageLimit),userCriteria  )
+
+                viewData <- getListViewData(
+                    Page(items, page, page * pageLimit, count, orderBy),
+                    conditions
+                )(request)
+            } yield {
+                implicit val req = request: Request[_]
+                render {
+                    case Accepts.Html() => Ok(listViewWithContext(viewData))
+                    case Accepts.Json() => Ok(toJson(items))
+                }
+            }
+        }.recover(handleFindExceptions)
+    }
+
+
+    override def listAll(orderBy: String) = AuthAction { implicit request =>
+        {
+            for {
+                user <- currentUser()
+                dataSetSettings <- dataSetSettingRepo.find(Seq("ownerId" #== user.get.id))
+                userCriteria = Seq("dataSetId" #-> dataSetSettings.map(_.dataSetId).toSeq)
+                (items, count) <- getFutureItemsAndCountByUserCriteria(None, orderBy, Nil, Nil, None, userCriteria)
+
+                viewData <- getListViewData(
+                    Page(items, 0, 0, count, orderBy),
+                    Nil
+                )(request)
+            } yield {
+                implicit val req = request: Request[_]
+
+                render {
+                    case Accepts.Html() => Ok(listViewWithContext(viewData))
+                    case Accepts.Json() => Ok(toJson(items))
+                }
+            }
+        }.recover(handleListAllExceptions)
+    }
+
+    def getFutureItemsAndCountByUserCriteria(
+        page: Option[Int],
+        orderBy: String,
+        filter: Seq[FilterCondition],
+        projection: Seq[String],
+        limit: Option[Int],
+        criteria: Seq[Criterion[Any]]
+    ): Future[(Traversable[SampleDocumentation], Int)] = {
+        val sort = toSort(orderBy)
+        val skip = page.zip(limit).headOption.map { case (page, limit) =>
+            page * limit
         }
-
-    override def find(page: Int, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent] =
-        restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.find(page, orderBy, filter)))
-
-    override def listAll(orderBy: String): Action[AnyContent] = {
-        restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.listAll(orderBy)))
+        for {
+            items <- repo.find(criteria, sort, projection, limit, skip)
+            count <- repo.count(criteria)
+          } yield {
+            (items, count)
+        }
     }
 
     override def saveCall(
@@ -117,8 +213,13 @@ class DocumentationController @Inject()(
         implicit request: AuthenticatedRequest[AnyContent]
     ): Future[BSONObjectID] = {
         for {
+            user <- currentUser()
+            dataSetSettings <- dataSetSettingRepo.find(Seq("dataSetId" #== documentation.dataSetId))
+            userIsOwner = dataSetSettings.map(_.ownerId).toSeq.find(_ == user.get.id).getOrElse(
+                throw new AdaException("You are not the owner of the dataset " + documentation.dataSetId)
+            )
+            existingDocumentation <- repo.find(Seq("dataSetId" #== documentation.dataSetId))
             documentationForDataSetIdExists <- repo.find(Seq("dataSetId" #== documentation.dataSetId))
-
             id <-
             if (documentationForDataSetIdExists.size == 0) {
                 repo.save(documentation)
@@ -232,6 +333,19 @@ class DocumentationController @Inject()(
             Future {
                 (form.get)
             }
+        }
+    }
+
+    override protected type ListViewData = (
+        Page[SampleDocumentation],
+        Seq[FilterCondition]
+        )
+
+    override protected def getListViewData(page: Page[SampleDocumentation], conditions: Seq[FilterCondition]) = { implicit request =>
+        for {
+            currentUser <- currentUser()
+        } yield {
+            (page, conditions)
         }
     }
 
