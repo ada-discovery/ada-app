@@ -7,17 +7,20 @@ import javax.inject.Inject
 import models.BatchRequestSetting
 import models.BatchRequestSetting.BatchRequestSettingIdentity
 import org.ada.server.AdaException
-import org.ada.server.dataaccess.RepoTypes.UserRepo
-import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
-import org.ada.server.models.Field
+import org.ada.server.dataaccess.RepoTypes.{FieldRepo, UserRepo}
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.models.DataSetFormattersAndIds._
 import org.ada.server.models.User.UserIdentity
+import org.ada.server.models._
 import org.ada.server.services.UserManager
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaCrudControllerImpl
 import org.ada.web.controllers.dataset.DataSetWebContext
+import org.ada.web.services.DataSpaceService
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.controllers._
+import org.incal.play.formatters.JsonFormatter
 import org.incal.play.security.SecurityUtil.toAuthenticatedAction
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
@@ -25,14 +28,17 @@ import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.RequestSettingRepo
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+
 
 @Deprecated
 class RequestSettingController @Inject()(
     requestSettingRepo: RequestSettingRepo,
     val userManager: UserManager,
     dsaf: DataSetAccessorFactory,
+    dataSpaceService: DataSpaceService,
     userRepo: UserRepo
 ) extends AdaCrudControllerImpl[BatchRequestSetting, BSONObjectID](requestSettingRepo)
     with SubjectPresentRestrictedCrudController[BSONObjectID]
@@ -45,11 +51,14 @@ class RequestSettingController @Inject()(
     override protected val homeCall = {
         routes.RequestSettingController.listAll()
     }
+
+    private implicit val widgetSpecFormatter = JsonFormatter[WidgetSpec]
     override protected[controllers] val form = Form(
         mapping(
             "id" -> ignored(Option.empty[BSONObjectID]),
             "dataSetId" -> nonEmptyText,
             "timeCreated" -> ignored(new Date()),
+            "widgetSpecs" -> seq(of[WidgetSpec]),
             "userIds" -> seq(of[BSONObjectID]),
             "displayFieldNames" -> seq(nonEmptyText)
         )(BatchRequestSetting.apply)(BatchRequestSetting.unapply)
@@ -92,7 +101,7 @@ class RequestSettingController @Inject()(
                     deleteExisting <- repo.delete(targetSettingsExistingOptions.map(_._id.get))
                     ids <- Future.sequence(targetDataSetIds.map(
                         dataSetId => {
-                            val requestSetting = BatchRequestSetting(dataSetId = dataSetId, userIds = sourceSetting.head.userIds, displayFieldNames = sourceSetting.head.displayFieldNames)
+                            val requestSetting = BatchRequestSetting(dataSetId = dataSetId, userIds = sourceSetting.head.userIds, widgetSpecs = Seq(), displayFieldNames = sourceSetting.head.displayFieldNames)
                             repo.save(requestSetting)
                         }
                     )
@@ -121,7 +130,7 @@ class RequestSettingController @Inject()(
 
     def copy = restrictAdminAny(noCaching = true) {
         implicit request => {
-            Future{
+            Future {
                 render {
                     case Accepts.Html() => Ok(views.html.requestSettings.copy())
                     case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
@@ -144,14 +153,42 @@ class RequestSettingController @Inject()(
 
     override protected def getFormEditViewData(requestId: BSONObjectID, form: Form[BatchRequestSetting]): AuthenticatedRequest[_] => Future[EditViewData] = {
         implicit request => {
-            for {
-                existingSetting <- repo.get(requestId)
-                fieldRepo = dsaf(existingSetting.get.dataSetId).get.fieldRepo
-                users <- getUsersByIds(existingSetting.get.userIds.map(Some(_)))
-                fields <- Future.sequence(existingSetting.get.displayFieldNames.map(fieldRepo.get))
-            } yield {
-                (IdForm(requestId, form), existingSetting.get.dataSetId, fields.flatten)
-            }
+            val dataSet = form.get.dataSetId
+            dsaf(dataSet).map { dsa =>
+                val filtersFuture =
+                    form.value match {
+                        case Some(dataView) =>
+                            val filterIds = dataView.widgetSpecs.map(_.subFilterId).flatten
+                            if (filterIds.nonEmpty) {
+                                dsa.filterRepo.find(
+                                    projection = Seq("name")
+                                )
+                            } else
+                                Future(Nil)
+                        case None => Future(Nil)
+                    }
+
+                val dataSetNameFuture = dsa.dataSetName
+                val nameFieldMapFuture = getNameFieldMap(dsa.fieldRepo)
+                val settingFuture = dsa.setting
+
+
+                for {
+                    existingSetting <- repo.get(requestId)
+                    fieldRepo = dsaf(existingSetting.get.dataSetId).get.fieldRepo
+                    users <- getUsersByIds(existingSetting.get.userIds.map(Some(_)))
+                    fields <- Future.sequence(existingSetting.get.displayFieldNames.map(fieldRepo.get))
+                    (dataSetName, dataSpaceTree, dataSetSetting) <- getDataSetNameTreeAndSetting(dsa)
+                    setting <- requestSettingRepo.find(Seq("dataSetId" #== dataSet)).map(_.headOption)
+                    filters <- filtersFuture
+                    nameFieldMap <- nameFieldMapFuture
+                    dataSetName <- dataSetNameFuture
+                    dataSetSetting <- settingFuture
+                } yield {
+                    val idFilterNameMap = filters.map(filter => (filter._id.get, filter.name.getOrElse(""))).toMap
+                    (IdForm(requestId, form), existingSetting.get.dataSetId, nameFieldMap, idFilterNameMap, dataSetSetting.filterShowFieldStyle, dataSpaceTree, dataSetSetting)
+                }
+            }.get
         }
     }
 
@@ -172,15 +209,44 @@ class RequestSettingController @Inject()(
         }
     }
 
-    override protected def createView = { implicit ctx =>
-        views.html.requestSettings.create(_)
+    override protected type CreateViewData = (
+        Form[BatchRequestSetting]
+        )
+
+    private def getDataSetNameTreeAndSetting(
+        dsa: DataSetAccessor
+    )(
+        implicit request: AuthenticatedRequest[_]
+    ): Future[(String, Traversable[DataSpaceMetaInfo], DataSetSetting)] = {
+        val dataSetNameFuture = dsa.dataSetName
+        val treeFuture = dataSpaceService.getTreeForCurrentUser
+        val settingFuture = dsa.setting
+
+        for {
+            dataSetName <- dataSetNameFuture
+            dataSpaceTree <- treeFuture
+            setting <- settingFuture
+        } yield
+            (dataSetName, dataSpaceTree, setting)
     }
+
+    private def getNameFieldMap(fieldRepo: FieldRepo): Future[Map[String, Field]] =
+        fieldRepo.find().map {
+            _.map(field =>
+                (field.name, field)
+            ).toMap
+        }
 
     override protected type EditViewData = (
         IdForm[BSONObjectID, BatchRequestSetting],
             String,
-            Traversable[Field]
+            Map[String, Field],
+            Map[BSONObjectID, String],
+            Option[FilterShowFieldStyle.Value],
+            Traversable[DataSpaceMetaInfo],
+            DataSetSetting
         )
+
     override protected type ShowViewData = (
         BatchRequestSetting, Traversable[String]
         )
@@ -190,9 +256,9 @@ class RequestSettingController @Inject()(
     }
 
     override protected def editView = { implicit ctx => {
-        data: (IdForm[BSONObjectID, BatchRequestSetting], String, Traversable[Field]) => {
+        data: EditViewData => {
             implicit val dataSetWebCtx = dataSetWebContext(data._2)
-            views.html.requestSettings.edit(data._1)
+            views.html.requestSettings.edit(data._1, data._3, data._4, data._5, data._6, data._7)
         }
     }
     }
@@ -221,6 +287,10 @@ class RequestSettingController @Inject()(
                 )
                 Ok(JsArray(dataSetNames))
             }
+    }
+
+    override protected def createView = { implicit ctx =>
+        views.html.requestSettings.create(_)
     }
 
     def getDataGroups = restrictAdminAny(noCaching = true) {

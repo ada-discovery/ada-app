@@ -35,7 +35,7 @@ class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configurati
     requestsRepo.save(request)
 
     val committeeId = BSONObjectID.parse("577e18c24500004800cdc557").toOption
-    val committee = BatchRequestSetting(committeeId, "dataSetId", new Date(), Nil, Seq("name1"))
+    val committee = BatchRequestSetting(committeeId, "dataSetId", new Date(), Nil, Nil, Seq("name1"))
     committeeRepo.delete(committeeId)
     committeeRepo.save(committee)
 
