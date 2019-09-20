@@ -168,21 +168,15 @@ class RequestSettingController @Inject()(
                         case None => Future(Nil)
                     }
 
-                val dataSetNameFuture = dsa.dataSetName
                 val nameFieldMapFuture = getNameFieldMap(dsa.fieldRepo)
                 val settingFuture = dsa.setting
-
+                val treeFuture = dataSpaceService.getTreeForCurrentUser
 
                 for {
                     existingSetting <- repo.get(requestId)
-                    fieldRepo = dsaf(existingSetting.get.dataSetId).get.fieldRepo
-                    users <- getUsersByIds(existingSetting.get.userIds.map(Some(_)))
-                    fields <- Future.sequence(existingSetting.get.displayFieldNames.map(fieldRepo.get))
-                    (dataSetName, dataSpaceTree, dataSetSetting) <- getDataSetNameTreeAndSetting(dsa)
-                    setting <- requestSettingRepo.find(Seq("dataSetId" #== dataSet)).map(_.headOption)
                     filters <- filtersFuture
+                    dataSpaceTree <- treeFuture
                     nameFieldMap <- nameFieldMapFuture
-                    dataSetName <- dataSetNameFuture
                     dataSetSetting <- settingFuture
                 } yield {
                     val idFilterNameMap = filters.map(filter => (filter._id.get, filter.name.getOrElse(""))).toMap
@@ -212,23 +206,6 @@ class RequestSettingController @Inject()(
     override protected type CreateViewData = (
         Form[BatchRequestSetting]
         )
-
-    private def getDataSetNameTreeAndSetting(
-        dsa: DataSetAccessor
-    )(
-        implicit request: AuthenticatedRequest[_]
-    ): Future[(String, Traversable[DataSpaceMetaInfo], DataSetSetting)] = {
-        val dataSetNameFuture = dsa.dataSetName
-        val treeFuture = dataSpaceService.getTreeForCurrentUser
-        val settingFuture = dsa.setting
-
-        for {
-            dataSetName <- dataSetNameFuture
-            dataSpaceTree <- treeFuture
-            setting <- settingFuture
-        } yield
-            (dataSetName, dataSpaceTree, setting)
-    }
 
     private def getNameFieldMap(fieldRepo: FieldRepo): Future[Map[String, Field]] =
         fieldRepo.find().map {

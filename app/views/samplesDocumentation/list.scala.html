@@ -12,7 +12,7 @@
 @import views.html.requests.requestTable
 
 @(
-    page: Page[SampleDocumentation],
+    page: Page[(SampleDocumentation, String)],
     conditions: Seq[FilterCondition]
 )(
     implicit context: WebContext
@@ -42,11 +42,12 @@
         paginatedTable(
             page,
             controllers.samplesDocumentation.routes.DocumentationController.find(_, _, conditions),
-            typeColumns[SampleDocumentation](
-                (Some("dataSetId"), "Dataset id", _.dataSetId),
-                (Some("timeupdated"), "Time of update", _.timeUpdated)
+            typeColumns[(SampleDocumentation, String)](
+                (Some("dataSetId"), "Dataset id", _._1.dataSetId),
+                (Some("timeUpdated"), "Time updated", _._1.timeUpdated),
+                (None, "Document name", _._2)
             ),
-            Some({ item: Any => controllers.samplesDocumentation.routes.DocumentationController.edit(item.asInstanceOf[SampleDocumentation]._id.get) })
+            Some({ item: Any => controllers.samplesDocumentation.routes.DocumentationController.edit(item.asInstanceOf[(SampleDocumentation, String)]._1._id.get) })
         )
     }
 
