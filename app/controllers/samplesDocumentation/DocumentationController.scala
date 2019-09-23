@@ -188,7 +188,6 @@ class DocumentationController @Inject()(
         documentations.map( doc => {
             val dataSetDir = new File(importFolder + "/" + doc.dataSetId)
                 if (dataSetDir.exists() && dataSetDir.isDirectory) {
-                    val files = dataSetDir.listFiles
                    Some(doc, dataSetDir.listFiles.filter(f => f.isFile && !f.getName.startsWith(".")).head.getName)
                 } else {
                     None
@@ -196,7 +195,6 @@ class DocumentationController @Inject()(
             }
     ).flatten
     }
-
 
     override protected def getListViewData(page: Page[SampleDocumentation], conditions: Seq[FilterCondition]) = { implicit request =>
         Future{

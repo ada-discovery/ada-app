@@ -34,7 +34,6 @@ import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, RequestSettin
 import services.request.{ActionNotificationService, BatchOrderService}
 import services.request.ActionGraph
 import views.html.dataset.actionTable
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -56,8 +55,7 @@ class BatchOrderRequestsController @Inject()(
     with HasBasicFormCreateView[BatchOrderRequest]
     with HasEditView[BatchOrderRequest, BSONObjectID]
     with HasListView[BatchOrderRequest]
-    //  with AdaAuthConfig
-{ // TODO: No need for AdaAuthConfig
+{
     private implicit val idsFormatter = BSONObjectIDStringFormatter
     private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
     override protected type EditViewData = (
@@ -486,7 +484,6 @@ class BatchOrderRequestsController @Inject()(
                             (existingRequest.get.copy(state = newState, createdById = existingRequest.get.createdById, history = updatedHistory.toSeq), notifications)
                         case None => throw new AdaException("No logged user found")
                     }
-
                     repo.update(batchRequestWithStateAndNotifications._1).map(id => (id, batchRequestWithStateAndNotifications._2))
                 }
             } yield {
