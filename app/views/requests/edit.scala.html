@@ -12,11 +12,15 @@
 @import org.ada.web.controllers.dataset.TableViewData
 @import views.html.requests.historyTable
 
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import play.api.libs.json.JsObject
 @(
     data: IdForm[BSONObjectID, BatchOrderRequest],
-    items: Option[TableViewData]
+    items: Traversable[JsObject],
+    fieldNames: Traversable[String]
+
 )(
-    implicit context: WebContext
+        implicit context: WebContext
 )
 
 @elements = {
@@ -25,13 +29,7 @@
     @select("request", "state", data.form, BatchRequestState.values.map(state => (state.toString, state.toString)).toSeq, true)
 
     @labelValue("request", "Requested items") {
-        @if(items.isDefined) {
-            @itemsTable(items.get)
-        } else {
-            <div class="row">
-                No item included
-            </div>
-        }
+        @itemsTable(items, fieldNames)
     }
 
     @labelValue("request", "History") {

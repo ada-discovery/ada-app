@@ -1,0 +1,47 @@
+@import views.html.layout
+@import views.html.elements.editableTextElements
+@import org.ada.server.models.Translation
+@import org.incal.play.controllers.{WebContext, IdForm}
+@import org.incal.play.controllers.WebContext._
+@import org.ada.web.controllers.routes
+@import views.html.elements._
+@import org.ada.web.util.typeColumns
+@import views.html.table.{displayTable, dynamicTable}
+@import reactivemongo.bson.BSONObjectID
+@import views.html.requests.itemsTable
+@import org.ada.web.controllers.dataset.TableViewData
+@import views.html.requests.historyTable
+
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import play.api.libs.json.JsObject
+@(
+    data: IdForm[BSONObjectID, SampleDocumentation]
+)(
+        implicit context: WebContext
+)
+
+@elements = {
+    @inputTextReadonly("sampleDocument", "dataSetId", data.form)
+
+@labelValue("sampleDocument", "New Document") {
+    <input type="file" name="samples-document">
+}
+
+@labelValue("sampleDocument", "Current document") {
+    <iframe src="@controllers.samplesDocumentation.routes.DocumentationController.download(data.form.get.dataSetId)" style="width:718px; height:700px;" frameborder="0"></iframe>
+}
+}
+
+@layout.edit(
+    "Samples document",
+    "samples document",
+    errors = data.form.errors,
+    elements = elements,
+    updateCall = controllers.samplesDocumentation.routes.DocumentationController.update(data.id),
+    cancelCall = controllers.samplesDocumentation.routes.DocumentationController.listAll(),
+    deleteCall = Some(controllers.samplesDocumentation.routes.DocumentationController.delete(data.id)),
+    None,
+    None,
+    None,
+    Seq((Symbol("enctype"),"multipart/form-data"))
+)

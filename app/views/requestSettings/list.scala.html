@@ -2,11 +2,11 @@
 @import org.incal.core.FilterCondition
 @import org.incal.play.Page
 @import org.incal.play.controllers.WebContext
-@import services.request.{ActionGraph, RoleProviderService}
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import reactivemongo.bson.BSONObjectID
 @import org.incal.core.ConditionType
+@import views.html.filter.filterWithJs
 
 @(
     page: Page[BatchRequestSetting],
@@ -14,6 +14,31 @@
 )(
     implicit context: WebContext
 )
+
+@actions = {
+    <div class="row">
+        <div class="pull-right">
+            <div class="dropdown">
+                <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Actions
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a href="@controllers.requestSetting.routes.RequestSettingController.create()">
+                            Add a new setting
+                        </a>
+                    </li>
+                    <li>
+                        <a href="@controllers.requestSetting.routes.RequestSettingController.copy()">
+                            Copy a setting
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+}
 
 @table = @{
     paginatedTable(
@@ -31,7 +56,7 @@
     "request setting",
     None,
     page.total,
-    None,
+    Some(actions),
     Some(table),
     None
 )

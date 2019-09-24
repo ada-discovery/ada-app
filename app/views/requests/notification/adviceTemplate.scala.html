@@ -2,26 +2,17 @@
 @import org.incal.core.util.toHumanReadableCamel
 
 @(
-        userName: String,
-        role: Role.Value,
-        url: String,
-        requesterName: String,
-        dataSetId: String,
-        timeCreated: Date,
-        fromState: BatchRequestState.Value,
-        toState: BatchRequestState.Value,
-        updateTimestamp: Date,
-        updatedByUser: String
+    notificationInfo: NotificationInfo
 )
 
-Dear @userName,<br>
-as @role, please be informed that the status of a request changed,<br>
-<b>you can see the request in Ada at the following url <a href="@url">@url</a></b><br><br>
+Dear @notificationInfo.targetUser,<br>
+as @notificationInfo.userRole, please be informed that the status of a request changed,<br>
+<b>you can see the request in Ada at the following url <a href="@notificationInfo.getRequestUrl">@notificationInfo.getRequestUrl</a></b><br><br>
 please find below the current status:<br>
-requester: @requesterName<br>
-dataset Id: @dataSetId<br>
-created on date: @timeCreated<br>
-status change: <b>from @toHumanReadableCamel(fromState.toString()) to @toHumanReadableCamel(toState.toString())</b><br>
-status changed on date: @updateTimestamp<br>
-updated by user: @updatedByUser<br><br>
+requester: @notificationInfo.createdByUser<br>
+dataset Id: @notificationInfo.dataSetId<br>
+created on date: @notificationInfo.creationDate<br>
+status change: <b>from @toHumanReadableCamel(notificationInfo.fromState.toString()) to @toHumanReadableCamel(notificationInfo.toState.toString())</b><br>
+status changed on date: @notificationInfo.updateDate<br>
+updated by user: @notificationInfo.updatedByUser<br><br>
 Best regards, Ada Team

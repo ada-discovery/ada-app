@@ -11,49 +11,58 @@
 @import  org.ada.server.models._
 @import views.html.table.dynamicStringTable
 @import views.html.dataset.{dynamicFieldTable}
+@import views.html.elements.{fieldTypeahead, typeahead}
+@import views.html.table.{displayTable, dynamicTable, dynamicTwoColumnTable}
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import views.html.dataview.{filterOrIdTable, widgetSpecTable}
+@import org.ada.server.models.WidgetGenerationMethod
+@import views.html.dataview.activateTypeahead
+@import views.html.dataset.{datasetMenu, datasetSubNav, datasetSubNavJs}
 
 @(
     data: IdForm[BSONObjectID, BatchRequestSetting],
-    committees: Map[BSONObjectID, String] // TODO: Not used
+    nameFieldMap: Map[String,  Field],
+    idFilterNameMap: Map[BSONObjectID, String],
+    showFieldStyle: Option[FilterShowFieldStyle.Value],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
+    dataSetSetting: DataSetSetting
 )(
-    implicit context: WebContext
+     implicit context: DataSetWebContext, ctx: WebContext
 )
 
 @elements = {
-
     @inputTextReadonly("requestSetting", "dataSetId", data.form)
-
     @dynamicTableJsImport()
     @typeaheadJsImport()
 
-    @labelValue("userIds", attributeLabel("requestSetting", "userIds")) {
-        @* TODO: How come a user-id table is a field table? Looks like an abuse *@
-        @dynamicFieldTable(
-            "userId",
-            Nil,
-            true,
-            5,
-            None,
-            None,
-            showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
-        )
-    }
-
-    @labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")){
-        @dynamicFieldTable(
-            "displayFieldName",
-            data.form.value.map(_.displayFieldNames.map(f => Field(f,Some(f)))).getOrElse(Nil), // TODO: I would probably load the fields with labels and everything first and pass to the view
-            true,
-            5,
-            Some(extraFieldButtons),
-            None,
-            showFieldStyle = Some(FilterShowFieldStyle.NamesOnly) //TODO: NamesOnly?
-        )
-    }
-
-    @helper.javascriptRouter("dataSetJsRoutes")(
-        org.ada.web.controllers.dataset.routes.javascript.DataSetDispatcher.getFields
+@labelValue("userIds", attributeLabel("requestSetting", "Committee users Ids")) {
+    @dynamicFieldTable(
+        "userId",
+        Nil,
+        true,
+        5,
+        None,
+        None,
+        showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
     )
+}
+    
+@labelValue("widgetSpecs", attributeLabel("dataView", "widgetSpecs")){
+    @widgetSpecTable(
+        data.form.value.map(_.widgetSpecs).getOrElse(Nil),
+        nameFieldMap,
+        idFilterNameMap,
+        showFieldStyle
+    )
+}
+
+@labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")){
+    @dynamicStringTable("displayFieldName", data.form.value.map(_.displayFieldNames).getOrElse(Nil), false, None, Some(extraFieldButtons), true, 8)
+}
+
+@helper.javascriptRouter("dataSetJsRoutes")(
+    context.dataSetJsRouter.generateTable
+)
 
     <script type="text/javascript">
         $(function () {
@@ -64,39 +73,22 @@
                 true
             )
 
-            var dataSetId = $("#dataSetId").val()
-
-            if (dataSetId.length > 0) {
-                @* TODO: This is bad, actually very very bad... at too many levels: 1) Passing param like this is hacky, 2) You should never access DataSetDispatcher directly but use DataSetRouter or DataSetJsRouter that does exactly what you need, 3) The param "dataSetId" is set to a readonly field, then read in js, and passed to a function. You can just pass it as a view attribute if you ever need it. *@
-                var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
-                populateFieldTypeahedFromUrl(
+            populateFieldTypeahedFromUrl(
                     $('#displayFieldNameDiv').find('#fieldTypeahead'),
                     $('#displayFieldNameDiv').find('#fieldName'),
-                    url,
+                    '@Html(context.dataSetRouter.allFields.url)',
                     @FilterShowFieldStyle.NamesOnly.id
-                )
-            }
+            )
         })
 
-        @* TODO: Might work but risky... *@
-        function clearTable(){
-            $('#displayFieldNameDiv').find('table tbody tr').remove()
-        }
-
         function addAllFields() {
-            var dataSetId = $('#dataSetId').val()
-            clearTable()
-            @* TODO: Same as above... use DataSetRouter or DataSetJsRouter *@
-            var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
-
             $.ajax({
-                url: url,
+                url:  '@Html(context.dataSetRouter.allFields.url)',
                 success: function (data) {
                     $.each(data, function(index, field) {
                         var values = {};
-                        values["fieldName"] = field.name;
-                        values["fieldTypeahead"] = field.label ? field.label : field.name;
 
+                        values["newItem"] = field.name;
                         $('#displayFieldNameDiv').dynamicTable('addTableRow', values)
                     });
                 },
@@ -112,6 +104,10 @@
     </a>
 }
 
+@extraBottomResources = {
+    @activateTypeahead(showFieldStyle)
+}
+
 @layout.edit(
     "Request setting",
     "request setting",
@@ -120,6 +116,7 @@
     updateCall = controllers.requestSetting.routes.RequestSettingController.update(data.id),
     cancelCall = controllers.requestSetting.routes.RequestSettingController.listAll(),
     deleteCall = Some(controllers.requestSetting.routes.RequestSettingController.delete(data.id)),
-    None,
-    None
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    Some(datasetSubNav(dataSetSetting)),
+    bottomResources = Some(extraBottomResources)
 )
