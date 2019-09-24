@@ -49,63 +49,6 @@
 
 @dynamicTableJsImport()
 @typeaheadJsImport()
-	@* TODO: All js stuff should be used put to "bottomResources" --> not available for create layout *@
-@helper.javascriptRouter("requestJsRoutes")(
-	controllers.requests.routes.javascript.BatchOrderRequestsController.findItemsWithFilter
-)
-
-	<script type="text/javascript">
-			$("#dataSetIdTypeahead").parent("div").on("click", function () {
-				if (!$(this).find("div.tt-menu").hasClass("tt-open")) {
-					requestItems()
-				}
-			});
-
-			//			$('#dataSetIdTypeahead').on("change type paste", function () {
-			$('#dataSetId').on("change type paste", function () {
-				requestItems()
-			});
-
-			$(".inner-content form").submit(function () {
-				addItemsToRequest()
-			});
-
-			function generateTable(data) {
-
-				// filter
-				var filterElement = $(".filter-div");
-				//	filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
-
-				var tableDiv = $(".table-div")
-				tableDiv.html(data.table)
-			}
-
-			function requestItems() {
-				var dataSetId = $("#dataSetId").val()
-				if (dataSetId.length > 0) {
-					requestJsRoutes.controllers.requests.BatchOrderRequestsController.findItemsWithFilter(dataSetId, 0, "").ajax({
-						type: 'GET',
-						success: function (data) {
-							generateTable(data)
-						},
-						error: showErrorResponse
-					})
-				}
-			}
-
-			function addItemsToRequest() {
-				var rows = $("tbody tr")
-				rows.each(function () {
-					var selected = $(this).find("td input").prop("checked")
-					var itemId = $(this).find("td span")[0].id;
-
-					if (selected) {
-						$(".inner-content form").append('<input type="hidden" name="itemIds[]" value=' + itemId + '>')
-					}
-				})
-			}
-	</script>
-	}
 }
 
 @layout.create(
