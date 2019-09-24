@@ -54,12 +54,11 @@ class ActionNotificationServiceImpl @Inject()(
         }
     }
 
-    // TODO: why to introduce a single-line function for a single caller? --> I would keep it for a better readability of the code
-    private def isResumeRequired(role: Role.Value, notificationType: NotificationType.Value) = {
-        (role == Role.Committee || role == Role.Owner) && (notificationType == NotificationType.Solicitation)
-    }
-
     private def buildAttachment(notificationInfo: NotificationInfo) = {
+        def isResumeRequired(role: Role.Value, notificationType: NotificationType.Value) = {
+            (role == Role.Committee || role == Role.Owner) && (notificationType == NotificationType.Solicitation)
+        }
+
         if (isResumeRequired(notificationInfo.userRole, notificationInfo.notificationType)) {
             Some(buildResumeDocument(notificationInfo))
         } else {

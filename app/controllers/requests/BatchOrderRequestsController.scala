@@ -38,14 +38,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 @Deprecated
-// TODO: whooooo, 17 dependent components, that's a bit too much, most of the funs from the "providers" should be put inside the controller since there are merely util funds (single caller, not general enough)
-// TODO: For truly general funs you can create a single service called BatchOrderService and put everything there (rather than spliting it to 10 dummy classes)
 class BatchOrderRequestsController @Inject()(
     requestsRepo: BatchOrderRequestRepo,
     requestSettingRepo: RequestSettingRepo,
     dataSetSettingRepo: DataSetSettingRepo,
     dsaf: DataSetAccessorFactory,
-    val userManager: UserManager,
     val actionNotificationService: ActionNotificationService,
     batchOrderService: BatchOrderService,
     dataSpaceService: DataSpaceService,
@@ -476,7 +473,7 @@ class BatchOrderRequestsController @Inject()(
                                         getRequestUrl = getRequestUrlByNotificationType(notificationType, existingRequest.get._id.get, role),
                                         notificationType = notificationType,
                                         updatedByUser = currentUser.user.ldapDn,
-                                        items = Some(items)
+                                        items = items
                                     )
                                 }
                             }

@@ -9,9 +9,7 @@ import play.api.libs.json.JsValue
 import services.request.MessageTemplate
 
 object PdfHelper {
-
     def getFile(notificationInfo: NotificationInfo): File = {
-
         val document = new PDDocument()
         val page = new PDPage
         val tempFile = File.createTempFile("temp-ada-email-attachment", ".tmp")
@@ -27,21 +25,9 @@ object PdfHelper {
     private def buildContent(document: PDDocument, page: PDPage, notification: NotificationInfo) = {
         val content = new PDPageContentStream(document, page)
 
-        val text = "Request resume\n" + MessageTemplate.format(
-            notification.notificationType,
-            notification.targetUser,
-            notification.userRole.toString,
-            notification.createdByUser,
-            notification.dataSetId,
-            notification.creationDate,
-            notification.fromState,
-            notification.toState,
-            notification.updateDate,
-            notification.updatedByUser,
-            notification.getRequestUrl
-        ) + "\nDescription:\n \n" + notification.description.getOrElse("") + "\n \n"
+        val text = "Request resume\n" + MessageTemplate.format(notification) + "\nDescription:\n \n" + notification.description.getOrElse("") + "\n \n"
 
-        val itemsToPrint = notification.items.get.map(_.fields)
+        val itemsToPrint = notification.items.map(_.fields)
         val table = buildTable(itemsToPrint)
 
         buildLines(text + table, content)

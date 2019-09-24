@@ -26,6 +26,5 @@ case class NotificationInfo(
     updatedByUser: String,
     getRequestUrl: String,
     description: Option[String],
-    //                             items: Option[TableViewData])
-    items: Option[Traversable[JsObject]]
+    items: Traversable[JsObject]
 )
