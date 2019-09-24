@@ -89,29 +89,6 @@ class RequestSettingController @Inject()(
         restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.listAll(orderBy)))
     }
 
-    def copyBatch(
-        sourceDataSetId: String,
-        targetDataSetIds: Seq[String]
-    ) =
-        restrictAdminAny(noCaching = true) {
-            implicit request => {
-                for {
-                    sourceSetting <- repo.find(Seq("dataSetId" #== sourceDataSetId))
-                    targetSettingsExistingOptions <- repo.find(Seq("dataSetId" #-> targetDataSetIds))
-                    deleteExisting <- repo.delete(targetSettingsExistingOptions.map(_._id.get))
-                    ids <- Future.sequence(targetDataSetIds.map(
-                        dataSetId => {
-                            val requestSetting = BatchRequestSetting(dataSetId = dataSetId, userIds = sourceSetting.head.userIds, widgetSpecs = Seq(), displayFieldNames = sourceSetting.head.displayFieldNames)
-                            repo.save(requestSetting)
-                        }
-                    )
-                    )
-                } yield {
-                    Redirect(homeCall).flashing("success" -> "state of request updated with success")
-                }
-            }
-        }
-
     override def saveCall(
         requestSetting: BatchRequestSetting
     )(
@@ -127,29 +104,6 @@ class RequestSettingController @Inject()(
             }
         } yield
             id
-
-    def copy = restrictAdminAny(noCaching = true) {
-        implicit request => {
-            Future {
-                render {
-                    case Accepts.Html() => Ok(views.html.requestSettings.copy())
-                    case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
-                }
-            }
-        }
-    }
-
-    def getDataSetIdsWithRequestSettings = restrictAdminAny(noCaching = true) {
-        implicit request =>
-            for {
-                requestSettings <- repo.find()
-            } yield {
-                val dataSetNames = requestSettings.map(setting =>
-                    Json.obj("name" -> setting.dataSetId, "label" -> setting.dataSetId)
-                )
-                Ok(JsArray(dataSetNames.toSeq))
-            }
-    }
 
     override protected def getFormEditViewData(requestId: BSONObjectID, form: Form[BatchRequestSetting]): AuthenticatedRequest[_] => Future[EditViewData] = {
         implicit request => {
@@ -252,35 +206,7 @@ class RequestSettingController @Inject()(
         }
     }
 
-    def getDatasetOptionsByGroup(dataGroupId: String) = restrictAdminAny(noCaching = true) {
-        implicit request =>
-            for {
-                groupDataSetIds <- Future {
-                    Seq("car.car", "sar.sap")
-                }
-            } yield {
-                val dataSetNames = groupDataSetIds.map(id =>
-                    Json.obj("name" -> id, "label" -> id)
-                )
-                Ok(JsArray(dataSetNames))
-            }
-    }
-
     override protected def createView = { implicit ctx =>
         views.html.requestSettings.create(_)
-    }
-
-    def getDataGroups = restrictAdminAny(noCaching = true) {
-        implicit request =>
-            for {
-                dataGroups <- Future {
-                    Seq("group 1", "group 2")
-                }
-            } yield {
-                val dataGroupNames = dataGroups.map(id =>
-                    Json.obj("name" -> id, "label" -> id)
-                )
-                Ok(JsArray(dataGroupNames))
-            }
     }
 }

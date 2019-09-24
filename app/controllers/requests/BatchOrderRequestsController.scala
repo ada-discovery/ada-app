@@ -423,7 +423,6 @@ class BatchOrderRequestsController @Inject()(
                 notificationType = NotificationType.Solicitation,
                 updatedByUser = user.get.user.ldapDn,
                 items = None
-                //TableViewData(Page(Traversable(),0,0,0,""),None,Traversable())
             )
 
             actionNotificationService.sendNotifications(Traversable(notification))
