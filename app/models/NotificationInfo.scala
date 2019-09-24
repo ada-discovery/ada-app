@@ -11,7 +11,7 @@ object NotificationType extends Enumeration {
 
 // TODO: no need to have "val" in a use class
 // TODO: why do you need TableViewData as an optional attribute? If you want to pass items pass just that
-case class NotificationInfo (val notificationType: NotificationType.Value,val dataSetId: String, val creationDate:Date,val createdByUser:String , val targetUser:String, val userRole: Role.Value, val targetUserEmail:String, val fromState:BatchRequestState.Value, val toState:BatchRequestState.Value, val updateDate:Date,
+case class NotificationInfo(val notificationType: NotificationType.Value,val dataSetId: String, val creationDate:Date,val createdByUser:String , val targetUser:String, val userRole: Role.Value, val targetUserEmail:String, val fromState:BatchRequestState.Value, val toState:BatchRequestState.Value, val updateDate:Date,
                              val updatedByUser:String, val getRequestUrl:String, val description: Option[String], val items: Option[TableViewData])
 
 // TODO: never use null in Scala!! there is Option[] to indicate an optional type
