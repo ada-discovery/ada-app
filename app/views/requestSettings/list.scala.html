@@ -25,12 +25,12 @@
                 </button>
                 <ul class="dropdown-menu">
                     <li>
-                        <a href="@controllers.requestSetting.routes.RequestSettingController.create()">
+                        <a href="@controllers.orderrequest.routes.RequestSettingController.create()">
                             Add a new setting
                         </a>
                     </li>
                     <li>
-                        <a href="@controllers.requestSetting.routes.RequestSettingController.copy()">
+                        <a href="@controllers.orderrequest.routes.RequestSettingController.copy()">
                             Copy a setting
                         </a>
                     </li>
@@ -43,12 +43,12 @@
 @table = @{
     paginatedTable(
         page,
-        controllers.requestSetting.routes.RequestSettingController.find(_, _, conditions),
+        controllers.orderrequest.routes.RequestSettingController.find(_, _, conditions),
         typeColumns[BatchRequestSetting](
             (Some("dataSetId"), "Dataset id", _.dataSetId),
             (Some("timeCreated"), "Date", _.timeCreated)
         ),
-        Some({ item: Any => controllers.requestSetting.routes.RequestSettingController.edit(item.asInstanceOf[BatchRequestSetting]._id.get) })
+        Some({ item: Any => controllers.orderrequest.routes.RequestSettingController.edit(item.asInstanceOf[BatchRequestSetting]._id.get) })
     )
 }
 

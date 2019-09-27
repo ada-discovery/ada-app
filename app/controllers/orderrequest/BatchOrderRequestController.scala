@@ -1,8 +1,9 @@
-package controllers.requests
+package controllers.orderrequest
 
 import java.util.Date
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
+import controllers.orderrequest.routes
 import javax.inject.Inject
 import models.BatchOrderRequest.batchRequestFormat
 import models.{NotificationInfo, NotificationType, Role, _}
@@ -11,7 +12,6 @@ import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.ada.server.models.User.UserIdentity
 import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, Filter, User}
-import org.ada.server.services.UserManager
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaCrudControllerImpl
 import org.ada.web.controllers.dataset.DataSetWebContext
@@ -34,11 +34,12 @@ import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, RequestSettin
 import services.request.{ActionNotificationService, BatchOrderService}
 import services.request.ActionGraph
 import views.html.dataset.actionTable
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 @Deprecated
-class BatchOrderRequestsController @Inject()(
+class BatchOrderRequestController @Inject()(
     requestsRepo: BatchOrderRequestRepo,
     requestSettingRepo: RequestSettingRepo,
     dataSetSettingRepo: DataSetSettingRepo,
@@ -53,157 +54,153 @@ class BatchOrderRequestsController @Inject()(
     with HasEditView[BatchOrderRequest, BSONObjectID]
     with HasListView[BatchOrderRequest]
 {
-    private implicit val idsFormatter = BSONObjectIDStringFormatter
-    private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
-    override protected type EditViewData = (
-        IdForm[BSONObjectID, BatchOrderRequest],
-            Traversable[JsObject],
-            Traversable[String]
-        )
-    override protected type ListViewData = (
-        Page[(BatchOrderRequest, String, Call)],
-            Seq[FilterCondition]
-        )
-    override protected type ShowViewData = (
-        BatchOrderRequest,
-            Traversable[JsObject],
-            Traversable[String]
-        )
-    protected type UserScopedListViewData = (
-        Page[(BatchOrderRequest, String, Call)],
-            Seq[FilterCondition]
-        )
-    override protected val homeCall = routes.BatchOrderRequestsController.findActive()
-    override protected[controllers] val form = Form(
-        mapping(
-            "id" -> ignored(Option.empty[BSONObjectID]),
-            "dataSetId" -> nonEmptyText,
-            "itemIds" -> seq(of[BSONObjectID]),
-            "state" -> of[BatchRequestState.Value],
-            "created by id" -> ignored(Option.empty[BSONObjectID]),
-            "timeCreated" -> ignored(new Date()),
-            "history" -> ignored(Seq[ActionInfo]())
-        )(BatchOrderRequest.apply)(BatchOrderRequest.unapply)
-    )
-    private val activeRequestsListRedirect = Redirect(routes.BatchOrderRequestsController.findActive())
-    private val selectedIdsForm = Form(single("selectedIds" -> seq(of[BSONObjectID])))
+  private implicit val idsFormatter = BSONObjectIDStringFormatter
+  private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
 
-    def createNew(dataSet: String)
-    = WithNoCaching {
-        restrictAdminOrPermissionAny(s"DS:$dataSet:createRequest") {
-            implicit request =>
-                dsaf(dataSet).map { dsa =>
+  override protected type EditViewData = (
+    IdForm[BSONObjectID, BatchOrderRequest],
+    Traversable[JsObject],
+    Traversable[String]
+  )
+
+  override protected type ListViewData = (
+    Page[(BatchOrderRequest, String, Call)],
+    Seq[FilterCondition]
+  )
+
+  override protected type ShowViewData = (
+    BatchOrderRequest,
+    Traversable[JsObject],
+    Traversable[String]
+  )
+
+  protected type UserScopedListViewData = (
+    Page[(BatchOrderRequest, String, Call)],
+    Seq[FilterCondition]
+  )
+
+  override protected val homeCall = routes.BatchOrderRequestController.findActive()
+  override protected[controllers] val form = Form(
+    mapping(
+        "id" -> ignored(Option.empty[BSONObjectID]),
+        "dataSetId" -> nonEmptyText,
+        "itemIds" -> seq(of[BSONObjectID]),
+        "state" -> of[BatchRequestState.Value],
+        "created by id" -> ignored(Option.empty[BSONObjectID]),
+        "timeCreated" -> ignored(new Date()),
+        "history" -> ignored(Seq[ActionInfo]())
+    )(BatchOrderRequest.apply)(BatchOrderRequest.unapply)
+  )
+
+  private val activeRequestsListRedirect = Redirect(routes.BatchOrderRequestController.findActive())
+  private val selectedIdsForm = Form(single("selectedIds" -> seq(of[BSONObjectID])))
+
+  def createNew(dataSet: String) = restrictAdminOrPermissionAny(s"DS:$dataSet:createRequest", true) {
+    implicit request =>
+        dsaf(dataSet).map { dsa =>
+            for {
+                // get the batch-order setting for a given data set
+                setting <- requestSettingRepo.find(Seq("dataSetId" #== dataSet)).map(_.headOption)
+
+                // handy things for a view: data set name, data space tree, and data set setting
+                (dataSetName, dataSpaceTree, dataSetSetting) <- getDataSetNameTreeAndSetting(dsa)
+            } yield
+                setting match {
+                    case None =>
+                        NotFound(s"Batch-order setting for the data set '${dataSet}' not found.")
+                    case Some(setting) =>
+                        implicit val context = dataSetWebContext(dataSet)
+                        Ok(
+                            actionTable(
+                                setting.displayFieldNames,
+                                routes.BatchOrderRequestController.saveNew(dataSet),
+                                "Request Items",
+                                dataSetName + " Batch Order Request",
+                                Filter(),
+                                dataSetSetting,
+                                dataSpaceTree
+                            )
+                        )
+                }
+            }.getOrElse(
+                Future(NotFound(s"Data set '${dataSet}' doesn't exist."))
+            )
+  }
+
+  private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
+
+  private def getDataSetNameTreeAndSetting(
+    dsa: DataSetAccessor
+  )(
+    implicit request: AuthenticatedRequest[_]
+  ): Future[(String, Traversable[DataSpaceMetaInfo], DataSetSetting)] = {
+    val dataSetNameFuture = dsa.dataSetName
+    val treeFuture = dataSpaceService.getTreeForCurrentUser
+    val settingFuture = dsa.setting
+
+    for {
+        // get the data set name
+        dataSetName <- dataSetNameFuture
+
+        // get the data space tree
+        dataSpaceTree <- treeFuture
+
+        // get the data set setting
+        setting <- settingFuture
+    } yield
+        (dataSetName, dataSpaceTree, setting)
+  }
+
+  def saveNew(dataSet: String) = restrictAdminOrPermissionAny(s"DS:$dataSet:createRequest", true) {
+    implicit request =>
+        selectedIdsForm.bindFromRequest.fold(
+            _ =>  Future(BadRequest(s"Cannot parse selected ids.")),
+            selectedIds =>
+                if (selectedIds.size == 0) {
+                    Future(BadRequest("No item added to the request."))
+                } else {
                     for {
-                        // get the batch-order setting for a given data set
-                        setting <- requestSettingRepo.find(Seq("dataSetId" #== dataSet)).map(_.headOption)
+                        // get a currently-logged user
+                        user <- currentUser()
 
-                        // handy things for a view: data set name, data space tree, and data set setting
-                        (dataSetName, dataSpaceTree, dataSetSetting) <- getDataSetNameTreeAndSetting(dsa)
-                    } yield
-                        setting match {
-                            case None =>
-                                NotFound(s"Batch-order setting for the data set '${dataSet}' not found.")
-                            case Some(setting) =>
-                                implicit val context = dataSetWebContext(dataSet)
-                                Ok(
-                                    actionTable(
-                                        setting.displayFieldNames,
-                                        routes.BatchOrderRequestsController.saveNew(dataSet),
-                                        "Request Items",
-                                        dataSetName + " Batch Order Request",
-                                        Filter(),
-                                        dataSetSetting,
-                                        dataSpaceTree
-                                    )
-                                )
-                        }
-                }.getOrElse(
-                    Future(NotFound(s"Data set '${dataSet}' doesn't exist."))
-                )
-        }
-    }
+                        // create a new batch-order request and save
+                        id <- repo.save(BatchOrderRequest(
+                            dataSetId = dataSet,
+                            itemIds = selectedIds,
+                            state = BatchRequestState.Created,
+                            createdById = user.flatMap(_.user._id)
+                        ))
+                    } yield {
+                        val date = new Date()
+                        val createAction = ActionGraph.createAction()
 
-    private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
+                        val notification = NotificationInfo(
+                            creationDate = date,
+                            dataSetId = dataSet,
+                            userRole = Role.Requester,
+                            fromState = createAction.fromState,
+                            toState = createAction.toState,
+                            possibleActions =  ActionGraph.apply.get(createAction.toState).get.map(_.action),
+                            createdByUser = user.get.user.ldapDn,
+                            targetUser = user.get.user.ldapDn,
+                            description = None,
+                            targetUserEmail = user.get.user.email,
+                            updateDate = date,
+                            getRequestUrl = getActionUrl(id, Role.Requester),
+                            notificationType = NotificationType.Solicitation,
+                            updatedByUser = user.get.user.ldapDn,
+                            items = None
+                        )
 
-    private def getDataSetNameTreeAndSetting(
-        dsa: DataSetAccessor
-    )(
-        implicit request: AuthenticatedRequest[_]
-    ): Future[(String, Traversable[DataSpaceMetaInfo], DataSetSetting)] = {
-        val dataSetNameFuture = dsa.dataSetName
-        val treeFuture = dataSpaceService.getTreeForCurrentUser
-        val settingFuture = dsa.setting
-
-        for {
-            // get the data set name
-            dataSetName <- dataSetNameFuture
-
-            // get the data space tree
-            dataSpaceTree <- treeFuture
-
-            // get the data set setting
-            setting <- settingFuture
-        } yield
-            (dataSetName, dataSpaceTree, setting)
-    }
-
-    def saveNew(
-        dataSet: String
-    )
-    = WithNoCaching {
-        restrictAdminOrPermissionAny(s"DS:$dataSet:createRequest") {
-            implicit request =>
-                selectedIdsForm.bindFromRequest.fold(
-                    _ =>
-                        Future(BadRequest(s"Cannot parse selected ids.")),
-                    selectedIds =>
-                        if (selectedIds.size == 0) {
-                            Future(BadRequest("No item added to the request."))
-                        } else {
-                            for {
-                                // get a currently-logged user
-                                user <- currentUser()
-
-                                // create a new batch-order request and save
-                                id <- repo.save(BatchOrderRequest(
-                                    dataSetId = dataSet,
-                                    itemIds = selectedIds,
-                                    state = BatchRequestState.Created,
-                                    createdById = user.flatMap(_.user._id)
-                                )
-                                )
-                            } yield {
-                                val date = new Date()
-                                val createAction = ActionGraph.createAction()
-
-                                val notification = NotificationInfo(
-                                    creationDate = date,
-                                    dataSetId = dataSet,
-                                    userRole = Role.Requester,
-                                    fromState = createAction.fromState,
-                                    toState = createAction.toState,
-                                    possibleActions =  ActionGraph.apply.get(createAction.toState).get.map(_.action),
-                                    createdByUser = user.get.user.ldapDn,
-                                    targetUser = user.get.user.ldapDn,
-                                    description = None,
-                                    targetUserEmail = user.get.user.email,
-                                    updateDate = date,
-                                    getRequestUrl = getActionUrl(id, Role.Requester),
-                                    notificationType = NotificationType.Solicitation,
-                                    updatedByUser = user.get.user.ldapDn,
-                                    items = None
-                                )
-
-                                actionNotificationService.sendNotifications(Traversable(notification))
-                                Redirect(homeCall).flashing("success" -> s"New batch-order request '${id.stringify}' has been created.")
-                            }
-                        }
-                )
-        }
+                        actionNotificationService.sendNotifications(Traversable(notification))
+                        Redirect(homeCall).flashing("success" -> s"New batch-order request '${id.stringify}' has been created.")
+                    }
+                }
+        )
     }
 
     private def getActionUrl(requestId: BSONObjectID, role: Role.Value)(implicit request: RequestHeader) =
-        routes.BatchOrderRequestsController.action(requestId, role).absoluteURL()
+        routes.BatchOrderRequestController.action(requestId, role).absoluteURL()
 
     override def get(id: BSONObjectID) =
         restrictAdminOrUserCustomAny(isRequestAllowed(id, None, None, true))(toAuthenticatedAction(super.get(id)))
@@ -340,12 +337,12 @@ class BatchOrderRequestsController @Inject()(
         headRole match {
             case Some(role) => {
                 if (role == Role.Administrator) {
-                    controllers.requests.routes.BatchOrderRequestsController.edit(request._id.get)
+                    controllers.orderrequest.routes.BatchOrderRequestController.edit(request._id.get)
                 } else {
-                    controllers.requests.routes.BatchOrderRequestsController.action(request._id.get, role)
+                    controllers.orderrequest.routes.BatchOrderRequestController.action(request._id.get, role)
                 }
             }
-            case None => controllers.requests.routes.BatchOrderRequestsController.get(request._id.get)
+            case None => controllers.orderrequest.routes.BatchOrderRequestController.get(request._id.get)
         }
     }
 
@@ -373,8 +370,8 @@ class BatchOrderRequestsController @Inject()(
             viewData <- getUserScopedListViewData(Page(items, page, page * pageLimit, count, orderBy), filter)(request)
         } yield {
             pageToApprove match {
-                case Some(page) => Ok((views.html.requests.requestTable(viewData._1, filter, (p, o) => controllers.requests.routes.BatchOrderRequestsController.findActive(None, Some(p), o, filter), isAjaxRefresh = true)))
-                case None => Ok((views.html.requests.requestTable(viewData._1, filter, (p, o) => controllers.requests.routes.BatchOrderRequestsController.findActive(Some(p), None, o, filter), isAjaxRefresh = true)))
+                case Some(page) => Ok((views.html.requests.requestTable(viewData._1, filter, (p, o) => controllers.orderrequest.routes.BatchOrderRequestController.findActive(None, Some(p), o, filter), isAjaxRefresh = true)))
+                case None => Ok((views.html.requests.requestTable(viewData._1, filter, (p, o) => controllers.orderrequest.routes.BatchOrderRequestController.findActive(Some(p), None, o, filter), isAjaxRefresh = true)))
             }
         }
     }.recover(handleFindExceptions)
@@ -538,7 +535,7 @@ class BatchOrderRequestsController @Inject()(
     }
 
     private def getReadOnlyUrl(requestId: BSONObjectID)(implicit request: RequestHeader) =
-        routes.BatchOrderRequestsController.get(requestId).absoluteURL()
+        routes.BatchOrderRequestController.get(requestId).absoluteURL()
 
     private def getRequestSettingsFieldNames(dataSetId: String) =
         for {
@@ -648,7 +645,7 @@ class BatchOrderRequestsController @Inject()(
                         } else {
                             render {
                                 case Accepts.Html() =>
-                                    Redirect(routes.BatchOrderRequestsController.get(id)).flashing("error" -> "No action can be performed at the moment.")
+                                    Redirect(routes.BatchOrderRequestController.get(id)).flashing("error" -> "No action can be performed at the moment.")
                                 case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
                             }
                         }

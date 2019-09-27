@@ -42,9 +42,9 @@
     "request",
     errors = data.form.errors,
     elements = elements,
-    updateCall = controllers.requests.routes.BatchOrderRequestsController.update(data.id),
-    cancelCall = controllers.requests.routes.BatchOrderRequestsController.listAll(),
-    deleteCall = Some(controllers.requests.routes.BatchOrderRequestsController.delete(data.id)),
+    updateCall = controllers.orderrequest.routes.BatchOrderRequestController.update(data.id),
+    cancelCall = controllers.orderrequest.routes.BatchOrderRequestController.listAll(),
+    deleteCall = Some(controllers.orderrequest.routes.BatchOrderRequestController.delete(data.id)),
     None,
     None
 )

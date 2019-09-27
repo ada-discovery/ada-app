@@ -5,7 +5,6 @@
 @import org.incal.play.controllers.WebContext
 @import org.ada.web.util.typeColumns
 @import org.ada.web.controllers.routes
-@import controllers.requests.routes
 @import views.html.elements._
 @import org.incal.play.Page
 @import org.ada.server.models.FilterShowFieldStyle
@@ -38,17 +37,17 @@
 
 @elements = {
 
-@labelValue("request", "DataSet Id") {
-	<input type="text" id="dataSetId" name="dataSetId" class="form-control"/>
-}
+	@labelValue("request", "DataSet Id") {
+		<input type="text" id="dataSetId" name="dataSetId" class="form-control"/>
+	}
 
 	<input type="hidden" name="state" value="@BatchRequestState.Created"/>
 
 	<div class="filter-div"></div>
 	<div class="table-div"></div>
 
-@dynamicTableJsImport()
-@typeaheadJsImport()
+	@dynamicTableJsImport()
+	@typeaheadJsImport()
 }
 
 @layout.create(
@@ -56,6 +55,6 @@
 	"request",
 	form = form,
 	elements = elements,
-	saveCall = controllers.requests.routes.BatchOrderRequestsController.save(),
-	listCall = controllers.requests.routes.BatchOrderRequestsController.findActive()
+	saveCall = controllers.orderrequest.routes.BatchOrderRequestController.save(),
+	listCall = controllers.orderrequest.routes.BatchOrderRequestController.findActive()
 )

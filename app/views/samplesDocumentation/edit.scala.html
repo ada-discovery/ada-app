@@ -28,7 +28,7 @@
 }
 
 @labelValue("sampleDocument", "Current document") {
-    <iframe src="@controllers.samplesDocumentation.routes.DocumentationController.download(data.form.get.dataSetId)" style="width:718px; height:700px;" frameborder="0"></iframe>
+    <iframe src="@controllers.orderrequest.routes.DocumentationController.download(data.form.get.dataSetId)" style="width:718px; height:700px;" frameborder="0"></iframe>
 }
 }
 
@@ -37,9 +37,9 @@
     "samples document",
     errors = data.form.errors,
     elements = elements,
-    updateCall = controllers.samplesDocumentation.routes.DocumentationController.update(data.id),
-    cancelCall = controllers.samplesDocumentation.routes.DocumentationController.listAll(),
-    deleteCall = Some(controllers.samplesDocumentation.routes.DocumentationController.delete(data.id)),
+    updateCall = controllers.orderrequest.routes.DocumentationController.update(data.id),
+    cancelCall = controllers.orderrequest.routes.DocumentationController.listAll(),
+    deleteCall = Some(controllers.orderrequest.routes.DocumentationController.delete(data.id)),
     None,
     None,
     None,

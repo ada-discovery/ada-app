@@ -1,14 +1,15 @@
-package controllers.requestSetting
+package controllers.orderrequest
 
 import java.util.Date
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
+import controllers.orderrequest.routes
 import javax.inject.Inject
 import models.BatchRequestSetting
 import models.BatchRequestSetting.BatchRequestSettingIdentity
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.{FieldRepo, UserRepo}
-import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.models.DataSetFormattersAndIds._
 import org.ada.server.models.User.UserIdentity
 import org.ada.server.models._
@@ -24,7 +25,6 @@ import org.incal.play.formatters.JsonFormatter
 import org.incal.play.security.SecurityUtil.toAuthenticatedAction
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
-import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.RequestSettingRepo
@@ -198,12 +198,6 @@ class RequestSettingController @Inject()(
 
     override protected def listView = { implicit ctx =>
         (views.html.requestSettings.list(_, _)).tupled
-    }
-
-    private def getUsers() = {
-        userRepo.find().map { users =>
-            users.map(c => (c._id.get, c)).toMap
-        }
     }
 
     override protected def createView = { implicit ctx =>

@@ -23,7 +23,7 @@
         <div class="col-md-8">
             @filterWithJs(
                 Filter(conditions),
-                controllers.requests.routes.BatchOrderRequestsController.findActive(),
+                controllers.orderrequest.routes.BatchOrderRequestController.findActive(),
                 Left(Seq(
                     Field("Status", Some("Status"))
                 )),
@@ -38,6 +38,6 @@
     None,
     page.total,
     Some(actions),
-    Some(requestTable(page,conditions,controllers.requests.routes.BatchOrderRequestsController.find(_, _, conditions))),
+    Some(requestTable(page, conditions, controllers.orderrequest.routes.BatchOrderRequestController.find(_, _, conditions))),
     None
 )

@@ -5,7 +5,6 @@
 @import org.incal.play.controllers.WebContext
 @import org.ada.web.util.typeColumns
 @import org.ada.web.controllers.routes
-@import controllers.requests.routes
 @import views.html.elements._
 @import org.incal.play.Page
 @import org.ada.server.models.FilterShowFieldStyle
@@ -33,21 +32,21 @@
 )
 
 @elements = {
-@labelValue("sampleDocument", "Dataset Id") {
-	<input type="text" name="dataSetId">
+	@labelValue("sampleDocument", "Dataset Id") {
+		<input type="text" name="dataSetId">
+	}
+
+	@labelValue("sampleDocument", "Document") {
+		<input type="file" name="samples-document">
+	}
 }
 
-@labelValue("sampleDocument", "Document") {
-	<input type="file" name="samples-document">
-}
-}
-
-	@layout.create(
-		"Samples documentation",
-		"samples documentation",
-		form = form,
-		elements = elements,
-		saveCall = controllers.samplesDocumentation.routes.DocumentationController.save(),
-		listCall = controllers.samplesDocumentation.routes.DocumentationController.listAll(),
-		(Symbol("enctype"),"multipart/form-data")
-	)
+@layout.create(
+	"Samples documentation",
+	"samples documentation",
+	form = form,
+	elements = elements,
+	saveCall = controllers.orderrequest.routes.DocumentationController.save(),
+	listCall = controllers.orderrequest.routes.DocumentationController.listAll(),
+	(Symbol("enctype"),"multipart/form-data")
+)

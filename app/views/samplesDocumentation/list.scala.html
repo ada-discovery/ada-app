@@ -28,7 +28,7 @@
                     </button>
                     <ul class="dropdown-menu">
                         <li>
-                            <a href="@controllers.samplesDocumentation.routes.DocumentationController.create()">
+                            <a href="@controllers.orderrequest.routes.DocumentationController.create()">
                                 Add a new document
                             </a>
                         </li>
@@ -41,13 +41,13 @@
     @table = @{
         paginatedTable(
             page,
-            controllers.samplesDocumentation.routes.DocumentationController.find(_, _, conditions),
+            controllers.orderrequest.routes.DocumentationController.find(_, _, conditions),
             typeColumns[(SampleDocumentation, String)](
                 (Some("dataSetId"), "Dataset id", _._1.dataSetId),
                 (Some("timeUpdated"), "Time updated", _._1.timeUpdated),
                 (None, "Document name", _._2)
             ),
-            Some({ item: Any => controllers.samplesDocumentation.routes.DocumentationController.edit(item.asInstanceOf[(SampleDocumentation, String)]._1._id.get) })
+            Some({ item: Any => controllers.orderrequest.routes.DocumentationController.edit(item.asInstanceOf[(SampleDocumentation, String)]._1._id.get) })
         )
     }
 

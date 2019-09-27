@@ -113,9 +113,9 @@
     "request setting",
     errors = data.form.errors,
     elements = elements,
-    updateCall = controllers.requestSetting.routes.RequestSettingController.update(data.id),
-    cancelCall = controllers.requestSetting.routes.RequestSettingController.listAll(),
-    deleteCall = Some(controllers.requestSetting.routes.RequestSettingController.delete(data.id)),
+    updateCall = controllers.orderrequest.routes.RequestSettingController.update(data.id),
+    cancelCall = controllers.orderrequest.routes.RequestSettingController.listAll(),
+    deleteCall = Some(controllers.orderrequest.routes.RequestSettingController.delete(data.id)),
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav(dataSetSetting)),
     bottomResources = Some(extraBottomResources)

@@ -68,18 +68,18 @@
 @extraBottomResources = {
 
     @helper.javascriptRouter("requestJsRoutes")(
-    controllers.requests.routes.javascript.BatchOrderRequestsController.performAction
+        controllers.orderrequest.routes.javascript.BatchOrderRequestController.performAction
     )
 
     <script type="text/javascript">
         function simpleSubmit(action) {
-            var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.performAction('@data._id.get.stringify', action, '@role')
+            var requestAction = requestJsRoutes.controllers.orderrequest.BatchOrderRequestController.performAction('@data._id.get.stringify', action, '@role')
             submit('post', requestAction.url)
         }
 
         function submitWithDescription(action) {
             var reasonDescription = $('#addDescriptionModal #decision-reason').val()
-            var requestAction = requestJsRoutes.controllers.requests.BatchOrderRequestsController.performAction('@data._id.get.stringify', action, '@role', reasonDescription)
+            var requestAction = requestJsRoutes.controllers.orderrequest.BatchOrderRequestController.performAction('@data._id.get.stringify', action, '@role', reasonDescription)
             submit('post', requestAction.url)
         }
     </script>
@@ -116,7 +116,7 @@
 @layout.show(
     "Update request status",
     elements = elements,
-    Some(controllers.requests.routes.BatchOrderRequestsController.findActive()),
+    Some(controllers.orderrequest.routes.BatchOrderRequestController.findActive()),
     None,
     None,
     Some(extraBottomResources),

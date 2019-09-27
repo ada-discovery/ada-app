@@ -5,7 +5,6 @@
 @import org.incal.play.controllers.WebContext
 @import org.ada.web.util.typeColumns
 @import org.ada.web.controllers.routes
-@import controllers.requests.routes
 @import views.html.elements._
 @import org.incal.play.Page
 @import org.ada.web.controllers.dataset.routes
@@ -22,7 +21,7 @@
 @import org.ada.web.controllers.dataset.datatrans.DataSetTransformationController
 @import views.html.table.dynamicStringTable
 @import views.html.dataset.{dynamicFieldTable}
-@import  org.ada.server.models.FilterShowFieldStyle
+@import org.ada.server.models.FilterShowFieldStyle
 @import org.ada.server.models.User
 @import views.html.dataSetTypeahead
 
@@ -73,11 +72,11 @@
 	)
 
 	<script type="text/javascript">
-			$(function () {
-				populateIdNameTypeahedFromUrl(
-						$('#userIdDiv').find('#fieldTypeahead'),
-						$('#userIdDiv').find('#fieldName'),
-						'@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)', true)
+		$(function () {
+			populateIdNameTypeahedFromUrl(
+				$('#userIdDiv').find('#fieldTypeahead'),
+				$('#userIdDiv').find('#fieldName'),
+				'@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)', true)
 			})
 
 			$('#dataSetIdTypeahead').on('typeahead:selected', function(e, data) {
@@ -100,10 +99,10 @@
 				if (dataSetId.length > 0) {
 					var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
 					populateFieldTypeahedFromUrl(
-							$('#displayFieldNameDiv').find('#fieldTypeahead'),
-							$('#displayFieldNameDiv').find('#fieldName'),
-							url,
-							@FilterShowFieldStyle.NamesOnly.id
+						$('#displayFieldNameDiv').find('#fieldTypeahead'),
+						$('#displayFieldNameDiv').find('#fieldName'),
+						url,
+						@FilterShowFieldStyle.NamesOnly.id
 					)
 				}
 			}
@@ -135,6 +134,6 @@
 	"request setting",
 	form = form,
 	elements = elements,
-	saveCall = controllers.requestSetting.routes.RequestSettingController.save(),
-	listCall = controllers.requestSetting.routes.RequestSettingController.listAll()
+	saveCall = controllers.orderrequest.routes.RequestSettingController.save(),
+	listCall = controllers.orderrequest.routes.RequestSettingController.listAll()
 )

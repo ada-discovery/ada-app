@@ -23,7 +23,7 @@
         <div class="col-md-8">
             @filterWithJs(
                 Filter(conditions),
-                controllers.requests.routes.BatchOrderRequestsController.findActive(),
+                controllers.orderrequest.routes.BatchOrderRequestController.findActive(),
                 Left(Seq(
                     Field("state", Some("Status")),
                     Field("dataSetId", Some("Dataset Id")),
@@ -39,11 +39,11 @@
 @table = @{
     pageType match {
          case PageType.ToApprove =>
-            val refreshCall = (p: Int, o: String) => controllers.requests.routes.BatchOrderRequestsController.findActive(None, Some(p), o, conditions)
+            val refreshCall = (p: Int, o: String) => controllers.orderrequest.routes.BatchOrderRequestController.findActive(None, Some(p), o, conditions)
             requestTable(page,conditions,refreshCall,  true)
 
          case PageType.Created =>
-            val refreshCall = (p: Int, o: String) => controllers.requests.routes.BatchOrderRequestsController.findActive(Some(p), None, o, conditions)
+            val refreshCall = (p: Int, o: String) => controllers.orderrequest.routes.BatchOrderRequestController.findActive(Some(p), None, o, conditions)
             requestTable(page,conditions,refreshCall, true)
     }
 }
@@ -53,7 +53,7 @@
         @if((pageType == PageType.ToApprove && countBackground>0) || pageType == PageType.Created) {
             <li @if(pageType == PageType.Created) {
                 class="active" }>
-                <a href="@controllers.requests.routes.BatchOrderRequestsController.findActive(Some(0), None, "", conditions)">
+                <a href="@controllers.orderrequest.routes.BatchOrderRequestController.findActive(Some(0), None, "", conditions)">
                     My own Requests@if(pageType == PageType.ToApprove) {(@countBackground)}</a>
             </li>
         }
@@ -61,7 +61,7 @@
         @if((pageType == PageType.Created && countBackground>0) || pageType == PageType.ToApprove) {
             <li @if(pageType == PageType.ToApprove) {
                 class="active" }>
-                <a href="@controllers.requests.routes.BatchOrderRequestsController.findActive(None, Some(0), "", conditions)">
+                <a href="@controllers.orderrequest.routes.BatchOrderRequestController.findActive(None, Some(0), "", conditions)">
                     Requests to be responsible for@if(pageType == PageType.Created) {(@countBackground)}</a>
             </li>
         }
