@@ -7,7 +7,7 @@ import scala.io.Source
 
 class FindGeneVennOverlaps extends InputRunnableExt[FindGeneVennOverlapsSpec] {
 
-  private val delimiter = ","
+  protected val delimiter = ","
   private val eol = "\n"
   private val header = Seq("x", "y", "color", "gene").mkString(delimiter)
 
@@ -65,12 +65,12 @@ class FindGeneVennOverlaps extends InputRunnableExt[FindGeneVennOverlapsSpec] {
     val positions = sunflowerPositions(genes.size, centerX, centerY, maxRadius)
 
     genes.toSeq.sorted.zip(positions).map { case (gene, (x, y)) =>
-      val color = geneColorMap.get(gene).get + 1
+      val color = geneColorMap.get(gene).getOrElse(throw new RuntimeException(s"Gene $gene not found.")) + 1
       Seq(x, y, color, gene).mkString(delimiter)
     }.mkString(eol)
   }
 
-  private def readGenes(
+  protected def readGenes(
     fileName: String,
     cutoff: Int
   ) = {
@@ -99,6 +99,18 @@ class FindGeneVennOverlaps extends InputRunnableExt[FindGeneVennOverlapsSpec] {
     radius: Double,
     angle: Double
   ) = (radius * Math.sin(angle), radius * Math.cos(angle))
+}
+
+class FindGeneVennOverlaps2 extends FindGeneVennOverlaps {
+
+  override protected def readGenes(
+    fileName: String,
+    cutoff: Int
+  ) = {
+    val lines = Source.fromFile(fileName).getLines()
+
+    lines.take(1).toSeq.head.split(delimiter, -1).map(_.trim).take(cutoff).toSet
+  }
 }
 
 case class FindGeneVennOverlapsSpec(
