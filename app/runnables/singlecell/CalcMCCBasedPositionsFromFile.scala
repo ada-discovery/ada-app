@@ -5,15 +5,15 @@ import akka.stream.ActorMaterializer
 import com.google.inject.Inject
 import org.ada.server.models.{Field, FieldTypeId}
 import org.ada.server.AdaException
+import org.ada.server.calc.CalculatorExecutors
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.{listFiles, seqFutures, writeStringAsStream}
+import org.incal.core.dataaccess.Criterion._
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 
 import collection.mutable.ArrayBuffer
-import org.ada.server.calc.CalculatorExecutors
-import org.incal.core.dataaccess.Criterion._
 import play.api.libs.json.Json
 
 import scala.reflect.runtime.universe.typeOf

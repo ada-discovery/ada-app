@@ -63,7 +63,10 @@ trait PrepareCellIdsForSubmissionHelper {
   private val defaultDelimiter = ","
   protected val eol = "\n"
 
-  private val geneNameReplacements = Map("Blimp_1" -> "Blimp-1", "E_spl_m5_HLH" -> "E(spl)m5-HLH")
+  private val geneNameReplacements = Map(
+    "Blimp_1" -> "Blimp-1",
+    "E_spl_m5_HLH" -> "E(spl)m5-HLH"
+  )
 
   protected def prepareSubmission(
     cellIds: Traversable[CellId],
