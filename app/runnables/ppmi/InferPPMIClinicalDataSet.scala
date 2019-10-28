@@ -1,33 +1,35 @@
 package runnables.ppmi
 
 import javax.inject.Inject
-
-import org.ada.server.field.{FieldTypeHelper, FieldTypeInferrerFactory}
+import org.ada.server.dataaccess.StreamSpec
+import org.ada.server.models.StorageType
+import org.ada.server.models.datatrans.{InferDataSetTransformation, ResultDataSetSpec}
 import org.incal.core.runnables.FutureRunnable
 import org.incal.play.GuiceRunnableApp
-import org.ada.server.services.DataSetService
+import org.ada.server.services.ServiceTypes.DataSetCentralTransformer
 
-class InferPPMIClinicalDataSet @Inject()(dataSetService: DataSetService) extends FutureRunnable {
+class InferPPMIClinicalDataSet @Inject()(transformer: DataSetCentralTransformer) extends FutureRunnable {
 
   override def runAsFuture = {
-    val fieldTypeInferrerFactory = FieldTypeInferrerFactory(
-      FieldTypeHelper.fieldTypeFactory(),
-      50,
-      10,
-      FieldTypeHelper.arrayDelimiter
+    // spec
+    val spec = InferDataSetTransformation(
+      sourceDataSetId = "ppmi.raw_clinical_visit",
+      resultDataSetSpec = ResultDataSetSpec(
+        id = "ppmi.clinical_visit",
+        name = "Clinical Visit",
+        storageType = StorageType.ElasticSearch
+      ),
+      maxEnumValuesCount = Some(50),
+      minAvgValuesPerEnum = Some(10),
+      inferenceGroupSize = None,
+      inferenceGroupsInParallel = None,
+      streamSpec = StreamSpec(
+        batchSize = Some(100)
+      )
     )
 
-    dataSetService.translateDataAndDictionaryOptimal(
-      "ppmi.raw_clinical_visit",
-      "ppmi.clinical_visit",
-      "Clinical Visit",
-      None,
-      None,
-      Some(100),
-      None,
-      None,
-      Some(fieldTypeInferrerFactory.applyJson)
-    )
+    // transform
+    transformer(spec)
   }
 }
 
