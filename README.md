@@ -1,5 +1,5 @@
-# Ada (NCER-PD Reporting System)
-<br/>
+# Ada-Web - NCER-PD Project
+[![version](https://img.shields.io/badge/version-0.8.0-green.svg)](https://ada.parkinson.lu) [![License: CC BY-NC 3.0](https://img.shields.io/badge/License-CC%20BY--NC%203.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/3.0/)
 
 ## Application Server (Apache Tomcat)
 
