@@ -25,7 +25,6 @@ class InputOHDSIColumnConcepts @Inject() (dsaf: DataSetAccessorFactory) extends 
     val targetDsa = dsaSafe(input.targetDataSetId.trim)
     val targetFieldName = input.targetFieldName.trim
 
-
     def nextValue(excludedValues: Seq[Int]) = {
       val exclusionCriterion = if (excludedValues.nonEmpty) Seq(targetFieldName #!-> excludedValues) else Nil
 
