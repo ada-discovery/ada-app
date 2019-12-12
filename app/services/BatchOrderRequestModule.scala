@@ -17,11 +17,11 @@ class BatchOrderRequestModule extends ScalaModule {
     )
 
     bind[RequestSettingRepo].toInstance(
-      new MongoAsyncCrudRepo[BatchRequestSetting, BSONObjectID]("batch_request_setting")
+      new MongoAsyncCrudRepo[BatchRequestSetting, BSONObjectID]("batch_request_settings")
     )
 
     bind[SampleDocumentationRepo].toInstance(
-      new MongoAsyncCrudRepo[SampleDocumentation, BSONObjectID]("sample_documentation")
+      new MongoAsyncCrudRepo[SampleDocumentation, BSONObjectID]("sample_documentations")
     )
   }
 }

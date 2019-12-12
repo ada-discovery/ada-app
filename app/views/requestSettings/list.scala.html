@@ -15,28 +15,18 @@
     implicit context: WebContext
 )
 
+@modalBody = {
+    @dataSetTypeahead()
+}
+
 @actions = {
     <div class="row">
         <div class="pull-right">
-            <div class="dropdown">
-                <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    Actions
-                    <span class="caret"></span>
-                </button>
-                <ul class="dropdown-menu">
-                    <li>
-                        <a href="@controllers.orderrequest.routes.RequestSettingController.create()">
-                            Add a new setting
-                        </a>
-                    </li>
-                    <li>
-                        <a href="@controllers.orderrequest.routes.RequestSettingController.copy()">
-                            Copy a setting
-                        </a>
-                    </li>
-                </ul>
-            </div>
+            <a class="btn btn-info btn-sm" data-toggle="modal" data-target="#addSettingModal" title="Add New">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+            </a>
         </div>
+        @modal("addSettingModal", "Add New Request Setting", modalBody, Some(controllers.orderrequest.routes.RequestSettingController.create()), None, None)
     </div>
 }
 

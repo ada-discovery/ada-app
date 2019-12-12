@@ -8,13 +8,25 @@ GET         /admin/showRCPrediction                             controllers.ml.R
 POST        /admin/runRCPrediction                              controllers.ml.RCPredictionController.runRCPrediction
 
 
+# Requests Settings
+GET         /requestSettings                                    controllers.orderrequest.RequestSettingController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /requestSettings/all                                controllers.orderrequest.RequestSettingController.listAll(s: String ?= "timeCreated")
+GET         /requestSettings/new                                controllers.orderrequest.RequestSettingController.create
+POST        /requestSettings/save                               controllers.orderrequest.RequestSettingController.save
+GET         /requestSettings/:id/get                            controllers.orderrequest.RequestSettingController.get(id: BSONObjectID)
+GET         /requestSettings/:id/edit                           controllers.orderrequest.RequestSettingController.edit(id: BSONObjectID)
+POST        /requestSettings/:id                                controllers.orderrequest.RequestSettingController.update(id: BSONObjectID)
+POST        /requestSettings/:id/delete                         controllers.orderrequest.RequestSettingController.delete(id: BSONObjectID)
+
+
+# Batch-order Requests
 GET         /requests/new2                                      controllers.orderrequest.BatchOrderRequestController.createNew(dataSet: String)
 POST        /requests/saveNew                                   controllers.orderrequest.BatchOrderRequestController.saveNew(dataSet: String)
 
 GET         /requests                                           controllers.orderrequest.BatchOrderRequestController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /requests/active                                    controllers.orderrequest.BatchOrderRequestController.findActiveWithFilter(p1: Option[Int] ?= None, p2: Option[Int] ?= None, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
 POST        /requests/active                                    controllers.orderrequest.BatchOrderRequestController.findActive(p1: Option[Int] ?= None, p2: Option[Int] ?= None, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
-GET         /requests/all                                       controllers.orderrequest.BatchOrderRequestController.listAll(s: String ?= "original")
+GET         /requests/all                                       controllers.orderrequest.BatchOrderRequestController.listAll(s: String ?= "timeCreated")
 
 POST        /requests/save                                      controllers.orderrequest.BatchOrderRequestController.save
 GET         /requests/:id/get                                   controllers.orderrequest.BatchOrderRequestController.get(id: BSONObjectID)
@@ -23,18 +35,6 @@ GET         /requests/:id/action                                controllers.orde
 POST        /requests/:id                                       controllers.orderrequest.BatchOrderRequestController.update(id: BSONObjectID)
 POST        /requests/:id/delete                                controllers.orderrequest.BatchOrderRequestController.delete(id: BSONObjectID)
 POST        /requests/:id/performAction                         controllers.orderrequest.BatchOrderRequestController.performAction(id: BSONObjectID, action: models.RequestAction.Value, role: models.Role.Value, description: Option[String] ?= None)
-
-# Requests Settings
-GET         /requestSettings                                    controllers.orderrequest.RequestSettingController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
-GET         /requestSettings/all                                controllers.orderrequest.RequestSettingController.listAll(s: String ?= "original")
-GET         /requestSettings/new                                controllers.orderrequest.RequestSettingController.create
-POST        /requestSettings/save                               controllers.orderrequest.RequestSettingController.save
-
-GET         /requestSettings/:id/get                            controllers.orderrequest.RequestSettingController.get(id: BSONObjectID)
-GET         /requestSettings/:id/edit                           controllers.orderrequest.RequestSettingController.edit(id: BSONObjectID)
-POST        /requestSettings/:id                                controllers.orderrequest.RequestSettingController.update(id: BSONObjectID)
-POST        /requestSettings/:id/delete                         controllers.orderrequest.RequestSettingController.delete(id: BSONObjectID)
-
 
 # Sample docs
 GET         /samplesDocumentation                               controllers.orderrequest.DocumentationController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)

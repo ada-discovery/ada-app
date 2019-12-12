@@ -2,7 +2,6 @@
 @import views.html.elements.editableTextElements
 @import views.html.table.dynamicTableJsImport
 @import org.incal.play.controllers.{WebContext, IdForm}
-@import org.incal.play.controllers.WebContext._
 @import org.ada.web.controllers.routes
 @import views.html.elements._
 @import org.ada.web.util.typeColumns
@@ -16,86 +15,57 @@
 @import org.ada.web.controllers.dataset.DataSetWebContext
 @import views.html.dataview.{filterOrIdTable, widgetSpecTable}
 @import org.ada.server.models.WidgetGenerationMethod
-@import views.html.dataview.activateTypeahead
+@import views.html.requestSettings.dynamicUserTable
+@import views.html.dataview.{activateTypeahead => dataViewActivateTypeahead}
 @import views.html.dataset.{datasetMenu, datasetSubNav, datasetSubNavJs}
+@import org.ada.web.controllers.dataset.DataSetWebContext._
 
 @(
-    data: IdForm[BSONObjectID, BatchRequestSetting],
+    id: BSONObjectID,
+    form: Form[BatchRequestSetting],
     nameFieldMap: Map[String,  Field],
+    idUserMap: Map[BSONObjectID, User],
     idFilterNameMap: Map[BSONObjectID, String],
-    showFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
     dataSetSetting: DataSetSetting
 )(
-     implicit context: DataSetWebContext, ctx: WebContext
+    implicit context: DataSetWebContext
 )
 
 @elements = {
-    @inputTextReadonly("requestSetting", "dataSetId", data.form)
+    @labelValue("dataSetId", attributeLabel("requestSetting", "dataSetId")) {
+        <input id="dataSetId" name="dataSetId" value="@context.dataSetId" readonly="true">
+    }
+
     @dynamicTableJsImport()
-    @typeaheadJsImport()
 
-@labelValue("userIds", attributeLabel("requestSetting", "Committee users Ids")) {
-    @dynamicFieldTable(
-        "userId",
-        Nil,
-        true,
-        5,
-        None,
-        None,
-        showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
-    )
-}
-    
-@labelValue("widgetSpecs", attributeLabel("dataView", "widgetSpecs")){
-    @widgetSpecTable(
-        data.form.value.map(_.widgetSpecs).getOrElse(Nil),
-        nameFieldMap,
-        idFilterNameMap,
-        showFieldStyle
-    )
-}
+    @labelValue("userIds", attributeLabel("requestSetting", "committeeUserIds")) {
+        @dynamicUserTable(
+            "userId",
+            form.value.map(_.userIds).getOrElse(Nil).flatMap(idUserMap.get(_))
+        )
+    }
 
-@labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")){
-    @dynamicStringTable("displayFieldName", data.form.value.map(_.displayFieldNames).getOrElse(Nil), false, None, Some(extraFieldButtons), true, 8)
-}
+    @labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")) {
+        @dynamicFieldTable(
+            "displayFieldName",
+            form.value.map(_.displayFieldNames).getOrElse(Nil).map(Field(_)),
+            true,
+            5,
+            Some(extraFieldButtons),
+            None,
+            showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
+        )
+    }
 
-@helper.javascriptRouter("dataSetJsRoutes")(
-    context.dataSetJsRouter.generateTable
-)
-
-    <script type="text/javascript">
-        $(function () {
-            populateIdNameTypeahedFromUrl(
-                $('#userIdDiv').find('#fieldTypeahead'),
-                $('#userIdDiv').find('#fieldName'),
-                '@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)',
-                true
-            )
-
-            populateFieldTypeahedFromUrl(
-                    $('#displayFieldNameDiv').find('#fieldTypeahead'),
-                    $('#displayFieldNameDiv').find('#fieldName'),
-                    '@Html(context.dataSetRouter.allFields.url)',
-                    @FilterShowFieldStyle.NamesOnly.id
-            )
-        })
-
-        function addAllFields() {
-            $.ajax({
-                url:  '@Html(context.dataSetRouter.allFields.url)',
-                success: function (data) {
-                    $.each(data, function(index, field) {
-                        var values = {};
-
-                        values["newItem"] = field.name;
-                        $('#displayFieldNameDiv').dynamicTable('addTableRow', values)
-                    });
-                },
-                error: showErrorResponse
-            });
-        }
-    </script>
+    @labelValue("widgetSpecs", attributeLabel("dataView", "widgetSpecs")){
+        @widgetSpecTable(
+            form.value.map(_.widgetSpecs).getOrElse(Nil),
+            nameFieldMap,
+            idFilterNameMap,
+            dataSetSetting.filterShowFieldStyle
+        )
+    }
 }
 
 @extraFieldButtons = {
@@ -105,17 +75,52 @@
 }
 
 @extraBottomResources = {
-    @activateTypeahead(showFieldStyle)
+    @typeaheadJsImport()
+
+    @dataViewActivateTypeahead(dataSetSetting.filterShowFieldStyle)
+
+    <script type="text/javascript">
+        $(function () {
+            populateIdNameTypeahedFromUrl(
+                $('#add_userIdModal').find('#userTypeahead'),
+                $('#add_userIdModal').find('#userId'),
+                '@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)'
+            )
+
+            populateFieldTypeahedFromUrl(
+                $('#displayFieldNameDiv').find('#fieldTypeahead'),
+                $('#displayFieldNameDiv').find('#fieldName'),
+                '@Html(context.dataSetRouter.allFields.url)',
+                @FilterShowFieldStyle.NamesOnly.id
+            )
+        })
+
+        function addAllFields() {
+            $.ajax({
+                url:  '@Html(context.dataSetRouter.allFields.url)',
+                success: function (data) {
+                    $.each(data, function(index, field) {
+                        var values = {};
+                        values["fieldName"] = field.name;
+                        values["fieldTypeahead"] = field.label ? field.label : field.name;
+
+                        $('#displayFieldNameDiv').dynamicTable('addTableRow', values)
+                    });
+                },
+                error: showErrorResponse
+            });
+        }
+    </script>
 }
 
 @layout.edit(
     "Request setting",
     "request setting",
-    errors = data.form.errors,
+    errors = form.errors,
     elements = elements,
-    updateCall = controllers.orderrequest.routes.RequestSettingController.update(data.id),
-    cancelCall = controllers.orderrequest.routes.RequestSettingController.listAll(),
-    deleteCall = Some(controllers.orderrequest.routes.RequestSettingController.delete(data.id)),
+    updateCall = controllers.orderrequest.routes.RequestSettingController.update(id),
+    cancelCall = controllers.orderrequest.routes.RequestSettingController.find(),
+    deleteCall = Some(controllers.orderrequest.routes.RequestSettingController.delete(id)),
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav(dataSetSetting)),
     bottomResources = Some(extraBottomResources)

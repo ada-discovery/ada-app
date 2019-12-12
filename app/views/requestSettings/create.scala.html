@@ -1,8 +1,6 @@
 @import views.html.layout
 @import views.html.elements.editableTextElements
 @import org.ada.server.models.Translation
-@import org.incal.play.controllers.WebContext._
-@import org.incal.play.controllers.WebContext
 @import org.ada.web.util.typeColumns
 @import org.ada.web.controllers.routes
 @import views.html.elements._
@@ -20,15 +18,16 @@
 @import org.ada.web.controllers.dataset.datatrans.javascript.ReverseDataSetTransformationController
 @import org.ada.web.controllers.dataset.datatrans.DataSetTransformationController
 @import views.html.table.dynamicStringTable
-@import views.html.dataset.{dynamicFieldTable}
+@import views.html.requestSettings.dynamicUserTable
 @import org.ada.server.models.FilterShowFieldStyle
 @import org.ada.server.models.User
-@import views.html.dataSetTypeahead
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import org.ada.web.controllers.dataset.DataSetWebContext._
 
 @(
 	form: Form[BatchRequestSetting]
 )(
-    implicit context: WebContext
+    implicit context: DataSetWebContext
 )
 
 @extraFieldButtons = {
@@ -38,24 +37,17 @@
 }
 
 @elements = {
-	@dataSetTypeahead("requestSetting", form)
-
 	@dynamicTableJsImport()
-	@typeaheadJsImport()
 
-	@labelValue("userNames", attributeLabel("requestSetting", "Committee users Ids")){
-		@dynamicFieldTable(
-			"userId",
-			Nil,
-			true,
-			5,
-			None,
-			None,
-			showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
-		)
+	@labelValue("dataSetId", attributeLabel("requestSetting", "dataSetId")) {
+		<input id="dataSetId" name="dataSetId" value="@context.dataSetId" readonly="true">
 	}
 
-	@labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")){
+	@labelValue("userIds", attributeLabel("requestSetting", "committeeUserIds")) {
+		@dynamicUserTable("userId")
+	}
+
+	@labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")) {
 		@dynamicFieldTable(
 			"displayFieldName",
 			Nil,
@@ -67,65 +59,39 @@
 		)
 	}
 
-	@helper.javascriptRouter("dataSetJsRoutes")(
-		org.ada.web.controllers.dataset.routes.javascript.DataSetDispatcher.getFields
-	)
+	@typeaheadJsImport()
 
 	<script type="text/javascript">
 		$(function () {
 			populateIdNameTypeahedFromUrl(
-				$('#userIdDiv').find('#fieldTypeahead'),
-				$('#userIdDiv').find('#fieldName'),
-				'@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)', true)
-			})
+				$('#add_userIdModal').find('#userTypeahead'),
+				$('#add_userIdModal').find('#userId'),
+				'@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)'
+			)
 
-			$('#dataSetIdTypeahead').on('typeahead:selected', function(e, data) {
-				updateTypeahead();
+			populateFieldTypeahedFromUrl(
+				$('#displayFieldNameDiv').find('#fieldTypeahead'),
+				$('#displayFieldNameDiv').find('#fieldName'),
+				'@Html(context.dataSetRouter.allFields.url)',
+				@FilterShowFieldStyle.NamesOnly.id
+			)
+		})
+
+		function addAllFields() {
+			$.ajax({
+				url:  '@Html(context.dataSetRouter.allFields.url)',
+				success: function (data) {
+					$.each(data, function(index, field) {
+						var values = {};
+						values["fieldName"] = field.name;
+						values["fieldTypeahead"] = field.label ? field.label : field.name;
+
+						$('#displayFieldNameDiv').dynamicTable('addTableRow', values)
+					});
+				},
+				error: showErrorResponse
 			});
-
-			function clearTable(){
-				$('#displayFieldNameDiv').find('table tbody tr').remove()
-			}
-
-			function clearTypeahead(){
-				$('#displayFieldNameDiv').find('.tt-menu').remove()
-			}
-
-		    function updateTypeahead() {
-				clearTypeahead()
-				clearTable()
-
-				var dataSetId = $("#dataSetIdTypeahead").val()
-				if (dataSetId.length > 0) {
-					var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
-					populateFieldTypeahedFromUrl(
-						$('#displayFieldNameDiv').find('#fieldTypeahead'),
-						$('#displayFieldNameDiv').find('#fieldName'),
-						url,
-						@FilterShowFieldStyle.NamesOnly.id
-					)
-				}
-			}
-
-			function addAllFields() {
-				var dataSetId = $('#dataSetIdTypeahead').val()
-				clearTable()
-				var url = dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFields().url + "?dataSet=" + dataSetId
-
-				$.ajax({
-					url: url,
-					success: function (data) {
-						$.each(data, function(index, field) {
-							var values = {};
-							values["fieldName"] = field.name;
-							values["fieldTypeahead"] = field.label ? field.label : field.name;
-
-							$('#displayFieldNameDiv').dynamicTable('addTableRow', values)
-						});
-					},
-					error: showErrorResponse
-				});
-			}
+		}
 	</script>
 }
 
@@ -135,5 +101,5 @@
 	form = form,
 	elements = elements,
 	saveCall = controllers.orderrequest.routes.RequestSettingController.save(),
-	listCall = controllers.orderrequest.routes.RequestSettingController.listAll()
+	listCall = controllers.orderrequest.routes.RequestSettingController.find()
 )

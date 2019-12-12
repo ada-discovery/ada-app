@@ -14,7 +14,7 @@ case class BatchRequestSetting(
   dataSetId: String,
   timeCreated: Date = new Date(),
   widgetSpecs: Seq[WidgetSpec],
-  userIds: Seq[BSONObjectID],
+  userIds: Seq[BSONObjectID], // TODO: rename to committeeUserIds
   displayFieldNames: Seq[String]
 )
 

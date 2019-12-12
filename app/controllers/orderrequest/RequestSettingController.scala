@@ -13,194 +13,173 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.models.DataSetFormattersAndIds._
 import org.ada.server.models.User.UserIdentity
 import org.ada.server.models._
-import org.ada.server.services.UserManager
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaCrudControllerImpl
 import org.ada.web.controllers.dataset.DataSetWebContext
 import org.ada.web.services.DataSpaceService
-import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.controllers._
 import org.incal.play.formatters.JsonFormatter
-import org.incal.play.security.SecurityUtil.toAuthenticatedAction
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.RequestSettingRepo
+import views.html.{requestSettings => requestViews}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-
-@Deprecated
 class RequestSettingController @Inject()(
-    requestSettingRepo: RequestSettingRepo,
-    val userManager: UserManager,
-    dsaf: DataSetAccessorFactory,
-    dataSpaceService: DataSpaceService,
-    userRepo: UserRepo
+  requestSettingRepo: RequestSettingRepo,
+  dsaf: DataSetAccessorFactory,
+  dataSpaceService: DataSpaceService,
+  userRepo: UserRepo
 ) extends AdaCrudControllerImpl[BatchRequestSetting, BSONObjectID](requestSettingRepo)
-    with SubjectPresentRestrictedCrudController[BSONObjectID]
-    with HasShowView[BatchRequestSetting, BSONObjectID]
-    with HasEditView[BatchRequestSetting, BSONObjectID]
-    with HasBasicListView[BatchRequestSetting]
-    with HasBasicFormCreateView[BatchRequestSetting] {
+  with AdminRestrictedCrudController[BSONObjectID]
+//  with HasShowView[BatchRequestSetting, BSONObjectID]
+//  with HasFormEditView[BatchRequestSetting, BSONObjectID]
+  with HasBasicListView[BatchRequestSetting]
+  with HasBasicFormCreateView[BatchRequestSetting] {
 
-    private implicit val idsFormatter = BSONObjectIDStringFormatter
-    override protected val homeCall = {
-        routes.RequestSettingController.listAll()
-    }
+  override protected val homeCall = routes.RequestSettingController.listAll()
 
-    private implicit val widgetSpecFormatter = JsonFormatter[WidgetSpec]
-    override protected[controllers] val form = Form(
-        mapping(
-            "id" -> ignored(Option.empty[BSONObjectID]),
-            "dataSetId" -> nonEmptyText,
-            "timeCreated" -> ignored(new Date()),
-            "widgetSpecs" -> seq(of[WidgetSpec]),
-            "userIds" -> seq(of[BSONObjectID]),
-            "displayFieldNames" -> seq(nonEmptyText)
-        )(BatchRequestSetting.apply)(BatchRequestSetting.unapply)
+  private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
+
+  private implicit val widgetSpecFormatter = JsonFormatter[WidgetSpec]
+  private implicit val idFormatter = BSONObjectIDStringFormatter
+
+  override protected[controllers] val form = Form(
+    mapping(
+      "id" -> ignored(Option.empty[BSONObjectID]),
+      "dataSetId" -> nonEmptyText,
+      "timeCreated" -> ignored(new Date()),
+      "widgetSpecs" -> seq(of[WidgetSpec]),
+      "userIds" -> seq(of[BSONObjectID]),
+      "displayFieldNames" -> seq(nonEmptyText)
+    )(BatchRequestSetting.apply)(BatchRequestSetting.unapply)
+  )
+
+  // Save
+  override def saveCall(
+    requestSetting: BatchRequestSetting)(
+    implicit request: AuthenticatedRequest[AnyContent]
+  ): Future[BSONObjectID] = {
+    println(request.body.asFormUrlEncoded.get)
+    for {
+      dataSetIdExists <- repo.find(Seq("dataSetId" #== requestSetting.dataSetId), limit = Some(1)).map(_.headOption.isDefined)
+
+      id <- if (!dataSetIdExists)
+      // TODO: add a menu in data set setting
+        repo.save(requestSetting)
+      else
+        throw new AdaException(s"A configuration already exists for dataset id '${requestSetting.dataSetId}'.")
+    } yield
+      id
+  }
+
+  // Create
+  override protected def createView = { implicit ctx =>
+    val dataSetId = ctx.request.queryString.get("dataSetId").map(_.head).getOrElse(
+      throw new AdaException("No dataSetId specified.")
     )
 
-    override def get(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
-        restrictAdminAny(noCaching = true) {
-            toAuthenticatedAction(super.get(id))
-        }
+    implicit val dataSetWebCtx = dataSetWebContext(dataSetId)
+    views.html.requestSettings.create(_)
+  }
 
-    override def edit(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
-        restrictAdminAny(noCaching = true) {
-            toAuthenticatedAction(super.edit(id))
-        }
+  // Edit
+  override protected type EditViewData = (
+    BSONObjectID,
+    Form[BatchRequestSetting],
+    Map[String, Field],
+    Map[BSONObjectID, User],
+    Map[BSONObjectID, String],
+    Traversable[DataSpaceMetaInfo],
+    DataSetSetting
+  )
 
-    override def update(id: BSONObjectID): play.api.mvc.Action[AnyContent] =
-        restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.update(id)))
+  override protected def getFormEditViewData(
+    requestId: BSONObjectID,
+    form: Form[BatchRequestSetting]
+  ) = { implicit request =>
+    for {
+      // get a batch request setting
+      existingSetting <- repo.get(requestId)
 
-    override def delete(id: BSONObjectID): Action[AnyContent] =
-        restrictAdminAny(noCaching = true) {
-            toAuthenticatedAction(super.delete(id))
-        }
+      // check is exists
+      _ = require(existingSetting.isDefined, s"No request setting found for the id '${requestId.stringify}'.")
 
-    override def find(page: Int, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent] =
-        restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.find(page, orderBy, filter)))
+      // get the associated data set id
+      dataSetId = existingSetting.get.dataSetId
 
-    override def listAll(orderBy: String): Action[AnyContent] = {
-        restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.listAll(orderBy)))
+      // create a data set accessor
+      dsa = dsaf(dataSetId).getOrElse(
+        throw new AdaException(s"No dsa found for the data set id '${dataSetId}'.")
+      )
+
+      // get all the filters
+      filters <- dsa.filterRepo.find(projection = Seq("name"))
+
+      // get the reference users/committee members
+      refUsers <- userRepo.find(Seq(UserIdentity.name #-> existingSetting.get.userIds.map(Some(_))))
+
+      // + other auxiliary data
+      dataSpaceTree <- dataSpaceService.getTreeForCurrentUser
+      fields <- dsa.fieldRepo.find()
+      dataSetSetting <- dsa.setting
+    } yield {
+      val nameFieldMap = fields.map(field => (field.name, field)).toMap
+
+      val idFilterNameMap = filters.map(filter => (filter._id.get, filter.name.getOrElse(""))).toMap
+      val idUserMap = refUsers.map(user => (user._id.get, user)).toMap
+      println(idUserMap)
+      (
+        requestId,
+        form,
+        nameFieldMap,
+        idUserMap,
+        idFilterNameMap,
+        dataSpaceTree,
+        dataSetSetting
+      )
     }
+  }
 
-    override def saveCall(
-        requestSetting: BatchRequestSetting
-    )(
-        implicit request: AuthenticatedRequest[AnyContent]
-    ): Future[BSONObjectID] =
-        for {
-            dataSetIdExists <- repo.find(Seq("dataSetId" #== requestSetting.dataSetId))
-            id <-
-            if (dataSetIdExists.size == 0) {
-                repo.save(requestSetting)
-            } else {
-                throw new AdaException("A configuration already exists for dataset id " + requestSetting.dataSetId)
-            }
-        } yield
-            id
+  override protected def editView = { implicit ctx =>
+    data: EditViewData =>
+      implicit val dataSetWebCtx = dataSetWebContext(data._7.dataSetId)
+      (requestViews.edit(_, _, _, _, _, _, _)).tupled(data)
+  }
 
-    override protected def getFormEditViewData(requestId: BSONObjectID, form: Form[BatchRequestSetting]): AuthenticatedRequest[_] => Future[EditViewData] = {
-        implicit request => {
-            val dataSet = form.get.dataSetId
-            dsaf(dataSet).map { dsa =>
-                val filtersFuture =
-                    form.value match {
-                        case Some(dataView) =>
-                            val filterIds = dataView.widgetSpecs.map(_.subFilterId).flatten
-                            if (filterIds.nonEmpty) {
-                                dsa.filterRepo.find(
-                                    projection = Seq("name")
-                                )
-                            } else
-                                Future(Nil)
-                        case None => Future(Nil)
-                    }
+  // Show
+  override protected type ShowViewData = (
+    BatchRequestSetting,
+    Traversable[String]
+  )
 
-                val nameFieldMapFuture = getNameFieldMap(dsa.fieldRepo)
-                val settingFuture = dsa.setting
-                val treeFuture = dataSpaceService.getTreeForCurrentUser
+  override protected def getFormShowViewData(
+    requestId: BSONObjectID,
+    form: Form[BatchRequestSetting]
+  ) = { implicit request =>
+    for {
+      existingSetting <- repo.get(requestId)
 
-                for {
-                    existingSetting <- repo.get(requestId)
-                    filters <- filtersFuture
-                    dataSpaceTree <- treeFuture
-                    nameFieldMap <- nameFieldMapFuture
-                    dataSetSetting <- settingFuture
-                } yield {
-                    val idFilterNameMap = filters.map(filter => (filter._id.get, filter.name.getOrElse(""))).toMap
-                    (IdForm(requestId, form), existingSetting.get.dataSetId, nameFieldMap, idFilterNameMap, dataSetSetting.filterShowFieldStyle, dataSpaceTree, dataSetSetting)
-                }
-            }.get
-        }
-    }
+      // check is exists
+      _ = require(existingSetting.isDefined, s"No request setting found for the id '${requestId.stringify}'.")
 
-    override protected def getFormShowViewData(requestId: BSONObjectID, form: Form[BatchRequestSetting]): AuthenticatedRequest[_] => Future[ShowViewData] = {
-        implicit request => {
-            for {
-                existingSetting <- repo.get(requestId)
-                users <- getUsersByIds(existingSetting.get.userIds.map(Some(_)))
-            } yield {
-                (form.get, users.map(_._2.ldapDn))
-            }
-        }
-    }
+      userIds = existingSetting.get.userIds.map(Some(_))
+      users <- userRepo.find(Seq(UserIdentity.name #-> userIds.toSeq))
+    } yield
+      (form.get, users.map(_.ldapDn))
+  }
 
-    private def getUsersByIds(userIds: Traversable[Option[BSONObjectID]]) = {
-        userRepo.find(Seq(UserIdentity.name #-> userIds.toSeq)).map { users =>
-            users.map(c => (c._id.get, c)).toMap
-        }
-    }
+  override protected def showView = { implicit ctx =>
+    (views.html.requestSettings.show(_, _)).tupled
+  }
 
-    override protected type CreateViewData = (
-        Form[BatchRequestSetting]
-        )
-
-    private def getNameFieldMap(fieldRepo: FieldRepo): Future[Map[String, Field]] =
-        fieldRepo.find().map {
-            _.map(field =>
-                (field.name, field)
-            ).toMap
-        }
-
-    override protected type EditViewData = (
-        IdForm[BSONObjectID, BatchRequestSetting],
-            String,
-            Map[String, Field],
-            Map[BSONObjectID, String],
-            Option[FilterShowFieldStyle.Value],
-            Traversable[DataSpaceMetaInfo],
-            DataSetSetting
-        )
-
-    override protected type ShowViewData = (
-        BatchRequestSetting, Traversable[String]
-        )
-
-    override protected def showView = { implicit ctx =>
-        (views.html.requestSettings.show(_, _)).tupled
-    }
-
-    override protected def editView = { implicit ctx => {
-        data: EditViewData => {
-            implicit val dataSetWebCtx = dataSetWebContext(data._2)
-            views.html.requestSettings.edit(data._1, data._3, data._4, data._5, data._6, data._7)
-        }
-    }
-    }
-
-    private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
-
-    override protected def listView = { implicit ctx =>
-        (views.html.requestSettings.list(_, _)).tupled
-    }
-
-    override protected def createView = { implicit ctx =>
-        views.html.requestSettings.create(_)
-    }
+  // List
+  override protected def listView = { implicit ctx =>
+    (views.html.requestSettings.list(_, _)).tupled
+  }
 }
