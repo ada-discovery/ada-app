@@ -8,7 +8,7 @@ import javax.inject.Inject
 import models.BatchRequestSetting
 import models.BatchRequestSetting.BatchRequestSettingIdentity
 import org.ada.server.AdaException
-import org.ada.server.dataaccess.RepoTypes.{FieldRepo, UserRepo}
+import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, FieldRepo, UserRepo}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.models.DataSetFormattersAndIds._
 import org.ada.server.models.User.UserIdentity
@@ -33,12 +33,11 @@ import scala.concurrent.Future
 class RequestSettingController @Inject()(
   requestSettingRepo: RequestSettingRepo,
   dsaf: DataSetAccessorFactory,
+  dataSetSettingRepo: DataSetSettingRepo,
   dataSpaceService: DataSpaceService,
   userRepo: UserRepo
 ) extends AdaCrudControllerImpl[BatchRequestSetting, BSONObjectID](requestSettingRepo)
   with AdminRestrictedCrudController[BSONObjectID]
-//  with HasShowView[BatchRequestSetting, BSONObjectID]
-//  with HasFormEditView[BatchRequestSetting, BSONObjectID]
   with HasBasicListView[BatchRequestSetting]
   with HasBasicFormCreateView[BatchRequestSetting] {
 
@@ -64,19 +63,26 @@ class RequestSettingController @Inject()(
   override def saveCall(
     requestSetting: BatchRequestSetting)(
     implicit request: AuthenticatedRequest[AnyContent]
-  ): Future[BSONObjectID] = {
-    println(request.body.asFormUrlEncoded.get)
+  ): Future[BSONObjectID] =
     for {
       dataSetIdExists <- repo.find(Seq("dataSetId" #== requestSetting.dataSetId), limit = Some(1)).map(_.headOption.isDefined)
 
+      dataSetSetting <- dataSetSettingRepo.find(Seq("dataSetId" #== requestSetting.dataSetId), limit = Some(1)).map(_.headOption)
+
       id <- if (!dataSetIdExists)
-      // TODO: add a menu in data set setting
-        repo.save(requestSetting)
+        for {
+          id <- repo.save(requestSetting)
+          _ <- dataSetSetting.map { dataSetSetting =>
+            val newDataSetSetting = dataSetSetting.copy(
+              extraNavigationItems = dataSetSetting.extraNavigationItems :+ Link("Order Request", routes.BatchOrderRequestController.createNew(requestSetting.dataSetId).url))
+            dataSetSettingRepo.update(newDataSetSetting)
+          }.getOrElse(Future(()))
+        } yield
+          id
       else
         throw new AdaException(s"A configuration already exists for dataset id '${requestSetting.dataSetId}'.")
     } yield
       id
-  }
 
   // Create
   override protected def createView = { implicit ctx =>
@@ -133,7 +139,7 @@ class RequestSettingController @Inject()(
 
       val idFilterNameMap = filters.map(filter => (filter._id.get, filter.name.getOrElse(""))).toMap
       val idUserMap = refUsers.map(user => (user._id.get, user)).toMap
-      println(idUserMap)
+
       (
         requestId,
         form,
