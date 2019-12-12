@@ -2,7 +2,7 @@ package runnables.other
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import org.ada.server.dataaccess.StreamSpec
+import org.incal.core.dataaccess.StreamSpec
 import javax.inject.Inject
 import org.ada.server.models.{Field, FieldTypeId}
 import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}

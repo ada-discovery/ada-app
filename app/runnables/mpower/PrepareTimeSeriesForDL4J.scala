@@ -6,10 +6,9 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.util.writeStringAsStream
-import org.ada.server.akka.AkkaStreamUtil.fileHeaderAndContentSource
+import org.incal.core.akka.AkkaFileIO.headerAndFileSource
 
 import scala.concurrent.Future
-import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class PrepareTimeSeriesForDL4J extends InputFutureRunnableExt[PrepareTimeSeriesForDL4JSpec] {
@@ -37,7 +36,7 @@ class PrepareTimeSeriesForDL4J extends InputFutureRunnableExt[PrepareTimeSeriesF
     }
 
     for {
-      (header, contentSource) <- fileHeaderAndContentSource(input.inputFileName)
+      (header, contentSource) <- headerAndFileSource(input.inputFileName)
 
       columnNames = header.split(delimiter, -1).map(_.trim)
       seriesHeader = input.inputSeriesIndeces.map(columnNames(_))

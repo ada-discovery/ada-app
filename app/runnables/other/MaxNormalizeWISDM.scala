@@ -2,7 +2,7 @@ package runnables.other
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
-import org.ada.server.dataaccess.StreamSpec
+import org.incal.core.dataaccess.StreamSpec
 import javax.inject.Inject
 import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory

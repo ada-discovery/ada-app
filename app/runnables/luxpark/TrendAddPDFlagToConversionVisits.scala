@@ -1,7 +1,7 @@
 package runnables.luxpark
 
 import akka.stream.Materializer
-import org.ada.server.dataaccess.StreamSpec
+import org.incal.core.dataaccess.StreamSpec
 import javax.inject.Inject
 import org.ada.server.models.{Field, FieldTypeId}
 import org.incal.core.dataaccess.{Criterion, NotEqualsNullCriterion}

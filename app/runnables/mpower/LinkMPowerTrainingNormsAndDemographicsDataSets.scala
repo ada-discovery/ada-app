@@ -1,11 +1,10 @@
 package runnables.mpower
 
 import javax.inject.Inject
-import org.ada.server.dataaccess.StreamSpec
+import org.incal.core.dataaccess.StreamSpec
 import org.ada.server.models.StorageType
 import org.ada.server.models.datatrans.{LinkTwoDataSetsTransformation, ResultDataSetSpec}
 import org.incal.core.runnables.FutureRunnable
-import org.ada.server.services.DataSetService
 import org.ada.server.services.ServiceTypes.DataSetCentralTransformer
 
 class LinkMPowerTrainingNormsAndDemographicsDataSets @Inject()(centralTransformer: DataSetCentralTransformer) extends FutureRunnable {

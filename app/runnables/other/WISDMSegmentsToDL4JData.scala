@@ -6,7 +6,7 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import org.ada.server.dataaccess.StreamSpec
+import org.incal.core.dataaccess.StreamSpec
 import javax.inject.Inject
 import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
 import org.incal.core.dataaccess.Criterion._

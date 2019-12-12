@@ -1,7 +1,7 @@
 package runnables.ppmi
 
 import javax.inject.Inject
-import org.ada.server.dataaccess.StreamSpec
+import org.incal.core.dataaccess.StreamSpec
 import org.ada.server.models.StorageType
 import org.ada.server.models.datatrans.{InferDataSetTransformation, ResultDataSetSpec}
 import org.incal.core.runnables.FutureRunnable

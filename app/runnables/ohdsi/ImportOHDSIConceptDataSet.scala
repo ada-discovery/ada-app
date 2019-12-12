@@ -1,7 +1,7 @@
 package runnables.ohdsi
 
 import javax.inject.Inject
-import org.ada.server.dataaccess.StreamSpec
+import org.incal.core.dataaccess.StreamSpec
 import org.ada.server.models.datatrans.{ResultDataSetSpec, SwapFieldsDataSetTransformation}
 import org.ada.server.models.{Field, FieldTypeId, StorageType}
 import org.ada.server.services.ServiceTypes.DataSetCentralTransformer
