@@ -9,14 +9,14 @@ POST        /admin/runRCPrediction                              controllers.ml.R
 
 
 # Requests Settings
-GET         /requestSettings                                    controllers.orderrequest.RequestSettingController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
-GET         /requestSettings/all                                controllers.orderrequest.RequestSettingController.listAll(s: String ?= "timeCreated")
-GET         /requestSettings/new                                controllers.orderrequest.RequestSettingController.create
-POST        /requestSettings/save                               controllers.orderrequest.RequestSettingController.save
-GET         /requestSettings/:id/get                            controllers.orderrequest.RequestSettingController.get(id: BSONObjectID)
-GET         /requestSettings/:id/edit                           controllers.orderrequest.RequestSettingController.edit(id: BSONObjectID)
-POST        /requestSettings/:id                                controllers.orderrequest.RequestSettingController.update(id: BSONObjectID)
-POST        /requestSettings/:id/delete                         controllers.orderrequest.RequestSettingController.delete(id: BSONObjectID)
+GET         /requestSettings                                    controllers.orderrequest.BatchOrderRequestSettingController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /requestSettings/all                                controllers.orderrequest.BatchOrderRequestSettingController.listAll(s: String ?= "timeCreated")
+GET         /requestSettings/new                                controllers.orderrequest.BatchOrderRequestSettingController.create
+POST        /requestSettings/save                               controllers.orderrequest.BatchOrderRequestSettingController.save
+GET         /requestSettings/:id/get                            controllers.orderrequest.BatchOrderRequestSettingController.get(id: BSONObjectID)
+GET         /requestSettings/:id/edit                           controllers.orderrequest.BatchOrderRequestSettingController.edit(id: BSONObjectID)
+POST        /requestSettings/:id                                controllers.orderrequest.BatchOrderRequestSettingController.update(id: BSONObjectID)
+POST        /requestSettings/:id/delete                         controllers.orderrequest.BatchOrderRequestSettingController.delete(id: BSONObjectID)
 
 
 # Batch-order Requests
