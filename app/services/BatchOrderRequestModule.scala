@@ -1,23 +1,23 @@
 package services
 
-import models.{BatchOrderRequest, BatchRequestSetting, SampleDocumentation}
+import models.{BatchOrderRequest, BatchOrderRequestSetting, SampleDocumentation}
 import models.BatchOrderRequest.batchRequestFormat
 import net.codingwell.scalaguice.ScalaModule
 import org.ada.server.dataaccess.mongo.MongoAsyncCrudRepo
 import org.incal.core.dataaccess.AsyncCrudRepo
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, RequestSettingRepo, SampleDocumentationRepo}
+import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, BatchOrderRequestSettingRepo, SampleDocumentationRepo}
 
 class BatchOrderRequestModule extends ScalaModule {
 
   override def configure = {
-    bind[BatchOrderRequestRepo].toInstance(
-      new MongoAsyncCrudRepo[BatchOrderRequest, BSONObjectID]("batch_requests")
+    bind[BatchOrderRequestSettingRepo].toInstance(
+      new MongoAsyncCrudRepo[BatchOrderRequestSetting, BSONObjectID]("batch_request_settings")
     )
 
-    bind[RequestSettingRepo].toInstance(
-      new MongoAsyncCrudRepo[BatchRequestSetting, BSONObjectID]("batch_request_settings")
+    bind[BatchOrderRequestRepo].toInstance(
+      new MongoAsyncCrudRepo[BatchOrderRequest, BSONObjectID]("batch_requests")
     )
 
     bind[SampleDocumentationRepo].toInstance(
@@ -27,7 +27,7 @@ class BatchOrderRequestModule extends ScalaModule {
 }
 
 object BatchOrderRequestRepoTypes {
+  type BatchOrderRequestSettingRepo = AsyncCrudRepo[BatchOrderRequestSetting, BSONObjectID]
   type BatchOrderRequestRepo = AsyncCrudRepo[BatchOrderRequest, BSONObjectID]
-  type RequestSettingRepo = AsyncCrudRepo[BatchRequestSetting, BSONObjectID]
   type SampleDocumentationRepo = AsyncCrudRepo[SampleDocumentation, BSONObjectID]
 }

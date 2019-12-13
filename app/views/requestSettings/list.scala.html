@@ -1,22 +1,26 @@
 @import org.ada.web.util.typeColumns
 @import org.incal.core.FilterCondition
 @import org.incal.play.Page
-@import org.incal.play.controllers.WebContext
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import reactivemongo.bson.BSONObjectID
+@import views.html.elements.{inputTypeahead, typeahead}
 @import org.incal.core.ConditionType
 @import views.html.filter.filterWithJs
+@import org.ada.web.controllers.dataset.datatrans.routes
+@import org.ada.server.models.FilterShowFieldStyle
+@import org.incal.play.controllers.WebContext
+@import org.incal.play.controllers.WebContext._
 
 @(
-    page: Page[BatchRequestSetting],
+    page: Page[BatchOrderRequestSetting],
     conditions: Seq[FilterCondition]
 )(
     implicit context: WebContext
 )
 
 @modalBody = {
-    @dataSetTypeahead()
+    @typeahead("dataSetIdTypeahead", "dataSetId", "Data Set Id", isLarge = true)
 }
 
 @actions = {
@@ -26,20 +30,35 @@
                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
             </a>
         </div>
-        @modal("addSettingModal", "Add New Request Setting", modalBody, Some(controllers.orderrequest.routes.RequestSettingController.create()), None, None)
+        @modal("addSettingModal", "Add New Request Setting", modalBody, Some(controllers.orderrequest.routes.BatchOrderRequestSettingController.create()), None, None)
     </div>
 }
 
 @table = @{
     paginatedTable(
         page,
-        controllers.orderrequest.routes.RequestSettingController.find(_, _, conditions),
-        typeColumns[BatchRequestSetting](
+        controllers.orderrequest.routes.BatchOrderRequestSettingController.find(_, _, conditions),
+        typeColumns[BatchOrderRequestSetting](
             (Some("dataSetId"), "Dataset id", _.dataSetId),
             (Some("timeCreated"), "Date", _.timeCreated)
         ),
-        Some({ item: Any => controllers.orderrequest.routes.RequestSettingController.edit(item.asInstanceOf[BatchRequestSetting]._id.get) })
+        Some({ item: Any => controllers.orderrequest.routes.BatchOrderRequestSettingController.edit(item.asInstanceOf[BatchOrderRequestSetting]._id.get) })
     )
+}
+
+@bottomResources = {
+    @typeaheadJsImport()
+
+    <script type="text/javascript">
+        $(function () {
+            populateFieldTypeahedFromUrl(
+                $('#dataSetIdTypeahead'),
+                $('#dataSetId'),
+                '@Html(routes.DataSetTransformationController.dataSetIds().url)',
+                @FilterShowFieldStyle.LabelsOnly.id
+            )
+        })
+    </script>
 }
 
 @layout.list(
@@ -48,5 +67,5 @@
     page.total,
     Some(actions),
     Some(table),
-    None
+    bottomResources = Some(bottomResources)
 )

@@ -1,14 +1,14 @@
 package runnables.other
 
 import javax.inject.Inject
-import models.BatchRequestSetting
+import models.BatchOrderRequestSetting
 import org.incal.core.runnables.{InputFutureRunnableExt, RunnableHtmlOutput}
-import services.BatchOrderRequestRepoTypes.RequestSettingRepo
+import services.BatchOrderRequestRepoTypes.BatchOrderRequestSettingRepo
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class SaveCommittee @Inject() (committeeRepo: RequestSettingRepo) extends InputFutureRunnableExt[BatchRequestSetting] with RunnableHtmlOutput {
+class SaveCommittee @Inject() (committeeRepo: BatchOrderRequestSettingRepo) extends InputFutureRunnableExt[BatchOrderRequestSetting] with RunnableHtmlOutput {
 
-  override def runAsFuture(committee: BatchRequestSetting) =
+  override def runAsFuture(committee: BatchOrderRequestSetting) =
     for {
        committeeId <-  committeeRepo.save(committee)
        committeeLoaded <- committeeRepo.get(committeeId)

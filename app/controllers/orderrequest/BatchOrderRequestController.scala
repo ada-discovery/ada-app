@@ -30,7 +30,7 @@ import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.libs.json.JsObject
 import play.api.mvc.{Action, AnyContent, Call, RequestHeader}
 import reactivemongo.bson.BSONObjectID
-import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, RequestSettingRepo}
+import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, BatchOrderRequestSettingRepo}
 import services.request.{ActionNotificationService, BatchOrderService}
 import services.request.ActionGraph
 import views.html.dataset.actionTable
@@ -41,7 +41,7 @@ import scala.concurrent.Future
 @Deprecated
 class BatchOrderRequestController @Inject()(
     requestsRepo: BatchOrderRequestRepo,
-    requestSettingRepo: RequestSettingRepo,
+    requestSettingRepo: BatchOrderRequestSettingRepo,
     dataSetSettingRepo: DataSetSettingRepo,
     dsaf: DataSetAccessorFactory,
     val actionNotificationService: ActionNotificationService,
@@ -102,6 +102,8 @@ class BatchOrderRequestController @Inject()(
                 // get the batch-order setting for a given data set
                 setting <- requestSettingRepo.find(Seq("dataSetId" #== dataSet)).map(_.headOption)
 
+                dataViewOption <- dsa.dataViewRepo.get(setting.get.viewId)
+
                 // handy things for a view: data set name, data space tree, and data set setting
                 (dataSetName, dataSpaceTree, dataSetSetting) <- getDataSetNameTreeAndSetting(dsa)
             } yield
@@ -110,17 +112,22 @@ class BatchOrderRequestController @Inject()(
                         NotFound(s"Batch-order setting for the data set '${dataSet}' not found.")
                     case Some(setting) =>
                         implicit val context = dataSetWebContext(dataSet)
+                      dataViewOption.map { dataView =>
                         Ok(
-                            actionTable(
-                                setting.displayFieldNames,
-                                routes.BatchOrderRequestController.saveNew(dataSet),
-                                "Request Items",
-                                dataSetName + " Batch Order Request",
-                                Filter(),
-                                dataSetSetting,
-                                dataSpaceTree
-                            )
+                          actionTable(
+                            dataView.tableColumnNames,
+                            routes.BatchOrderRequestController.saveNew(dataSet),
+                            "Request Items",
+                            dataSetName + " Batch Order Request",
+                            Filter(),
+                            dataSetSetting,
+                            dataSpaceTree
+                          )
                         )
+                      }.getOrElse(
+                        NotFound(s"Data view '${setting.viewId}' not found.")
+                      )
+
                 }
             }.getOrElse(
                 Future(NotFound(s"Data set '${dataSet}' doesn't exist."))
@@ -197,40 +204,39 @@ class BatchOrderRequestController @Inject()(
                     }
                 }
         )
-    }
+  }
 
-    private def getActionUrl(requestId: BSONObjectID, role: Role.Value)(implicit request: RequestHeader) =
-        routes.BatchOrderRequestController.action(requestId, role).absoluteURL()
+  private def getActionUrl(requestId: BSONObjectID, role: Role.Value)(implicit request: RequestHeader) =
+    routes.BatchOrderRequestController.action(requestId, role).absoluteURL()
 
-    override def get(id: BSONObjectID) =
-        restrictAdminOrUserCustomAny(isRequestAllowed(id, None, None, true))(toAuthenticatedAction(super.get(id)))
+  override def get(id: BSONObjectID) =
+    restrictAdminOrUserCustomAny(isRequestAllowed(id, None, None, true))(toAuthenticatedAction(super.get(id)))
 
-    override def edit(id: BSONObjectID) =
-        restrictAdminAny(noCaching = true) {
-            toAuthenticatedAction(super.edit(id))
-        }
+  override def edit(id: BSONObjectID) = restrictAdminAny(noCaching = true) {
+    toAuthenticatedAction(super.edit(id))
+  }
 
-    override def update(id: BSONObjectID) =
-        restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.update(id)))
+  override def update(id: BSONObjectID) = restrictAdminAny(noCaching = true)(
+    toAuthenticatedAction(super.update(id))
+  )
 
-    override def delete(id: BSONObjectID): Action[AnyContent] =
-        restrictAdminAny(noCaching = true) {
-            toAuthenticatedAction(super.delete(id))
-        }
+  override def delete(id: BSONObjectID) = restrictAdminAny(noCaching = true) {
+    toAuthenticatedAction(super.delete(id))
+  }
 
-    override def find(page: Int, orderBy: String, filter: Seq[FilterCondition]) =
-        restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.find(page, orderBy, filter)))
+  override def find(page: Int, orderBy: String, filter: Seq[FilterCondition]) =
+    restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.find(page, orderBy, filter)))
 
-    def findActiveWithFilter(pageCreated: Option[Int] = None, pageToApprove: Option[Int] = None, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent] = {
-        restrictAny(findRequestsForUserWithFilter(pageCreated, pageToApprove, orderBy, filter))
-    }
+  def findActiveWithFilter(pageCreated: Option[Int] = None, pageToApprove: Option[Int] = None, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent] = {
+    restrictAny(findRequestsForUserWithFilter(pageCreated, pageToApprove, orderBy, filter))
+  }
 
-    private def findRequestsForUserWithFilter(
-        pageCreated: Option[Int] = None,
-        pageToApprove: Option[Int] = None,
-        orderBy: String,
-        filter: Seq[FilterCondition]
-    ): Action[AnyContent] = AuthAction { implicit request => {
+  private def findRequestsForUserWithFilter(
+    pageCreated: Option[Int] = None,
+    pageToApprove: Option[Int] = None,
+    orderBy: String,
+    filter: Seq[FilterCondition]
+  ) = AuthAction { implicit request => {
         for {
             user <- currentUser()
             approverCriterion <- buildApproverCriterion(user)
@@ -273,7 +279,7 @@ class BatchOrderRequestController @Inject()(
             committees <- requestSettingRepo.find()
             dataSetSettings <- dataSetSettingRepo.find(Seq("ownerId" #== user.get.user._id))
         } yield {
-            val userCommittee = committees.filter(c => c.userIds.contains(user.get.user._id.get))
+            val userCommittee = committees.filter(c => c.committeeUserIds.contains(user.get.user._id.get))
             val committeeDataSetIds = userCommittee.map(c => c.dataSetId).toSeq
             val ownedDataSetIds = dataSetSettings.map(s => s.dataSetId).toSeq
             val dataSetIds = ownedDataSetIds ++ committeeDataSetIds
@@ -538,12 +544,17 @@ class BatchOrderRequestController @Inject()(
         routes.BatchOrderRequestController.get(requestId).absoluteURL()
 
     private def getRequestSettingsFieldNames(dataSetId: String) =
-        for {
-            fieldNamesByDataSet <- requestSettingRepo.find(Seq("dataSetId" #== dataSetId)).map {
-                _.flatMap(_.displayFieldNames)
-            }
-        } yield
-            fieldNamesByDataSet
+      for {
+        requestSetting <- requestSettingRepo.find(Seq("dataSetId" #== dataSetId), limit = Some(1)).map(_.headOption)
+
+        dsa = dsaf(dataSetId).getOrElse(throw new AdaException(s"Data set id '${dataSetId}' not found."))
+
+        view <- requestSetting match {
+          case Some(setting) => dsa.dataViewRepo.get(setting.viewId)
+          case None => Future(None)
+        }
+      } yield
+        view.map(_.tableColumnNames).getOrElse(Nil)
 
     private def isRequestAllowed(
         requestId: BSONObjectID,

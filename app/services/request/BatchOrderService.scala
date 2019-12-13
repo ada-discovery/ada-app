@@ -10,7 +10,7 @@ import org.ada.web.models.security.DeadboltUser
 import org.incal.core.dataaccess.Criterion._
 import org.incal.play.security.SecurityRole
 import reactivemongo.bson.BSONObjectID
-import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, RequestSettingRepo}
+import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, BatchOrderRequestSettingRepo}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -27,7 +27,7 @@ trait BatchOrderService {
 @Singleton
 class BatchOrderServiceImpl @Inject()(
     requestsRepo: BatchOrderRequestRepo,
-    requestSettingRepo: RequestSettingRepo,
+    requestSettingRepo: BatchOrderRequestSettingRepo,
     dataSetSettingRepo: DataSetSettingRepo
 ) extends BatchOrderService {
 
@@ -42,7 +42,7 @@ class BatchOrderServiceImpl @Inject()(
     private def getUserRoles(existingRequest: BatchOrderRequest, user: Option[USER]): Future[(BSONObjectID, Traversable[Role.Value])] = {
         for {
             committeeIds <- requestSettingRepo.find(Seq("dataSetId" #== existingRequest.dataSetId)).map {
-                _.flatMap(_.userIds)
+                _.flatMap(_.committeeUserIds)
             }
             requesterId = Seq(existingRequest.createdById.getOrElse(
                 throw new AdaException(("no requester id found for request: " + existingRequest._id.get))
@@ -80,7 +80,7 @@ class BatchOrderServiceImpl @Inject()(
     def getAllowedUserIds(existingRequest: BatchOrderRequest, user: Option[User]) =
         for {
             committeeIds <- requestSettingRepo.find(Seq("dataSetId" #== existingRequest.dataSetId)).map {
-                _.flatMap(_.userIds)
+                _.flatMap(_.committeeUserIds)
             }
             requesterId = Traversable(existingRequest.createdById.getOrElse(
                 throw new AdaException(("no requester id found for request: " + existingRequest._id.get))

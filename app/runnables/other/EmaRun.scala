@@ -5,7 +5,7 @@ package runnables.other
 import java.util.Date
 
 import javax.inject.Inject
-import models.{BatchOrderRequest, BatchRequestSetting, BatchRequestState}
+import models.{BatchOrderRequest, BatchOrderRequestSetting, BatchRequestState}
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
@@ -15,11 +15,11 @@ import org.incal.core.dataaccess.EqualsCriterion
 import org.incal.core.runnables.{InputFutureRunnableExt, RunnableHtmlOutput}
 import play.api.{Configuration, Logger}
 import reactivemongo.bson.BSONObjectID
-import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, RequestSettingRepo}
+import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, BatchOrderRequestSettingRepo}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configuration, userRepo: UserRepo, committeeRepo: RequestSettingRepo, requestsRepo:BatchOrderRequestRepo)
+class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configuration, userRepo: UserRepo, committeeRepo: BatchOrderRequestSettingRepo, requestsRepo:BatchOrderRequestRepo)
   extends InputFutureRunnableExt[EmaRunRunSpec] with RunnableHtmlOutput {
   private val logger = Logger
 
@@ -35,7 +35,7 @@ class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configurati
     requestsRepo.save(request)
 
     val committeeId = BSONObjectID.parse("577e18c24500004800cdc557").toOption
-    val committee = BatchRequestSetting(committeeId, "dataSetId", new Date(), Nil, Nil, Seq("name1"))
+    val committee = BatchOrderRequestSetting(committeeId, "dataSetId", new Date(), Nil, BSONObjectID.generate())
     committeeRepo.delete(committeeId)
     committeeRepo.save(committee)
 

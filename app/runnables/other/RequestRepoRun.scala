@@ -7,11 +7,11 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.incal.core.runnables.{InputFutureRunnableExt, RunnableHtmlOutput}
 import play.api.{Configuration, Logger}
 import reactivemongo.bson.BSONObjectID
-import services.BatchOrderRequestRepoTypes.{RequestSettingRepo, BatchOrderRequestRepo}
+import services.BatchOrderRequestRepoTypes.{BatchOrderRequestSettingRepo, BatchOrderRequestRepo}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
-class RequestRepoRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configuration, userRepo: UserRepo, committeeRepo: RequestSettingRepo, requestsRepo:BatchOrderRequestRepo)
+class RequestRepoRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configuration, userRepo: UserRepo, committeeRepo: BatchOrderRequestSettingRepo, requestsRepo:BatchOrderRequestRepo)
   extends InputFutureRunnableExt[RequestRepoRunSpec] with RunnableHtmlOutput {
   private val logger = Logger
 

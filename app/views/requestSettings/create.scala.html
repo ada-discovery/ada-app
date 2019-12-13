@@ -19,22 +19,17 @@
 @import org.ada.web.controllers.dataset.datatrans.DataSetTransformationController
 @import views.html.table.dynamicStringTable
 @import views.html.requestSettings.dynamicUserTable
+@import views.html.elements.{inputTypeahead, typeahead}
 @import org.ada.server.models.FilterShowFieldStyle
 @import org.ada.server.models.User
 @import org.ada.web.controllers.dataset.DataSetWebContext
 @import org.ada.web.controllers.dataset.DataSetWebContext._
 
 @(
-	form: Form[BatchRequestSetting]
+	form: Form[BatchOrderRequestSetting]
 )(
     implicit context: DataSetWebContext
 )
-
-@extraFieldButtons = {
-	<a id="addAllFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllFields();" data-toggle="tooltip" title="Add All Fields">
-		<span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All
-	</a>
-}
 
 @elements = {
 	@dynamicTableJsImport()
@@ -43,63 +38,36 @@
 		<input id="dataSetId" name="dataSetId" value="@context.dataSetId" readonly="true">
 	}
 
-	@labelValue("userIds", attributeLabel("requestSetting", "committeeUserIds")) {
-		@dynamicUserTable("userId")
+	@labelValue("committeeUserIds", attributeLabel("requestSetting", "committeeUserIds")) {
+		@dynamicUserTable("committeeUserId")
 	}
 
-	@labelValue("displayFieldNames", attributeLabel("requestSetting", "displayFieldNames")) {
-		@dynamicFieldTable(
-			"displayFieldName",
-			Nil,
-			true,
-			5,
-			Some(extraFieldButtons),
-			None,
-			showFieldStyle = Some(FilterShowFieldStyle.NamesOnly)
-		)
-	}
+	@inputTypeahead("dataView", "viewId", "viewNameTypeahead", form, "Data View")
 
 	@typeaheadJsImport()
 
 	<script type="text/javascript">
 		$(function () {
 			populateIdNameTypeahedFromUrl(
-				$('#add_userIdModal').find('#userTypeahead'),
-				$('#add_userIdModal').find('#userId'),
+				$('#add_committeeUserIdModal').find('#userTypeahead'),
+				$('#add_committeeUserIdModal').find('#userId'),
 				'@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)'
 			)
 
-			populateFieldTypeahedFromUrl(
-				$('#displayFieldNameDiv').find('#fieldTypeahead'),
-				$('#displayFieldNameDiv').find('#fieldName'),
-				'@Html(context.dataSetRouter.allFields.url)',
-				@FilterShowFieldStyle.NamesOnly.id
+			populateIdNameTypeahedFromUrl(
+				$('#viewNameTypeahead'),
+				$('#viewId'),
+				'@Html(context.dataViewRouter.idAndNamesAccessible.url)'
 			)
 		})
-
-		function addAllFields() {
-			$.ajax({
-				url:  '@Html(context.dataSetRouter.allFields.url)',
-				success: function (data) {
-					$.each(data, function(index, field) {
-						var values = {};
-						values["fieldName"] = field.name;
-						values["fieldTypeahead"] = field.label ? field.label : field.name;
-
-						$('#displayFieldNameDiv').dynamicTable('addTableRow', values)
-					});
-				},
-				error: showErrorResponse
-			});
-		}
 	</script>
 }
 
 @layout.create(
     "Request setting",
-	"request setting",
+	"requestSetting",
 	form = form,
 	elements = elements,
-	saveCall = controllers.orderrequest.routes.RequestSettingController.save(),
-	listCall = controllers.orderrequest.routes.RequestSettingController.find()
+	saveCall = controllers.orderrequest.routes.BatchOrderRequestSettingController.save(),
+	listCall = controllers.orderrequest.routes.BatchOrderRequestSettingController.find()
 )
