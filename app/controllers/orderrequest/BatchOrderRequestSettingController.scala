@@ -7,7 +7,7 @@ import javax.inject.Inject
 import models.BatchOrderRequestSetting
 import models.BatchOrderRequestSetting.BatchRequestSettingIdentity
 import org.ada.server.AdaException
-import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, FieldRepo, UserRepo}
+import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInfoRepo, FieldRepo, UserRepo}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.models.DataSetFormattersAndIds._
 import org.ada.server.models.User.UserIdentity
@@ -18,10 +18,14 @@ import org.ada.web.controllers.dataset.DataSetWebContext
 import org.ada.web.services.DataSpaceService
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.controllers._
+import org.incal.play.security.AuthAction
+import org.incal.play.security.SecurityUtil.toAuthenticatedAction
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
-import play.api.mvc.{Action, AnyContent}
+import play.api.libs.json.Json
+import play.api.mvc.{Action, AnyContent, BodyParser}
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 import services.BatchOrderRequestRepoTypes.BatchOrderRequestSettingRepo
 import views.html.{requestSettings => requestViews}
 
@@ -33,6 +37,7 @@ class BatchOrderRequestSettingController @Inject()(
   dsaf: DataSetAccessorFactory,
   dataSetSettingRepo: DataSetSettingRepo,
   dataSpaceService: DataSpaceService,
+  dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
   userRepo: UserRepo
 ) extends AdaCrudControllerImpl[BatchOrderRequestSetting, BSONObjectID](requestSettingRepo)
   with AdminRestrictedCrudController[BSONObjectID]
@@ -40,7 +45,17 @@ class BatchOrderRequestSettingController @Inject()(
   with HasBasicFormCreateView[BatchOrderRequestSetting]
   with HasFormShowEqualEditView[BatchOrderRequestSetting, BSONObjectID] {
 
+//  override protected val entityNameKey = "batchOrderRequestSetting"
+
+  override protected lazy val entityName = "Request Setting"
+
+  override protected def formatId(id: BSONObjectID) = id.stringify
+
   override protected val homeCall = routes.BatchOrderRequestSettingController.listAll()
+
+  private val controllerName = this.getClass.getSimpleName
+
+  private val settingPermission = "EX:" + controllerName.replaceAllLiterally("Controller", "")
 
   private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
@@ -51,7 +66,7 @@ class BatchOrderRequestSettingController @Inject()(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSetId" -> nonEmptyText,
       "timeCreated" -> ignored(new Date()),
-      "committeeUserIds" -> seq(of[BSONObjectID]),
+      "committeeUserIds" -> seq(of[BSONObjectID]).verifying("At least one committee member needs to be specified.", _.nonEmpty),
       "viewId" -> of[BSONObjectID]
     )(BatchOrderRequestSetting.apply)(BatchOrderRequestSetting.unapply)
   )
@@ -93,14 +108,33 @@ class BatchOrderRequestSettingController @Inject()(
       id
 
   // Create
-  override protected def createView = { implicit ctx =>
-    val dataSetId = ctx.request.queryString.get("dataSetId").map(_.head).getOrElse(
-      throw new AdaException("No dataSetId specified.")
-    )
+  private val noDataSetRedirect = goHome.flashing("errors" -> "No data set id specified.")
 
-    implicit val dataSetWebCtx = dataSetWebContext(dataSetId)
+  override def create = AuthAction { implicit request =>
+    getDataSetId(request).map( dataSetId =>
+      if (dataSetId.trim.nonEmpty)
+        super.create.apply(request)
+      else
+        Future(noDataSetRedirect)
+    ).getOrElse(
+      Future(noDataSetRedirect)
+    )
+  }
+
+  override protected def createView = { implicit ctx =>
+    val dataSetId = getDataSetId(ctx.request.asInstanceOf[AuthenticatedRequest[AnyContent]])
+    if (dataSetId.isEmpty) {
+      throw new AdaException("No dataSetId specified.")
+    }
+    implicit val dataSetWebCtx = dataSetWebContext(dataSetId.get)
     views.html.requestSettings.create(_)
   }
+
+  private def getDataSetId(request: AuthenticatedRequest[AnyContent]): Option[String] =
+    request.queryString.get("dataSetId") match {
+      case Some(matches) => Some(matches.head)
+      case None => request.body.asFormUrlEncoded.flatMap(_.get("dataSetId").map(_.head))
+    }
 
   // Edit
   override protected type EditViewData = (
@@ -160,5 +194,59 @@ class BatchOrderRequestSettingController @Inject()(
   // List
   override protected def listView = { implicit ctx =>
     (views.html.requestSettings.list(_, _)).tupled
+  }
+
+  // Changing admin-restricted to admin-or-permission restricted
+  override protected def restrict[A](
+    bodyParser: BodyParser[A]
+  ) = restrictAdminOrPermission[A](settingPermission, bodyParser, noCaching = true)
+
+  def dataSetIds = restrictAny { implicit request =>
+    for {
+      dataSetMetaInfos <- dataSpaceService.getDataSetMetaInfosForCurrentUser
+    } yield {
+      val dataSetIdJsons = dataSetMetaInfos.map { metaInfo =>
+        Json.obj("name" -> metaInfo.id , "label" -> metaInfo.id)
+      }
+      Ok(Json.toJson(dataSetIdJsons))
+    }
+  }
+
+  def userIdAndNames = restrictAny { implicit request =>
+    for {
+      users <- userRepo.find()
+    } yield {
+      val idAndNames = users.toSeq.map( user =>
+        Json.obj("_id" -> user._id, "name" -> user.ldapDn)
+      )
+      Ok(Json.toJson(idAndNames))
+    }
+  }
+
+  def addAdmin = restrictAny { implicit request =>
+    val userId = request.body.asFormUrlEncoded.flatMap { form =>
+      form.get("userId").flatMap(params => BSONObjectID.parse(params.head).toOption)
+    }
+
+    userId match {
+      case Some(userId) =>
+        for {
+          user <- userRepo.get(userId)
+
+          // update the user (if found)
+          _ <- if (user.isDefined && !user.get.permissions.contains(settingPermission))
+              userRepo.update(user.get.copy(permissions = user.get.permissions ++ Seq(settingPermission)))
+            else
+            Future(())
+        } yield {
+          user match {
+            case Some(user) => goHome.flashing("success" -> s"User '${user.ldapDn}' was made a batch-order request admin.")
+            case None => goHome.flashing("errors" -> s"No user '${userId.stringify}' found.")
+          }
+        }
+
+      case None =>
+        Future(goHome.flashing("errors" -> s"No user id specified."))
+    }
   }
 }

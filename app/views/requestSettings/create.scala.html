@@ -1,27 +1,8 @@
 @import views.html.layout
-@import views.html.elements.editableTextElements
-@import org.ada.server.models.Translation
-@import org.ada.web.util.typeColumns
-@import org.ada.web.controllers.routes
-@import views.html.elements._
-@import org.incal.play.Page
-@import org.ada.web.controllers.dataset.routes
-@import org.ada.web.security.AdaAuthConfig
-@import views.html.table.{dynamicStringTable, dynamicTableJsImport, dynamicTable}
-@import views.html.helper.input
-@import views.html.table.dynamicStringTable
-@import views.html.table.paginatedTable
-@import views.html.dataset.{dynamicFieldTable, dataSetExportDropdown}
-@import views.html.table.dynamicTableJsImport
+@import views.html.requestSettings.{elements, bottomJsResources}
 @import reactivemongo.bson.BSONObjectID
-@import org.incal.play.controllers.{GenericJsRouter, GenericRouter}
-@import org.ada.web.controllers.dataset.datatrans.javascript.ReverseDataSetTransformationController
-@import org.ada.web.controllers.dataset.datatrans.DataSetTransformationController
-@import views.html.table.dynamicStringTable
-@import views.html.requestSettings.dynamicUserTable
-@import views.html.elements.{inputTypeahead, typeahead}
-@import org.ada.server.models.FilterShowFieldStyle
 @import org.ada.server.models.User
+@import controllers.orderrequest.routes.{BatchOrderRequestSettingController => settingRoutes}
 @import org.ada.web.controllers.dataset.DataSetWebContext
 @import org.ada.web.controllers.dataset.DataSetWebContext._
 
@@ -31,43 +12,12 @@
     implicit context: DataSetWebContext
 )
 
-@elements = {
-	@dynamicTableJsImport()
-
-	@labelValue("dataSetId", attributeLabel("requestSetting", "dataSetId")) {
-		<input id="dataSetId" name="dataSetId" value="@context.dataSetId" readonly="true">
-	}
-
-	@labelValue("committeeUserIds", attributeLabel("requestSetting", "committeeUserIds")) {
-		@dynamicUserTable("committeeUserId")
-	}
-
-	@inputTypeahead("dataView", "viewId", "viewNameTypeahead", form, "Data View")
-
-	@typeaheadJsImport()
-
-	<script type="text/javascript">
-		$(function () {
-			populateIdNameTypeahedFromUrl(
-				$('#add_committeeUserIdModal').find('#userTypeahead'),
-				$('#add_committeeUserIdModal').find('#userId'),
-				'@Html(org.ada.web.controllers.routes.UserController.idAndNames().url)'
-			)
-
-			populateIdNameTypeahedFromUrl(
-				$('#viewNameTypeahead'),
-				$('#viewId'),
-				'@Html(context.dataViewRouter.idAndNamesAccessible.url)'
-			)
-		})
-	</script>
-}
-
 @layout.create(
     "Request setting",
 	"requestSetting",
 	form = form,
-	elements = elements,
-	saveCall = controllers.orderrequest.routes.BatchOrderRequestSettingController.save(),
-	listCall = controllers.orderrequest.routes.BatchOrderRequestSettingController.find()
+    elements = elements(form, Map()),
+	saveCall = settingRoutes.save(),
+	listCall = settingRoutes.find(),
+    bottomResources = Some(bottomJsResources())
 )

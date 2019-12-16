@@ -9,8 +9,11 @@
 @import views.html.filter.filterWithJs
 @import org.ada.web.controllers.dataset.datatrans.routes
 @import org.ada.server.models.FilterShowFieldStyle
+@import be.objectify.deadbolt.scala.views.html.restrict
+@import controllers.orderrequest.routes.{ BatchOrderRequestSettingController => settingRoutes }
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
+@import org.incal.play.security.SecurityRole
 
 @(
     page: Page[BatchOrderRequestSetting],
@@ -28,21 +31,29 @@
         <div class="pull-right">
             <a class="btn btn-info btn-sm" data-toggle="modal" data-target="#addSettingModal" title="Add New">
                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                Setting
             </a>
-        </div>
-        @modal("addSettingModal", "Add New Request Setting", modalBody, Some(controllers.orderrequest.routes.BatchOrderRequestSettingController.create()), None, None)
+            @restrict(roles = List(Array(SecurityRole.admin))) {
+                <a class="btn btn-info btn-sm" data-toggle="modal" data-target="#userSelectionModal" title="Add Request Setting Admin">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                    Admin
+                </a>
+                @typeaheadSelectionModal("userSelectionModal", "user", "User", settingRoutes.userIdAndNames, None)
+            }
+            </div>
+        @modal("addSettingModal", "Add New Request Setting", modalBody, Some(settingRoutes.create()), None, None)
     </div>
 }
 
 @table = @{
     paginatedTable(
         page,
-        controllers.orderrequest.routes.BatchOrderRequestSettingController.find(_, _, conditions),
+        settingRoutes.find(_, _, conditions),
         typeColumns[BatchOrderRequestSetting](
             (Some("dataSetId"), "Dataset id", _.dataSetId),
             (Some("timeCreated"), "Date", _.timeCreated)
         ),
-        Some({ item: Any => controllers.orderrequest.routes.BatchOrderRequestSettingController.edit(item.asInstanceOf[BatchOrderRequestSetting]._id.get) })
+        Some({ item: Any => settingRoutes.edit(item.asInstanceOf[BatchOrderRequestSetting]._id.get) })
     )
 }
 
@@ -54,10 +65,20 @@
             populateFieldTypeahedFromUrl(
                 $('#dataSetIdTypeahead'),
                 $('#dataSetId'),
-                '@Html(routes.DataSetTransformationController.dataSetIds().url)',
+                '@Html(settingRoutes.dataSetIds().url)',
                 @FilterShowFieldStyle.LabelsOnly.id
             )
+
+            $("#userSelectionModal #submitButton").one("click", addAsAdmin);
         })
+
+        function addAsAdmin() {
+            var userId = $("#userSelectionModal #userId").val().trim()
+            if (userId) {
+                var params = {"userId" : userId}
+                submit('post', '@settingRoutes.addAdmin', params)
+            }
+        }
     </script>
 }
 

@@ -80,65 +80,64 @@ class BatchOrderRequestController @Inject()(
   )
 
   override protected val homeCall = routes.BatchOrderRequestController.findActive()
+
   override protected[controllers] val form = Form(
     mapping(
-        "id" -> ignored(Option.empty[BSONObjectID]),
-        "dataSetId" -> nonEmptyText,
-        "itemIds" -> seq(of[BSONObjectID]),
-        "state" -> of[BatchRequestState.Value],
-        "created by id" -> ignored(Option.empty[BSONObjectID]),
-        "timeCreated" -> ignored(new Date()),
-        "history" -> ignored(Seq[ActionInfo]())
+      "id" -> ignored(Option.empty[BSONObjectID]),
+      "dataSetId" -> nonEmptyText,
+      "itemIds" -> seq(of[BSONObjectID]),
+      "state" -> of[BatchRequestState.Value],
+      "created by id" -> ignored(Option.empty[BSONObjectID]),
+      "timeCreated" -> ignored(new Date()),
+      "history" -> ignored(Seq[ActionInfo]())
     )(BatchOrderRequest.apply)(BatchOrderRequest.unapply)
   )
+
+  private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
   private val activeRequestsListRedirect = Redirect(routes.BatchOrderRequestController.findActive())
   private val selectedIdsForm = Form(single("selectedIds" -> seq(of[BSONObjectID])))
 
-  def createNew(dataSet: String) = restrictAdminOrPermissionAny(s"DS:$dataSet:createRequest", true) {
+  def createNew(dataSet: String) = restrictAdminOrPermissionAny(s"DS:$dataSet:createRequest", noCaching = true) {
     implicit request =>
-        dsaf(dataSet).map { dsa =>
-            for {
-                // get the batch-order setting for a given data set
-                setting <- requestSettingRepo.find(Seq("dataSetId" #== dataSet)).map(_.headOption)
+      dsaf(dataSet).map { dsa =>
+        for {
+          // get the batch-order setting for a given data set
+          setting <- requestSettingRepo.find(Seq("dataSetId" #== dataSet)).map(_.headOption)
 
-                dataViewOption <- dsa.dataViewRepo.get(setting.get.viewId)
+          dataViewOption <- dsa.dataViewRepo.get(setting.get.viewId)
 
-                // handy things for a view: data set name, data space tree, and data set setting
-                (dataSetName, dataSpaceTree, dataSetSetting) <- getDataSetNameTreeAndSetting(dsa)
-            } yield
-                setting match {
-                    case None =>
-                        NotFound(s"Batch-order setting for the data set '${dataSet}' not found.")
-                    case Some(setting) =>
-                        implicit val context = dataSetWebContext(dataSet)
-                      dataViewOption.map { dataView =>
-                        Ok(
-                          actionTable(
-                            dataView.tableColumnNames,
-                            routes.BatchOrderRequestController.saveNew(dataSet),
-                            "Request Items",
-                            dataSetName + " Batch Order Request",
-                            Filter(),
-                            dataSetSetting,
-                            dataSpaceTree
-                          )
-                        )
-                      }.getOrElse(
-                        NotFound(s"Data view '${setting.viewId}' not found.")
-                      )
-
-                }
-            }.getOrElse(
-                Future(NotFound(s"Data set '${dataSet}' doesn't exist."))
-            )
+          // handy things for a view: data set name, data space tree, and data set setting
+          (dataSetName, dataSpaceTree, dataSetSetting) <- getDataSetNameTreeAndSetting(dsa)
+        } yield
+          setting match {
+            case None =>
+              NotFound(s"Batch-order setting for the data set '${dataSet}' not found.")
+            case Some(setting) =>
+              implicit val context = dataSetWebContext(dataSet)
+              dataViewOption.map { dataView =>
+                Ok(
+                  actionTable(
+                    dataView.tableColumnNames,
+                    routes.BatchOrderRequestController.saveNew(dataSet),
+                    "Request Items",
+                    dataSetName + " Batch Order Request",
+                    Filter(),
+                    dataSetSetting,
+                    dataSpaceTree
+                  )
+                )
+              }.getOrElse(
+                NotFound(s"Data view '${setting.viewId}' not found.")
+              )
+            }
+          }.getOrElse(
+            Future(NotFound(s"Data set '${dataSet}' doesn't exist."))
+          )
   }
 
-  private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
-
   private def getDataSetNameTreeAndSetting(
-    dsa: DataSetAccessor
-  )(
+    dsa: DataSetAccessor)(
     implicit request: AuthenticatedRequest[_]
   ): Future[(String, Traversable[DataSpaceMetaInfo], DataSetSetting)] = {
     val dataSetNameFuture = dsa.dataSetName
