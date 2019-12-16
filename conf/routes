@@ -13,11 +13,13 @@ GET         /requestSettings                                    controllers.orde
 GET         /requestSettings/all                                controllers.orderrequest.BatchOrderRequestSettingController.listAll(s: String ?= "timeCreated")
 GET         /requestSettings/new                                controllers.orderrequest.BatchOrderRequestSettingController.create
 POST        /requestSettings/save                               controllers.orderrequest.BatchOrderRequestSettingController.save
-GET         /requestSettings/:id/get                            controllers.orderrequest.BatchOrderRequestSettingController.get(id: BSONObjectID)
-GET         /requestSettings/:id/edit                           controllers.orderrequest.BatchOrderRequestSettingController.edit(id: BSONObjectID)
-POST        /requestSettings/:id                                controllers.orderrequest.BatchOrderRequestSettingController.update(id: BSONObjectID)
-POST        /requestSettings/:id/delete                         controllers.orderrequest.BatchOrderRequestSettingController.delete(id: BSONObjectID)
-
+GET         /requestSettings/get/:id                            controllers.orderrequest.BatchOrderRequestSettingController.get(id: BSONObjectID)
+GET         /requestSettings/edit:id                            controllers.orderrequest.BatchOrderRequestSettingController.edit(id: BSONObjectID)
+POST        /requestSettings/update/:id                         controllers.orderrequest.BatchOrderRequestSettingController.update(id: BSONObjectID)
+POST        /requestSettings/delete/:id                         controllers.orderrequest.BatchOrderRequestSettingController.delete(id: BSONObjectID)
+GET         /requestSettings/dataSetIds                         controllers.orderrequest.BatchOrderRequestSettingController.dataSetIds
+GET         /requestSettings/userIdAndNames                     controllers.orderrequest.BatchOrderRequestSettingController.userIdAndNames
+POST        /requestSettings/addAdmin                           controllers.orderrequest.BatchOrderRequestSettingController.addAdmin
 
 # Batch-order Requests
 GET         /requests/new2                                      controllers.orderrequest.BatchOrderRequestController.createNew(dataSet: String)
