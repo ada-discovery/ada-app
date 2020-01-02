@@ -3,13 +3,11 @@ package runnables.mpower
 import javax.inject.Inject
 import org.incal.core.dataaccess.StreamSpec
 import org.ada.server.models.StorageType
-import org.ada.server.models.datatrans.ResultDataSetSpec
+import org.ada.server.models.datatrans.{MergeMultiDataSetsTransformation, ResultDataSetSpec}
 import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
-import org.ada.server.services.DataSetService
+import org.ada.server.services.ServiceTypes.DataSetCentralTransformer
 
-import scala.reflect.runtime.universe.typeOf
-
-class MergeMPowerTrainingTesting2DataSets @Inject()(dataSetService: DataSetService) extends InputFutureRunnableExt[MergeMPowerTrainingTesting2DataSetsSpec] {
+class MergeMPowerTrainingTesting2DataSets @Inject()(centralTransformer: DataSetCentralTransformer) extends InputFutureRunnableExt[MergeMPowerTrainingTesting2DataSetsSpec] {
 
   private val dataSet1 = "mpower_challenge.walking_activity_training_2"
   private val dataSet2 = "mpower_challenge.walking_activity_supplement_training"
@@ -36,8 +34,9 @@ class MergeMPowerTrainingTesting2DataSets @Inject()(dataSetService: DataSetServi
     Seq(Some("pedometer_walking_returnu002ejsonu002eitems"), Some("pedometer_walking_returnu002ejsonu002eitems"), Some("pedometer_walking_returnu002ejsonu002eitemss"))
   )
 
-  override def runAsFuture(input: MergeMPowerTrainingTesting2DataSetsSpec) =
-    dataSetService.mergeDataSetsWoInference(
+  override def runAsFuture(input: MergeMPowerTrainingTesting2DataSetsSpec) = {
+    val spec = MergeMultiDataSetsTransformation(
+      None,
       Seq(dataSet1, dataSet2, dataSet3),
       fieldNameMappings,
       true,
@@ -48,6 +47,9 @@ class MergeMPowerTrainingTesting2DataSets @Inject()(dataSetService: DataSetServi
       ),
       StreamSpec(batchSize = input.batchSize)
     )
+
+    centralTransformer(spec)
+  }
 }
 
 case class MergeMPowerTrainingTesting2DataSetsSpec(

@@ -3,13 +3,11 @@ package runnables.mpower
 import javax.inject.Inject
 import org.incal.core.dataaccess.StreamSpec
 import org.ada.server.models.StorageType
-import org.ada.server.models.datatrans.ResultDataSetSpec
+import org.ada.server.models.datatrans.{MergeMultiDataSetsTransformation, ResultDataSetSpec}
 import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
-import org.ada.server.services.DataSetService
+import org.ada.server.services.ServiceTypes.DataSetCentralTransformer
 
-import scala.reflect.runtime.universe.typeOf
-
-class MergeMPowerTrainingTestingNormsDataSets @Inject()(dataSetService: DataSetService) extends InputFutureRunnableExt[MergeMPowerTrainingTestingNormsDataSetsSpec] {
+class MergeMPowerTrainingTestingNormsDataSets @Inject()(centralTransformer: DataSetCentralTransformer) extends InputFutureRunnableExt[MergeMPowerTrainingTestingNormsDataSetsSpec] {
 
   private val dataSet1 = "mpower_challenge.walking_activity_training_norms_w_demographics"
   private val dataSet2 = "mpower_challenge.walking_activity_testing_norms"
@@ -23,7 +21,7 @@ class MergeMPowerTrainingTestingNormsDataSets @Inject()(dataSetService: DataSetS
     Seq(Some("appVersion"), Some("appVersion")),
     Seq(Some("createdOn"), Some("createdOn")),
     Seq(Some("healthCode"), Some("healthCode")),
-//    Seq(Some("phoneInfo"), Some("phoneInfo")),
+    //    Seq(Some("phoneInfo"), Some("phoneInfo")),
     Seq(Some("accel_walking_outboundu002ejsonu002eitems_euclideanNorms"), Some("accel_walking_outboundjsonitems_euclideanNorms")),
     Seq(Some("accel_walking_outboundu002ejsonu002eitems_manhattanNorms"), Some("accel_walking_outboundjsonitems_manhattanNorms")),
     Seq(Some("accel_walking_restu002ejsonu002eitems_euclideanNorms"), Some("accel_walking_restjsonitems_euclideanNorms")),
@@ -85,8 +83,9 @@ class MergeMPowerTrainingTestingNormsDataSets @Inject()(dataSetService: DataSetS
     Seq(Some("years-smoking"), None)
   )
 
-  override def runAsFuture(input: MergeMPowerTrainingTestingNormsDataSetsSpec) =
-    dataSetService.mergeDataSetsWoInference(
+  override def runAsFuture(input: MergeMPowerTrainingTestingNormsDataSetsSpec) = {
+    val spec = MergeMultiDataSetsTransformation(
+      None,
       Seq(dataSet1, dataSet2),
       fieldNameMappings,
       true,
@@ -96,6 +95,10 @@ class MergeMPowerTrainingTestingNormsDataSets @Inject()(dataSetService: DataSetS
         StorageType.Mongo
       ),
       StreamSpec(batchSize = input.batchSize)
-    )}
+    )
+
+    centralTransformer(spec)
+  }
+}
 
 case class MergeMPowerTrainingTestingNormsDataSetsSpec(batchSize: Option[Int])
