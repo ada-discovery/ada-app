@@ -33,6 +33,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 @Deprecated
+// TODO: Why we need a separate controller just to upload a documentation? Merge to BatchOrderRequestSettingController...
 class DocumentationController @Inject()(
   repo: SampleDocumentationRepo,
   val userManager: UserManager,
