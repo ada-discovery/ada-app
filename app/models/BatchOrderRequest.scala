@@ -14,17 +14,17 @@ case class BatchOrderRequest(
   dataSetId: String,
   itemIds: Seq[BSONObjectID],
   state: BatchRequestState.Value = BatchRequestState.Created,
-  createdById: Option[BSONObjectID] = None,
+  createdById: BSONObjectID,
   timeCreated: Date = new Date(),
   history: Seq[ActionInfo] = Nil
 )
 
 case class ActionInfo(
-  timestamp: Date,
-  performedByUser: String,
   fromState:BatchRequestState.Value,
   toState: BatchRequestState.Value,
-  comment: Option[String]
+  performedByUser: String,
+  comment: Option[String] = None,
+  timestamp: Date = new Date()
 )
 
 object BatchRequestState extends Enumeration {

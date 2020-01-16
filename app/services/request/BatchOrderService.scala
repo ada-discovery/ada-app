@@ -17,85 +17,98 @@ import scala.concurrent.Future
 
 @ImplementedBy(classOf[BatchOrderServiceImpl])
 trait BatchOrderService {
-    type USER = DeadboltUser
+  type USER = DeadboltUser
 
-    def getUserRolesByRequest(items: Traversable[BatchOrderRequest], currentUser: Option[USER]): Future[Map[BSONObjectID, Traversable[Role.Value]]]
+  def getUserRolesByRequest(
+    items: Traversable[BatchOrderRequest],
+    currentUser: User
+  ): Future[Map[BSONObjectID, Traversable[Role.Value]]]
 
-    def getAllowedUserIds(existingRequest: BatchOrderRequest, user: Option[User]): Future[Map[Role.Value, Traversable[BSONObjectID]]]
+  def getAllowedUserIds(
+    existingRequest: BatchOrderRequest
+  ): Future[Map[Role.Value, Traversable[BSONObjectID]]]
 }
 
 @Singleton
 class BatchOrderServiceImpl @Inject()(
-    requestsRepo: BatchOrderRequestRepo,
-    requestSettingRepo: BatchOrderRequestSettingRepo,
-    dataSetSettingRepo: DataSetSettingRepo
+  requestsRepo: BatchOrderRequestRepo,
+  requestSettingRepo: BatchOrderRequestSettingRepo,
+  dataSetSettingRepo: DataSetSettingRepo
 ) extends BatchOrderService {
 
-    def getUserRolesByRequest(requests: Traversable[BatchOrderRequest], user: Option[USER]): Future[Map[BSONObjectID, Traversable[Role.Value]]] = {
-        Future.sequence(getRolesFutures(requests, user)).map(_.toMap)
+  def getUserRolesByRequest(
+    requests: Traversable[BatchOrderRequest],
+    user: User
+  ): Future[Map[BSONObjectID, Traversable[Role.Value]]] =
+    Future.sequence(requests.map(r => getUserRoles(r, user))).map(_.toMap)
+
+  private def getUserRoles(
+    request: BatchOrderRequest,
+    user: User
+  ): Future[(BSONObjectID, Traversable[Role.Value])] = {
+    for {
+      committeeIds <- getCommitteeIds(request)
+
+      ownerId <- getOwnerId(request)
+    } yield {
+      val userId = user._id.get
+
+      def getRoleIfFound(ids: Seq[BSONObjectID], role: Role.Value) =
+        if (ids.contains(userId)) Some(role) else None
+
+      (
+        request._id.get,
+        Seq(
+          getRoleIfFound(committeeIds, Role.Committee),
+          getRoleIfFound(Seq(request.createdById), Role.Requester),
+          getRoleIfFound(Seq(ownerId).flatten, Role.Owner),
+          getAdminRoleIfApplicable(user)
+        ).flatten
+      )
     }
+  }
 
-    private def getRolesFutures(requests: Traversable[BatchOrderRequest], user: Option[USER]): Traversable[Future[(BSONObjectID, Traversable[Role.Value])]] = {
-        requests.map(r => getUserRoles(r, user))
-    }
+  def getAllowedUserIds(
+    request: BatchOrderRequest
+  ) =
+    for {
+      committeeIds <- getCommitteeIds(request)
 
-    private def getUserRoles(existingRequest: BatchOrderRequest, user: Option[USER]): Future[(BSONObjectID, Traversable[Role.Value])] = {
-        for {
-            committeeIds <- requestSettingRepo.find(Seq("dataSetId" #== existingRequest.dataSetId)).map {
-                _.flatMap(_.committeeUserIds)
-            }
-            requesterId = Seq(existingRequest.createdById.getOrElse(
-                throw new AdaException(("no requester id found for request: " + existingRequest._id.get))
-            )
-            )
-            ownerIds <- dataSetSettingRepo.find(Seq("dataSetId" #== existingRequest.dataSetId)).map { dataSets =>
-                dataSets.filter(dataSet => dataSet.ownerId.isDefined).map(dataSet => dataSet.ownerId.get)
-            }
-        } yield {
-            (existingRequest._id.get,
-                Seq(
-                    getRoleIfApplicable(committeeIds, Role.Committee, user.get.user._id),
-                    getRoleIfApplicable(requesterId, Role.Requester, user.get.user._id),
-                    getRoleIfApplicable(ownerIds, Role.Owner, user.get.user._id),
-                    getAdminRoleIfApplicable(user)
-                ).flatten)
-        }
-    }
+      ownerId <- getOwnerId(request)
+    } yield
+      Map(
+        Role.Committee -> committeeIds,
+        Role.Requester -> Seq(request.createdById),
+        Role.Owner -> Seq(ownerId).flatten
+      )
 
-    private def getAdminRoleIfApplicable(user: Option[USER]): Option[Role.Value] =
-        if (user.get.roles.contains(SecurityRole.admin)) {
-            Some(Role.Administrator)
-        } else {
-            None
-        }
+  // maximum one batch order request setting expected
+  private def getCommitteeIds(
+    request: BatchOrderRequest
+  ): Future[Seq[BSONObjectID]] =
+    for {
+      requestSetting <- requestSettingRepo.find(
+        Seq("dataSetId" #== request.dataSetId),
+        limit = Some(1)
+      ).map(_.headOption)
+    } yield
+      requestSetting.map(_.committeeUserIds).getOrElse(Nil)
 
-    private def getRoleIfApplicable(
-        ids: Traversable[BSONObjectID],
-        role: Role.Value,
-        userId: Option[BSONObjectID]
-    ): Option[Role.Value] = {
-        ids.find(_ == userId.get).map(id => role)
-    }
+  // maximum one data set setting expected
+  private def getOwnerId(
+    request: BatchOrderRequest
+  ): Future[Option[BSONObjectID]] =
+    for {
+      dataSetSetting <- dataSetSettingRepo.find(
+        Seq("dataSetId" #== request.dataSetId),
+        limit = Some(1)
+      ).map(_.headOption)
+    } yield
+      dataSetSetting.flatMap(_.ownerId)
 
-    def getAllowedUserIds(existingRequest: BatchOrderRequest, user: Option[User]) =
-        for {
-            committeeIds <- requestSettingRepo.find(Seq("dataSetId" #== existingRequest.dataSetId)).map {
-                _.flatMap(_.committeeUserIds)
-            }
-            requesterId = Traversable(existingRequest.createdById.getOrElse(
-                throw new AdaException(("no requester id found for request: " + existingRequest._id.get))
-            )
-            )
-            ownerIds <- dataSetSettingRepo.find(Seq("dataSetId" #== existingRequest.dataSetId)).map { dataSets =>
-                dataSets.filter(dataSet => dataSet.ownerId.isDefined).map(dataSet => dataSet.ownerId.get)
-            }
-        } yield {
-            Map(
-                Role.Committee -> committeeIds,
-                Role.Requester -> requesterId,
-                Role.Owner -> ownerIds
-            )
-        }
-
-
+  private def getAdminRoleIfApplicable(user: User): Option[Role.Value] =
+    if (user.roles.contains(SecurityRole.admin))
+      Some(Role.Administrator)
+    else
+      None
 }

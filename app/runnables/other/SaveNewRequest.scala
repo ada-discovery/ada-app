@@ -3,6 +3,7 @@ package runnables.other
 import javax.inject.Inject
 import models.{BatchOrderRequest, BatchRequestState}
 import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt, RunnableHtmlOutput}
+import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.BatchOrderRequestRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -11,7 +12,7 @@ class SaveNewRequest @Inject() (requestsRepo:BatchOrderRequestRepo) extends Inpu
 
   override def runAsFuture(input: SaveNewRequestSpec) = {
    // val request = BatchOrderRequest(None, input.dataSetId, input.itemIds.flatMap(BSONObjectID.parse(_).toOption), BatchRequestState.Created)
-   val request = BatchOrderRequest(None, input.dataSetId, Seq(), BatchRequestState.Created)
+   val request = BatchOrderRequest(None, input.dataSetId, Seq(), BatchRequestState.Created, createdById = BSONObjectID.generate)
 
     for {
       savedRequestId <- requestsRepo.save(request)

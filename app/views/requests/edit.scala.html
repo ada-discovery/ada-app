@@ -11,16 +11,14 @@
 @import views.html.requests.itemsTable
 @import org.ada.web.controllers.dataset.TableViewData
 @import views.html.requests.historyTable
-
-@import org.ada.web.controllers.dataset.DataSetWebContext
 @import play.api.libs.json.JsObject
+
 @(
     data: IdForm[BSONObjectID, BatchOrderRequest],
     items: Traversable[JsObject],
     fieldNames: Traversable[String]
-
 )(
-        implicit context: WebContext
+    implicit context: WebContext
 )
 
 @elements = {
@@ -44,7 +42,5 @@
     elements = elements,
     updateCall = controllers.orderrequest.routes.BatchOrderRequestController.update(data.id),
     cancelCall = controllers.orderrequest.routes.BatchOrderRequestController.listAll(),
-    deleteCall = Some(controllers.orderrequest.routes.BatchOrderRequestController.delete(data.id)),
-    None,
-    None
+    deleteCall = Some(controllers.orderrequest.routes.BatchOrderRequestController.delete(data.id))
 )
