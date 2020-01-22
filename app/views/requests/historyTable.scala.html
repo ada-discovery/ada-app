@@ -12,10 +12,10 @@
 @displayTable(
     items,
     typeColumns[ActionInfo](
-        (None, "date", _.timestamp.format("yyyy-MM-dd HH:mm:ss")),
-        (None, "by user", _.performedByUser),
-        (None, "state", (a: ActionInfo) => toHumanReadableCamel(a.toState.toString())),
-        (None, "comment", _.comment.map(commentArea).getOrElse(""))
+        (None, "Date", _.timestamp.format("yyyy-MM-dd HH:mm:ss")),
+        (None, "By user", _.performedByUser),
+        (None, "State", (a: ActionInfo) => toHumanReadableCamel(a.toState.toString())),
+        (None, "Comment", _.comment.map(commentArea).getOrElse(""))
     )
 )
 

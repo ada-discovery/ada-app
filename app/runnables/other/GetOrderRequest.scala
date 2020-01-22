@@ -7,17 +7,19 @@ import services.BatchOrderRequestRepoTypes.BatchOrderRequestRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class GetOrderRequestRun @Inject() (requestsRepo:BatchOrderRequestRepo) extends InputFutureRunnableExt[GetRequestRunSpec] with RunnableHtmlOutput {
+@Deprecated
+class GetOrderRequestRun @Inject() (requestRepo: BatchOrderRequestRepo) extends InputFutureRunnableExt[GetOrderRequestRunSpec] with RunnableHtmlOutput {
 
-  override def runAsFuture(input: GetRequestRunSpec) =
-    requestsRepo.get(input.requestId).map(
+  override def runAsFuture(input: GetOrderRequestRunSpec) =
+    requestRepo.get(input.requestId).map(
       _.fold(
         addParagraph(bold(s"Request with id ${input.requestId} not found!"))
       )(
         request => addParagraph(bold(request.toString))
-      ))
+      )
+    )
 }
 
-case class GetRequestRunSpec(
+case class GetOrderRequestRunSpec(
   requestId: BSONObjectID
 )

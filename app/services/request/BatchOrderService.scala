@@ -19,7 +19,7 @@ import scala.concurrent.Future
 trait BatchOrderService {
   type USER = DeadboltUser
 
-  def getUserRolesByRequest(
+  def getRequestIdUserRoles(
     items: Traversable[BatchOrderRequest],
     currentUser: User
   ): Future[Map[BSONObjectID, Traversable[Role.Value]]]
@@ -36,7 +36,7 @@ class BatchOrderServiceImpl @Inject()(
   dataSetSettingRepo: DataSetSettingRepo
 ) extends BatchOrderService {
 
-  def getUserRolesByRequest(
+  def getRequestIdUserRoles(
     requests: Traversable[BatchOrderRequest],
     user: User
   ): Future[Map[BSONObjectID, Traversable[Role.Value]]] =

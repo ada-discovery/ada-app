@@ -5,12 +5,13 @@
 @import org.incal.play.controllers.WebContext._
 @import views.html.layout
 @import views.html.table.paginatedTable
-@import org.ada.server.models.{User,Field,FilterShowFieldStyle,Filter}
+@import org.ada.server.models.{User,Field ,FilterShowFieldStyle,Filter}
 @import views.html.filter.{filter, filterWithJs}
-@import views.html.requests.requestTable
+@import views.html.requests.{requestTable, toApproveRequestTable, createdRequestTable}
+@import controllers.orderrequest.routes.{ BatchOrderRequestController => requestRoutes }
 
 @(
-    page: Page[(BatchOrderRequest, String, Call)],
+    page: Page[(BatchOrderRequest, Option[String], Call)],
     pageType: PageType.Value,
     conditions: Seq[FilterCondition],
     countBackground: Int
@@ -23,7 +24,7 @@
         <div class="col-md-8">
             @filterWithJs(
                 Filter(conditions),
-                controllers.orderrequest.routes.BatchOrderRequestController.findActive(),
+                requestRoutes.findActive(),
                 Left(Seq(
                     Field("state", Some("Status")),
                     Field("dataSetId", Some("Dataset Id")),
@@ -39,30 +40,29 @@
 @table = @{
     pageType match {
          case PageType.ToApprove =>
-            val refreshCall = (p: Int, o: String) => controllers.orderrequest.routes.BatchOrderRequestController.findActive(None, Some(p), o, conditions)
-            requestTable(page,conditions,refreshCall,  true)
+            toApproveRequestTable(page, conditions)
 
          case PageType.Created =>
-            val refreshCall = (p: Int, o: String) => controllers.orderrequest.routes.BatchOrderRequestController.findActive(Some(p), None, o, conditions)
-            requestTable(page,conditions,refreshCall, true)
+            createdRequestTable(page, conditions)
     }
 }
 
 @requestsSelector = {
     <ul id="requestsSubMenu" class="nav nav-tabs">
+        @* TODO: this is a weird approach. Normally I would expect that these tabs get populated at once and tab switching only shows and hides their content (without refresh) *@
         @if((pageType == PageType.ToApprove && countBackground>0) || pageType == PageType.Created) {
-            <li @if(pageType == PageType.Created) {
-                class="active" }>
-                <a href="@controllers.orderrequest.routes.BatchOrderRequestController.findActive(Some(0), None, "", conditions)">
-                    My own Requests@if(pageType == PageType.ToApprove) {(@countBackground)}</a>
+            <li @if(pageType == PageType.Created) { class="active" }>
+                <a href="@requestRoutes.findActive(Some(0), None, "", conditions)">
+                    My own Requests@if(pageType == PageType.ToApprove) {(@countBackground)}
+                </a>
             </li>
         }
 
         @if((pageType == PageType.Created && countBackground>0) || pageType == PageType.ToApprove) {
-            <li @if(pageType == PageType.ToApprove) {
-                class="active" }>
-                <a href="@controllers.orderrequest.routes.BatchOrderRequestController.findActive(None, Some(0), "", conditions)">
-                    Requests to be responsible for@if(pageType == PageType.Created) {(@countBackground)}</a>
+            <li @if(pageType == PageType.ToApprove) { class="active" }>
+                <a href="@requestRoutes.findActive(None, Some(0), "", conditions)">
+                    Requests to be responsible for@if(pageType == PageType.Created) {(@countBackground)}
+                </a>
             </li>
         }
     </ul>

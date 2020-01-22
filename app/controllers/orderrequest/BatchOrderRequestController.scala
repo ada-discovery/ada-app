@@ -12,19 +12,20 @@ import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.ada.server.models.User.UserIdentity
 import org.ada.server.models._
+import org.ada.server.field.FieldUtil._
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaCrudControllerImpl
 import org.ada.web.controllers.dataset.{DataSetViewHelper, DataSetWebContext, TableViewData}
 import org.ada.web.models.security.DeadboltUser
 import org.ada.web.services.DataSpaceService
 import org.ada.server.dataaccess.dataset.FilterRepoExtra._
+import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion._
 import org.incal.play.{Page, PageOrder}
 import org.incal.play.controllers._
 import org.incal.play.formatters.EnumFormatter
-import org.incal.play.security.AuthAction
 import org.incal.play.security.SecurityUtil.toAuthenticatedAction
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
@@ -50,7 +51,7 @@ class BatchOrderRequestController @Inject()(
     val dataSpaceService: DataSpaceService,
     userRepo: UserRepo
 ) extends AdaCrudControllerImpl[BatchOrderRequest, BSONObjectID](requestsRepo) // maybe switch to readonly controller ???
-    with SubjectPresentRestrictedCrudController[BSONObjectID]
+    with AdminRestrictedCrudController[BSONObjectID]
     with HasBasicFormCreateView[BatchOrderRequest]
     with HasEditView[BatchOrderRequest, BSONObjectID]
     with HasListView[BatchOrderRequest]
@@ -58,23 +59,6 @@ class BatchOrderRequestController @Inject()(
 
   private implicit val idsFormatter = BSONObjectIDStringFormatter
   private implicit val requestStateFormatter = EnumFormatter(BatchRequestState)
-
-  override protected type EditViewData = (
-    IdForm[BSONObjectID, BatchOrderRequest],
-    Traversable[JsObject],
-    Traversable[String]
-  )
-
-  override protected type ShowViewData = (
-    BatchOrderRequest,
-    Traversable[JsObject],
-    Traversable[String]
-  )
-
-  protected type UserScopedListViewData = (
-    Page[(BatchOrderRequest, String, Call)],
-    Seq[FilterCondition]
-  )
 
   override protected val homeCall = orderRoutes.findActive()
 
@@ -90,15 +74,19 @@ class BatchOrderRequestController @Inject()(
     )(BatchOrderRequest.apply)(BatchOrderRequest.unapply)
   )
 
+  override protected lazy val entityName = "Order Request"
+
+  override protected def formatId(id: BSONObjectID) = id.stringify
+
   private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
-  private val activeRequestsListRedirect = Redirect(orderRoutes.findActive())
+  private val activeRequestsListRedirect = Redirect(homeCall)
   private val selectedIdsForm = Form(single("selectedIds" -> seq(of[BSONObjectID])))
 
-  // List
+  // List - admin only
 
   override protected type ListViewData = (
-    Page[(BatchOrderRequest, String, Call)],
+    Page[(BatchOrderRequest, Option[String], Call)],
     Seq[FilterCondition]
   )
 
@@ -113,14 +101,22 @@ class BatchOrderRequestController @Inject()(
       // check if the user exists
       user = requireDefined(userOption, s"No current user found.").user
 
-      users <- getUsersByIds(page.items.map(_.createdById))
+      // get a map containing id -> user associations
+      users <- getIdUserMap(page.items.map(_.createdById))
 
-      userRolesByRequest <- batchOrderService.getUserRolesByRequest(page.items, user)
+      // get a map with request id -> user roles assocs
+      requestIdUserRolesMap <- batchOrderService.getRequestIdUserRoles(page.items, user)
     } yield {
 
-      val itemsForUserWithCall = page.items.map(item =>
-        (item, users.get(item.createdById).get.ldapDn, itemViewRouting(item, userRolesByRequest.get(item._id.get).get))
-      )
+      val itemsForUserWithCall = page.items.map { orderRequest =>
+        val userName = users.get(orderRequest.createdById).map(_.ldapDn)
+        val roles = requestIdUserRolesMap.get(orderRequest._id.get).getOrElse(
+          throw new IllegalStateException(s"No roles found for the batch order request ${orderRequest._id.get.stringify}.")
+        )
+        val routing = itemViewRouting(orderRequest, roles)
+
+        (orderRequest, userName, routing)
+      }
 
       (Page(itemsForUserWithCall, page.page, page.offset, page.total, page.orderBy), conditions)
     }
@@ -133,7 +129,7 @@ class BatchOrderRequestController @Inject()(
   // Create
 
   def createNew(dataSet: String) =
-    restrictAdminOrPermissionAny(s"DS:$dataSet:createRequest", noCaching = true) { implicit request =>
+    restrictAdminOrPermissionAny(orderRequestPermission(dataSet), noCaching = true) { implicit request =>
     {
       dsaf(dataSet).map { dsa =>
         for {
@@ -219,13 +215,13 @@ class BatchOrderRequestController @Inject()(
   // Save
 
   def saveNew(dataSet: String) =
-    restrictAdminOrPermissionAny(s"DS:$dataSet:createRequest", true) { implicit request =>
+    restrictAdminOrPermissionAny(orderRequestPermission(dataSet), true) { implicit request =>
       {
         selectedIdsForm.bindFromRequest.fold(
           _ =>  Future(BadRequest(s"Cannot parse selected ids.")),
         selectedIds =>
-          if (selectedIds.size == 0) {
-            Future(BadRequest("No item added to the request."))
+          if (selectedIds.isEmpty) {
+            Future(Redirect(homeCall).flashing("error" -> "No item(s) added to the request."))
           } else {
             for {
               // get the currently-logged user
@@ -278,154 +274,123 @@ class BatchOrderRequestController @Inject()(
       }.recover(handleExceptions("a save (new) batch-order request"))
     }
 
-  override def get(id: BSONObjectID) =
-    restrictAdminOrUserCustomAny(isRequestAllowed(id, None, None, true))(toAuthenticatedAction(super.get(id)))
+  private def orderRequestPermission(dataSet: String) = s"DS:$dataSet:createRequest"
 
-  // TODO: we should probably switch the default to adminRestricted so we don't need to do it for each action
-  override def edit(id: BSONObjectID) = restrictAdminAny(noCaching = true) {
-    toAuthenticatedAction(super.edit(id))
-  }
+  // Show - admin only
 
-  override def update(id: BSONObjectID) = restrictAdminAny(noCaching = true)(
-    toAuthenticatedAction(super.update(id))
+  override protected type ShowViewData = (
+    BatchOrderRequest,
+    Traversable[Seq[String]],
+    Seq[String]
   )
 
-  override def delete(id: BSONObjectID) = restrictAdminAny(noCaching = true) {
-    toAuthenticatedAction(super.delete(id))
-  }
-
-  override def find(page: Int, orderBy: String, filter: Seq[FilterCondition]) =
-    restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.find(page, orderBy, filter)))
-
-  override def listAll(orderBy: String) =
-    restrictAdminAny(noCaching = true)(toAuthenticatedAction(super.listAll(orderBy)))
-
-  def findActiveWithFilter(
-    pageCreated: Option[Int] = None,
-    pageToApprove: Option[Int] = None,
-    orderBy: String,
-    filter: Seq[FilterCondition]
-  ) = restrictAny { implicit request =>
-    {
-      for {
-        userOption <- currentUser()
-
-        user = requireDefined(userOption, s"No current user found.").user
-
-        approverCriterion <- buildApproverCriterion(user)
-
-        criteria <- toCriteria(filter)
-
-        (page, userCriteria, pageType, backgroundListCriteria) = getPageWithCriteria(pageCreated, pageToApprove, orderBy, criteria, user, approverCriterion)
-
-        (items, count, backgroundListCount) <- getFutureUserScopedItemsAndCounts(Some(page), orderBy, userCriteria, backgroundListCriteria)
-
-        listData <- getUserScopedListViewData(Page(items, page, page * pageLimit, count, orderBy), filter)(request)
-      } yield
-        Ok((views.listByCategory(listData._1, pageType, filter, backgroundListCount)))
-    }.recover(handleFindExceptions)
-  }
-
-  private def getPageWithCriteria(
-    pageCreated: Option[Int] = None,
-    pageToApprove: Option[Int] = None,
-    orderBy: String,
-    criteria: Seq[Criterion[Any]],
-    user: User,
-    approverCriterion: Seq[Criterion[Any]]
-  ) = {
-    val requesterCreiteria = criteria ++ Seq("createdById" #== user._id)
-    val approverCriteria = criteria ++ approverCriterion
-
-    if (pageCreated.isDefined) {
-      (pageCreated.get, requesterCreiteria, PageType.Created, approverCriteria)
-    } else if (pageToApprove.isDefined) {
-      (pageToApprove.get, approverCriteria, PageType.ToApprove, requesterCreiteria)
-    } else {
-      (0, requesterCreiteria, PageType.Created, approverCriteria)
+  override protected def getFormShowViewData(
+    requestId: BSONObjectID,
+    form: Form[BatchOrderRequest]
+  ) = { implicit request =>
+    getRequestedItemsWithFieldLabels(requestId).map { case (itemsToDisplay, fieldLabels) =>
+      val batchOrderRequest = requireDefined(form.value, "No batch order request attached to the show view.")
+      (batchOrderRequest, itemsToDisplay, fieldLabels)
     }
   }
 
-  private def buildApproverCriterion(user: User) =
+  /**
+    * Auxiliary function to get the requested items in a display-ready format and field labels for the batch order request with a given id.
+
+    * @param requestId
+    * @param request
+    * @return
+    */
+  private def getRequestedItemsWithFieldLabels(
+    requestId: BSONObjectID)(
+    implicit request: AuthenticatedRequest[_]
+  ): Future[(Traversable[Seq[String]], Seq[String])] =
     for {
-      committees <- requestSettingRepo.find()
-      dataSetSettings <- dataSetSettingRepo.find(Seq("ownerId" #== user._id))
+      existingRequest <- repo.get(requestId)
+
+      // check if the batch order request is actually defined
+      orderRequest = requireDefined(existingRequest, s"Batch order request with the id '${requestId.stringify}' not found.")
+
+      // get a data set accessor
+      dsa = requireDefined(dsaf(orderRequest.dataSetId), s"Data set '${orderRequest.dataSetId}' not found.")
+
+      // get the fields associated with this request's setting
+      fields <- getRequestFields(dsa)
+
+      // get the items by their ids
+      items <- if (orderRequest.itemIds.nonEmpty) {
+        dsa.dataSetRepo.find(Seq(JsObjectIdentity.name #-> orderRequest.itemIds), projection = fields.map(_.name))
+      } else Future(Nil)
     } yield {
-      val userCommittee = committees.filter(c => c.committeeUserIds.contains(user._id.get))
-      val committeeDataSetIds = userCommittee.map(c => c.dataSetId).toSeq
-      val ownedDataSetIds = dataSetSettings.map(s => s.dataSetId).toSeq
-      val dataSetIds = ownedDataSetIds ++ committeeDataSetIds
-      Seq("dataSetId" #-> dataSetIds, "state" #!= BatchRequestState.Created.toString)
-  }
-
-    private def getFutureUserScopedItemsAndCounts(
-        page: Option[Int],
-        orderBy: String,
-        criteria: Seq[Criterion[Any]],
-        backgroundPageCriteria: Seq[Criterion[Any]],
-        limit: Option[Int] = Some(pageLimit),
-        projection: Seq[String] = listViewColumns.getOrElse(Nil)
-    ): Future[(Traversable[(BatchOrderRequest, String)], Int, Int)] = {
-        val sort = toSort(orderBy)
-        val skip = page.zip(limit).headOption.map { case (page, limit) =>
-            page * limit
-        }
-
-        for {
-            items <- repo.find(criteria, sort, projection, limit, skip)
-            count <- repo.count(criteria)
-            backgroundCount <- repo.count(backgroundPageCriteria)
-            users <- getUsersByIds(items.map(_.createdById))
-        } yield {
-            val itemsWithName = items.map(i => (i, users.get(i.createdById).get.ldapDn))
-            (itemsWithName, count, backgroundCount)
-        }
+      val namedFieldTypes = fields.map(_.toNamedTypeAny).toSeq
+      val itemsToDisplay = items.map(_.toDisplayStrings(namedFieldTypes))
+      (itemsToDisplay, fields.map(_.labelOrElseName))
     }
 
-  protected def getUserScopedListViewData(
-    page: Page[(BatchOrderRequest, String)],
-    conditions: Seq[FilterCondition]
-  ): AuthenticatedRequest[_] => Future[UserScopedListViewData] = {
-    implicit request =>
-      for {
-        // get the currently-logged user
-        userOption <- currentUser()
+  /**
+    * Returns field names to display for batch order requests associated with a given data set
+    *
+    * @param dsa
+    * @return
+    */
+  private def getRequestFields(dsa: DataSetAccessor): Future[Seq[Field]] =
+    for {
+      requestSetting <- requestSettingRepo.find(Seq("dataSetId" #== dsa.dataSetId), limit = Some(1)).map(_.headOption)
 
-        // check if the user exists
-        user = requireDefined(userOption, "No current user found.").user
+      // check if the batch order request setting is actually defined
+      setting = requireDefined(requestSetting, s"Batch order request setting for data set '${dsa.dataSetId}' not found.")
 
-        userRolesByRequest <- batchOrderService.getUserRolesByRequest(page.items.map(_._1), user)
-      } yield {
-        val pageItemsWithCall = buildItemsWithCall(page.items, userRolesByRequest)
-        (Page(pageItemsWithCall, page.page, page.offset, page.total, page.orderBy), conditions)
-      }
+      // get the associated view
+      viewOption <- dsa.dataViewRepo.get(setting.viewId)
+
+      // check if the view is actually defined
+      view = requireDefined(viewOption, s"View '${setting.viewId.stringify}' not found.")
+
+      // find the fields reference by view (table column names)
+      fields <- dsa.fieldRepo.find(Seq(FieldIdentity.name #-> view.tableColumnNames))
+    } yield {
+      val nameFieldMap = fields.map(field => (field.name, field)).toMap
+      view.tableColumnNames.flatMap { fieldName => nameFieldMap.get(fieldName) }
+    }
+
+  override protected def showView = { implicit ctx =>
+    (views.show(_, _, _)).tupled
   }
 
-    private def buildItemsWithCall(
-      items: Traversable[(BatchOrderRequest, String)],
-      rolesByRequestId: Map[BSONObjectID, Traversable[Role.Value]]
-    ) =
-      items.map(item => (item._1, item._2, itemViewRouting(item._1, rolesByRequestId.get(item._1._id.get).get)))
+  // TODO: who can actually "see" this? admin and ..
+  override def get(id: BSONObjectID) =
+    restrictAdminOrUserCustomAny(isRequestAllowed(requestId = id, readOnly = true))(
+      toAuthenticatedAction(super[AdaCrudControllerImpl].get(id))
+    )
 
-    private def itemViewRouting(
-      request: BatchOrderRequest,
-      roles: Traversable[Role.Value]
-    ): Call = {
-      val userRolesPrioritized = PrioritizedRoles.apply.toSeq.sortBy(_._1).filter(p => roles.toSeq.contains(p._2))
-      val applicableActions = ActionGraph.asMap.get(request.state).getOrElse(Traversable())
-      val allowedRoles = applicableActions.map(a => a.allowed).toSet
-      val headRole = userRolesPrioritized.toStream.map(p => p._2).find(p => allowedRoles.contains(p) || p == Role.Administrator).headOption
+  // Edit - admin only
 
-      headRole match {
-        case Some(role) =>
-          if (role == Role.Administrator)
-            orderRoutes.edit(request._id.get)
-          else
-            orderRoutes.action(request._id.get, role)
+  override protected type EditViewData = (
+    BSONObjectID,
+    Form[BatchOrderRequest],
+    Traversable[Seq[String]],
+    Seq[String]
+  )
 
-        case None => orderRoutes.get(request._id.get)
-      }
+  override protected def getFormEditViewData(
+    requestId: BSONObjectID,
+    form: Form[BatchOrderRequest]
+  ) = { implicit request =>
+    getRequestedItemsWithFieldLabels(requestId).map { case (items, fieldNames) =>
+      (requestId, form, items, fieldNames)
     }
+  }
+
+  override protected def editView = { implicit ctx =>
+    (views.edit(_, _, _, _)).tupled
+  }
+
+  // List Active
+
+  protected type UserScopedListViewData = (
+    Page[(BatchOrderRequest, Option[String], Call)],
+    Seq[FilterCondition]
+  )
 
   def findActive(
     pageCreated: Option[Int] = None,
@@ -439,107 +404,284 @@ class BatchOrderRequestController @Inject()(
 
         user = requireDefined(userOption, s"No current user found.").user
 
-
-        approverCriterion <- buildApproverCriterion(user)
+        approverCriteria <- buildApproverCriteria(user)
 
         criteria <- toCriteria(filter)
 
-        (page, userCriteria, pageType, backgroundListCriteria) = getPageWithCriteria(pageCreated, pageToApprove, orderBy, criteria, user, approverCriterion)
+        (page, userCriteria, pageType, backgroundListCriteria) = getPageWithCriteria(pageCreated, pageToApprove, orderBy, criteria, user, approverCriteria)
 
-        (items, count, backgroundListCount) <- getFutureUserScopedItemsAndCounts(Some(page), orderBy, userCriteria, backgroundListCriteria)
+        (items, count, backgroundListCount) <- getUserScopedItemsAndCounts(Some(page), orderBy, userCriteria, backgroundListCriteria)
 
-        listData <- getUserScopedListViewData(Page(items, page, page * pageLimit, count, orderBy), filter)(request)
+        page <- getUserScopedListViewData(Page(items, page, page * pageLimit, count, orderBy))
+      } yield
+        Ok((views.listWithTabs(page, pageType, filter, backgroundListCount)))
+
+    }.recover(handleFindExceptions)
+  }
+
+  private def getPageWithCriteria(
+    pageCreated: Option[Int] = None,
+    pageToApprove: Option[Int] = None,
+    orderBy: String,
+    criteria: Seq[Criterion[Any]],
+    user: User,
+    approverCriteria: Seq[Criterion[Any]]
+  ) = {
+    val requesterCriteria = criteria ++ Seq("createdById" #== user._id)
+    val fullApproverCriteria = criteria ++ approverCriteria
+
+    if (pageCreated.isDefined) {
+      (pageCreated.get, requesterCriteria, PageType.Created, fullApproverCriteria)
+    } else if (pageToApprove.isDefined) {
+      (pageToApprove.get, fullApproverCriteria, PageType.ToApprove, requesterCriteria)
+    } else {
+      (0, requesterCriteria, PageType.Created, fullApproverCriteria)
+    }
+  }
+
+  private def buildApproverCriteria(user: User) =
+    for {
+      committees <- requestSettingRepo.find()
+      dataSetSettings <- dataSetSettingRepo.find(Seq("ownerId" #== user._id))
+    } yield {
+      val userCommittee = committees.filter(c => c.committeeUserIds.contains(user._id.get))
+      val committeeDataSetIds = userCommittee.map(c => c.dataSetId).toSeq
+      val ownedDataSetIds = dataSetSettings.map(s => s.dataSetId).toSeq
+      val dataSetIds = ownedDataSetIds ++ committeeDataSetIds
+      Seq("dataSetId" #-> dataSetIds, "state" #!= BatchRequestState.Created.toString)
+  }
+
+  private def getUserScopedItemsAndCounts(
+    page: Option[Int],
+    orderBy: String,
+    criteria: Seq[Criterion[Any]],
+    backgroundPageCriteria: Seq[Criterion[Any]],
+    limit: Option[Int] = Some(pageLimit),
+    projection: Seq[String] = listViewColumns.getOrElse(Nil)
+  ): Future[(Traversable[(BatchOrderRequest, Option[String])], Int, Int)] = {
+    val sort = toSort(orderBy)
+    val skip = page.zip(limit).headOption.map { case (page, limit) => page * limit }
+
+    for {
+      items <- repo.find(criteria, sort, projection, limit, skip)
+      count <- repo.count(criteria)
+      backgroundCount <- repo.count(backgroundPageCriteria)
+      users <- getIdUserMap(items.map(_.createdById))
+    } yield {
+      val itemsWithName = items.map(i => (i, users.get(i.createdById).map(_.ldapDn)))
+      (itemsWithName, count, backgroundCount)
+    }
+  }
+
+  protected def getUserScopedListViewData(
+    page: Page[(BatchOrderRequest, Option[String])])(
+    implicit request: AuthenticatedRequest[_]
+  ) =
+    for {
+      // get the currently-logged user
+      userOption <- currentUser()
+
+      // check if the user exists
+      user = requireDefined(userOption, "No current user found.").user
+
+      userRolesByRequest <- batchOrderService.getRequestIdUserRoles(page.items.map(_._1), user)
+    } yield {
+      val pageItemsWithCall = page.items.map { item =>
+        val call = itemViewRouting(item._1, userRolesByRequest.get(item._1._id.get).get)
+        (item._1, item._2, call)
+      }
+
+      Page(pageItemsWithCall, page.page, page.offset, page.total, page.orderBy)
+    }
+
+  private def itemViewRouting(
+    request: BatchOrderRequest,
+    roles: Traversable[Role.Value]
+  ): Call = {
+    val userRolesPrioritized = PrioritizedRoles.apply.toSeq.sortBy(_._1).filter(p => roles.toSeq.contains(p._2))
+    val applicableActions = ActionGraph.asMap.get(request.state).getOrElse(Traversable())
+    val allowedRoles = applicableActions.map(a => a.allowed).toSet
+    val headRole = userRolesPrioritized.toStream.map(p => p._2).find(p => allowedRoles.contains(p) || p == Role.Administrator).headOption
+
+    headRole match {
+      case Some(role) =>
+        if (role == Role.Administrator)
+          orderRoutes.edit(request._id.get)
+        else
+          orderRoutes.action(request._id.get, role)
+
+      case None => orderRoutes.get(request._id.get)
+    }
+  }
+
+  def getRequestTable(
+    pageCreated: Option[Int] = None,
+    pageToApprove: Option[Int] = None,
+    orderBy: String,
+    filter: Seq[FilterCondition]
+  ) = restrictAny { implicit request =>
+    {
+      for {
+        userOption <- currentUser()
+
+        user = requireDefined(userOption, s"No current user found.").user
+
+        approverCriteria <- buildApproverCriteria(user)
+
+        criteria <- toCriteria(filter)
+
+        (page, userCriteria, pageType, backgroundListCriteria) = getPageWithCriteria(pageCreated, pageToApprove, orderBy, criteria, user, approverCriteria)
+
+        (items, count, backgroundListCount) <- getUserScopedItemsAndCounts(Some(page), orderBy, userCriteria, backgroundListCriteria)
+
+        page <- getUserScopedListViewData(Page(items, page, page * pageLimit, count, orderBy))
       } yield
         pageToApprove match {
-          case Some(page) =>
-            Ok((views.requestTable(listData._1, filter, (p, o) => orderRoutes.findActive(None, Some(p), o, filter), isAjaxRefresh = true)))
+          case Some(_) =>
+            Ok(views.toApproveRequestTable(page, filter))
 
           case None =>
-            Ok((views.requestTable(listData._1, filter, (p, o) => orderRoutes.findActive(Some(p), None, o, filter), isAjaxRefresh = true)))
+            Ok(views.createdRequestTable(page, filter))
         }
     }.recover(handleFindExceptions)
   }
 
-    def performAction(
-        requestId: BSONObjectID,
-        action: RequestAction.Value,
-        role: Role.Value,
-        description: Option[String]
-    ) = restrictAdminOrUserCustomAny(isRequestAllowed(requestId, Some(action), Some(role), false)) {
-        implicit request => {
-            val dateOfUpdate = new Date()
-            for {
-                existingRequest <- repo.get(requestId)
-                user <- currentUser()
-                allowedStateAction = getNextState(existingRequest.get.state, action)
-                //          userHasAllowedRole = checkAssumedRoleCanDoAction(role, allowedStateAction.allowed)
-                descriptionExistsIfRequired = checkDescriptionExists(allowedStateAction, description)
-                userIdsMapping <- batchOrderService.getAllowedUserIds(existingRequest.get)
-                usersToNotify <- retrieveUsersToNotify(userIdsMapping)
-                fieldNames <- getRequestSettingsFieldNames(existingRequest.get.dataSetId)
-                items <- getItemsById(existingRequest.get.itemIds, existingRequest.get.dataSetId, fieldNames)
-                (id, notifications) <- {
-                    val batchRequestWithStateAndNotifications = user match {
-                        case Some(currentUser) =>
-                            val newState = allowedStateAction.toState
-                            val actionInfo = ActionInfo(existingRequest.get.state, newState, currentUser.user.ldapDn, description)
-                            val updatedHistory: Traversable[ActionInfo] = existingRequest.get.history :+ actionInfo
-                            val notifications: Traversable[NotificationInfo] = usersToNotify.flatten { case (role, users) => {
-                                users.map { user =>
-                                    val notificationType = getNotificationType(allowedStateAction, role)
-                                    NotificationInfo(
-                                        creationDate = existingRequest.get.timeCreated,
-                                        dataSetId = existingRequest.get.dataSetId,
-                                        userRole = role,
-                                        fromState = allowedStateAction.fromState,
-                                        toState = allowedStateAction.toState,
-                                        possibleActions =  ActionGraph.asMap.get(allowedStateAction.toState).get.map(_.action),
-                                        createdByUser = usersToNotify.get(Role.Requester).get.toSeq(0).ldapDn,
-                                        targetUser = user.ldapDn,
-                                        description = description,
-                                        targetUserEmail = user.email,
-                                        updateDate = dateOfUpdate,
-                                        getRequestUrl = getRequestUrlByNotificationType(notificationType, existingRequest.get._id.get, role),
-                                        notificationType = notificationType,
-                                        updatedByUser = currentUser.user.ldapDn,
-                                        items = items
-                                    )
-                                }
-                            }
-                            }
-                            (existingRequest.get.copy(state = newState, createdById = existingRequest.get.createdById, history = updatedHistory.toSeq), notifications)
-                        case None => throw new AdaException("No logged user found")
-                    }
-                    repo.update(batchRequestWithStateAndNotifications._1).map(id => (id, batchRequestWithStateAndNotifications._2))
-                }
-            } yield {
-                actionNotificationService.sendNotifications(notifications)
-                activeRequestsListRedirect.flashing("success" -> "state of request updated with success")
-            }
-        }.recover(handleExceptions("request action"))
-    }
+  def performAction(
+    requestId: BSONObjectID,
+    action: RequestAction.Value,
+    role: Role.Value,
+    description: Option[String]
+  ) = restrictAdminOrUserCustomAny(isRequestAllowed(requestId, Some(action), Some(role), false)) { implicit request =>
+    {
+      for {
+        requestOption <- repo.get(requestId)
 
-    private def checkDescriptionExists(action: models.Action, description: Option[String]) =
-      if (action.commentNeeded && !description.isDefined) {
-        throw new AdaException("Description not provided or not accepted '" + description + "'" + " for new state: " + action.toState)
+        orderRequest = requireDefined(requestOption, s"Batch order request '${requestId.stringify}' not found.")
+
+        userOption <- currentUser()
+
+        user = requireDefined(userOption, s"No current user found.").user
+
+        allowedStateAction = getNextState(orderRequest.state, action)
+
+        // userHasAllowedRole = checkAssumedRoleCanDoAction(role, allowedStateAction.allowed)
+        // descriptionExistsIfRequired = checkDescriptionExists(allowedStateAction, description)
+
+        userIdsMapping <- batchOrderService.getAllowedUserIds(orderRequest)
+
+        // id -> user map of all the users allowed to handle the request
+        userIdMap <- {
+          val userIds = userIdsMapping.flatMap(_._2)
+          getIdUserMap(userIds)
+        }
+
+        roleUsersToNotify = userIdsMapping.map { case (role, userIds) =>
+          (role, userIds.map(id => userIdMap.get(id).get))
+        }
+
+        // get a data set accessor
+        dsa = requireDefined(dsaf(orderRequest.dataSetId), s"Data set '${orderRequest.dataSetId}' not found.")
+
+        // get the fields associated with this request's setting
+        fields <- getRequestFields(dsa)
+
+        // get the items by their ids
+        items <- dsa.dataSetRepo.find(Seq(JsObjectIdentity.name #-> orderRequest.itemIds), projection = fields.map(_.name))
+
+        notifications = roleUsersToNotify.flatten { case (role, users) =>
+          users.map { user =>
+            val notificationType = getNotificationType(allowedStateAction, role)
+
+            val notificationUrlToShow =
+              notificationType match {
+                case NotificationType.Advice => orderRoutes.get(requestId).absoluteURL()
+                case NotificationType.Solicitation => orderRoutes.action(requestId, role).absoluteURL()
+              }
+
+            NotificationInfo(
+              creationDate = orderRequest.timeCreated,
+              dataSetId = orderRequest.dataSetId,
+              userRole = role,
+              fromState = allowedStateAction.fromState,
+              toState = allowedStateAction.toState,
+              possibleActions =  ActionGraph.asMap.get(allowedStateAction.toState).get.map(_.action),
+              createdByUser = roleUsersToNotify.get(Role.Requester).get.toSeq(0).ldapDn,
+              targetUser = user.ldapDn,
+              description = description,
+              targetUserEmail = user.email,
+              updateDate = new Date(),
+              getRequestUrl = notificationUrlToShow,
+              notificationType = notificationType,
+              updatedByUser = user.ldapDn,
+              items = items
+            )
+          }
+        }
+
+        // update the batch order request with new state and history
+        _ <- {
+          val newState = allowedStateAction.toState
+          val actionInfo = ActionInfo(orderRequest.state, newState, user.ldapDn, description)
+
+          val updatedHistory = orderRequest.history :+ actionInfo
+          val updatedOrderRequest = orderRequest.copy(state = newState, history = updatedHistory)
+
+          repo.update(updatedOrderRequest)
+        }
+      } yield {
+        actionNotificationService.sendNotifications(notifications)
+        activeRequestsListRedirect.flashing("success" -> "state of request updated with success")
       }
-
-  private def retrieveUsersToNotify(
-    userIdsMapping: Map[Role.Value, Traversable[BSONObjectID]]
-  ): Future[Map[Role.Value, Traversable[User]]] = {
-    val userIds = userIdsMapping.flatMap(_._2).toSeq
-
-    for {
-      users <- getUsersByIds(userIds)
-    } yield
-      userIdsMapping.map { case (role, userId) => (role, userId.map(id => users.get(id).get)) }
+    }.recover(handleExceptions("request action"))
   }
 
-  private def getUsersByIds(
+  // TODO: What is a difference between performAction and action
+  def action(id: BSONObjectID, role: Role.Value) =
+    restrictAdminOrUserCustomAny(isRequestAllowed(id, None, Some(role), false)) { implicit request =>
+      {
+        for {
+          requestOption <- repo.get(id)
+
+          orderRequest = requireDefined(requestOption, s"Batch order request '${id.stringify}' not found.")
+
+          validActions = ActionGraph.asMap.get(orderRequest.state).getOrElse(Traversable[models.Action]()).filter(_.allowed == role)
+
+          editViewData <-  getEditViewData(id, orderRequest)(request).map(Some(_))
+
+          (items, fieldLabels) <- getRequestedItemsWithFieldLabels(id)
+        } yield {
+          implicit val context = dataSetWebContext(orderRequest.dataSetId)
+
+          if (validActions.size > 0) {
+            render {
+              case Accepts.Html() => Ok(views.actions(editViewData.get._2.get, validActions, role, items, fieldLabels))
+              case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
+            }
+          } else {
+            render {
+              case Accepts.Html() =>
+                Redirect(orderRoutes.get(id)).flashing("error" -> "No action can be performed at the moment.")
+              case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
+            }
+          }
+        }
+      }.recover(handleExceptions("action"))
+    }
+
+  @Deprecated
+  private def checkDescriptionExists(
+    action: models.Action,
+    description: Option[String]
+  ) =
+    if (action.commentNeeded && !description.isDefined) {
+      throw new AdaException("Description not provided or not accepted '" + description + "'" + " for new state: " + action.toState)
+    }
+
+  private def getIdUserMap(
     userIds: Traversable[BSONObjectID]
   ) =
     userRepo.find(Seq(UserIdentity.name #-> userIds.map(Some(_)).toSeq)).map { users =>
-      users.map(c => (c._id.get, c)).toMap
+      users.map(user => (user._id.get, user)).toMap
     }
 
   private def getNotificationType(action: models.Action, role: Role.Value) =
@@ -551,30 +693,6 @@ class BatchOrderRequestController @Inject()(
         if (action.solicited == role) NotificationType.Solicitation else NotificationType.Advice
   }
 
-    private def getRequestUrlByNotificationType(
-      notificationType: NotificationType.Value,
-      requestId: BSONObjectID,
-      role: Role.Value)(
-      implicit request: AuthenticatedRequest[_]
-    ) =
-      notificationType match {
-        case NotificationType.Advice => orderRoutes.get(requestId).absoluteURL()
-        case NotificationType.Solicitation => orderRoutes.action(requestId, role).absoluteURL()
-      }
-
-    private def getRequestSettingsFieldNames(dataSetId: String) =
-      for {
-        requestSetting <- requestSettingRepo.find(Seq("dataSetId" #== dataSetId), limit = Some(1)).map(_.headOption)
-
-        dsa = dsaf(dataSetId).getOrElse(throw new AdaException(s"Data set id '${dataSetId}' not found."))
-
-        view <- requestSetting match {
-          case Some(setting) => dsa.dataViewRepo.get(setting.viewId)
-          case None => Future(None)
-        }
-      } yield
-        view.map(_.tableColumnNames).getOrElse(Nil)
-
   private def isRequestAllowed(
     requestId: BSONObjectID,
     action: Option[RequestAction.Value] = None,
@@ -584,9 +702,13 @@ class BatchOrderRequestController @Inject()(
     request: AuthenticatedRequest[Any]
   ): Future[Boolean] =
     for {
-      existingRequestOption <- repo.get(requestId)
-      allowedRoles = determineValidRoles(action, assumedRole, readOnly, existingRequestOption.get)
-      userIdsMapping <- batchOrderService.getAllowedUserIds(existingRequestOption.get)
+      requestOption <- repo.get(requestId)
+
+      request = requireDefined(requestOption, s"Batch order request '${requestId}' not found.")
+
+      allowedRoles = determineValidRoles(action, assumedRole, readOnly, request)
+
+      userIdsMapping <- batchOrderService.getAllowedUserIds(request)
     } yield {
 
       val assumedRoleHasPermission = userIdsMapping.find(entry =>
@@ -619,10 +741,10 @@ class BatchOrderRequestController @Inject()(
           }
 
         case None => ActionGraph.asMap.get(existingRequest.state).get.map(a => a.allowed).toSet
+      }
+    } else {
+      Set(Role.Requester, Role.Owner, Role.Committee)
     }
-  } else {
-    Set(Role.Requester, Role.Owner, Role.Committee)
-  }
 
   private def getNextState(
     currentState: BatchRequestState.Value,
@@ -632,90 +754,6 @@ class BatchOrderRequestController @Inject()(
       case Some(allowedAction) => allowedAction
       case None => throw new AdaException("Action '" + action + "' not allowed for current state '" + currentState + "'")
     }
-
-    private def getItemsById(
-        itemIds: Seq[BSONObjectID],
-        dataSetId: String,
-        fieldNames: Traversable[String]
-    ) = {
-        val dsa = dsaf(dataSetId).get
-        val itemsRepo = dsa.dataSetRepo
-
-        itemsRepo.find(Seq("_id" #-> itemIds), projection = fieldNames)
-    }
-
-    def action(id: BSONObjectID, role: Role.Value) = restrictAdminOrUserCustomAny(isRequestAllowed(id, None, Some(role), false)) {
-        implicit request => {
-            for {
-                existingRequest <- repo.get(id)
-                validActions = ActionGraph.asMap.get(existingRequest.get.state).getOrElse(Traversable[models.Action]()).filter(_.allowed == role)
-                editViewData <- existingRequest.fold(
-                    throw new AdaException("request with id '" + id.stringify + "' not found")
-                ) { entity =>
-                    getEditViewData(id, entity)(request).map(Some(_))
-                }
-                fieldNames <- getRequestSettingsFieldNames(existingRequest.get.dataSetId)
-                items <- getItemsById(existingRequest.get.itemIds, existingRequest.get.dataSetId, fieldNames.toSeq)
-            } yield {
-                existingRequest match {
-                    case None => NotFound(s"$entityName '${formatId(id)}' not found")
-                    case Some(_) =>
-                        implicit val context = dataSetWebContext(existingRequest.get.dataSetId)
-
-                        if (validActions.size > 0) {
-                            render {
-                                case Accepts.Html() => Ok(views.actions(editViewData.get._1.form.get, validActions, role, items, fieldNames))
-                                case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
-                            }
-                        } else {
-                            render {
-                                case Accepts.Html() =>
-                                    Redirect(orderRoutes.get(id)).flashing("error" -> "No action can be performed at the moment.")
-                                case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
-                            }
-                        }
-                }
-            }
-        }.recover(handleEditExceptions(id))
-    }
-
-    override protected def getFormEditViewData(
-        requestId: BSONObjectID,
-        form: Form[BatchOrderRequest]
-    ) = { implicit request =>
-        getRequestWithItems(requestId, form).map(r => (IdForm(requestId, r._1), r._2, r._3))
-    }
-
-    private def getRequestWithItems(
-        requestId: BSONObjectID,
-        form: Form[BatchOrderRequest]
-    )(
-        implicit request: AuthenticatedRequest[_]
-    ): Future[(Form[BatchOrderRequest], Traversable[JsObject], Traversable[String])] =
-        for {
-            existingRequest <- repo.get(requestId)
-            fieldNames <- getRequestSettingsFieldNames(existingRequest.get.dataSetId)
-            items <- getItemsById(existingRequest.get.itemIds, existingRequest.get.dataSetId, fieldNames.toSeq)
-        } yield {
-            (form, items, fieldNames)
-        }
-
-    override protected def getFormShowViewData(
-        requestId: BSONObjectID,
-        form: Form[BatchOrderRequest]
-    ) = { implicit request =>
-        getRequestWithItems(requestId, form).map(r => (r._1.get, r._2, r._3))
-    }
-
-    override protected def showView = { implicit ctx =>
-      (views.show(_, _, _)).tupled
-    }
-
-    override protected def editView = { implicit ctx =>
-      (views.edit(_, _, _)).tupled
-    }
-
-
 
   private def requireDefined[T](
     value: Option[T],

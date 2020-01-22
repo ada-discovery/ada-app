@@ -6,6 +6,7 @@ import org.incal.core.runnables.{InputFutureRunnableExt, RunnableHtmlOutput}
 import services.BatchOrderRequestRepoTypes.BatchOrderRequestSettingRepo
 import scala.concurrent.ExecutionContext.Implicits.global
 
+@Deprecated
 class SaveSetting @Inject() (
   settingRepo: BatchOrderRequestSettingRepo
 ) extends InputFutureRunnableExt[BatchOrderRequestSetting] with RunnableHtmlOutput {

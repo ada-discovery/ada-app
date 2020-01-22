@@ -113,7 +113,7 @@ class BatchOrderRequestSettingController @Inject()(
   override def create = AuthAction { implicit request =>
     getDataSetId(request).map( dataSetId =>
       if (dataSetId.trim.nonEmpty)
-        super.create.apply(request)
+        super.create(request)
       else
         Future(noDataSetRedirect)
     ).getOrElse(

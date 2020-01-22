@@ -7,6 +7,8 @@ object ActionGraph {
 
   val needsDescription = true
 
+  // TODO: move to custom.conf (or a dedicated conf file)
+
   private val actions: Traversable[Action] = Seq(
     Action(
       BatchRequestState.Created,

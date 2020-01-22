@@ -8,6 +8,7 @@ import services.BatchOrderRequestRepoTypes.BatchOrderRequestRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+@Deprecated
 class SaveNewRequest @Inject() (requestsRepo:BatchOrderRequestRepo) extends InputFutureRunnableExt[SaveNewRequestSpec] with RunnableHtmlOutput {
 
   override def runAsFuture(input: SaveNewRequestSpec) = {

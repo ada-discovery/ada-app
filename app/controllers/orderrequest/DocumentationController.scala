@@ -34,6 +34,7 @@ import scala.concurrent.Future
 
 @Deprecated
 // TODO: Why we need a separate controller just to upload a documentation? Merge to BatchOrderRequestSettingController...
+// Also documentation for batch order requests (manuals) should be ideally stored in a db (e.g. Mongo)
 class DocumentationController @Inject()(
   repo: SampleDocumentationRepo,
   val userManager: UserManager,

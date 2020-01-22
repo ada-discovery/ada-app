@@ -1,7 +1,5 @@
 package runnables.other
 
-
-
 import java.util.Date
 
 import javax.inject.Inject
@@ -19,8 +17,14 @@ import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, BatchOrderReq
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configuration, userRepo: UserRepo, committeeRepo: BatchOrderRequestSettingRepo, requestsRepo:BatchOrderRequestRepo)
-  extends InputFutureRunnableExt[EmaRunRunSpec] with RunnableHtmlOutput {
+@Deprecated
+class EmaRun @Inject() (
+  dsaf: DataSetAccessorFactory,
+  configuration: Configuration,
+  userRepo: UserRepo,
+  settingRepo: BatchOrderRequestSettingRepo,
+  requestRepo: BatchOrderRequestRepo
+) extends InputFutureRunnableExt[EmaRunRunSpec] with RunnableHtmlOutput {
   private val logger = Logger
 
   override def runAsFuture(input: EmaRunRunSpec) = {
@@ -31,19 +35,19 @@ class EmaRun @Inject() (dsaf: DataSetAccessorFactory, configuration: Configurati
     val requestId = Some(BSONObjectID.parse("577e18c24500004800cdc557").get)
     val sampleId = BSONObjectID.parse("577e18c24500004800cdc558").get
     val request = BatchOrderRequest(requestId,"dataSetId", Seq(sampleId), BatchRequestState.Created, createdById = BSONObjectID.generate)
-    requestsRepo.delete(requestId)
-    requestsRepo.save(request)
+    requestRepo.delete(requestId)
+    requestRepo.save(request)
 
     val committeeId = BSONObjectID.parse("577e18c24500004800cdc557").toOption
     val committee = BatchOrderRequestSetting(committeeId, "dataSetId", new Date(), Nil, BSONObjectID.generate())
-    committeeRepo.delete(committeeId)
-    committeeRepo.save(committee)
+    settingRepo.delete(committeeId)
+    settingRepo.save(committee)
 
     val projectName = configuration.getString("project.name").getOrElse("N/A")
 
     for {
-      commiteeRead <- committeeRepo.get(committeeId.get)
-      repoRead <- requestsRepo.get(requestId.get)
+      commiteeRead <- settingRepo.get(committeeId.get)
+      repoRead <- requestRepo.get(requestId.get)
       // total count
       count <- dsa.dataSetRepo.count()
 

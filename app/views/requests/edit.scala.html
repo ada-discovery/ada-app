@@ -12,35 +12,37 @@
 @import org.ada.web.controllers.dataset.TableViewData
 @import views.html.requests.historyTable
 @import play.api.libs.json.JsObject
+@import controllers.orderrequest.routes.{ BatchOrderRequestController => requestRoutes }
 
 @(
-    data: IdForm[BSONObjectID, BatchOrderRequest],
-    items: Traversable[JsObject],
-    fieldNames: Traversable[String]
+    id: BSONObjectID,
+    form: Form[BatchOrderRequest],
+    requestedItems: Traversable[Seq[String]],
+    fieldNames: Seq[String]
 )(
     implicit context: WebContext
 )
 
 @elements = {
-    @inputTextReadonly("request", "dataSetId", data.form)
+    @inputTextReadonly("request", "dataSetId", form)
 
-    @select("request", "state", data.form, BatchRequestState.values.map(state => (state.toString, state.toString)).toSeq, true)
+    @select("request", "state", form, BatchRequestState.values.map(state => (state.toString, state.toString)).toSeq, true)
 
-    @labelValue("request", "Requested items") {
-        @itemsTable(items, fieldNames)
+    @labelValue("requestedItems", "Requested items") {
+        @itemsTable(requestedItems, fieldNames)
     }
 
     @labelValue("request", "History") {
-        @historyTable(data.form.get.history)
+        @form.value.map(_.history).map(history => historyTable(history)).getOrElse("")
     }
 }
 
 @layout.edit(
     "Request",
     "request",
-    errors = data.form.errors,
+    errors = form.errors,
     elements = elements,
-    updateCall = controllers.orderrequest.routes.BatchOrderRequestController.update(data.id),
-    cancelCall = controllers.orderrequest.routes.BatchOrderRequestController.listAll(),
-    deleteCall = Some(controllers.orderrequest.routes.BatchOrderRequestController.delete(data.id))
+    updateCall = requestRoutes.update(id),
+    cancelCall = requestRoutes.listAll(),
+    deleteCall = Some(requestRoutes.delete(id))
 )

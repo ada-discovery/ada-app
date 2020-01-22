@@ -25,22 +25,22 @@
     data: BatchOrderRequest,
     validActions: Traversable[Action],
     role: Role.Value,
-    items: Traversable[JsObject],
-    fieldNames: Traversable[String]
+    items: Traversable[Seq[String]],
+    fieldLabels: Seq[String]
 )(
-      implicit context: WebContext
+    implicit context: WebContext
 )
 
 @elements = {
-    @labelValue("request", "DataSet Id") {
+    @labelValue("dataSetId", "DataSet Id") {
         <input type="text" class="form-control" value="@data.dataSetId" readonly="readonly"/>
     }
 
     @labelValue("request", "Requested items") {
-        @itemsTable(items, fieldNames)
+        @itemsTable(items, fieldLabels)
     }
 
-    @labelValue("request", "History") {
+    @labelValue("history", "History") {
         @historyTable(data.history)
     }
 

@@ -13,31 +13,32 @@
 @import play.api.libs.json.JsObject
 @import views.html.requests.itemsTable
 @import views.html.requests.historyTable
+@import controllers.orderrequest.routes.{ BatchOrderRequestController => requestRoutes }
 
 @(
     request: BatchOrderRequest,
-    items: Traversable[JsObject],
-    fieldNames: Traversable[String]
+    items: Traversable[Seq[String]],
+    fieldLabels: Seq[String]
 )(
     implicit context: WebContext
 )
 
 @elements = {
-    @labelValue("request", "DataSet Id") {
+    @labelValue("dataSetId", "DataSet Id") {
         <input type="text" class="form-control" value="@request.dataSetId" readonly="readonly"/>
     }
 
-    @labelValue("request", "Requested items") {
-        @itemsTable(items, fieldNames)
+    @labelValue("requestedItems", "Requested items") {
+        @itemsTable(items, fieldLabels)
      }
 
-    @labelValue("request", "History") {
+    @labelValue("history", "History") {
        @historyTable(request.history)
     }
 }
 
 @layout.show(
     "Request status",
-    elements = elements,
-    Some(controllers.orderrequest.routes.BatchOrderRequestController.findActive())
+    elements,
+    Some(requestRoutes.findActive())
 )

@@ -6,7 +6,7 @@
 @import org.incal.core.util.toHumanReadableCamel
 
 @(
-    page: Page[(BatchOrderRequest, String, Call )],
+    page: Page[(BatchOrderRequest, Option[String], Call)],
     conditions: Seq[FilterCondition],
     refreshCall: (Int, String) => Call,
     isAjaxRefresh : Boolean = false
@@ -18,16 +18,13 @@
     @paginatedTable(
         page,
         refreshCall,
-        typeColumns[(BatchOrderRequest, String, Call)](
-            (Some("createdby"), "Requester name", _._2),
-            (Some("timeCreated"), "Date", _._1.timeCreated),
+        typeColumns[(BatchOrderRequest, Option[String], Call)](
+            (Some("createdById"), "Requester name", _._2.getOrElse("")),
+            (Some("dataSetId"), "Data Set", _._1.dataSetId),
+            (Some("timeCreated"), "Date", _._1.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
             (Some("state"), "Status", r => toHumanReadableCamel(r._1.state.toString()))
         ),
         Some({ item: Any => item.asInstanceOf[(BatchOrderRequest, String, Call)]._3 }),
         isAjaxRefresh = isAjaxRefresh
     )
 </div>
-
-<script type="text/javascript">
-    activateRowClickable();
-</script>
