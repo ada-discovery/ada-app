@@ -90,7 +90,7 @@ object ActionGraph {
 
   val asMap: Map[BatchRequestState.Value, Traversable[Action]] = actions.map { action => (action.fromState, action) }.toGroupMap
 
-  def createAction() = {
+  val createAction =
     Action(
       BatchRequestState.None,
       RequestAction.Create,
@@ -98,5 +98,4 @@ object ActionGraph {
       Role.Requester,
       Role.Requester
     )
-  }
 }

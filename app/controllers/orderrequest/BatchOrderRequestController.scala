@@ -246,7 +246,7 @@ class BatchOrderRequestController @Inject()(
               }
             } yield {
               val date = new Date()
-              val createAction = ActionGraph.createAction()
+              val createAction = ActionGraph.createAction
 
               val notification = NotificationInfo(
                 creationDate = date,
