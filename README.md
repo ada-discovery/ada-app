@@ -1,88 +1,93 @@
 # Ada-Web - NCER-PD Project
-[![version](https://img.shields.io/badge/version-0.8.0-green.svg)](https://ada.parkinson.lu) [![License: CC BY-NC 3.0](https://img.shields.io/badge/License-CC%20BY--NC%203.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/3.0/)
+[![version](https://img.shields.io/badge/version-0.8.1-green.svg)](https://ada.parkinson.lu) [![License: CC BY-NC 3.0](https://img.shields.io/badge/License-CC%20BY--NC%203.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/3.0/)
 
-## Application Server (Apache Tomcat)
+## Application Server (Netty)
+
+* IP: 10.240.6.121
+* Root folder: `/home/peter.banda/ada-web-ncer/`
 
 **Start**
-```bash
-ssh -p 8022 yourusername@10.79.2.192
-cd /home/peter.banda/apache-tomcat-7.0.64/bin
-source set_env.sh
-./startup.sh
+```
+sudo ./bin/runme
 ```
 
 **Stop**
-```bash
-ssh -p 8022 yourusername@10.79.2.192
-cd /home/peter.banda/apache-tomcat-7.0.64/bin
-./shutdown.sh
-ps -A | grep java (to check if still running, if yes do: 'kill -s kill pid')
+```
+sudo ./bin/stopme
 ```
 
 **Config**
-```bash
-/home/peter.banda/apache-tomcat-7.0.64/bin/catalina.sh
-````
-
-**Log**
-```bash
-/home/peter.banda/apache-tomcat-7.0.64/logs/catalina.out
+```
+./bin/set_env.sh
+./conf/custom.conf
 ```
 
-**Backup script**
-```bash
+**Log**
+```
+./bin/logs/application.log
+````
+
+**Cron Jobs**
+```
 /etc/cron.daily/ada-backup
+/etc/cron.daily/sftp_ibbl_to_ada
+```
+
+**Monit Config**
+```
+/etc/monit/monitrc
 ```
 
 <br/>
 
 ## Database (Mongo)
 
+* IP: 10.240.6.124
+
 **Start**
-```bash
-ssh -p 8022 yourusername@10.79.2.71
+```
 sudo service mongod start
 ```
 
 **Stop**
-```bash
-ssh -p 8022 yourusername@10.79.2.71
+```
 sudo service mongod stop
 ```
 
 **Config**
-```bash
+```
 /etc/mongod.conf
 ```
 
 **Log**
-```bash
+```
 /var/log/mongodb/mongod.log
 ```
 
 **Backup script**
 ```bash
-/etc/cron.daily/ada-db-backup
+/etc/cron.weekly/ada-db-backup
 ```
 
 <br/>
 
 ## Database (Elastic Search)
 
+* IP: 10.240.6.125
+
+
 **Start**
-```bash
-ssh -p 8022 yourusername@10.79.2.235
+```
 sudo service elasticsearch start
 ```
 
 **Stop**
-```bash
-ssh -p 8022 yourusername@10.79.2.235
+```
 sudo service elasticsearch stop
 ```
 
 **Config(s)**
-```bash
+```
 /etc/elasticsearch/elasticsearch.yml
 /etc/init.d/elasticsearch
 /etc/default/elasticsearch
@@ -90,18 +95,49 @@ sudo service elasticsearch stop
 ```
 
 **Log**
-```bash
-/var/log/elasticsearch/ada-cluster.log
 ```
-
-**Backup script**
-```bash
-TODO
+/var/log/elasticsearch/ada-cluster.log
 ```
 
 <br/>
 
-## API
+## Spark Grid
+* Master IP: 10.240.6.121 (same as the netty server)
+* Slave IPs: 10.240.6.122 & 10.240.6.123
+* Root folder: `/home/peter.banda/spark-2.2.0-bin-hadoop2.7`
+
+**Start Master**
+
+```
+ ./sbin/start-master.sh --webui-port 8081
+```
+
+**Stop Master**
+
+```
+./sbin/stop-master.sh 
+```
+
+**Start Slave**
+
+```
+./sbin/start-slave.sh spark://10.240.6.121:7077
+```
+
+**Stop Slave**
+
+```
+./sbin/stop-slaves.sh
+```
+
+**Monitoring Web UI**
+
+- http://10.240.6.121:8081
+
+
+<br/>
+
+# API
 
 Use **https://ada.parkinson.lu** as the API's core url.
 
