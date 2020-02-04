@@ -4,7 +4,7 @@
 ## Application Server (Netty)
 
 * IP: 10.240.6.121
-* Root folder: `/home/peter.banda/ada-web-ncer/`
+* Root folder: `/opt/ada-web-ncer/`
 
 **Start**
 ```
