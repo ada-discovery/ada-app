@@ -38,7 +38,7 @@ val playVersion = "2.5.9"
 libraryDependencies ++= Seq(
   "org.adada" %% "ada-web" % "0.8.1",
   "org.adada" %% "ada-web" % "0.8.1" classifier "assets",
-  "org.adada" %% "ada-dream-pd-challenge" % "0.0.7",
+  "org.adada" %% "ada-dream-pd-challenge" % "0.1.0",
   "org.in-cal" %% "incal-dl4j" % "0.2.3",   // DL4J
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
   "org.apache.pdfbox" % "pdfbox" % "2.0.1",
