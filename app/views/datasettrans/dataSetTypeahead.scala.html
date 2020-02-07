@@ -1,0 +1,68 @@
+@import views.html.layout.main
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
+@import org.incal.play.controllers.WebContext
+@import org.incal.play.controllers.WebContext._
+@import org.incal.core.util.nonAlphanumericToUnderscore
+@import views.html.elements.inputTypeahead
+@import org.ada.web.controllers.dataset.datatrans.routes
+@import org.ada.server.models.FilterShowFieldStyle
+@import reactivemongo.bson.BSONObjectID
+
+@(
+    domainName: String,
+    fieldName: String,
+    form: Form[_],
+    transformationId: Option[BSONObjectID] = None,
+    dataSetNameSuffix: Option[String] = None
+)(
+    implicit context: WebContext
+)
+
+@typeaheadJsImport()
+
+@inputTypeahead(
+    domainName,
+    fieldName,
+    fieldName + "Typeahead",
+    form,
+    "Data Set"
+)
+
+@helper.javascriptRouter("dataSetTransformationJsRoutes")(
+    org.ada.web.controllers.dataset.datatrans.routes.javascript.DataSetTransformationController.resultDataSetIdAndName
+)
+
+<script type="text/javascript">
+    $(function () {
+        var addSelectedListener = function() {
+            setTimeout(function(){
+                @dataSetNameSuffix.map { suffix =>
+                    $('#@{fieldName}Typeahead').on('typeahead:selected', function (evt, item) {
+                        var sourceDataSetId = item.key
+                        var transformationId = @if(transformationId.isDefined) { '@transformationId.get.stringify' } else { null }
+
+                        if (sourceDataSetId) {
+                            dataSetTransformationJsRoutes.org.ada.web.controllers.dataset.datatrans.DataSetTransformationController.resultDataSetIdAndName(sourceDataSetId, '@suffix', transformationId).ajax({
+                                success: function (data) {
+                                    $('#resultDataSetSpec_id').val(data.id)
+                                    $('#resultDataSetSpec_name').val(data.name)
+                                },
+                                error: showErrorResponse
+                            })
+                        }
+                    })
+                }
+            }, 250)
+        }
+
+        populateFieldTypeahedFromUrl(
+            $('#@{fieldName}Typeahead'),
+            $('#@{fieldName}'),
+            '@Html(org.ada.web.controllers.routes.AdminController.dataSetIds().url)',
+            @FilterShowFieldStyle.LabelsOnly.id,
+            addSelectedListener,
+            true
+        )
+    })
+</script>

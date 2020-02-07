@@ -1,0 +1,8 @@
+@import org.ada.server.models.dataimport.EGaitDataSetImport
+@import views.html.elements.{inputText, checkbox}
+@import org.incal.play.controllers.WebContext
+@import org.incal.play.controllers.WebContext._
+
+@(form: Form[EGaitDataSetImport])(implicit webContext: WebContext)
+
+@checkbox("eGaitDataSetImport", "importRawData", form)

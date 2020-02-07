@@ -1,0 +1,13 @@
+@import org.ada.server.models.dataimport.RedCapDataSetImport
+@import views.html.elements.{inputText, checkbox}
+@import org.incal.play.controllers.WebContext
+@import org.incal.play.controllers.WebContext._
+
+@(form: Form[RedCapDataSetImport])(implicit webContext: WebContext)
+
+@inputText("redCapDataSetImport", "url", form)
+@inputText("redCapDataSetImport", "token", form)
+@checkbox("redCapDataSetImport", "importDictionaryFlag", form)
+@inputText("redCapDataSetImport", "eventNames", form)
+@inputText("redCapDataSetImport", "categoriesToInheritFromFirstVisit", form)
+@inputText("redCapDataSetImport", "saveBatchSize", form)

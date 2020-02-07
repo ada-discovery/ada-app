@@ -1,0 +1,36 @@
+language: scala
+scala:
+   - 2.11.12
+jdk:
+  - openjdk8
+services:
+  - docker
+addons:
+  apt:
+    packages:
+      - git
+env:
+  - ADA_MONGO_DB_URI="mongodb://127.0.0.1:27017/ada"
+before_install:
+  - docker load -i docker_images/images.tar || true
+  - docker run -d -p 27017:27017 mongo:4
+  - docker run -d -p 9200:9200 elasticsearch:5.6
+install:
+  # build ada-server dependency and publish locally
+  - git clone https://github.com/ada-discovery/ada-server.git
+  - cd ada-server
+  - git checkout master  # change this if you are developing against a different ada-server branch but still want CI
+  - sbt publish-local
+  - cd .. && rm -rf ada-server
+script:
+  - sbt clean
+  - sbt "testOnly *Spec"
+  - sbt jacocoReport
+before_cache:
+  - docker save -o docker_images/images.tar $(docker images -a -q)
+  # Cleanup the cached directories to avoid unnecessary cache updates
+  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -print -delete
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - docker_images

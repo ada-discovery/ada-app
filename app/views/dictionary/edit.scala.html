@@ -1,0 +1,47 @@
+@import views.html.layout
+@import views.html.elements.{inputText, inputTextReadonly, select}
+@import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
+@import org.ada.server.models.DataSpaceMetaInfo
+@import org.ada.server.models.Category
+@import org.ada.server.models.Field
+@import org.ada.server.models.FieldTypeId
+@import org.ada.web.controllers.dataset.DataSetWebContext._
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import org.ada.web.util.enumToValueString
+@import org.ada.server.models.DataSetSetting
+
+@(
+    displayName: String,
+    fieldName: String,
+    form: Form[Field],
+    categories: Traversable[Category],
+    setting: DataSetSetting,
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit context: DataSetWebContext
+)
+
+@elements = {
+    @inputTextReadonly("field", "name", form)
+    @inputText("field", "label", form)
+    @select("field", "fieldType", form, enumToValueString(FieldTypeId), false)
+    @inputText("field", "isArray", form)
+    @inputText("field", "enumValues", form, Seq('_label -> "Enum Values"))
+    @inputText("field", "displayDecimalPlaces", form)
+    @inputText("field", "displayTrueValue", form)
+    @inputText("field", "displayFalseValue", form)
+    @inputText("field", "aliases", form)
+    @select("field", "categoryId", form, categories.map(cat => (cat._id.get.stringify, cat.name)).toSeq, true)
+}
+
+@layout.edit(
+    displayName,
+    "field",
+	form.errors,
+    elements,
+    dictionaryRouter.update(fieldName),
+    dictionaryRouter.plainList,
+    deleteCall = None,
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    Some(datasetSubNavWithJs(setting))
+)

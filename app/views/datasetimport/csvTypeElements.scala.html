@@ -1,0 +1,35 @@
+@import org.ada.server.models.dataimport.CsvDataSetImport
+@import views.html.datasetimport.fileOrPathInput
+@import views.html.elements._
+@import org.incal.play.controllers.WebContext
+@import org.incal.play.controllers.WebContext._
+
+@(form: Form[CsvDataSetImport])(implicit webContext: WebContext)
+
+@fileOrPathInput("csvDataSetImport", "sourceChoice", "Source", "dataFile", "path", form)
+@inputText("csvDataSetImport", "delimiter", form)
+@inputText("csvDataSetImport", "eol", form)
+@inputText("csvDataSetImport", "charsetName", form)
+@checkbox("csvDataSetImport", "matchQuotes", form)
+@checkbox("csvDataSetImport", "inferFieldTypes", form)
+@inputText("csvDataSetImport", "inferenceMaxEnumValuesCount", form)
+@inputText("csvDataSetImport", "inferenceMinAvgValuesPerEnum", form)
+@inputText("csvDataSetImport", "arrayDelimiter", form)
+@checkbox("csvDataSetImport", "booleanIncludeNumbers", form)
+@inputText("csvDataSetImport", "saveBatchSize", form)
+
+<script type="text/javascript">
+    $('form').submit(function(ev) {
+        ev.preventDefault();
+
+        var importLocalFile = $('input[name="sourceChoice"]:checked').val() == "1"
+        if (importLocalFile)
+            // if local file provided remove the path field by erasing its name
+            $('#path').attr("name", '');
+        else
+            // otherwise remove the import file field
+            $('#dataFile').attr("name", '');
+
+        this.submit();
+    });
+</script>

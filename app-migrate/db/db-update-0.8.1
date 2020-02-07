@@ -1,0 +1,41 @@
+db.getCollection('dataset_settings').update({},
+	{$set:{"extraNavigationItems":[]}},
+	{multi: true}
+)
+
+
+db.getCollection('dataset_imports').update({'setting': {$exists: true}},
+	{$set:{"setting.extraNavigationItems":[]}},
+    {multi: true}
+)
+
+
+db.getCollection('dictionaries').find({'classificationResults': {$exists: true}}).forEach(function(item)
+{
+    var toUpdate = false
+    for(i = 0; i != item.classificationResults.length; ++i)
+    {
+	var result = item.classificationResults[i];
+	result["runSpec-learningSetting-collectOutputs"] = false;
+        toUpdate = true;
+    }
+
+    if (toUpdate) {
+        db.getCollection('dictionaries').save(item);
+    }
+})
+
+db.getCollection('dataset_settings').update({},
+	{$set:{"showSideCategoricalTree":true}},
+	{multi: true}
+)
+
+db.getCollection('dataset_imports').update({'setting': {$exists: true}},
+	{$set:{"setting.showSideCategoricalTree":true}},
+    {multi: true}
+)
+
+db.getCollection('users').update({},
+	{$set:{"locked":false}},
+    {multi: true}
+)
