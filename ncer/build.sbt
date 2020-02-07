@@ -1,18 +1,9 @@
 import com.github.play2war.plugin._
 import PlayKeys._
 
-organization := "org.adada"
-
 name := "ada-web-ncer"
 
-version := "0.8.1"
-
 scalaVersion := "2.11.12"
-
-//Play2WarPlugin.play2WarSettings
-//Play2WarKeys.servletVersion := "3.1"
-
-lazy val root = (project in file(".")).enablePlugins(PlayScala, SbtWeb)
 
 libraryDependencies ++= Seq(cache, ws, filters)
 
@@ -36,8 +27,6 @@ routesImport ++= Seq(
 val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-web" % "0.8.1",
-  "org.adada" %% "ada-web" % "0.8.1" classifier "assets",
   "org.adada" %% "ada-dream-pd-challenge" % "0.1.0",
   "org.in-cal" %% "incal-dl4j" % "0.2.3",   // DL4J
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",

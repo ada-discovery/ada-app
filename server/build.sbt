@@ -1,16 +1,10 @@
 import com.typesafe.sbt.license.{DepModuleInfo, LicenseInfo}
 
-organization := "org.adada"
-
 name := "ada-server"
-
-version := "0.8.1"
 
 description := "Server side of Ada Discovery Analytics containing a persistence layer, stats and data import/transformation services, and util classes."
 
-isSnapshot := false
-
-scalaVersion := "2.11.12"
+licenses += "Apache 2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
 
 resolvers ++= Seq(
   "Sci Java" at "https://maven.scijava.org/content/repositories/public/", // for the T-SNE lib
@@ -18,7 +12,6 @@ resolvers ++= Seq(
 )
 
 val playVersion = "2.5.9"
-
 libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play" % playVersion,
   "com.typesafe.play" %% "play-json" % playVersion,
@@ -154,28 +147,3 @@ licenseOverrides := {
   =>
     LicenseInfo(LicenseCategory.Unrecognized, "UnboundID LDAP SDK Free Use License", "https://github.com/pingidentity/ldapsdk/blob/master/LICENSE-UnboundID-LDAPSDK.txt")
 }
-
-
-// POM settings for Sonatype
-
-homepage := Some(url("https://ada-discovery.github.io"))
-
-publishMavenStyle := true
-
-scmInfo := Some(ScmInfo(url("https://github.com/ada-discovery/ada-server"), "scm:git@github.com:ada-discovery/ada-server.git"))
-
-developers := List(
-  Developer("bnd", "Peter Banda", "peter.banda@protonmail.com", url("https://peterbanda.net")),
-  Developer("sherzinger", "Sascha Herzinger", "sascha.herzinger@uni.lu", url("https://wwwfr.uni.lu/lcsb/people/sascha_herzinger"))
-)
-
-licenses += "Apache 2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
-
-publishTo := Some(
-  if (isSnapshot.value)
-    Opts.resolver.sonatypeSnapshots
-  else
-    Opts.resolver.sonatypeStaging
-)
-
-fork in Test := true

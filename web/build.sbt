@@ -4,19 +4,14 @@ import com.typesafe.sbt.license.{DepModuleInfo, LicenseInfo}
 import com.typesafe.sbt.pgp.PgpKeys._
 import sbt.ExclusionRule
 
-organization := "org.adada"
-
 name := "ada-web"
-
-// load version from the app config
-val conf = ConfigFactory.parseFile(new java.io.File("conf/application.conf")).resolve()
-version := conf.getString("app.version")
 
 description := "Web part of Ada Discovery Analytics backed by Play Framework."
 
-isSnapshot := false
-
-scalaVersion := "2.11.12"
+licenses ++= Seq(
+  "Creative Commons Attribution-NonCommercial 3.0" -> url("http://creativecommons.org/licenses/by-nc/3.0"),
+  "Highcharts" -> url("https://www.highcharts.com/blog/products/highcharts")
+)
 
 resolvers ++= Seq(
   Resolver.mavenLocal
@@ -28,15 +23,12 @@ routesImport ++= Seq(
   "org.ada.web.controllers.QueryStringBinders._"
 )
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala, SbtWeb)
-
 PlayKeys.devSettings := Seq(
   "play.server.netty.maxInitialLineLength" -> "16384"
   //   "play.server.netty.transport" -> "jdk" // uncomment for MacOS
 )
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-server" % "0.8.1",
   "org.in-cal" %% "incal-play" % "0.2.4",
   "com.typesafe.play" %% "play-mailer" % "6.0.1",        // to send emails
   "com.typesafe.play" %% "play-mailer-guice" % "6.0.1",  // to send emails (Guice)
@@ -57,7 +49,6 @@ libraryDependencies ++= Seq(
 ) map { _.excludeAll(ExclusionRule(organization = "org.slf4j")) }
 
 val jacksonVersion = "2.8.8"
-
 // Jackson overrides because of Spark
 dependencyOverrides ++= Set(
   "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion,
@@ -221,30 +212,3 @@ licenseOverrides := {
   =>
     LicenseInfo(LicenseCategory.Unrecognized, "UnboundID LDAP SDK Free Use License", "https://github.com/pingidentity/ldapsdk/blob/master/LICENSE-UnboundID-LDAPSDK.txt")
 }
-
-// POM settings for Sonatype
-
-homepage := Some(url("https://ada-discovery.github.io"))
-
-publishMavenStyle := true
-
-scmInfo := Some(ScmInfo(url("https://github.com/ada-discovery/ada-web"), "scm:git@github.com:ada-discovery/ada-web.git"))
-
-developers := List(
-  Developer("bnd", "Peter Banda", "peter.banda@protonmail.com", url("https://peterbanda.net")),
-  Developer("sherzinger", "Sascha Herzinger", "sascha.herzinger@uni.lu", url("https://wwwfr.uni.lu/lcsb/people/sascha_herzinger"))
-)
-
-licenses ++= Seq(
-  "Creative Commons Attribution-NonCommercial 3.0" -> url("http://creativecommons.org/licenses/by-nc/3.0"),
-  "Highcharts" -> url("https://www.highcharts.com/blog/products/highcharts")
-)
-
-publishTo := Some(
-  if (isSnapshot.value)
-    Opts.resolver.sonatypeSnapshots
-  else
-    Opts.resolver.sonatypeStaging
-)
-
-fork in Test := true
