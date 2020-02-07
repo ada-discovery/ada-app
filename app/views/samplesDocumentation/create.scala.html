@@ -1,0 +1,50 @@
+@import views.html.layout
+@import views.html.elements.editableTextElements
+@import org.ada.server.models.Translation
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
+@import org.ada.web.util.typeColumns
+@import org.ada.web.controllers.routes
+@import views.html.elements._
+@import org.incal.play.Page
+@import org.ada.server.models.FilterShowFieldStyle
+@import org.ada.web.controllers.dataset.routes
+@import org.ada.web.security.AdaAuthConfig
+@import views.html.table.{dynamicStringTable, dynamicTableJsImport, dynamicTable}
+@import views.html.helper.input
+@import views.html.table.dynamicStringTable
+@import views.html.table.paginatedTable
+@import views.html.dataset.{dynamicFieldTable, dataSetExportDropdown}
+@import views.html.table.dynamicTableJsImport
+@import reactivemongo.bson.BSONObjectID
+@import org.incal.play.controllers.{GenericJsRouter, GenericRouter}
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import views.html.dataset.view.{viewExportDropdown, viewTables, viewCountFilters}
+@import views.html.layout.formErrors
+
+@(
+	form: Form[SampleDocumentation]
+)(
+    implicit context: WebContext
+)
+
+@elements = {
+	@labelValue("sampleDocument", "Dataset Id") {
+		<input type="text" name="dataSetId">
+	}
+
+	@labelValue("sampleDocument", "Document") {
+		<input type="file" name="samples-document">
+	}
+}
+
+@layout.create(
+	"Samples documentation",
+	"samples documentation",
+	form = form,
+	elements = elements,
+	saveCall = controllers.orderrequest.routes.DocumentationController.save(),
+	listCall = controllers.orderrequest.routes.DocumentationController.listAll(),
+	None,
+	Seq('enctype -> "multipart/form-data")
+)

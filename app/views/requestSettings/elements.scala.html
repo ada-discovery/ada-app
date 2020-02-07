@@ -1,0 +1,29 @@
+@import views.html.table.dynamicTableJsImport
+@import views.html.elements._
+@import views.html.requestSettings.dynamicUserTable
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import org.ada.web.controllers.dataset.DataSetWebContext._
+@import reactivemongo.bson.BSONObjectID
+@import org.ada.server.models.User
+
+@(
+    form: Form[BatchOrderRequestSetting],
+    idUserMap: Map[BSONObjectID, User]
+)(
+    implicit context: DataSetWebContext
+)
+
+@labelValue("dataSetId", attributeLabel("requestSetting", "dataSetId")) {
+    <input id="dataSetId" name="dataSetId" value="@context.dataSetId" readonly="true">
+}
+
+@dynamicTableJsImport()
+
+@labelValue("committeeUserIds", "Committee Users") {
+    @dynamicUserTable(
+        "committeeUserId",
+        form.value.map(_.committeeUserIds).getOrElse(Nil).flatMap(idUserMap.get(_))
+    )
+}
+
+@inputTypeahead("dataView", "viewId", "viewNameTypeahead", form, "Data View")

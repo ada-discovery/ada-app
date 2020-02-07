@@ -1,0 +1,46 @@
+@import org.ada.web.util.typeColumns
+@import org.incal.core.FilterCondition
+@import org.incal.play.Page
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
+@import views.html.layout
+@import views.html.filter.{filter, filterWithJs}
+@import views.html.table.paginatedTable
+@import reactivemongo.bson.BSONObjectID
+@import org.incal.core.ConditionType
+@import org.ada.server.models.{User,Field,FilterShowFieldStyle,Filter}
+@import views.html.requests.requestTable
+@import controllers.orderrequest.routes.{ BatchOrderRequestController => requestRoutes }
+
+@(
+    page: Page[(BatchOrderRequest, Option[String], Call )],
+    conditions: Seq[FilterCondition]
+)(
+    implicit context: WebContext
+)
+
+@actions = {
+    <div class="row">
+        <div class="col-md-8">
+            @filterWithJs(
+                Filter(conditions),
+                requestRoutes.find(),
+                Left(Seq(
+                    Field("state", Some("Status")),
+                    Field("dataSetId", Some("Dataset Id"))
+                )),
+                None,
+                Some(FilterShowFieldStyle.LabelsOnly)
+            )
+        </div>
+    </div>
+}
+
+@layout.list(
+    "request",
+    None,
+    page.total,
+    Some(actions),
+    Some(requestTable(page, conditions, requestRoutes.find(_, _, conditions))),
+    None
+)

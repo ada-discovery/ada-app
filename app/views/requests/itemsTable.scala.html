@@ -1,0 +1,19 @@
+@import play.api.libs.json.{JsObject, JsNull}
+@import views.html.table.{header, displayTable}
+@import views.html.table.paginatedTable
+@import org.ada.web.util._
+@import org.ada.web.controllers.dataset.TableViewData
+
+@(
+    items: Traversable[Seq[String]],
+    fieldLabels: Seq[String]
+)
+
+@displayTable(
+    items,
+    typeColumns[Seq[String]](
+        fieldLabels.zipWithIndex.map { case (fieldLabel, index) =>
+            (None, fieldLabel, (_: Seq[String])(index))
+        } :_*
+    )
+)

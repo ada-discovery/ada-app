@@ -1,0 +1,23 @@
+@import java.util.Date
+@import org.incal.core.util.toHumanReadableCamel
+
+@(
+        notificationInfo: NotificationInfo
+)
+
+Dear @notificationInfo.targetUser,<br>
+as @notificationInfo.userRole, please be informed that the status of a request changed,<br>
+<b>you are now required to do an action in Ada at the following url <a href="@notificationInfo.getRequestUrl">@notificationInfo.getRequestUrl</a></b><br>
+@if(notificationInfo.possibleActions.size>1) {
+   where you will have to perform one of the following actions: <b>@notificationInfo.possibleActions</b><br>
+} else {
+   where you will have to perform the following action: <b>@notificationInfo.possibleActions</b><br>
+}
+please find below the current status:<br>
+requester: @notificationInfo.createdByUser<br>
+dataset Id: @notificationInfo.dataSetId<br>
+created on date: @notificationInfo.creationDate<br>
+status change: <b>from @toHumanReadableCamel(notificationInfo.fromState.toString) to @toHumanReadableCamel(notificationInfo.toState.toString())</b><br>
+status changed on date: @notificationInfo.updateDate<br>
+updated by user: <b>@notificationInfo.updatedByUser</b><br><br>
+Best regards, Ada Team

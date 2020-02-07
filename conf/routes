@@ -1,0 +1,50 @@
+# Routes
+
+->          /                                                   core.Routes
+->          /pdChallenge                                        pdchallenge.Routes
+
+#RC predictions (to remove)
+GET         /admin/showRCPrediction                             controllers.ml.RCPredictionController.showRCPrediction
+POST        /admin/runRCPrediction                              controllers.ml.RCPredictionController.runRCPrediction
+
+
+# Requests Settings
+GET         /requestSettings                                    controllers.orderrequest.BatchOrderRequestSettingController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /requestSettings/all                                controllers.orderrequest.BatchOrderRequestSettingController.listAll(s: String ?= "timeCreated")
+GET         /requestSettings/new                                controllers.orderrequest.BatchOrderRequestSettingController.create
+POST        /requestSettings/save                               controllers.orderrequest.BatchOrderRequestSettingController.save
+GET         /requestSettings/get/:id                            controllers.orderrequest.BatchOrderRequestSettingController.get(id: BSONObjectID)
+GET         /requestSettings/edit:id                            controllers.orderrequest.BatchOrderRequestSettingController.edit(id: BSONObjectID)
+POST        /requestSettings/update/:id                         controllers.orderrequest.BatchOrderRequestSettingController.update(id: BSONObjectID)
+POST        /requestSettings/delete/:id                         controllers.orderrequest.BatchOrderRequestSettingController.delete(id: BSONObjectID)
+GET         /requestSettings/dataSetIds                         controllers.orderrequest.BatchOrderRequestSettingController.dataSetIds
+GET         /requestSettings/userIdAndNames                     controllers.orderrequest.BatchOrderRequestSettingController.userIdAndNames
+POST        /requestSettings/addAdmin                           controllers.orderrequest.BatchOrderRequestSettingController.addAdmin
+
+# Batch-order Requests
+GET         /requests/new                                       controllers.orderrequest.BatchOrderRequestController.createNew(dataSet: String)
+POST        /requests/save                                      controllers.orderrequest.BatchOrderRequestController.saveNew(dataSet: String)
+GET         /requests                                           controllers.orderrequest.BatchOrderRequestController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /requests/active                                    controllers.orderrequest.BatchOrderRequestController.findActive(p1: Option[Int] ?= None, p2: Option[Int] ?= None, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+POST        /requests/getRequestTable                           controllers.orderrequest.BatchOrderRequestController.getRequestTable(p1: Option[Int] ?= None, p2: Option[Int] ?= None, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /requests/all                                       controllers.orderrequest.BatchOrderRequestController.listAll(s: String ?= "timeCreated")
+GET         /requests/:id/get                                   controllers.orderrequest.BatchOrderRequestController.get(id: BSONObjectID)
+GET         /requests/:id/edit                                  controllers.orderrequest.BatchOrderRequestController.edit(id: BSONObjectID)
+GET         /requests/:id/action                                controllers.orderrequest.BatchOrderRequestController.action(id: BSONObjectID, role: models.Role.Value)
+POST        /requests/:id                                       controllers.orderrequest.BatchOrderRequestController.update(id: BSONObjectID)
+POST        /requests/:id/delete                                controllers.orderrequest.BatchOrderRequestController.delete(id: BSONObjectID)
+POST        /requests/:id/performAction                         controllers.orderrequest.BatchOrderRequestController.performAction(id: BSONObjectID, action: models.RequestAction.Value, role: models.Role.Value, description: Option[String] ?= None)
+
+# Sample docs
+GET         /samplesDocumentation                               controllers.orderrequest.DocumentationController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /samplesDocumentation/all                           controllers.orderrequest.DocumentationController.listAll(s: String ?= "original")
+GET         /samplesDocumentation/new                           controllers.orderrequest.DocumentationController.create
+POST        /samplesDocumentation/save                          controllers.orderrequest.DocumentationController.save
+
+GET         /samplesDocumentation/dataSetId/:dataSetId/get      controllers.orderrequest.DocumentationController.getByDataSetId(dataSetId :String)
+GET         /samplesDocumentation/dataSetId/:dataSetId          controllers.orderrequest.DocumentationController.download(dataSetId: String)
+
+GET         /samplesDocumentation/:id/get                       controllers.orderrequest.DocumentationController.get(id: BSONObjectID)
+GET         /samplesDocumentation/:id/edit                      controllers.orderrequest.DocumentationController.edit(id: BSONObjectID)
+POST        /samplesDocumentation/:id                           controllers.orderrequest.DocumentationController.update(id: BSONObjectID)
+POST        /samplesDocumentation/:id/delete                    controllers.orderrequest.DocumentationController.delete(id: BSONObjectID)

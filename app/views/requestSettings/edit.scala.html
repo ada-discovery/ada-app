@@ -1,0 +1,32 @@
+@import views.html.layout
+@import org.ada.web.controllers.routes
+@import reactivemongo.bson.BSONObjectID
+@import  org.ada.server.models._
+@import views.html.requestSettings.{elements, bottomJsResources}
+@import views.html.dataset.{datasetMenu, datasetSubNav, datasetSubNavJs}
+@import controllers.orderrequest.routes.{BatchOrderRequestSettingController => settingRoutes}
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import org.ada.web.controllers.dataset.DataSetWebContext._
+
+@(
+    id: BSONObjectID,
+    form: Form[BatchOrderRequestSetting],
+    idUserMap: Map[BSONObjectID, User],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
+    dataSetSetting: DataSetSetting
+)(
+    implicit context: DataSetWebContext
+)
+
+@layout.edit(
+    "Request setting",
+    "requestSetting",
+    errors = form.errors,
+    elements = elements(form, idUserMap),
+    updateCall = settingRoutes.update(id),
+    cancelCall = settingRoutes.find(),
+    deleteCall = Some(settingRoutes.delete(id)),
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    Some(datasetSubNav(dataSetSetting)),
+    bottomResources = Some(bottomJsResources())
+)

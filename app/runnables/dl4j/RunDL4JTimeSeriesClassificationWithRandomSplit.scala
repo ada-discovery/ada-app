@@ -1,0 +1,6 @@
+package runnables.dl4j
+
+import org.incal.core.runnables.InputRunnableExt
+import org.incal.dl4j.{DL4JHelper, TimeSeriesClassificationWithRandomSplitSpec}
+
+class RunDL4JTimeSeriesClassificationWithRandomSplit extends InputRunnableExt[TimeSeriesClassificationWithRandomSplitSpec] with DL4JHelper

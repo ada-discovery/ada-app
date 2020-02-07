@@ -1,0 +1,61 @@
+@import org.ada.web.util.typeColumns
+@import org.incal.core.FilterCondition
+@import org.incal.play.Page
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
+@import views.html.layout
+@import views.html.filter.{filter, filterWithJs}
+@import views.html.table.paginatedTable
+@import reactivemongo.bson.BSONObjectID
+@import org.incal.core.ConditionType
+@import org.ada.server.models.{User,Field,FilterShowFieldStyle,Filter}
+@import views.html.requests.requestTable
+
+@(
+    page: Page[(SampleDocumentation, String)],
+    conditions: Seq[FilterCondition]
+)(
+    implicit context: WebContext
+)
+
+    @actions = {
+        <div class="row">
+            <div class="pull-right">
+                <div class="dropdown">
+                    <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Actions
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a href="@controllers.orderrequest.routes.DocumentationController.create()">
+                                Add a new document
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    }
+
+    @table = @{
+        paginatedTable(
+            page,
+            controllers.orderrequest.routes.DocumentationController.find(_, _, conditions),
+            typeColumns[(SampleDocumentation, String)](
+                (Some("dataSetId"), "Dataset id", _._1.dataSetId),
+                (Some("timeUpdated"), "Time updated", _._1.timeUpdated),
+                (None, "Document name", _._2)
+            ),
+            Some({ item: Any => controllers.orderrequest.routes.DocumentationController.edit(item.asInstanceOf[(SampleDocumentation, String)]._1._id.get) })
+        )
+    }
+
+    @layout.list(
+        "sample documentation",
+        None,
+        page.total,
+        Some(actions),
+        Some(table),
+        None
+    )

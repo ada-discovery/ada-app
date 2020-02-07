@@ -1,0 +1,78 @@
+@import org.ada.web.util.typeColumns
+@import org.incal.core.FilterCondition
+@import org.incal.play.Page
+@import org.incal.play.controllers.WebContext
+@import org.incal.play.controllers.WebContext._
+@import views.html.layout
+@import views.html.table.paginatedTable
+@import org.ada.server.models.{User,Field ,FilterShowFieldStyle,Filter}
+@import views.html.filter.{filter, filterWithJs}
+@import views.html.requests.{requestTable, toApproveRequestTable, createdRequestTable}
+@import controllers.orderrequest.routes.{ BatchOrderRequestController => requestRoutes }
+
+@(
+    page: Page[(BatchOrderRequest, Option[String], Call)],
+    pageType: PageType.Value,
+    conditions: Seq[FilterCondition],
+    countBackground: Int
+)(
+    implicit context: WebContext
+)
+
+@actions = {
+    <div class="row">
+        <div class="col-md-8">
+            @filterWithJs(
+                Filter(conditions),
+                requestRoutes.findActive(),
+                Left(Seq(
+                    Field("state", Some("Status")),
+                    Field("dataSetId", Some("Dataset Id")),
+                    Field("timeCreated", Some("Time Created"))
+                )),
+                None,
+                Some(FilterShowFieldStyle.LabelsOnly)
+            )
+        </div>
+    </div>
+}
+
+@table = @{
+    pageType match {
+         case PageType.ToApprove =>
+            toApproveRequestTable(page, conditions)
+
+         case PageType.Created =>
+            createdRequestTable(page, conditions)
+    }
+}
+
+@requestsSelector = {
+    <ul id="requestsSubMenu" class="nav nav-tabs">
+        @* TODO: this is a weird approach. Normally I would expect that these tabs get populated at once and tab switching only shows and hides their content (without refresh) *@
+        @if((pageType == PageType.ToApprove && countBackground>0) || pageType == PageType.Created) {
+            <li @if(pageType == PageType.Created) { class="active" }>
+                <a href="@requestRoutes.findActive(Some(0), None, "", conditions)">
+                    My own Requests@if(pageType == PageType.ToApprove) {(@countBackground)}
+                </a>
+            </li>
+        }
+
+        @if((pageType == PageType.Created && countBackground>0) || pageType == PageType.ToApprove) {
+            <li @if(pageType == PageType.ToApprove) { class="active" }>
+                <a href="@requestRoutes.findActive(None, Some(0), "", conditions)">
+                    Requests to be responsible for@if(pageType == PageType.Created) {(@countBackground)}
+                </a>
+            </li>
+        }
+    </ul>
+}
+
+@layout.list(
+    "request",
+    None,
+    page.total,
+    Some(actions),
+    Some(table),
+    topContentBar = Some(requestsSelector)
+)
