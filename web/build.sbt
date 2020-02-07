@@ -46,7 +46,7 @@ libraryDependencies ++= Seq(
   "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.+" % "test",
   // Because of Spark (turning janino logging to warn: https://github.com/janino-compiler/janino/issues/13)
   "ch.qos.logback" % "logback-classic" % "1.2.3"
-) map { _.excludeAll(ExclusionRule(organization = "org.slf4j")) }
+) map { _.exclude("org.slf4j","slf4j-log4j12") }
 
 val jacksonVersion = "2.8.8"
 // Jackson overrides because of Spark

@@ -32,7 +32,7 @@ libraryDependencies ++= Seq(
   "org.scalanlp" %% "breeze-natives" % "0.13.2",                                                    // linear algebra and stuff (native)
   //  "org.scalanlp" %% "breeze-viz" % "0.13.2",    // breeze visualization
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
-)
+) map { _.exclude("org.slf4j","slf4j-log4j12") }
 
 // For licenses not automatically downloaded (need to list them manually)
 licenseOverrides := {
