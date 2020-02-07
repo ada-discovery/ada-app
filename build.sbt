@@ -1,9 +1,9 @@
 name := "ada-app"
 
-ThisBuild / organization := "org.adada"
-ThisBuild / scalaVersion := "2.11.12"
-ThisBuild / version := "0.9.0-SNAPSHOT"
-ThisBuild / isSnapshot := true
+organization in ThisBuild := "org.adada"
+scalaVersion in ThisBuild := "2.11.12"
+version in ThisBuild := "0.9.0-SNAPSHOT"
+isSnapshot in ThisBuild := true
 
 lazy val server = project
 
@@ -17,17 +17,17 @@ lazy val ncer = project
   .aggregate(web)
   .dependsOn(web)
 
-Test / fork := true
+fork in Test := true
 
 // POM settings for Sonatype
-ThisBuild / homepage := Some(url("https://ada-discovery.github.io"))
-ThisBuild / publishMavenStyle := true
-ThisBuild / scmInfo := Some(ScmInfo(url("https://github.com/ada-discovery/ada-server"), "scm:git@github.com:ada-discovery/ada-server.git"))
-ThisBuild / developers := List(
+homepage in ThisBuild := Some(url("https://ada-discovery.github.io"))
+publishMavenStyle in ThisBuild := true
+scmInfo in ThisBuild := Some(ScmInfo(url("https://github.com/ada-discovery/ada-server"), "scm:git@github.com:ada-discovery/ada-server.git"))
+developers in ThisBuild := List(
   Developer("bnd", "Peter Banda", "peter.banda@protonmail.com", url("https://peterbanda.net")),
   Developer("sherzinger", "Sascha Herzinger", "sascha.herzinger@uni.lu", url("https://wwwfr.uni.lu/lcsb/people/sascha_herzinger"))
 )
-ThisBuild / publishTo := Some(
+publishTo in ThisBuild := Some(
   if (isSnapshot.value)
     Opts.resolver.sonatypeSnapshots
   else
