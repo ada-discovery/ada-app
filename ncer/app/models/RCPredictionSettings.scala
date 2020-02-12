@@ -1,11 +1,9 @@
 package org.ada.server.models
 
-import org.incal.core.util.ReflectionUtil
 import org.ada.server.json.{EnumFormat, FlattenFormat, JavaOrdinalEnumFormat, OrdinalSortedEnumFormat}
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import org.ada.server.field.FieldUtil
 import java.{util => ju}
 
 import com.bnd.network.domain.{ActivationFunctionType, ReservoirLearningSetting}

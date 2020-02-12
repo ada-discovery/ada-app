@@ -59,6 +59,10 @@
             </list>
         </property>
 
+        <property name="classLoader">
+            <bean class="org.ada.server.dataaccess.ignite.CurrentThreadClassLoaderFactory"/>
+        </property>
+
         <!--
         <property name="marshaller">
             <bean class="org.apache.ignite.marshaller.optimized.OptimizedMarshaller">
