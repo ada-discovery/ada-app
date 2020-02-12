@@ -87,7 +87,7 @@ object GenericMapping {
       applySimpleType(typ)
 
   def applySimpleType[T](typ: Type): Mapping[T] = {
-    val currentMirror = newMirror(currentThreadClassLoader)
+    val currentMirror = newCurrentThreadMirror
 
     genericMapping(typ, currentMirror).asInstanceOf[Mapping[T]]
   }

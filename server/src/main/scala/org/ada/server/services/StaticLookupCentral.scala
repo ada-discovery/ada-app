@@ -1,7 +1,7 @@
 package org.ada.server.services
 
 import org.ada.server.util.ClassFinderUtil.findClasses
-import org.incal.core.util.ReflectionUtil.{currentThreadClassLoader, newMirror, staticInstance}
+import org.incal.core.util.ReflectionUtil.{currentThreadClassLoader, newCurrentThreadMirror, newMirror, staticInstance}
 
 import scala.reflect.ClassTag
 
@@ -13,7 +13,7 @@ class StaticLookupCentralImpl[T: ClassTag](
 ) extends StaticLookupCentral[T]{
 
   def apply = {
-    val currentMirror = newMirror(currentThreadClassLoader)
+    val currentMirror = newCurrentThreadMirror
 
     findClasses[T](Some(lookupPackageName), exactPackageMatch).flatMap { importerClazz =>
       try {

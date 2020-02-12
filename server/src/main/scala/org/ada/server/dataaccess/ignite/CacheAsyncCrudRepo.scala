@@ -2,7 +2,6 @@ package org.ada.server.dataaccess.ignite
 
 import javax.cache.configuration.Factory
 import javax.inject.Inject
-
 import org.ada.server.dataaccess.mongo.{MongoAsyncCrudRepo, ReactiveMongoApi}
 import org.ada.server.dataaccess._
 import org.ada.server.dataaccess.ignite.BinaryJsonUtil.unescapeFieldName
@@ -15,10 +14,8 @@ import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{Format, JsResult, JsValue}
 
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.reflect.runtime.universe._
-import scala.reflect.runtime.{universe => ru}
+import scala.reflect.runtime.universe.{TypeTag, typeOf}
 import scala.reflect.ClassTag
 
 private class CacheAsyncCrudRepo[ID, E: TypeTag](
@@ -57,7 +54,10 @@ private class CacheAsyncCrudRepo[ID, E: TypeTag](
 
     results.map { result =>
       // TODO: which one is faster? First or second constructor call?
-      constructor(fieldNames.zip(result).toMap).get
+      constructor(fieldNames.zip(result).toMap).getOrElse(
+        throw new IllegalArgumentException(s"Constructor of the class '${constructorFinder.classSymbol.fullName}' with the fields '${fieldNames.mkString(", ")}' returned a null item.")
+      )
+
 //      constructor(result).get
     }
   }

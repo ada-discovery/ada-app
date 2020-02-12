@@ -4,11 +4,13 @@ import javax.inject.Inject
 import org.ada.server.models.redcap.LockRecordResponse
 import org.ada.server.services.importers.{RedCapLockAction, RedCapServiceFactory}
 import org.incal.core.runnables.{InputFutureRunnableExt, RunnableHtmlOutput}
-import org.incal.core.util.ReflectionUtil.getCaseClassMemberNamesAndValues
+import org.incal.core.util.ReflectionUtil.{getCaseClassMemberNamesAndValues, newCurrentThreadMirror}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class LockRedCapRecordAtCustomHost @Inject()(factory: RedCapServiceFactory) extends InputFutureRunnableExt[LockRedCapRecordAtCustomHostSpec] with RunnableHtmlOutput {
+
+  private val currentMirror = newCurrentThreadMirror
 
   override def runAsFuture(input: LockRedCapRecordAtCustomHostSpec) = {
     val redCapService = factory(input.url, input.token)
@@ -23,7 +25,7 @@ class LockRedCapRecordAtCustomHost @Inject()(factory: RedCapServiceFactory) exte
         responses.toSeq.sortBy(_.instrument).foreach { response =>
           addParagraph(bold(s"instrument: ${response.instrument}"))
 
-          val fieldValues = getCaseClassMemberNamesAndValues(response).filter(_._1 != "instrument").toSeq.sortBy(_._1)
+          val fieldValues = getCaseClassMemberNamesAndValues(response, currentMirror).filter(_._1 != "instrument").toSeq.sortBy(_._1)
 
           fieldValues.foreach { case (fieldName, value) =>
             val stringValue = value match {

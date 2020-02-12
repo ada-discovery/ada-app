@@ -3,7 +3,8 @@ package org.ada.web
 import org.ada.server.dataaccess.JsonUtil
 import org.ada.server.models._
 import org.ada.web.models._
-import org.incal.core.util.toHumanReadableCamel
+import org.incal.core.util.ReflectionUtil._
+import org.incal.core.util.{ReflectionUtil, toHumanReadableCamel}
 import org.incal.core.{ConditionType, FilterCondition}
 import play.api.libs.json.{Json, Writes}
 import play.twirl.api.Html
@@ -11,6 +12,8 @@ import play.twirl.api.Html
 import scala.collection.Traversable
 
 package object util {
+
+  private val currentMirror = newCurrentThreadMirror // a new mirror using a current-thread class loader
 
   def shorten(string : String, length: Int = 25) =
     if (string.length > length) string.substring(0, length - 2) + "..." else string
@@ -158,4 +161,9 @@ package object util {
 
   def toJsonHtml[T](o: T)(implicit tjs: Writes[T]): Html =
     Html(Json.stringify(Json.toJson(o)))
+
+  def getCaseClassMemberAndTypeNames(className: String): Traversable[(String, String)] = {
+    val runtimeType = classNameToRuntimeType(className, currentMirror)
+    ReflectionUtil.getCaseClassMemberAndTypeNames(runtimeType)
+  }
 }

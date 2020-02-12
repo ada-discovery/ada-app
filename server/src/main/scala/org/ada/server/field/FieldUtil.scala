@@ -10,7 +10,7 @@ import org.ada.server.dataaccess.RepoTypes.FieldRepo
 import org.ada.server.field.{FieldType, FieldTypeHelper}
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.incal.core.util.ReflectionUtil
-import org.incal.core.util.ReflectionUtil.currentThreadClassLoader
+import org.incal.core.util.ReflectionUtil.{currentThreadClassLoader, newCurrentThreadMirror}
 import org.ada.server.models.FieldTypeSpec
 import org.incal.core.FilterCondition
 import org.incal.core.FilterCondition.{toCriteria, toCriterion}
@@ -80,7 +80,7 @@ object FieldUtil {
     val memberNamesAndTypes = ReflectionUtil.getCaseClassMemberNamesAndTypes(typ).filter(x => !excludedFieldSet.contains(x._1))
 
     // create a new mirror using the current thread for reflection
-    val currentMirror = ReflectionUtil.newMirror(currentThreadClassLoader)
+    val currentMirror = newCurrentThreadMirror
 
     memberNamesAndTypes.map { case (fieldName, memberType) =>
       try {

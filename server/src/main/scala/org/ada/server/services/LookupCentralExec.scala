@@ -3,7 +3,7 @@ package org.ada.server.services
 import org.ada.server.AdaException
 import org.ada.server.util.ClassFinderUtil.findClasses
 import org.incal.core.runnables.InputFutureRunnable
-import org.incal.core.util.ReflectionUtil.classNameToRuntimeType
+import org.incal.core.util.ReflectionUtil.{classNameToRuntimeType, currentThreadClassLoader, newCurrentThreadMirror, newMirror}
 import play.api.inject.Injector
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -17,6 +17,8 @@ abstract protected[services] class LookupCentralExecImpl[IN, E <: InputFutureRun
   execName: String
 ) extends LookupCentralExec[IN] {
 
+  private val currentMirror = newCurrentThreadMirror
+
   protected val injector: Injector
 
   private val inputInstanceMap =
@@ -26,7 +28,7 @@ abstract protected[services] class LookupCentralExecImpl[IN, E <: InputFutureRun
     }
 
   override def apply(input: IN): Future[Unit] = {
-    val inputType = classNameToRuntimeType(input.getClass.getName)
+    val inputType = classNameToRuntimeType(input.getClass.getName, currentMirror)
 
     val (_, executor) = inputInstanceMap.find { case (execInputType, _) => execInputType =:= inputType }.getOrElse(
       throw new AdaException(s"No $execName found for the input type ${inputType.typeSymbol.fullName}.")
