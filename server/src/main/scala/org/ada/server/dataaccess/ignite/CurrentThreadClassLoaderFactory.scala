@@ -2,6 +2,7 @@ package org.ada.server.dataaccess.ignite
 
 import org.springframework.beans.factory.FactoryBean
 
+@Deprecated
 class CurrentThreadClassLoaderFactory extends FactoryBean[ClassLoader] {
 
   override def getObject: ClassLoader =
