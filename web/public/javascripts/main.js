@@ -15,21 +15,21 @@ function submit(method, action, parameters) {
 function addParams(form, parameters) {
   $.each(parameters, function(key, value) {
     function addField(val) {
-        var field = $('<input></input>');
+      var field = $('<input></input>');
 
-        field.attr("type", "hidden");
-        field.attr("name", key);
-        field.attr("value", val);
+      field.attr("type", "hidden");
+      field.attr("name", key);
+      field.attr("value", val);
 
-        form.append(field);
+      form.append(field);
     }
 
     if (Array.isArray(value)) {
-        $.each(value, function(index, val) {
-            addField(val);
-        });
+      $.each(value, function(index, val) {
+        addField(val);
+      });
     } else {
-        addField(value);
+      addField(value);
     }
   });
 }
@@ -39,8 +39,8 @@ function getQueryParams(qs) {
   qs = qs.split("?").slice(1).join("?");
 
   var params = {},
-      tokens,
-      re = /[?&]?([^=]+)=([^&]*)/g;
+    tokens,
+    re = /[?&]?([^=]+)=([^&]*)/g;
 
 
   while (tokens = re.exec(qs)) {
@@ -49,207 +49,212 @@ function getQueryParams(qs) {
     var existingValue = params[paramName];
 
     if (existingValue) {
-        if (Array.isArray(existingValue)) {
-            existingValue.push(value)
-            params[paramName] = existingValue;
-        } else {
-            params[paramName] = [existingValue, value]
-        }
+      if (Array.isArray(existingValue)) {
+        existingValue.push(value)
+        params[paramName] = existingValue;
+      } else {
+        params[paramName] = [existingValue, value]
+      }
     } else
-        params[paramName] = value;
+      params[paramName] = value;
   }
 
   return params;
 }
 
 function addUrlParm(url, name, value) {
-    var re = new RegExp("([?&]" + name + "=)[^&]+", "");
+  var re = new RegExp("([?&]" + name + "=)[^&]+", "");
 
-    function add(sep) {
-        url += sep + name + "=" + encodeURIComponent(value);
-    }
+  function add(sep) {
+    url += sep + name + "=" + encodeURIComponent(value);
+  }
 
-    function change() {
-        url = url.replace(re, "$1" + encodeURIComponent(value));
-    }
-    if (url.indexOf("?") === -1) {
-        add("?");
+  function change() {
+    url = url.replace(re, "$1" + encodeURIComponent(value));
+  }
+  if (url.indexOf("?") === -1) {
+    add("?");
+  } else {
+    if (re.test(url)) {
+      change();
     } else {
-        if (re.test(url)) {
-            change();
-        } else {
-            add("&");
-        }
+      add("&");
     }
+  }
 }
 
 function getCoreURL(url) {
-    var index = url.indexOf("?")
-    if (url.indexOf("?") != -1) {
-        return url.substring(0, index)
-    }
-    return url
+  var index = url.indexOf("?")
+  if (url.indexOf("?") != -1) {
+    return url.substring(0, index)
+  }
+  return url
 }
 
 function stringDatumTokenizer(searchAsContainsFlag, nonWhitespaceDelimiter, string) {
-    var string2 = string;
-    if (nonWhitespaceDelimiter) {
-        string2 = string.split(nonWhitespaceDelimiter).join(" ")
-    }
-    var strings = Bloodhound.tokenizers.whitespace(string2);
-    if (searchAsContainsFlag) {
-        $.each(strings, function (k, v) {
-            var i = 1;
-            while ((i + 1) < v.length) {
-                strings.push(v.substr(i, v.length));
-                i++;
-            }
-        })
-    }
-    return strings;
+  var string2 = string;
+  if (nonWhitespaceDelimiter) {
+    string2 = string.split(nonWhitespaceDelimiter).join(" ")
+  }
+  var strings = Bloodhound.tokenizers.whitespace(string2);
+  if (searchAsContainsFlag) {
+    $.each(strings, function (k, v) {
+      var i = 1;
+      while ((i + 1) < v.length) {
+        strings.push(v.substr(i, v.length));
+        i++;
+      }
+    })
+  }
+  return strings;
 }
 
 function createStringDatumTokenizer(searchAsContainsFlag, nonWhitespaceDelimiter) {
-    return stringDatumTokenizer.bind(null, searchAsContainsFlag).bind(null, nonWhitespaceDelimiter)
+  return stringDatumTokenizer.bind(null, searchAsContainsFlag).bind(null, nonWhitespaceDelimiter)
 }
 
-function populateStringTypeahead(element, data, searchAsContainsFlag, nonWhitespaceDelimiter, updateValueElement) {
-    var datumTokenizer = createStringDatumTokenizer(searchAsContainsFlag, nonWhitespaceDelimiter)
-    var source = createBloodhoundSource(data, datumTokenizer)
-    populateTypeahead(element, source, null, null, updateValueElement)
+function populateStringTypeahead({element, data, searchAsContainsFlag, nonWhitespaceDelimiter, updateValueElement}) {
+  var datumTokenizer = createStringDatumTokenizer(searchAsContainsFlag, nonWhitespaceDelimiter)
+  var source = createBloodhoundSource(data, datumTokenizer)
+  populateTypeahead({element, source, updateValueElement})
 }
 
 function createBloodhoundSource(data, datumTokenizer) {
-    var dataSource = new Bloodhound({
-        datumTokenizer: datumTokenizer,
-        queryTokenizer: Bloodhound.tokenizers.whitespace,
-        local: data
-    });
+  var dataSource = new Bloodhound({
+    datumTokenizer: datumTokenizer,
+    queryTokenizer: Bloodhound.tokenizers.whitespace,
+    local: data
+  });
 
-    dataSource.initialize();
+  dataSource.initialize();
 
-    // Setting of minlength to 0 does not work. To show ALL items if nothing entered this function needs to be introduced
-    function listSearchWithAll(q, sync) {
-        if (q == '')
-            sync(dataSource.all());
-        else
-            dataSource.search(q, sync);
-    }
+  // Setting of minlength to 0 does not work. To show ALL items if nothing entered this function needs to be introduced
+  function listSearchWithAll(q, sync) {
+    if (q == '')
+      sync(dataSource.all());
+    else
+      dataSource.search(q, sync);
+  }
 
-    return listSearchWithAll;
+  return listSearchWithAll;
 }
 
-function populateTypeahead(element, source, displayFun, suggestionFun, updateValueElement) {
-    element.typeahead({
-        hint: true,
-        highlight: true,
-        minLength: 0
-    }, {
-        source: source,
-        display: displayFun,
-        templates: {
-            suggestion: suggestionFun
-        },
-        limit: 25
-    });
+function populateTypeahead({element, source, displayFun, suggestionFun, updateValueElement, minLength}) {
+  element.typeahead({
+    hint: true,
+    highlight: true,
+    minLength: typeof minLength === 'undefined' ? 0 : minLength
+  }, {
+    source: source,
+    display: displayFun,
+    templates: {
+      suggestion: suggestionFun
+    },
+    limit: 1000
+  });
 
-    element.on("focus", function () {
-        var value = element.val();
-        element.typeahead('val', '_');
-        element.typeahead('val', value);
-        return true
-    });
+  element.on("focus", function () {
+    var value = element.val();
+    element.typeahead('val', '_');
+    element.typeahead('val', value);
+    return true
+  });
 
-    element.on('typeahead:select', function (e, datum) {
-        if (updateValueElement)
-            updateValueElement(datum);
-    });
+  element.on('typeahead:select', function (e, datum) {
+    if (updateValueElement)
+      updateValueElement(datum);
+  });
 
-    element.on('typeahead:cursorchanged', function (e, datum) {
-        if (updateValueElement)
-            updateValueElement(datum);
-    });
+  element.on('typeahead:cursorchanged', function (e, datum) {
+    if (updateValueElement)
+      updateValueElement(datum);
+  });
 
-    element.on('keyup', this, function(e) {
-        if(e.keyCode != 8 && e.keyCode != 46) {
-            selectFirstSuggestion(element)
-        }
-    })
+  element.on('keyup', this, function(e) {
+    if(e.keyCode != 8 && e.keyCode != 46) {
+      selectFirstSuggestion(element)
+    }
+  })
 }
 
 function selectFirstSuggestion(element) {
-    var suggestions = element.parent().find('.tt-suggestion')
-    if (suggestions.length == 1) {
-        element.typeahead('select', suggestions.first())
-    }
+  var suggestions = element.parent().find('.tt-suggestion')
+  if (suggestions.length == 1) {
+    element.typeahead('select', suggestions.first())
+  }
 }
 
 function selectShortestSuggestion(element) {
-    var suggestions = element.parent().find('.tt-suggestion')
-    if (suggestions.length > 0) {
-        var min = Number.MAX_SAFE_INTEGER
-        var minSuggestion = null
-        $.each(suggestions, function (index, suggestion) {
-            if (suggestion.innerText.length < min) {
-                minSuggestion = suggestion;
-                min = suggestion.innerText.length
-            }
-        });
-        element.typeahead('select', minSuggestion)
-    }
+  var suggestions = element.parent().find('.tt-suggestion')
+  if (suggestions.length > 0) {
+    var min = Number.MAX_SAFE_INTEGER
+    var minSuggestion = null
+    $.each(suggestions, function (index, suggestion) {
+      if (suggestion.innerText.length < min) {
+        minSuggestion = suggestion;
+        min = suggestion.innerText.length
+      }
+    });
+    element.typeahead('select', minSuggestion)
+  }
 }
 
 function createFieldBloodhoundSource(fieldNameAndLabels, showOption) {
-    var fullFieldNameAndLabels = fieldNameAndLabels.map( function(field, index) {
+  var fullFieldNameAndLabels = fieldNameAndLabels.map( function(field, index) {
 
-        var nameItem = (Array.isArray(field)) ?
-            {key: field[0], value: field[0]} :
-            {key: field.name, value: field.name};
+    var nameItem = (Array.isArray(field)) ?
+      {key: field[0], value: field[0]} :
+      {key: field.name, value: field.name};
 
-        var labelItem = (Array.isArray(field)) ?
-            {key: field[0], value: field[1], isLabel: true} :
-            {key: field.name, value: field.label, isLabel: true};
+    var labelItem = (Array.isArray(field)) ?
+      {key: field[0], value: field[1], isLabel: true} :
+      {key: field.name, value: field.label, isLabel: true};
 
-        switch (showOption) {
-            case 0: return [nameItem];
-            case 1: return (labelItem.value != null) ? [labelItem] : [];
-            case 2: return (labelItem.value != null) ? [labelItem] : [nameItem];
-            case 3: return (labelItem.value != null) ? [nameItem, labelItem] : [nameItem];
-        }
-    });
+    switch (showOption) {
+      case 0: return [nameItem];
+      case 1: return (labelItem.value != null) ? [labelItem] : [];
+      case 2: return (labelItem.value != null) ? [labelItem] : [nameItem];
+      case 3: return (labelItem.value != null) ? [nameItem, labelItem] : [nameItem];
+    }
+  });
 
-    var stringDatumTokenizer = createStringDatumTokenizer(true, false);
+  var stringDatumTokenizer = createStringDatumTokenizer(true, false);
 
-    var compareValues = function (a, b) {
-        if (a.value < b.value)
-            return -1;
-        else if (a.value == b.value)
-            return 0;
-        else
-            return 1;
-    };
+  var compareValues = function (a, b) {
+    if (a.value < b.value)
+      return -1;
+    else if (a.value == b.value)
+      return 0;
+    else
+      return 1;
+  };
 
-    return createBloodhoundSource(
-        [].concat.apply([], fullFieldNameAndLabels).sort(compareValues),
-        function (item) {
-            return stringDatumTokenizer(item.value);
-        }
-    )
+  return createBloodhoundSource(
+    [].concat.apply([], fullFieldNameAndLabels).sort(compareValues),
+    function (item) {
+      return stringDatumTokenizer(item.value);
+    }
+  )
 }
 
-function populateFieldTypeaheds(typeaheadElements, fieldNameElements, fieldNameAndLabels, showOption, initSelectByNameElement) {
-    var source = createFieldBloodhoundSource(fieldNameAndLabels, showOption)
+function populateFieldTypeaheads({typeaheadElements,
+                                   fieldNameElements,
+                                   fieldNameAndLabels,
+                                   showOption,
+                                   initSelectByNameElement,
+                                   minLength}) {
+  var source = createFieldBloodhoundSource(fieldNameAndLabels, showOption)
 
-    for(var i = 0; i < typeaheadElements.length; i++){
-        var typeaheadElement = typeaheadElements[i]
-        var fieldNameElement = fieldNameElements[i]
+  for(var i = 0; i < typeaheadElements.length; i++){
+    var typeaheadElement = typeaheadElements[i]
+    var fieldNameElement = fieldNameElements[i]
 
-        populateFieldTypeahedAux(typeaheadElement, fieldNameElement, source, showOption)
+    populateFieldTypeaheadAux({typeaheadElement, fieldNameElement, source, showOption, minLength})
 
-        if (initSelectByNameElement) {
-            selectByNameElement(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption)
-        }
+    if (initSelectByNameElement) {
+      selectByNameElement(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption)
     }
+  }
 }
 
 /**
@@ -260,75 +265,97 @@ function populateFieldTypeaheds(typeaheadElements, fieldNameElements, fieldNameA
  * @param showOption 0 - show field names only, 1 - show field labels only,
  *                   2 - show field labels, and field names if no label defined, 3 - show both, field names and labels
  */
-function populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption, initSelectByNameElement) {
-    var source = createFieldBloodhoundSource(fieldNameAndLabels, showOption)
+function populateFieldTypeahead({typeaheadElement,
+                                  fieldNameElement,
+                                  fieldNameAndLabels,
+                                  showOption,
+                                  initSelectByNameElement,
+                                  minLength}) {
+  var source = createFieldBloodhoundSource(fieldNameAndLabels, showOption)
 
-    populateFieldTypeahedAux(typeaheadElement, fieldNameElement, source, showOption)
+  populateFieldTypeaheadAux({typeaheadElement, fieldNameElement, source, showOption, minLength})
 
-    if (initSelectByNameElement) {
-        selectByNameElement(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption)
-    }
+  if (initSelectByNameElement) {
+    selectByNameElement(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption)
+  }
 }
 
 function selectByNameElement(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption) {
-    var fieldName = fieldNameElement.val();
+  var fieldName = fieldNameElement.val();
 
-    var matchedField = $.grep(fieldNameAndLabels, function (field) {
-        var name = (Array.isArray(field)) ? field[0] : field.name;
-        return name == fieldName
-    });
+  var matchedField = $.grep(fieldNameAndLabels, function (field) {
+    var name = (Array.isArray(field)) ? field[0] : field.name;
+    return name == fieldName
+  });
 
-    if (matchedField.length > 0) {
-        var name = (Array.isArray(matchedField[0])) ? matchedField[0][0] : matchedField[0].name;
-        var label = (Array.isArray(matchedField[0])) ? matchedField[0][1] : matchedField[0].label;
+  if (matchedField.length > 0) {
+    var name = (Array.isArray(matchedField[0])) ? matchedField[0][0] : matchedField[0].name;
+    var label = (Array.isArray(matchedField[0])) ? matchedField[0][1] : matchedField[0].label;
 
-        var selectElement = null;
+    var selectElement = null;
 
-        switch (showOption) {
-            case 0: selectElement = name; break;
-            case 1: selectElement = label; break;
-            case 2: selectElement = (label != null) ? label : name; break;
-            case 3: selectElement = (label != null) ? label : name; break;
-        }
-
-        if (selectElement) {
-            typeaheadElement.typeahead('val', selectElement);
-            selectShortestSuggestion(typeaheadElement)
-        }
+    switch (showOption) {
+      case 0: selectElement = name; break;
+      case 1: selectElement = label; break;
+      case 2: selectElement = (label != null) ? label : name; break;
+      case 3: selectElement = (label != null) ? label : name; break;
     }
+
+    if (selectElement) {
+      typeaheadElement.typeahead('val', selectElement);
+      selectShortestSuggestion(typeaheadElement)
+    }
+  }
 }
 
-function populateFieldTypeahedAux(typeaheadElement, fieldNameElement, source, showOption) {
-    populateTypeahead(
-        typeaheadElement,
-        source,
-        function (item) {
-            return item.value;
-        },
-        function (item) {
-            var nameBadge = '';
-            var labelBadge = '';
-            switch (showOption) {
-                case 0: nameBadge = ''; break;
-                case 1: nameBadge = ''; break;
-                case 2: nameBadge = '<span class="label label-info label-filter">name</span>'; break;
-                case 3: nameBadge = '<span class="label label-info label-filter">name</span>'; break;
-            }
-            switch (showOption) {
-                case 0: labelBadge = ''; break;
-                case 1: labelBadge = ''; break;
-                case 2: labelBadge = '<span class="label label-success label-filter">label</span>'; break;
-                case 3: labelBadge = '<span class="label label-success label-filter">label</span>'; break;
-            }
-            if (item.isLabel)
-                return '<div><span>' + item.value + '</span>' + labelBadge + '</div>';
-            else
-                return '<div><span>' + item.value + '</span>' + nameBadge + '</div>';
-        },
-        function (item) {
-            fieldNameElement.val(item.key);
-        }
-    );
+function populateFieldTypeaheadAux({typeaheadElement, fieldNameElement, source, showOption, minLength}) {
+  populateTypeahead({
+    element: typeaheadElement,
+    source,
+    displayFun: function(item) {
+      return item.value;
+    },
+    suggestionFun: function(item) {
+      var nameBadge = '';
+      var labelBadge = '';
+      switch (showOption) {
+        case 0:
+          nameBadge = '';
+          break;
+        case 1:
+          nameBadge = '';
+          break;
+        case 2:
+          nameBadge = '<span class="label label-info label-filter">name</span>';
+          break;
+        case 3:
+          nameBadge = '<span class="label label-info label-filter">name</span>';
+          break;
+      }
+      switch (showOption) {
+        case 0:
+          labelBadge = '';
+          break;
+        case 1:
+          labelBadge = '';
+          break;
+        case 2:
+          labelBadge = '<span class="label label-success label-filter">label</span>';
+          break;
+        case 3:
+          labelBadge = '<span class="label label-success label-filter">label</span>';
+          break;
+      }
+      if (item.isLabel)
+        return '<div><span>' + item.value + '</span>' + labelBadge + '</div>';
+      else
+        return '<div><span>' + item.value + '</span>' + nameBadge + '</div>';
+    },
+    updateValueElement: function(item) {
+      fieldNameElement.val(item.key);
+    },
+    minLength
+  });
 }
 
 /**
@@ -339,89 +366,120 @@ function populateFieldTypeahedAux(typeaheadElement, fieldNameElement, source, sh
  * @param showOption 0 - show field names only, 1 - show field labels only,
  *                   2 - show field labels, and field names if no label defined, 3 - show both, field names and labels
  */
-function populateFieldTypeahedFromUrl(typeaheadElement, fieldNameElement, url, showOption, postFunction, initSelectByNameElement) {
-    $.ajax({
-        url: url,
-        success: function (fieldNameAndLabels) {
-            populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption, initSelectByNameElement);
-            if (postFunction) {
-                postFunction()
-            }
-        },
-        error: showErrorResponse
-    });
+function populateFieldTypeaheadFromUrl({typeaheadElement, fieldNameElement, url, showOption, postFunction, initSelectByNameElement, minLength}) {
+  $.ajax({
+    url: url,
+    success: function (fieldNameAndLabels) {
+      populateFieldTypeahead({
+        typeaheadElement,
+        fieldNameElement,
+        fieldNameAndLabels,
+        showOption,
+        initSelectByNameElement,
+        minLength
+      });
+      if (postFunction) {
+        postFunction()
+      }
+    },
+    error: showErrorResponse
+  });
 }
 
-function populateFieldTypeahedsFromUrl(typeaheadElements, fieldNameElements, url, showOption, initSelectByNameElement, postFunction) {
-    $.ajax({
-        url: url,
-        success: function (fieldNameAndLabels) {
-            populateFieldTypeaheds(typeaheadElements, fieldNameElements, fieldNameAndLabels, showOption, initSelectByNameElement);
-            if (postFunction) {
-                postFunction()
-            }
-        },
-        error: showErrorResponse
-    });
+function populateFieldTypeaheadsFromUrl({typeaheadElements, fieldNameElements, url, showOption, initSelectByNameElement, postFunction}) {
+  $.ajax({
+    url: url,
+    success: function (fieldNameAndLabels) {
+      populateFieldTypeaheads({
+        typeaheadElements,
+        fieldNameElements,
+        fieldNameAndLabels,
+        showOption,
+        initSelectByNameElement
+      });
+      if (postFunction) {
+        postFunction()
+      }
+    },
+    error: showErrorResponse
+  });
 }
 
-function populateIdNameTypeahedFromUrl(typeaheadElement, idElement, url, initSelectByNameElement) {
-    $.ajax({
-        url: url,
-        success: function (data) {
-            populateIdNameTypeahed(typeaheadElement, idElement, data, initSelectByNameElement);
-        },
-        error: function(data){
-            showErrorResponse(data)
-        }
-    });
+function populateIdNameTypeaheadFromUrl({typeaheadElement, idElement, url, initSelectByNameElement}) {
+  $.ajax({
+    url: url,
+    success: function (data) {
+      populateIdNameTypeahead({
+        typeaheadElement,
+        idElement,
+        idNames: data,
+        initSelectByNameElement
+      });
+    },
+    error: function(data){
+      showErrorResponse(data)
+    }
+  });
 }
 
-function populateIdNameTypeahed(typeaheadElement, idElement, idNames, initSelectByNameElement) {
-    var typeaheadData = idNames.map(function (item, index) {
+function populateIdNameTypeahead({typeaheadElement, idElement, idNames, initSelectByNameElement, minLength}) {
+  var typeaheadData = idNames.map(function (item, index) {
+    return {name: item._id.$oid, label: item.name};
+  });
+  populateFieldTypeahead({
+    typeaheadElement,
+    fieldNameElement: idElement,
+    fieldNameAndLabels: typeaheadData,
+    showOption: 1,
+    initSelectByNameElement,
+    minLength
+  });
+}
+
+function populateIdNameTypeaheadsFromUrl({typeaheadElements, idElements, url, initSelectByNameElement}) {
+  $.ajax({
+    url: url,
+    success: function (data) {
+      var fieldNameAndLabels = data.map(function (item, index) {
         return {name: item._id.$oid, label: item.name};
-    });
-    populateFieldTypeahed(typeaheadElement, idElement, typeaheadData, 1, initSelectByNameElement);
-}
-
-function populateIdNameTypeahedsFromUrl(typeaheadElements, idElements, url, initSelectByNameElement) {
-    $.ajax({
-        url: url,
-        success: function (data) {
-            var fieldNameAndLabels = data.map(function (item, index) {
-                return {name: item._id.$oid, label: item.name};
-            });
-            populateFieldTypeaheds(typeaheadElements, idElements, fieldNameAndLabels, 1, initSelectByNameElement);
-        },
-        error: showErrorResponse
-    });
+      });
+      populateFieldTypeaheads({
+        typeaheadElements,
+        fieldNameElements: idElements,
+        fieldNameAndLabels,
+        showOption: 1,
+        initSelectByNameElement
+      });
+    },
+    error: showErrorResponse
+  });
 }
 
 function registerMessageEventSource(url) {
 //  if (!!window.EventSource) {
- if (!window.messageSource)
+  if (!window.messageSource)
     window.messageSource = new self.EventSource(url);
-    window.messageSource.onmessage = function (e) {
-      if (e.data) {
-        var json = $.parseJSON(e.data);
-        prependTrollboxJsonMessage(json, true);
-        $("#trollmessagebox").scrollTop($(document).height());
-      }
-    };
+  window.messageSource.onmessage = function (e) {
+    if (e.data) {
+      var json = $.parseJSON(e.data);
+      prependTrollboxJsonMessage(json, true);
+      $("#trollmessagebox").scrollTop($(document).height());
+    }
+  };
 
-    window.messageSource.addEventListener('error', function (e) {
-      if (e.eventPhase == EventSource.CLOSED) {
-        console.log("Connection was closed on error: ");
-        console.log(e)
-      } else {
-        console.log("Error occurred while streaming: ");
-        console.log(e)
-      }
-    }, false);
-    //setTimeout(function() {
-    //    console.log("Closing source");
-    //    source.close()
-    //}, 3000)
+  window.messageSource.addEventListener('error', function (e) {
+    if (e.eventPhase == EventSource.CLOSED) {
+      console.log("Connection was closed on error: ");
+      console.log(e)
+    } else {
+      console.log("Error occurred while streaming: ");
+      console.log(e)
+    }
+  }, false);
+  //setTimeout(function() {
+  //    console.log("Closing source");
+  //    source.close()
+  //}, 3000)
   //} else {
   //  console.log("No support for HTML-5 Event Source")
   //  prependTrollboxMessage("", "", "Sorry. This browser doesn't seem to support HTML5-based messaging. Check <a href='http://html5test.com/compare/feature/communication-eventSource.html'>html5test</a> for browser compatibility.");
@@ -429,21 +487,21 @@ function registerMessageEventSource(url) {
 }
 
 function prependTrollboxJsonMessage(jsonMessage, isAdmin, fadeIn) {
-    var createdBy = jsonMessage.createdByUser
-    var isUserAdmin = jsonMessage.isUserAdmin
-    var timeCreated = jsonMessage.timeCreated
-    var content = Autolinker.link(jsonMessage.content);
-    var date = new Date(timeCreated);
-    prependTrollboxMessage(createdBy, date.toISOString(), content, isUserAdmin, fadeIn);
+  var createdBy = jsonMessage.createdByUser
+  var isUserAdmin = jsonMessage.isUserAdmin
+  var timeCreated = jsonMessage.timeCreated
+  var content = Autolinker.link(jsonMessage.content);
+  var date = new Date(timeCreated);
+  prependTrollboxMessage(createdBy, date.toISOString(), content, isUserAdmin, fadeIn);
 }
 
 function prependTrollboxMessage(author, timeCreated, text, isAdmin, fadeIn) {
   var messageBlock = null
   if(author) {
     if(isAdmin) {
-        messageBlock = $('<div class="alert alert-dismissable alert-success" data-toggle="tooltip" data-placement="top" title="Published at: ' + timeCreated + '">')
+      messageBlock = $('<div class="alert alert-dismissable alert-success" data-toggle="tooltip" data-placement="top" title="Published at: ' + timeCreated + '">')
     } else {
-        messageBlock = $('<div class="alert alert-dismissable" data-toggle="tooltip" data-placement="top" title="Published at: ' + timeCreated + '">')
+      messageBlock = $('<div class="alert alert-dismissable" data-toggle="tooltip" data-placement="top" title="Published at: ' + timeCreated + '">')
     }
     messageBlock.append('<span class="glyphicon glyphicon-user"></span>&nbsp;')
     messageBlock.append('<strong>' + author + ':</strong> &nbsp;')
@@ -454,32 +512,32 @@ function prependTrollboxMessage(author, timeCreated, text, isAdmin, fadeIn) {
   }
   messageBlock.append(text)
   if(fadeIn) {
-      messageBlock.hide();
+    messageBlock.hide();
   }
   $('#trollmessagebox').append(messageBlock);
   if(fadeIn) {
-      messageBlock.fadeIn('2000');
+    messageBlock.fadeIn('2000');
   }
 }
 
 function showHideMessageBox() {
-    if ($("#contentDiv").hasClass("col-md-8-25")) {
-        $("#contentDiv").removeClass("col-md-8-25").addClass("col-md-10")
-        $("#messageBoxDiv").hide();
-        $("#showHideMessageBoxSpan").html("&#8612;")
+  if ($("#contentDiv").hasClass("col-md-8-25")) {
+    $("#contentDiv").removeClass("col-md-8-25").addClass("col-md-10")
+    $("#messageBoxDiv").hide();
+    $("#showHideMessageBoxSpan").html("&#8612;")
 
-        if (Highcharts) {
-            refreshHighcharts();
-        }
-    } else {
-        $("#contentDiv").removeClass("col-md-10").addClass("col-md-8-25")
-        $("#messageBoxDiv").show();
-        $("#showHideMessageBoxSpan").html("&#8614;")
-
-        if (Highcharts) {
-            refreshHighcharts();
-        }
+    if (Highcharts) {
+      refreshHighcharts();
     }
+  } else {
+    $("#contentDiv").removeClass("col-md-10").addClass("col-md-8-25")
+    $("#messageBoxDiv").show();
+    $("#showHideMessageBoxSpan").html("&#8614;")
+
+    if (Highcharts) {
+      refreshHighcharts();
+    }
+  }
 }
 
 function showMessage(text) {
@@ -498,14 +556,14 @@ function showMessage(text) {
 }
 
 function showErrorResponse(data) {
-    if (data.responseText) {
-        showError(data.responseText)
-    } else {
-        if (data.status == 401)
-            showError("Access denied! We're sorry, but you are not authorized to perform the requested operation.")
-        else
-            showError(data.status + ": " + data.statusText)
-    }
+  if (data.responseText) {
+    showError(data.responseText)
+  } else {
+    if (data.status == 401)
+      showError("Access denied! We're sorry, but you are not authorized to perform the requested operation.")
+    else
+      showError(data.status + ": " + data.statusText)
+  }
 }
 
 function showError(message) {
@@ -544,19 +602,19 @@ function showErrors(errors) {
 }
 
 function addMessageDividerIfNeeded() {
-    var messagesCount = $('#messageContainer').find('.alert-dismissable').length
-    if ($('#messageContainer .messageDivider').length == 0 && messagesCount > 0) {
-        $('#messageContainer').append('<hr class="messageDivider"/>')
-    }
+  var messagesCount = $('#messageContainer').find('.alert-dismissable').length
+  if ($('#messageContainer .messageDivider').length == 0 && messagesCount > 0) {
+    $('#messageContainer').append('<hr class="messageDivider"/>')
+  }
 }
 
 function registerMessageDividerRemoval() {
-    $('#messageContainer .alert-dismissable .close').click(function () {
-        var messagesCount = $('#messageContainer').find('.alert-dismissable').length
-        if (messagesCount == 1) {
-            $('#messageContainer .messageDivider').remove();
-        }
-    });
+  $('#messageContainer .alert-dismissable .close').click(function () {
+    var messagesCount = $('#messageContainer').find('.alert-dismissable').length
+    if (messagesCount == 1) {
+      $('#messageContainer .messageDivider').remove();
+    }
+  });
 }
 
 function hideErrors() {
@@ -596,7 +654,7 @@ function handleModalButtonEnterPressed(modalName, submitButtonName, action, hide
       e.preventDefault();
       action()
       if(hideOnEnter) {
-          $("#" + modalName).modal("hide")
+        $("#" + modalName).modal("hide")
       }
     }
   });
@@ -605,443 +663,439 @@ function handleModalButtonEnterPressed(modalName, submitButtonName, action, hide
 }
 
 function shorten(string, length) {
-    return (string.length > length) ?
-        string.substring(0, length) + ".."
+  return (string.length > length) ?
+    string.substring(0, length) + ".."
     :
-        string
+    string
 }
 
 function loadNewContent(url, elementId, data, callType) {
-    $.ajax({
-        url: url,
-        data: data,
-        type: (callType) ? callType : "GET",
-        success: function (html) {
-            $("#" + elementId).html(html);
-        },
-        error: function(data) {
-            showErrorResponse(data)
-        }
-    });
+  $.ajax({
+    url: url,
+    data: data,
+    type: (callType) ? callType : "GET",
+    success: function (html) {
+      $("#" + elementId).html(html);
+    },
+    error: function(data) {
+      showErrorResponse(data)
+    }
+  });
 }
 
 function loadNewTableContent(element, url, data, callType) {
-    $.ajax({
-        url: url,
-        data: data,
-        type: (callType) ? callType : "GET",
-        success: function(content) {
-            var tableDiv = element.closest(".table-div")
-            $(tableDiv).html(content);
-        },
-        error: showErrorResponse
-    });
+  $.ajax({
+    url: url,
+    data: data,
+    type: (callType) ? callType : "GET",
+    success: function(content) {
+      var tableDiv = element.closest(".table-div")
+      $(tableDiv).html(content);
+    },
+    error: showErrorResponse
+  });
 }
 
 function activateRowClickable() {
-    $(function() {
-        $(".clickable-row").dblclick(function () {
-            window.document.location = $(this).data("href");
-        });
-        $(".no-rowClicked").dblclick(function (event) {
-            event.stopPropagation();
-        });
+  $(function() {
+    $(".clickable-row").click(function () {
+      window.document.location = $(this).data("href");
     });
+    $(".no-rowClicked").click(function (event) {
+      event.stopPropagation();
+    });
+  });
 }
 
 function getModalValues(modalElementId) {
-    var values = {};
-    $('#' + modalElementId +' input, #' + modalElementId +' select, #' + modalElementId +' textarea').each(function () {
-        if (this.id) {
-            if ($(this).attr('type') != "checkbox") {
-                values[this.id] = $(this).val()
-            } else {
-                values[this.id] = $(this).is(':checked')
-            }
-        }
-    })
-    return values;
+  var values = {};
+  $('#' + modalElementId +' input, #' + modalElementId +' select, #' + modalElementId +' textarea').each(function () {
+    if (this.id) {
+      if ($(this).attr('type') != "checkbox") {
+        values[this.id] = $(this).val()
+      } else {
+        values[this.id] = $(this).is(':checked')
+      }
+    }
+  })
+  return values;
 }
 
 function showMLOutput(evalRates) {
-    $("#outputDiv").html("");
+  $("#outputDiv").html("");
 
-    var header = ["Metrics", "Training", "Test"]
-    var showReplicationRates = evalRates[0].replicationEvalRate != null
+  var header = ["Metrics", "Training", "Test"]
+  var showReplicationRates = evalRates[0].replicationEvalRate != null
+  if (showReplicationRates)
+    header = header.concat("Replication")
+
+  function float3(value) {
+    return (value) ? value.toFixed(3) : ""
+  }
+
+  var rowData = evalRates.map(function(item) {
+    var data = [item.metricName, float3(item.trainEvalRate), float3(item.testEvalRate)]
     if (showReplicationRates)
-        header = header.concat("Replication")
+      data = data.concat(float3(item.replicationEvalRate))
+    return data
+  });
 
-    function float3(value) {
-        return (value) ? value.toFixed(3) : ""
-    }
-
-    var rowData = evalRates.map(function(item) {
-        var data = [item.metricName, float3(item.trainEvalRate), float3(item.testEvalRate)]
-        if (showReplicationRates)
-            data = data.concat(float3(item.replicationEvalRate))
-        return data
-    });
-
-    var table = createTable(header, rowData);
-    $("#outputDiv").html(table);
-    $('#outputDiv').fadeIn('2000');
+  var table = createTable(header, rowData);
+  $("#outputDiv").html(table);
+  $('#outputDiv').fadeIn('2000');
 }
 
 function getCookie(name) {
-    match = document.cookie.match(new RegExp(name + '=([^;]+)'));
-    if (match) return match[1];
+  match = document.cookie.match(new RegExp(name + '=([^;]+)'));
+  if (match) return match[1];
 }
 
 function flatten(data) {
-    var result = {};
-    function recurse (cur, prop) {
-        if (Object(cur) !== cur) {
-            result[prop] = cur;
-        } else if (Array.isArray(cur)) {
-            for(var i=0, l=cur.length; i<l; i++)
-                recurse(cur[i], prop + "[" + i + "]");
-            if (l == 0)
-                result[prop] = [];
-        } else {
-            var isEmpty = true;
-            for (var p in cur) {
-                isEmpty = false;
-                recurse(cur[p], prop ? prop+"."+p : p);
-            }
-            if (isEmpty && prop)
-                result[prop] = {};
-        }
+  var result = {};
+  function recurse (cur, prop) {
+    if (Object(cur) !== cur) {
+      result[prop] = cur;
+    } else if (Array.isArray(cur)) {
+      for(var i=0, l=cur.length; i<l; i++)
+        recurse(cur[i], prop + "[" + i + "]");
+      if (l == 0)
+        result[prop] = [];
+    } else {
+      var isEmpty = true;
+      for (var p in cur) {
+        isEmpty = false;
+        recurse(cur[p], prop ? prop+"."+p : p);
+      }
+      if (isEmpty && prop)
+        result[prop] = {};
     }
-    recurse(data, "");
-    return result;
+  }
+  recurse(data, "");
+  return result;
 }
 
 function removeDuplicates(array) {
-    return array.reduce(function(a,b){
-        if (a.indexOf(b) < 0 ) a.push(b);
-        return a;
-    },[]);
+  return array.reduce(function(a,b){
+    if (a.indexOf(b) < 0 ) a.push(b);
+    return a;
+  },[]);
 }
 
 function getRowValue(row, elementId) {
-    var element = row.find('#' + elementId);
-    var value = null;
-    if (element.length > 0) {
-        value = element.val().trim()
-        if (!value)
-            value = null
-    }
-    return value;
+  var element = row.find('#' + elementId);
+  var value = null;
+  if (element.length > 0) {
+    value = element.val().trim()
+    if (!value)
+      value = null
+  }
+  return value;
 }
 
 function createTable(columnNames, rows, nonStriped) {
-    var clazz = nonStriped ? "" : "table-striped"
-    var table = $("<table class='table " + clazz + "'>")
+  var clazz = nonStriped ? "" : "table-striped"
+  var table = $("<table class='table " + clazz + "'>")
 
-    // head
-    if (columnNames) {
-        var thead = $("<thead>")
-        var theadTr = $("<tr>")
+  // head
+  if (columnNames) {
+    var thead = $("<thead>")
+    var theadTr = $("<tr>")
 
-        $.each(columnNames, function (index, columnName) {
-            var th = "<th class='col header'>" + columnName + "</th>"
-            theadTr.append(th)
-        })
-        thead.append(theadTr)
-        table.append(thead)
-    }
-
-    // body
-    var tbody = $("<tbody>")
-
-    $.each(rows, function(index, row) {
-        var tr = $("<tr>")
-        $.each(row, function(index, item) {
-            var td = "<td>" + item + "</td>"
-            tr.append(td)
-        })
-        tbody.append(tr)
+    $.each(columnNames, function (index, columnName) {
+      var th = "<th class='col header'>" + columnName + "</th>"
+      theadTr.append(th)
     })
-    table.append(tbody)
+    thead.append(theadTr)
+    table.append(thead)
+  }
 
-    return table
+  // body
+  var tbody = $("<tbody>")
+
+  $.each(rows, function(index, row) {
+    var tr = $("<tr>")
+    $.each(row, function(index, item) {
+      var td = "<td>" + item + "</td>"
+      tr.append(td)
+    })
+    tbody.append(tr)
+  })
+  table.append(tbody)
+
+  return table
 }
 
 function initJsTree(treeElementId, data, typesSetting) {
-    $('#' + treeElementId).jstree({
-        "core" : {
-            "animation" : 0,
-            "check_callback" : true,
-            "themes" : {
-                'responsive' : false,
-                'variant' : 'large',
-                "stripes" : true
-            },
-            'data' : data
-        },
-        "types" : typesSetting,
-        "search": {
-        "case_insensitive": true,
-            "show_only_matches" : true,
-            "search_leaves_only": true
-        },
+  $('#' + treeElementId).jstree({
+    "core" : {
+      "animation" : 0,
+      "check_callback" : true,
+      "themes" : {
+        'responsive' : false,
+        'variant' : 'large',
+        "stripes" : true
+      },
+      'data' : data
+    },
+    "types" : typesSetting,
+    "search": {
+      "case_insensitive": true,
+      "show_only_matches" : true,
+      "search_leaves_only": true
+    },
 
-        "plugins" : [
-            "search", "sort", "state", "types", "wholerow" // "contextmenu", "dnd",
-        ]
-    });
+    "plugins" : [
+      "search", "sort", "state", "types", "wholerow" // "contextmenu", "dnd",
+    ]
+  });
 
-    $('#' + treeElementId).jstree("deselect_all");
+  $('#' + treeElementId).jstree("deselect_all");
 }
 
 function moveModalRight(modalId) {
-    $('#' + modalId).one('hidden.bs.modal', function () {
+  $('#' + modalId).one('hidden.bs.modal', function () {
 //            $(this).data('bs.modal', null);
-        var modalDialog = $('#' + modalId + ' .modal-dialog:first')
-        var isRight = modalDialog.hasClass("modal-right")
-        var isLeft = modalDialog.hasClass("modal-left")
+    var modalDialog = $('#' + modalId + ' .modal-dialog:first')
+    var isRight = modalDialog.hasClass("modal-right")
+    var isLeft = modalDialog.hasClass("modal-left")
 
-        if (isRight) {
-            modalDialog.removeClass("modal-right")
-            modalDialog.addClass("modal-left")
-        } else if (isLeft) {
-            modalDialog.removeClass("modal-left")
-        } else {
-            modalDialog.addClass("modal-right")
-        }
+    if (isRight) {
+      modalDialog.removeClass("modal-right")
+      modalDialog.addClass("modal-left")
+    } else if (isLeft) {
+      modalDialog.removeClass("modal-left")
+    } else {
+      modalDialog.addClass("modal-right")
+    }
 
-        $('#' + modalId).modal('show');
-    });
+    $('#' + modalId).modal('show');
+  });
 }
 
 function addSpinner(element, style) {
-    if (style)
-        element.append("<div class='spinner' style='margin: auto; " + style + "'></div>")
-    else
-        element.append("<div class='spinner' style='margin: auto;'></div>")
+  if (style)
+    element.append("<div class='spinner' style='margin: auto; " + style + "'></div>")
+  else
+    element.append("<div class='spinner' style='margin: auto;'></div>")
 }
 
 function updateFilterValueElement(filterElement, data) {
-    var fieldType = (data.isArray) ? data.fieldType + " Array" : data.fieldType
-    filterElement.find("#fieldInfo").html("Field type: " + fieldType)
-    var conditionTypeElement = filterElement.find("#conditionType")
+  var fieldType = (data.isArray) ? data.fieldType + " Array" : data.fieldType
+  filterElement.find("#fieldInfo").html("Field type: " + fieldType)
+  var conditionTypeElement = filterElement.find("#conditionType")
 
-    var conditionType = conditionTypeElement.val();
+  var conditionType = conditionTypeElement.val();
+  var isInNinType = (conditionType == "in" || conditionType == "nin") ? "multiple" : ""
 
-    console.log(conditionType)
+  var newValueElement = null;
+  if (data.allowedValues.length > 0) {
+    conditionTypeElement.change(function() {
+      var valueElement = $(this).parent().parent().find("#value")
 
-    var isInNinType = (conditionType == "in" || conditionType == "nin") ? "multiple" : ""
-
-
-    var newValueElement = null;
-    if (data.allowedValues.length > 0) {
-        conditionTypeElement.change(function() {
-            var valueElement = $(this).parent().parent().find("#value")
-
-            if (this.value == "in" || this.value == "nin") {
-                valueElement.prop('multiple', 'multiple');
-                var emptyOption = valueElement.find('option[value=""]');
-                emptyOption.remove()
-            } else {
-                valueElement.removeProp('multiple');
-                if (valueElement.find('option[value=""]').length == 0) {
-                    var firstOption = valueElement.find('option').first();
-                    firstOption.before('<option value="">[undefined]</option>');
-                }
-            }
-
-            valueElement.selectpicker('destroy');
-            valueElement.selectpicker();
-        })
-
-        var multiple = (isInNinType) ? "multiple" : ""
-        newValueElement = $("<select id='value' " + multiple + " class='selectpicker float-left show-menu-arrow form-control conditionValue'>")
-        if (!isInNinType)
-            newValueElement.append("<option value=''>[undefined]</option>")
-        $.each(data.allowedValues, function (index, keyValue) {
-            newValueElement.append("<option value='" + keyValue[0] + "'>" + keyValue[1] + "</option>")
-        });
-    } else {
-        newValueElement = $("<input id='value' class='float-left conditionValue' placeholder='Condition'/>")
-    }
-    var oldValueElement = filterElement.find("#addEditConditionModal .conditionValue")
-    var oldValue = oldValueElement.val()
-    oldValueElement.selectpicker('destroy');
-    oldValueElement.replaceWith(newValueElement);
-
-    if (data.allowedValues.length > 0) {
-        if (isInNinType) {
-            oldValue = oldValue.split(",");
+      if (this.value == "in" || this.value == "nin") {
+        valueElement.prop('multiple', 'multiple');
+        var emptyOption = valueElement.find('option[value=""]');
+        emptyOption.remove()
+      } else {
+        valueElement.removeProp('multiple');
+        if (valueElement.find('option[value=""]').length == 0) {
+          var firstOption = valueElement.find('option').first();
+          firstOption.before('<option value="">[undefined]</option>');
         }
-        newValueElement.val(oldValue);
-        newValueElement.selectpicker();
-    } else {
-        newValueElement.val(oldValue);
+      }
+
+      valueElement.selectpicker('destroy');
+      valueElement.selectpicker();
+    })
+
+    var multiple = (isInNinType) ? "multiple" : ""
+    newValueElement = $("<select id='value' " + multiple + " class='selectpicker float-left show-menu-arrow form-control conditionValue'>")
+    if (!isInNinType)
+      newValueElement.append("<option value=''>[undefined]</option>")
+    $.each(data.allowedValues, function (index, keyValue) {
+      newValueElement.append("<option value='" + keyValue[0] + "'>" + keyValue[1] + "</option>")
+    });
+  } else {
+    newValueElement = $("<input id='value' class='float-left conditionValue' placeholder='Condition'/>")
+  }
+  var oldValueElement = filterElement.find("#addEditConditionModal .conditionValue")
+  var oldValue = oldValueElement.val()
+  oldValueElement.selectpicker('destroy');
+  oldValueElement.replaceWith(newValueElement);
+
+  if (data.allowedValues.length > 0) {
+    if (isInNinType) {
+      oldValue = oldValue.split(",");
     }
+    newValueElement.val(oldValue);
+    newValueElement.selectpicker();
+  } else {
+    newValueElement.val(oldValue);
+  }
 }
 
 function updatePlusMinusIcon(element) {
-    var iconPlus = element.find("span.glyphicon-plus:first");
-    var iconMinus = element.find("span.glyphicon-minus:first");
-    if (iconPlus.length) {
-        iconPlus.removeClass("glyphicon-plus");
-        iconPlus.addClass("glyphicon-minus");
-    } else {
-        iconMinus.removeClass("glyphicon-minus");
-        iconMinus.addClass("glyphicon-plus");
-    }
+  var iconPlus = element.find("span.glyphicon-plus:first");
+  var iconMinus = element.find("span.glyphicon-minus:first");
+  if (iconPlus.length) {
+    iconPlus.removeClass("glyphicon-plus");
+    iconPlus.addClass("glyphicon-minus");
+  } else {
+    iconMinus.removeClass("glyphicon-minus");
+    iconMinus.addClass("glyphicon-plus");
+  }
 }
 
 function scrollToAnchor(id, offset){
-    var tag = $("#" + id)
-    if (!offset)
-        offset = 0
-    $('html,body').animate({scrollTop: tag.offset().top + offset},'slow');
+  var tag = $("#" + id)
+  if (!offset)
+    offset = 0
+  $('html,body').animate({scrollTop: tag.offset().top + offset},'slow');
 }
 
 function createIndependenceTestTable(results, withTestType) {
-    var header = ["Field", "p-Value", "Degree of Freedom", "Stats/F-Value"]
+  var header = ["Field", "p-Value", "Degree of Freedom", "Stats/F-Value"]
+  if (withTestType)
+    header.push("Test Type")
+
+  var rowData = results.map(function(item) {
+    var fieldLabel = item[0]
+    var result = item[1]
+
+    var color =
+      (result.pValue >= 0.05) ? "black":
+        (result.pValue >= 0.01) ? "forestGreen":
+          (result.pValue >= 0.001) ? "green" : "darkGreen"
+
+    var significantStyleDivStart = (result.pValue < 0.05) ? ("<div style='color: " + color + "; font-weight: bold'>") : "<div>"
+    var isAnovaTest = (result.FValue != null)
+    var rowStart = [fieldLabel,  significantStyleDivStart + result.pValue.toExponential(3).replace("e", " E") + "</div>"]
+
+    var rowEnd = (isAnovaTest) ?
+      [result.dfbg, result.FValue.toFixed(2)]
+      :
+      [result.degreeOfFreedom, result.statistics.toFixed(2)]
+
+    var testTypeText = (isAnovaTest) ? "ANOVA" : "Chi-Square"
+
     if (withTestType)
-        header.push("Test Type")
+      rowEnd.push(testTypeText)
 
-    var rowData = results.map(function(item) {
-        var fieldLabel = item[0]
-        var result = item[1]
+    return rowStart.concat(rowEnd)
+  });
 
-        var color =
-            (result.pValue >= 0.05) ? "black":
-                (result.pValue >= 0.01) ? "forestGreen":
-                    (result.pValue >= 0.001) ? "green" : "darkGreen"
-
-        var significantStyleDivStart = (result.pValue < 0.05) ? ("<div style='color: " + color + "; font-weight: bold'>") : "<div>"
-        var isAnovaTest = (result.FValue != null)
-        var rowStart = [fieldLabel,  significantStyleDivStart + result.pValue.toExponential(3).replace("e", " E") + "</div>"]
-
-        var rowEnd = (isAnovaTest) ?
-            [result.dfbg, result.FValue.toFixed(2)]
-            :
-            [result.degreeOfFreedom, result.statistics.toFixed(2)]
-
-        var testTypeText = (isAnovaTest) ? "ANOVA" : "Chi-Square"
-
-        if (withTestType)
-            rowEnd.push(testTypeText)
-
-        return rowStart.concat(rowEnd)
-    });
-
-    return createTable(header, rowData);
+  return createTable(header, rowData);
 }
 
 function msToStandardDateString(ms) {
-    var date = new Date(ms)
-    return date.getFullYear() + '-' +('0' + (date.getMonth()+1)).slice(-2)+ '-' + date.getDate() + ' ' + date.getHours() + ':'+('0' + (date.getMinutes())).slice(-2)+ ':' + date.getSeconds();
+  var date = new Date(ms)
+  return date.getFullYear() + '-' +('0' + (date.getMonth()+1)).slice(-2)+ '-' + date.getDate() + ' ' + date.getHours() + ':'+('0' + (date.getMinutes())).slice(-2)+ ':' + date.getSeconds();
 }
 
 function addFilterModelBeforeModalSubmit(modalId, filterElement, filterParamName) {
-    $('#' + modalId + ' form').submit(function(event) {
-        event.preventDefault();
+  $('#' + modalId + ' form').submit(function(event) {
+    event.preventDefault();
 
-        // remove the old filter
-        $(this).find("input[name='" + filterParamName + "']").remove();
+    // remove the old filter
+    $(this).find("input[name='" + filterParamName + "']").remove();
 
-        // add a new one
-        var filterModel = $(filterElement).multiFilter("getModel")
+    // add a new one
+    var filterModel = $(filterElement).multiFilter("getModel")
 
-        var params = {}
-        params[filterParamName] = JSON.stringify(filterModel)
-        addParams($(this), params)
+    var params = {}
+    params[filterParamName] = JSON.stringify(filterModel)
+    addParams($(this), params)
 
-        // submit
-        this.submit();
-    });
+    // submit
+    this.submit();
+  });
 }
 
 function submitModalOnEnter(event, element) {
-    if (event.which == 13) {
-        var modalFooter = $(element).closest(".modal-body").parent().find(".modal-footer")
-        modalFooter.find("#submitButton").trigger("click");
-        return false;
-    }
+  if (event.which == 13) {
+    var modalFooter = $(element).closest(".modal-body").parent().find(".modal-footer")
+    modalFooter.find("#submitButton").trigger("click");
+    return false;
+  }
 }
 
 function activateTableAllSelection() {
-    $(".table-selection-all").change(function() {
-        var rows = $(this).closest("table").find(".table-selection")
-        var checked = $(this).is(':checked')
-        $.each(rows, function(i, row) {
-            $(row).prop("checked", checked)
-        })
-    });
+  $(".table-selection-all").change(function() {
+    var rows = $(this).closest("table").find(".table-selection")
+    var checked = $(this).is(':checked')
+    $.each(rows, function(i, row) {
+      $(row).prop("checked", checked)
+    })
+  });
 }
 
 function getSelectedRowIds(tableElement) {
-    var ids = []
+  var ids = []
 
-    $(tableElement).find('tbody').find('tr').each(function() {
-        var checked = $(this).find("td input.table-selection[type=checkbox]").is(':checked');
-        var id = $(this).find("#_id").val()
+  $(tableElement).find('tbody').find('tr').each(function() {
+    var checked = $(this).find("td input.table-selection[type=checkbox]").is(':checked');
+    var id = $(this).find("#_id").val()
 
-        if (checked) {
-            ids.push(id);
-        }
-    });
+    if (checked) {
+      ids.push(id);
+    }
+  });
 
-    return ids;
+  return ids;
 }
 
-function enableFieldDragover(fieldNameElement, fieldTypeahedElement, execFun, acceptedTypes) {
-    fieldTypeahedElement.on('dragover', false).on('drop', function (ev) {
-        $(this).removeClass("dragged-over")
-        ev.preventDefault();
-        var transfer = ev.originalEvent.dataTransfer;
-        var id = transfer.getData("id");
-        var text = transfer.getData("text");
-        var type = transfer.getData("type");
+function enableFieldDragover(fieldNameElement, fieldTypeaheadElement, execFun, acceptedTypes) {
+  fieldTypeaheadElement.on('dragover', false).on('drop', function (ev) {
+    $(this).removeClass("dragged-over")
+    ev.preventDefault();
+    var transfer = ev.originalEvent.dataTransfer;
+    var id = transfer.getData("id");
+    var text = transfer.getData("text");
+    var type = transfer.getData("type");
 
-        if (id && (!acceptedTypes || acceptedTypes.includes(type))) {
-            $(fieldNameElement).val(id)
-            $(fieldTypeahedElement).val(text)
-            execFun();
-        }
-    }).on("dragover", function (ev) {
-        var transfer = ev.originalEvent.dataTransfer;
-        var type = transfer.getData("type");
+    if (id && (!acceptedTypes || acceptedTypes.includes(type))) {
+      $(fieldNameElement).val(id)
+      $(fieldTypeaheadElement).val(text)
+      execFun();
+    }
+  }).on("dragover", function (ev) {
+    var transfer = ev.originalEvent.dataTransfer;
+    var type = transfer.getData("type");
 
-        if (type.startsWith("field")) {
-            $(this).addClass("dragged-over")
-        }
-    }).on("dragleave", function () {
-        $(this).removeClass("dragged-over")
-    })
+    if (type.startsWith("field")) {
+      $(this).addClass("dragged-over")
+    }
+  }).on("dragleave", function () {
+    $(this).removeClass("dragged-over")
+  })
 }
 
 function enableFieldTableDragover(fieldTableElement, execFun, acceptedTypes) {
-    fieldTableElement.on('dragover', false).on('drop', function (ev) {
-        $(this).removeClass("dragged-over")
-        ev.preventDefault();
-        var transfer = ev.originalEvent.dataTransfer;
-        var id = transfer.getData("id");
-        var text = transfer.getData("text");
-        var type = transfer.getData("type");
+  fieldTableElement.on('dragover', false).on('drop', function (ev) {
+    $(this).removeClass("dragged-over")
+    ev.preventDefault();
+    var transfer = ev.originalEvent.dataTransfer;
+    var id = transfer.getData("id");
+    var text = transfer.getData("text");
+    var type = transfer.getData("type");
 
-        if (id && (!acceptedTypes || acceptedTypes.includes(type))) {
-            var values = {};
-            values["fieldName"] = id;
-            values["fieldTypeahead"] = text ? text : id;
+    if (id && (!acceptedTypes || acceptedTypes.includes(type))) {
+      var values = {};
+      values["fieldName"] = id;
+      values["fieldTypeahead"] = text ? text : id;
 
-            fieldTableElement.dynamicTable('addTableRow', values)
+      fieldTableElement.dynamicTable('addTableRow', values)
 
-            if (execFun) execFun();
-        }
-    }).on("dragover", function (ev) {
-        var transfer = ev.originalEvent.dataTransfer;
-        var type = transfer.getData("type");
+      if (execFun) execFun();
+    }
+  }).on("dragover", function (ev) {
+    var transfer = ev.originalEvent.dataTransfer;
+    var type = transfer.getData("type");
 
-        if (type.startsWith("field")) {
-            $(this).addClass("dragged-over")
-        }
-    }).on("dragleave", function () {
-        $(this).removeClass("dragged-over")
-    })
+    if (type.startsWith("field")) {
+      $(this).addClass("dragged-over")
+    }
+  }).on("dragleave", function () {
+    $(this).removeClass("dragged-over")
+  })
 }
