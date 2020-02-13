@@ -3,7 +3,6 @@
 
 ## Application Server (Netty)
 
-* IP: 10.240.6.121
 * Root folder: `/opt/ada-web-ncer/`
 
 **Start**
@@ -73,8 +72,6 @@ sudo service mongod stop
 
 ## Database (Elastic Search)
 
-* IP: 10.240.6.125
-
 
 **Start**
 ```
@@ -102,8 +99,6 @@ sudo service elasticsearch stop
 <br/>
 
 ## Spark Grid
-* Master IP: 10.240.6.121 (same as the netty server)
-* Slave IPs: 10.240.6.122 & 10.240.6.123
 * Root folder: `/home/peter.banda/spark-2.2.0-bin-hadoop2.7`
 
 **Start Master**
@@ -131,8 +126,6 @@ sudo service elasticsearch stop
 ```
 
 **Monitoring Web UI**
-
-- http://10.240.6.121:8081
 
 
 <br/>
