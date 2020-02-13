@@ -1,8 +1,10 @@
 package org.ada.server.dataaccess.ignite
 
-import org.apache.ignite.binary.{BinaryWriter, BinaryReader, BinarySerializer}
+import javax.inject.Singleton
+import org.apache.ignite.binary.{BinaryReader, BinarySerializer, BinaryWriter}
 import reactivemongo.bson.BSONObjectID
 
+@Singleton
 class BSONObjectIDBinarySerializer extends BinarySerializer {
 
   private val rawField = classOf[BSONObjectID].getDeclaredField("reactivemongo$bson$BSONObjectID$$raw")

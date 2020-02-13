@@ -1,28 +1,35 @@
 package org.ada.server.dataaccess.ignite
 
 import javax.inject.{Inject, Provider, Singleton}
-
-import org.apache.ignite.internal.IgnitionEx
+import org.apache.ignite.binary.BinaryTypeConfiguration
+import org.apache.ignite.configuration.{BinaryConfiguration, IgniteConfiguration}
+import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi
+import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder
 import org.apache.ignite.{Ignite, Ignition}
-import play.api.Configuration
+
+import scala.collection.JavaConversions._
 
 @Singleton
-class IgniteFactory @Inject() (configuration: Configuration) extends Provider[Ignite] {
-
-  private val configurationFilePath = configuration.getString("ignite.conf.path").get
-
+class IgniteFactory @Inject() (serializer: BSONObjectIDBinarySerializer,
+                               lifecycleBean: IgniteLifecycleBean,
+                               discoverySpi: TcpDiscoverySpi,
+                               ipFinder: TcpDiscoveryVmIpFinder) extends Provider[Ignite] {
   override def get(): Ignite = {
-//    // Create new configuration.
-//    val cfg = new IgniteConfiguration()
+    val binaryTypeCfg = new BinaryTypeConfiguration()
+    binaryTypeCfg.setTypeName("reactivemongo.bson.BSONObjectID")
+    binaryTypeCfg.setSerializer(serializer)
 
-    // Provide lifecycle bean to configuration.
-//  cfg.setLifecycleBeans(new MyLifecycleBean());
+    val binaryCfg = new BinaryConfiguration()
+    binaryCfg.setTypeConfigurations(Seq(binaryTypeCfg).toList)
 
-    // We need an absolute path due to some execution discrepancies
-    val configurationAbsPath = new java.io.File(configurationFilePath).getAbsolutePath
+    val cfg = new IgniteConfiguration()
+    cfg.setBinaryConfiguration(binaryCfg)
+    cfg.setLifecycleBeans(lifecycleBean)
 
-    // Start Ignite node with given configuration.
-    val configuration = IgnitionEx.loadConfiguration(configurationAbsPath).getKey
-    Ignition.getOrStart(configuration)
+    ipFinder.setAddresses(Seq("127.0.0.1"))
+    discoverySpi.setIpFinder(ipFinder)
+    cfg.setDiscoverySpi(discoverySpi)
+
+    Ignition.getOrStart(cfg)
   }
 }

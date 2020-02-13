@@ -1,10 +1,13 @@
 package org.ada.server.dataaccess.ignite
 
+import javax.inject.Singleton
 import org.ada.server.dataaccess.mongo.ReactiveMongoApi
 import org.apache.ignite.lifecycle.{LifecycleBean, LifecycleEventType}
+
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
+@Singleton
 class IgniteLifecycleBean extends LifecycleBean {
 
   override def onLifecycleEvent(evt: LifecycleEventType) = {

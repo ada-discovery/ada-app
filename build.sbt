@@ -9,13 +9,21 @@ lazy val server = project
 
 lazy val web = project
   .enablePlugins(PlayScala, SbtWeb)
-  .aggregate(server)
   .dependsOn(server)
+  .aggregate(server)
+  .settings(
+    aggregate in test := false,
+    aggregate in testOnly := false
+  )
 
 lazy val ncer = project
   .enablePlugins(PlayScala, SbtWeb)
-  .aggregate(web)
   .dependsOn(web)
+  .aggregate(web)
+  .settings(
+    aggregate in test := false,
+    aggregate in testOnly := false
+  )
 
 fork in Test := true
 

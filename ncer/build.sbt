@@ -29,7 +29,7 @@ val playVersion = "2.5.9"
 libraryDependencies ++= Seq(
   "org.adada" %% "ada-dream-pd-challenge" % "0.1.0",
   "org.in-cal" %% "incal-dl4j" % "0.2.3",   // DL4J
-  "org.scalatest" %% "scalatest" % "3.0.0" % "test",
+  "org.scalatestplus.play" %% "scalatestplus-play" % "3.0.0" % "test",
   "org.apache.pdfbox" % "pdfbox" % "2.0.1",
   "org.irods.jargon" % "jargon-core" % "4.3.0.2-RELEASE"  // iRODS stuff - installed locally from https://github.com/DICE-UNC/jargon/releases/tag/4.3.0.2-RELEASE
 ) map { _.exclude("org.slf4j","slf4j-log4j12") }
