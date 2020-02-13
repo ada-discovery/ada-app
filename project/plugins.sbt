@@ -19,7 +19,6 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-gzip" % "1.0.0")
 addSbtPlugin("com.typesafe.sbt" % "sbt-mocha" % "1.0.0")
 addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.8.2")
 addSbtPlugin("net.ground5hark.sbt" % "sbt-css-compress" % "0.1.3")
-addSbtPlugin("net.ground5hark.sbt" % "sbt-closure" % "0.1.3")
 addSbtPlugin("com.github.sbt" % "sbt-jacoco" % "3.1.+")
 
 // ADA WEB NCER
