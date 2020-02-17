@@ -108,17 +108,11 @@ class BatchOrderRequestSettingController @Inject()(
       id
 
   // Create
-  private val noDataSetRedirect = goHome.flashing("errors" -> "No data set id specified.")
-
   override def create = AuthAction { implicit request =>
-    getDataSetId(request).map( dataSetId =>
-      if (dataSetId.trim.nonEmpty)
-        super.create(request)
-      else
-        Future(noDataSetRedirect)
-    ).getOrElse(
-      Future(noDataSetRedirect)
-    )
+    getDataSetId(request) match {
+      case Some(dataSetId) if dataSetId.trim.nonEmpty => super.create(request)
+      case _ => Future(goHome.flashing("errors" -> "No data set id specified."))
+    }
   }
 
   override protected def createView = { implicit ctx =>

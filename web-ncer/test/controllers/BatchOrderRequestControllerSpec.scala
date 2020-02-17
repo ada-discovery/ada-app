@@ -1,13 +1,12 @@
 package controllers
 
+
 import controllers.orderrequest.BatchOrderRequestController
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
-import services.BatchOrderRequestRepoTypes.BatchOrderRequestSettingRepo
 
 class BatchOrderRequestControllerSpec extends PlaySpec with Results with GuiceOneAppPerSuite {
 
