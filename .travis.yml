@@ -20,11 +20,12 @@ install:
   - git clone https://github.com/in-cal/incal-core.git
   - cd incal-core
   - sbt publish-local
+  - cd .. && rm -rf incal-core
 script:
   - sbt clean
   - sbt "project server" "test"
   - sbt "project web" "testOnly *Spec"
-#  - sbt "project web" "testOnly *Spec"
+#  - sbt "project webNcer" "testOnly *Spec"
 before_cache:
   - docker save -o docker_images/images.tar $(docker images -a -q)
   # Cleanup the cached directories to avoid unnecessary cache updates

@@ -1,17 +1,17 @@
 package controllers
 
 import controllers.orderrequest.BatchOrderRequestController
-import org.ada.server.services.GuicePlayTestApp
 import org.scalatestplus.play._
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test._
 import services.BatchOrderRequestRepoTypes.BatchOrderRequestSettingRepo
 
-class BatchOrderRequestControllerSpec extends PlaySpec with Results {
+class BatchOrderRequestControllerSpec extends PlaySpec with Results with GuiceOneAppPerSuite {
 
-  private val injector = GuicePlayTestApp(Seq("play.modules.reactivemongo.ReactiveMongoModule")).injector
-  private val controller = injector.instanceOf[BatchOrderRequestController]
+  val controller = app.injector.instanceOf[BatchOrderRequestController]
 
   "BatchOrderRequestController#createNew" should {
     "should be valid" in {
