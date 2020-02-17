@@ -1,6 +1,3 @@
-import com.github.play2war.plugin._
-import PlayKeys._
-
 name := "ada-web-ncer"
 
 scalaVersion := "2.11.12"
@@ -27,6 +24,7 @@ routesImport ++= Seq(
 val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
+  "org.adada" %% "ada-web" % "0.9.0-SNAPSHOT",
   "org.adada" %% "ada-dream-pd-challenge" % "0.1.0",
   "org.in-cal" %% "incal-dl4j" % "0.2.3",   // DL4J
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.0.0" % "test",
