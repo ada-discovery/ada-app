@@ -6,7 +6,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 object GuicePlayTestApp {
 
   def apply(moduleNames: Seq[String] = Nil): Application = {
-    val env = play.api.Environment.simple(mode = play.api.Mode.Test)
+    val env = play.api.Environment.simple()
     val config = play.api.Configuration.load(env)
 
     val modules =
