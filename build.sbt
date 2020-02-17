@@ -5,9 +5,9 @@ scalaVersion in ThisBuild := "2.11.12"
 version in ThisBuild := "0.9.0-SNAPSHOT"
 isSnapshot in ThisBuild := true
 
-lazy val server = project
+lazy val server = (project in file("server"))
 
-lazy val web = project
+lazy val web = (project in file("web"))
   .enablePlugins(PlayScala, SbtWeb)
   .dependsOn(server)
   .aggregate(server)
@@ -16,7 +16,7 @@ lazy val web = project
     aggregate in testOnly := false
   )
 
-lazy val ncer = project
+lazy val webNcer = (project in file("web-ncer"))
   .enablePlugins(PlayScala, SbtWeb)
 
 fork in Test := true
