@@ -18,7 +18,7 @@ case class NotificationInfo(
   targetUserEmail: String,
   fromState: BatchRequestState.Value,
   toState: BatchRequestState.Value,
-  possibleActions: Traversable[RequestAction.Value],
+  possibleActions: Option[Traversable[RequestAction.Value]],
   updateDate: Date,
   updatedByUser: String,
   getRequestUrl: String,
