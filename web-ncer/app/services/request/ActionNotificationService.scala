@@ -37,7 +37,7 @@ class ActionNotificationServiceImpl @Inject()(
     private def sendNotification(notification: NotificationInfo, attachmentOption: Option[AttachmentFile]) = {
         val subject = buildSubject(notification)
         val attachments = attachmentOption.toSeq
-        val message = buildMessage(notification)
+        val message = views.html.requests.notification.emailTemplate(notification).toString
 
         val email = Email(
             from = fromEmail,
@@ -71,16 +71,9 @@ class ActionNotificationServiceImpl @Inject()(
         AttachmentFile("request-resume.pdf", resumeFile)
     }
 
-    private def buildMessage(notification: NotificationInfo) = {
-        notification.notificationType match {
-            case NotificationType.Solicitation => views.html.requests.notification.solicitationTemplate(notification).toString()
-            case NotificationType.Advice => views.html.requests.notification.adviceTemplate(notification).toString()
-        }
-    }
-
     private def buildSubject(notification: NotificationInfo) =
-        notification.notificationType match {
-            case NotificationType.Solicitation => "action needed on request in state " + toHumanReadableCamel(notification.toState.toString())
-            case NotificationType.Advice => "status of request updated to state " + toHumanReadableCamel(notification.toState.toString())
-        }
+        (notification.notificationType match {
+            case NotificationType.Solicitation => "[action required]"
+            case NotificationType.Advice => "[status updated]"
+        }) + " for sample request"
 }
