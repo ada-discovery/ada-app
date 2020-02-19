@@ -707,6 +707,10 @@ function activateRowClickable() {
   });
 }
 
+function preventEventPropagation(event) {
+  event.stopPropagation();
+}
+
 function getModalValues(modalElementId) {
   var values = {};
   $('#' + modalElementId +' input, #' + modalElementId +' select, #' + modalElementId +' textarea').each(function () {
