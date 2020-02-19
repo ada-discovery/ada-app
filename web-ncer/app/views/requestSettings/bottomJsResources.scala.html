@@ -8,17 +8,17 @@
 
 <script type="text/javascript">
     $(function () {
-        populateIdNameTypeahedFromUrl(
-            $('#add_committeeUserIdModal').find('#userTypeahead'),
-            $('#add_committeeUserIdModal').find('#userId'),
-            '@Html(settingRoutes.userIdAndNames().url)'
-        )
+        populateIdNameTypeaheadFromUrl({
+            typeaheadElement: $('#add_committeeUserIdModal').find('#userTypeahead'),
+            idElement: $('#add_committeeUserIdModal').find('#userId'),
+            url: '@Html(settingRoutes.userIdAndNames().url)'
+        })
 
-        populateIdNameTypeahedFromUrl(
-            $('#viewNameTypeahead'),
-            $('#viewId'),
-            '@Html(context.dataViewRouter.idAndNamesAccessible.url)',
-            true
-        )
+        populateIdNameTypeaheadFromUrl({
+            typeaheadElement: $('#viewNameTypeahead'),
+            idElement: $('#viewId'),
+            url: '@Html(context.dataViewRouter.idAndNamesAccessible.url)',
+            initSelectByNameElement: true
+        })
     })
 </script>

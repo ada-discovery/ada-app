@@ -62,12 +62,12 @@
 
     <script type="text/javascript">
         $(function () {
-            populateFieldTypeahedFromUrl(
-                $('#dataSetIdTypeahead'),
-                $('#dataSetId'),
-                '@Html(settingRoutes.dataSetIds().url)',
-                @FilterShowFieldStyle.LabelsOnly.id
-            )
+            populateFieldTypeaheadFromUrl({
+                typeaheadElement: $('#dataSetIdTypeahead'),
+                fieldNameElement: $('#dataSetId'),
+                url: '@Html(settingRoutes.dataSetIds().url)',
+                showOption: @FilterShowFieldStyle.LabelsOnly.id
+            })
 
             $("#userSelectionModal #submitButton").one("click", addAsAdmin);
         })
