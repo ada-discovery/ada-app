@@ -44,7 +44,7 @@
     function(values) {
         var row = null
         if (values["userId"]) {
-            var checkboxColumn = "<td><input type='checkbox' class='table-selection'></input></td>";
+            var checkboxColumn = "<td><input type='checkbox' class='table-selection' onclick='preventEventPropagation(event)'></input></td>";
             var userIdColumn = "<td><input type='hidden' id='userId' value='" + values["userId"] + "'/></td>";
             var userNameColumn = "<td>" + values["userTypeahead"] + "</td>";
 

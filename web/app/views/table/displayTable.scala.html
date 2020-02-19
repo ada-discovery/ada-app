@@ -19,7 +19,7 @@
 		<tr>
             @if(tableSelection) {
                 <th class="col header">
-                    <input type="checkbox" class="table-selection-all" title="Check/Uncheck All"/>
+                    <input type="checkbox" class="table-selection-all" onclick='preventEventPropagation(event)' title="Check/Uncheck All"/>
                 </th>
             }
             @columns.map { case (fieldName, fieldLabel, _) =>
@@ -35,7 +35,7 @@
                 }
                 @if(tableSelection) {
                     <td>
-                        <input type="checkbox" class="table-selection"/>
+                        <input type="checkbox" class="table-selection" onclick='preventEventPropagation(event)'/>
                     </td>
                 }
                 @columns.map { case (fieldName, _, content) =>
