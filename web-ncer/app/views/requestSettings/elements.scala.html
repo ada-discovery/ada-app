@@ -14,15 +14,28 @@
 )
 
 @labelValue("dataSetId", attributeLabel("requestSetting", "dataSetId")) {
-    <input id="dataSetId" name="dataSetId" value="@context.dataSetId" readonly="true">
+    <input id="dataSetId" name="dataSetId" value="@context.dataSetId" readonly="readonly">
 }
 
 @dynamicTableJsImport()
 
-@labelValue("committeeUserIds", "Committee Users") {
+@labelValue("committeeUserIds", "Committee Members") {
     @dynamicUserTable(
         "committeeUserId",
-        form.value.map(_.committeeUserIds).getOrElse(Nil).flatMap(idUserMap.get(_))
+        form.value match {
+            case Some(setting) => setting.committeeUserIds.map(idUserMap)
+            case None => Nil
+        }
+    )
+}
+
+@labelValue("bioBankUserIds", "Data Owner") {
+    @dynamicUserTable(
+        "bioBankUserId",
+        form.value match {
+            case Some(setting) => setting.bioBankUserIds.map(idUserMap)
+            case None => Nil
+        }
     )
 }
 

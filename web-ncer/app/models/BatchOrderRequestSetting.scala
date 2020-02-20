@@ -14,6 +14,7 @@ case class BatchOrderRequestSetting(
   dataSetId: String,
   timeCreated: Date = new Date(),
   committeeUserIds: Seq[BSONObjectID],
+  bioBankUserIds: Seq[BSONObjectID],
   viewId: BSONObjectID
 )
 

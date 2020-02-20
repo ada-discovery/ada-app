@@ -39,7 +39,7 @@ class EmaRun @Inject() (
     requestRepo.save(request)
 
     val committeeId = BSONObjectID.parse("577e18c24500004800cdc557").toOption
-    val committee = BatchOrderRequestSetting(committeeId, "dataSetId", new Date(), Nil, BSONObjectID.generate())
+    val committee = BatchOrderRequestSetting(committeeId, "dataSetId", new Date(), Nil, Nil, BSONObjectID.generate())
     settingRepo.delete(committeeId)
     settingRepo.save(committee)
 

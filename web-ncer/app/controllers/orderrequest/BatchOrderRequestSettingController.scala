@@ -66,7 +66,8 @@ class BatchOrderRequestSettingController @Inject()(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSetId" -> nonEmptyText,
       "timeCreated" -> ignored(new Date()),
-      "committeeUserIds" -> seq(of[BSONObjectID]).verifying("At least one committee member needs to be specified.", _.nonEmpty),
+      "committeeUserIds" -> seq(of[BSONObjectID]).verifying("At least one committee member must be specified.", _.nonEmpty),
+      "bioBankUserIds" -> seq(of[BSONObjectID]).verifying("At least one bio bank contact must be specified.", _.nonEmpty),
       "viewId" -> of[BSONObjectID]
     )(BatchOrderRequestSetting.apply)(BatchOrderRequestSetting.unapply)
   )
@@ -81,7 +82,7 @@ class BatchOrderRequestSettingController @Inject()(
       requestSettingExists <- repo.find(
         Seq("dataSetId" #== requestSetting.dataSetId),
         limit = Some(1)
-      ).map(_.headOption.isDefined)
+      ).map(_.nonEmpty)
 
       _ = if (requestSettingExists)
         throw new AdaException(s"A configuration already exists for dataset id '${requestSetting.dataSetId}'.")
@@ -103,9 +104,8 @@ class BatchOrderRequestSettingController @Inject()(
           extraNavigationItems = dataSetSetting.get.extraNavigationItems :+ newMenuLink
         )
         dataSetSettingRepo.update(newDataSetSetting)
-      } if (dataSetSetting.isDefined)
-    } yield
-      id
+      } if dataSetSetting.isDefined
+    } yield id
 
   // Create
   override def create = AuthAction { implicit request =>
@@ -155,7 +155,7 @@ class BatchOrderRequestSettingController @Inject()(
 
       // create a data set accessor
       dsa = dsaf(dataSetId).getOrElse(
-        throw new AdaException(s"No dsa found for the data set id '${dataSetId}'.")
+        throw new AdaException(s"No dsa found for the data set id '$dataSetId'.")
       )
 
       // data set setting

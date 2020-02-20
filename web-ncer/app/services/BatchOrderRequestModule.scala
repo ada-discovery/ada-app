@@ -11,7 +11,7 @@ import services.BatchOrderRequestRepoTypes.{BatchOrderRequestRepo, BatchOrderReq
 
 class BatchOrderRequestModule extends ScalaModule {
 
-  override def configure = {
+  override def configure() = {
     bind[BatchOrderRequestSettingRepo].toInstance(
       new MongoAsyncCrudRepo[BatchOrderRequestSetting, BSONObjectID]("batch_request_settings")
     )
