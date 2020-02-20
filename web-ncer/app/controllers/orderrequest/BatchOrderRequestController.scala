@@ -237,9 +237,9 @@ class BatchOrderRequestController @Inject()(
                 val batchRequest = BatchOrderRequest(
                   dataSetId = dataSet,
                   itemIds = selectedIds,
-                  state = BatchRequestState.Created,
+                  state = BatchRequestState.Draft,
                   createdById = userId,
-                  history = Seq(ActionInfo(BatchRequestState.Created, BatchRequestState.Created, user.ldapDn))
+                  history = Seq(ActionInfo(BatchRequestState.Draft, BatchRequestState.Draft, user.ldapDn))
                 )
 
                 repo.save(batchRequest)
@@ -448,7 +448,7 @@ class BatchOrderRequestController @Inject()(
       val committeeDataSetIds = userCommittee.map(c => c.dataSetId).toSeq
       val ownedDataSetIds = dataSetSettings.map(s => s.dataSetId).toSeq
       val dataSetIds = ownedDataSetIds ++ committeeDataSetIds
-      Seq("dataSetId" #-> dataSetIds, "state" #!= BatchRequestState.Created.toString)
+      Seq("dataSetId" #-> dataSetIds, "state" #!= BatchRequestState.Draft.toString)
   }
 
   private def getUserScopedItemsAndCounts(

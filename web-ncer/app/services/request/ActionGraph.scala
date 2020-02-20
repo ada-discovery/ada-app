@@ -10,9 +10,9 @@ object ActionGraph {
   // TODO: move to custom.conf (or a dedicated conf file)
   private val actions: Traversable[Action] = Seq(
     Action(
-      BatchRequestState.Created,
+      BatchRequestState.Draft,
       RequestAction.Submit,
-      BatchRequestState.SentForApproval,
+      BatchRequestState.AwaitingApproval,
       Role.Requester,
       Role.Committee,
       Seq(Role.Requester),
@@ -20,7 +20,7 @@ object ActionGraph {
     ),
 
     Action(
-      BatchRequestState.SentForApproval,
+      BatchRequestState.AwaitingApproval,
       RequestAction.Approve,
       BatchRequestState.Approved,
       Role.Committee,
@@ -29,7 +29,7 @@ object ActionGraph {
     ),
 
     Action(
-      BatchRequestState.SentForApproval,
+      BatchRequestState.AwaitingApproval,
       RequestAction.Reject,
       BatchRequestState.Rejected,
       Role.Committee,
@@ -48,19 +48,9 @@ object ActionGraph {
     ),
 
     Action(
-      BatchRequestState.Approved,
-      RequestAction.NotAvailable,
-      BatchRequestState.Unavailable,
-      Role.Owner,
-      Role.Requester,
-      Seq(Role.Owner),
-      needsDescription
-    ),
-
-    Action(
       BatchRequestState.OwnerAcknowledged,
       RequestAction.Send,
-      BatchRequestState.Sent,
+      BatchRequestState.InTransit,
       Role.Owner,
       Role.Requester,
       Seq(Role.Owner),
@@ -68,22 +58,12 @@ object ActionGraph {
     ),
 
     Action(
-      BatchRequestState.Sent,
+      BatchRequestState.InTransit,
       RequestAction.Receive,
-      BatchRequestState.UserReceived,
+      BatchRequestState.Received,
       Role.Requester,
       Role.Requester,
       Seq(Role.Owner, Role.Requester)
-    ),
-
-    Action(
-      BatchRequestState.Sent,
-      RequestAction.NotReceive,
-      BatchRequestState.NotReceived,
-      Role.Requester,
-      Role.Owner,
-      Seq(Role.Owner),
-      needsDescription
     )
   )
 
@@ -93,7 +73,7 @@ object ActionGraph {
     Action(
       BatchRequestState.None,
       RequestAction.Create,
-      BatchRequestState.Created,
+      BatchRequestState.Draft,
       Role.Requester,
       Role.Requester
     )

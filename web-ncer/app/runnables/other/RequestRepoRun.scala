@@ -24,7 +24,7 @@ class RequestRepoRun @Inject() (
   override def runAsFuture(input: RequestRepoRunSpec) = {
     val requestId = Some(BSONObjectID.parse("577e18c24500004800cdc557").get)
     val sampleId = BSONObjectID.parse("577e18c24500004800cdc558").get
-    val request = BatchOrderRequest(requestId,"dataSetId",Seq(sampleId),BatchRequestState.Created, createdById = BSONObjectID.generate)
+    val request = BatchOrderRequest(requestId,"dataSetId",Seq(sampleId),BatchRequestState.Draft, createdById = BSONObjectID.generate)
     requestRepo.save(request)
 
  for {

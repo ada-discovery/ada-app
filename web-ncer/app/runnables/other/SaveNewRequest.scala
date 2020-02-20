@@ -12,8 +12,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class SaveNewRequest @Inject() (requestsRepo:BatchOrderRequestRepo) extends InputFutureRunnableExt[SaveNewRequestSpec] with RunnableHtmlOutput {
 
   override def runAsFuture(input: SaveNewRequestSpec) = {
-   // val request = BatchOrderRequest(None, input.dataSetId, input.itemIds.flatMap(BSONObjectID.parse(_).toOption), BatchRequestState.Created)
-   val request = BatchOrderRequest(None, input.dataSetId, Seq(), BatchRequestState.Created, createdById = BSONObjectID.generate)
+   // val request = BatchOrderRequest(None, input.dataSetId, input.itemIds.flatMap(BSONObjectID.parse(_).toOption), BatchRequestState.Draft)
+   val request = BatchOrderRequest(None, input.dataSetId, Seq(), BatchRequestState.Draft, createdById = BSONObjectID.generate)
 
     for {
       savedRequestId <- requestsRepo.save(request)

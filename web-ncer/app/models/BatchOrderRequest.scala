@@ -6,14 +6,12 @@ import org.ada.server.dataaccess.BSONObjectIdentity
 import org.ada.server.json.EnumFormat
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
-import reactivemongo.play.json.JSONSerializationPack._
 
 case class BatchOrderRequest(
   _id: Option[BSONObjectID] = None,
   dataSetId: String,
   itemIds: Seq[BSONObjectID],
-  state: BatchRequestState.Value = BatchRequestState.Created,
+  state: BatchRequestState.Value = BatchRequestState.Draft,
   createdById: BSONObjectID,
   timeCreated: Date = new Date(),
   history: Seq[ActionInfo] = Nil
@@ -28,7 +26,16 @@ case class ActionInfo(
 )
 
 object BatchRequestState extends Enumeration {
-  val SentForApproval, Rejected, Created, Approved, OwnerAcknowledged, Unavailable, Sent, UserReceived, NotReceived, Error, None = Value
+  val Draft,  // [START] Initial state of a request
+  AwaitingApproval,  // Awaiting approval by committee
+  Rejected,  // [END] Committee has rejected the request
+  Approved,  // Committee has approved the request
+  OwnerAcknowledged,  // Sample owner acknowledged the approved request
+  NotAvailable,  // [END] Sample owner does not have any of the requested samples
+  InTransit,  // Sample owner shipped some or all samples to requester
+  Received,  // Sample owner confirms arrival
+  None  // used internally as default
+  = Value
 }
 
 object BatchOrderRequest {
