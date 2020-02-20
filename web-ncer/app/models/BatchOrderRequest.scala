@@ -6,6 +6,8 @@ import org.ada.server.dataaccess.BSONObjectIdentity
 import org.ada.server.json.EnumFormat
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
+import reactivemongo.play.json.JSONSerializationPack._
 
 case class BatchOrderRequest(
   _id: Option[BSONObjectID] = None,
