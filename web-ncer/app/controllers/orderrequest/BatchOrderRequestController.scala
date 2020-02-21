@@ -260,7 +260,7 @@ class BatchOrderRequestController @Inject()(
                 description = None,
                 targetUserEmail = user.email,
                 updateDate = date,
-                getRequestUrl = orderRoutes.action(id, Role.Requester).absoluteURL(),  // orderRoutes.get(id).absoluteURL(),
+                getRequestUrl = orderRoutes.actions(id, Role.Requester).absoluteURL(),  // orderRoutes.get(id).absoluteURL(),
                 notificationType = NotificationType.Solicitation,
                 updatedByUser = user.ldapDn,
                 items = None
@@ -508,7 +508,7 @@ class BatchOrderRequestController @Inject()(
         if (role == Role.Administrator)
           orderRoutes.edit(request._id.get)
         else
-          orderRoutes.action(request._id.get, role)
+          orderRoutes.actions(request._id.get, role)
 
       case None => orderRoutes.get(request._id.get)
     }
@@ -576,7 +576,7 @@ class BatchOrderRequestController @Inject()(
         }
 
         roleUsersToNotify = userIdsMapping.map { case (role, userIds) =>
-          (role, userIds.map(id => userIdMap.get(id).get))
+          (role, userIds.map(id => userIdMap(id)))
         }
 
         // get a data set accessor
@@ -595,7 +595,7 @@ class BatchOrderRequestController @Inject()(
             val notificationUrlToShow =
               notificationType match {
                 case NotificationType.Advice => orderRoutes.get(requestId).absoluteURL()
-                case NotificationType.Solicitation => orderRoutes.action(requestId, role).absoluteURL()
+                case NotificationType.Solicitation => orderRoutes.actions(requestId, role).absoluteURL()
               }
 
             NotificationInfo(
@@ -635,8 +635,7 @@ class BatchOrderRequestController @Inject()(
     }.recover(handleExceptions("request action"))
   }
 
-  // TODO: What is a difference between performAction and action
-  def action(id: BSONObjectID, role: Role.Value) =
+  def actions(id: BSONObjectID, role: Role.Value) =
     restrictAdminOrUserCustomAny(isRequestAllowed(id, None, Some(role), false)) { implicit request =>
       {
         for {
@@ -644,7 +643,7 @@ class BatchOrderRequestController @Inject()(
 
           orderRequest = requireDefined(requestOption, s"Batch order request '${id.stringify}' not found.")
 
-          validActions = ActionGraph.asMap.get(orderRequest.state).getOrElse(Traversable[models.Action]()).filter(_.allowed == role)
+          validActions = ActionGraph.asMap.getOrElse(orderRequest.state, Traversable[models.Action]()).filter(_.allowed == role)
 
           editViewData <-  getEditViewData(id, orderRequest)(request).map(Some(_))
 
@@ -652,7 +651,7 @@ class BatchOrderRequestController @Inject()(
         } yield {
           implicit val context = dataSetWebContext(orderRequest.dataSetId)
 
-          if (validActions.size > 0) {
+          if (validActions.nonEmpty) {
             render {
               case Accepts.Html() => Ok(views.actions(editViewData.get._2.get, validActions, role, items, fieldLabels))
               case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
@@ -743,7 +742,7 @@ class BatchOrderRequestController @Inject()(
         case None => ActionGraph.asMap.get(existingRequest.state).get.map(a => a.allowed).toSet
       }
     } else {
-      Set(Role.Requester, Role.Owner, Role.Committee)
+      Set(Role.Requester, Role.BioBank, Role.Committee)
     }
 
   private def getNextState(

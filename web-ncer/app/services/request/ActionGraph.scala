@@ -23,7 +23,7 @@ object ActionGraph {
       RequestAction.Approve,
       BatchRequestState.Approved,
       Role.Committee,
-      Role.Owner,
+      Role.BioBank,
       Seq(Role.Requester, Role.Committee)
     ),
 
@@ -39,30 +39,29 @@ object ActionGraph {
 
     Action(
       BatchRequestState.Approved,
-      RequestAction.Approve,
+      RequestAction.Acknowledge,
       BatchRequestState.BioBankAcknowledged,
-      Role.Owner,
-      Role.Owner,
+      Role.BioBank,
+      Role.BioBank,
       Seq(Role.Requester)
     ),
 
     Action(
       BatchRequestState.BioBankAcknowledged,
-      RequestAction.Send,
+      RequestAction.Shipped,
       BatchRequestState.InTransit,
-      Role.Owner,
+      Role.BioBank,
       Role.Requester,
-      Seq(Role.Owner),
-      needsDescription
+      Seq(Role.BioBank)
     ),
 
     Action(
       BatchRequestState.BioBankAcknowledged,
       RequestAction.NotAvailable,
       BatchRequestState.NotAvailable,
-      Role.Owner,
+      Role.BioBank,
       Role.Requester,
-      Seq(Role.Owner),
+      Seq(Role.BioBank),
       needsDescription
     ),
 
@@ -72,7 +71,7 @@ object ActionGraph {
       BatchRequestState.Received,
       Role.Requester,
       Role.Requester,
-      Seq(Role.Owner, Role.Requester)
+      Seq(Role.BioBank, Role.Requester)
     )
   )
 

@@ -61,7 +61,7 @@ class BatchOrderServiceImpl @Inject()(
         Seq(
           getRoleIfFound(committeeIds, Role.Committee),
           getRoleIfFound(Seq(request.createdById), Role.Requester),
-          getRoleIfFound(Seq(ownerId).flatten, Role.Owner),
+          getRoleIfFound(Seq(ownerId).flatten, Role.BioBank),
           getAdminRoleIfApplicable(user)
         ).flatten
       )
@@ -79,7 +79,7 @@ class BatchOrderServiceImpl @Inject()(
       Map(
         Role.Committee -> committeeIds,
         Role.Requester -> Seq(request.createdById),
-        Role.Owner -> Seq(ownerId).flatten
+        Role.BioBank -> Seq(ownerId).flatten
       )
 
   // maximum one batch order request setting expected

@@ -30,7 +30,7 @@ POST        /requests/getRequestTable                           controllers.orde
 GET         /requests/all                                       controllers.orderrequest.BatchOrderRequestController.listAll(s: String ?= "timeCreated")
 GET         /requests/:id/get                                   controllers.orderrequest.BatchOrderRequestController.get(id: BSONObjectID)
 GET         /requests/:id/edit                                  controllers.orderrequest.BatchOrderRequestController.edit(id: BSONObjectID)
-GET         /requests/:id/action                                controllers.orderrequest.BatchOrderRequestController.action(id: BSONObjectID, role: models.Role.Value)
+GET         /requests/:id/actions                               controllers.orderrequest.BatchOrderRequestController.actions(id: BSONObjectID, role: models.Role.Value)
 POST        /requests/:id                                       controllers.orderrequest.BatchOrderRequestController.update(id: BSONObjectID)
 POST        /requests/:id/delete                                controllers.orderrequest.BatchOrderRequestController.delete(id: BSONObjectID)
 POST        /requests/:id/performAction                         controllers.orderrequest.BatchOrderRequestController.performAction(id: BSONObjectID, action: models.RequestAction.Value, role: models.Role.Value, description: Option[String] ?= None)

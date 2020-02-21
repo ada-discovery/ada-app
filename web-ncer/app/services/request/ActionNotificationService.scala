@@ -56,7 +56,7 @@ class ActionNotificationServiceImpl @Inject()(
 
     private def buildAttachment(notificationInfo: NotificationInfo) = {
         def isResumeRequired(role: Role.Value, notificationType: NotificationType.Value) = {
-            (role == Role.Committee || role == Role.Owner) && (notificationType == NotificationType.Solicitation)
+            (role == Role.Committee || role == Role.BioBank) && (notificationType == NotificationType.Solicitation)
         }
 
         if (isResumeRequired(notificationInfo.userRole, notificationInfo.notificationType)) {
