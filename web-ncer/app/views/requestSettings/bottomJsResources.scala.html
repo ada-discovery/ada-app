@@ -8,9 +8,15 @@
 
 <script type="text/javascript">
     $(function () {
-        populateIdNameTypeaheadFromUrl({
-            typeaheadElement: $('#add_committeeUserIdModal').find('#userTypeahead'),
-            idElement: $('#add_committeeUserIdModal').find('#userId'),
+        populateIdNameTypeaheadsFromUrl({
+            typeaheadElements: [
+                $('#add_committeeUserIdModal').find('#userTypeahead'),
+                $('#add_bioBankUserIdModal').find('#userTypeahead')
+            ],
+            idElements: [
+                $('#add_committeeUserIdModal').find('#userId'),
+                $('#add_bioBankUserIdModal').find('#userId')
+            ],
             url: '@Html(settingRoutes.userIdAndNames().url)'
         })
 
