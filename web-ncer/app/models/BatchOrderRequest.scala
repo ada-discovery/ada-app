@@ -32,10 +32,10 @@ object BatchRequestState extends Enumeration {
   AwaitingApproval,  // Awaiting approval by committee
   Rejected,  // [END] Committee has rejected the request
   Approved,  // Committee has approved the request
-  OwnerAcknowledged,  // Sample owner acknowledged the approved request
+  BioBankAcknowledged,  // Sample owner acknowledged the approved request
   NotAvailable,  // [END] Sample owner does not have any of the requested samples
   InTransit,  // Sample owner shipped some or all samples to requester
-  Received,  // Sample owner confirms arrival
+  Received,  // [END] Sample owner confirms arrival
   None  // used internally as default
   = Value
 }
