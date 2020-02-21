@@ -57,6 +57,16 @@ object ActionGraph {
     ),
 
     Action(
+      BatchRequestState.BioBankAcknowledged,
+      RequestAction.NotAvailable,
+      BatchRequestState.NotAvailable,
+      Role.Owner,
+      Role.Requester,
+      Seq(Role.Owner),
+      needsDescription
+    ),
+
+    Action(
       BatchRequestState.InTransit,
       RequestAction.Receive,
       BatchRequestState.Received,
@@ -66,7 +76,8 @@ object ActionGraph {
     )
   )
 
-  val asMap: Map[BatchRequestState.Value, Traversable[Action]] = actions.map { action => (action.fromState, action) }.toGroupMap
+  val asMap: Map[BatchRequestState.Value, Traversable[Action]] =
+    actions.map { action => (action.fromState, action) }.toGroupMap
 
   val createAction =
     Action(
