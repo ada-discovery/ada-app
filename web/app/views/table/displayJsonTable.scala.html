@@ -27,7 +27,7 @@
 		<tr>
             @if(tableSelection) {
                 <th class="col header">
-                    <input type="checkbox" class="table-selection-all" title="Check/Uncheck All"/>
+                    <input type="checkbox" class="table-selection-all" onclick='preventEventPropagation(event)' title="Check/Uncheck All"/>
                 </th>
             }
             @if(fieldsToShow.isDefined) {
@@ -48,7 +48,7 @@
 	    	<tr class='@if(rowClickCall.isDefined) {clickable-row}' data-href='@if(rowClickCall.isDefined){@rowClickCall.get(item)}'>
                 @if(tableSelection) {
                     <td>
-                        <input type="checkbox" class="table-selection"/>
+                        <input type="checkbox" class="table-selection" onclick='preventEventPropagation(event)'/>
                         @{(item \ JsObjectIdentity.name).asOpt[BSONObjectID].map(idValue)}
                     </td>
                 }
