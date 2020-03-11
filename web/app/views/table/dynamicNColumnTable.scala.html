@@ -46,7 +46,7 @@
     function(values) {
         // create row
         var row = $("<tr></tr>")
-        var checkboxColumn = "<td><input type='checkbox' class='table-selection'></input></td>";
+        var checkboxColumn = "<td><input type='checkbox' class='table-selection' onclick='preventEventPropagation(event)'></input></td>";
         row.append(checkboxColumn)
 
         @fieldLabels.zipWithIndex.map { case (label, index) =>

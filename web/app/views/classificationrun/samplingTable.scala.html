@@ -37,7 +37,7 @@
         var outputValue = values["outputValue"].trim()
         var samplingRatio = values["samplingRatio"].trim()
 
-        var checkboxColumn = "<td><input type='checkbox' class='table-selection'></input></td>";
+        var checkboxColumn = "<td><input type='checkbox' class='table-selection' onclick='preventEventPropagation(event)'></input></td>";
         var outputValueColumn = "<td><input type='text' id='outputValue' style='width:80px' value='" + outputValue + "'/></td>";
         var samplingRatioColumn = "<td><input type='text' id='samplingRatio' style='width:80px' value='" + samplingRatio + "'/></td>";
 

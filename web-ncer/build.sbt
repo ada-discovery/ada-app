@@ -29,7 +29,7 @@ libraryDependencies ++= Seq(
   "org.in-cal" %% "incal-dl4j" % "0.2.3",   // DL4J
   "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.1" % "test",
   "org.apache.pdfbox" % "pdfbox" % "2.0.1",
-  "org.irods.jargon" % "jargon-core" % "4.3.0.2-RELEASE"  // iRODS stuff - installed locally from https://github.com/DICE-UNC/jargon/releases/tag/4.3.0.2-RELEASE
+  "org.irods.jargon" % "jargon-core" % "4.3.0.2-RELEASE"  from "https://github.com/DICE-UNC/jargon/releases/download/4.3.0.2-RELEASE/jargon-core-4.3.0.2-RELEASE.jar"
 ) map { _.exclude("org.slf4j","slf4j-log4j12") }
 
 // excludeDependencies += SbtExclusionRule(organization = "com.typesafe.akka") // "com.typesafe.akka" %% "akka-stream"

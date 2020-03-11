@@ -43,7 +43,7 @@
         var fieldPath = values["fieldPath"].trim()
         var transformType = values["transformType"].trim()
 
-        var checkboxColumn = "<td><input type='checkbox' class='table-selection'></input></td>";
+        var checkboxColumn = "<td><input type='checkbox' class='table-selection' onclick='preventEventPropagation(event)'></input></td>";
         var fieldPathColumn = "<td><input type='text' id='fieldPath' style='width:80px' value='" + fieldPath + "'/></td>";
         var transformTypeColumn = `<td>@scaleTypeElement(None)</td>`
 
