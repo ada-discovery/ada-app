@@ -5,12 +5,11 @@ import java.nio.charset.{Charset, MalformedInputException, UnsupportedCharsetExc
 import javax.inject.Inject
 import org.ada.server.models.dataimport.DataSetImport
 import org.ada.server.AdaParseException
-import org.ada.server.field.FieldTypeHelper
+import org.ada.server.field.{FieldType, FieldTypeHelper}
 import org.ada.server.models._
 import org.ada.server.dataaccess.RepoTypes._
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.ada.server.services.DataSetService
-import org.ada.server.util.MessageLogger
 import org.ada.server.field.FieldUtil.specToField
 import org.ada.server.field.inference.FieldTypeInferrer
 import org.incal.core.runnables.InputFutureRunnable
@@ -116,10 +115,10 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
 
     try {
       eol match {
-        case Some(eol) => {
+        case Some(eol) =>
           // TODO: not effective... if a custom eol is used we need to read the whole file into memory and split again. It'd be better to use a custom BufferedReader
           createSource.mkString.split(eol).iterator
-        }
+
         case None =>
           createSource.getLines
       }

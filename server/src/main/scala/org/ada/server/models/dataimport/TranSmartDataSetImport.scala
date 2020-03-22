@@ -21,6 +21,7 @@ case class TranSmartDataSetImport(
   inferFieldTypes: Boolean,
   inferenceMaxEnumValuesCount: Option[Int] = None,
   inferenceMinAvgValuesPerEnum: Option[Double] = None,
+  explicitNullAliases: Seq[String] = Nil,
   saveBatchSize: Option[Int] = None,
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,
