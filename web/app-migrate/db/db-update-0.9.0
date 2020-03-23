@@ -1,0 +1,19 @@
+db.getCollection('dataset_imports').update({concreteClass : "org.ada.server.models.dataimport.CsvDataSetImport"},
+	{$set:{"explicitNullAliases":[]}},
+    {multi: true}
+)
+
+db.getCollection('dataset_imports').update({concreteClass : "org.ada.server.models.dataimport.JsonDataSetImport"},
+	{$set:{"explicitNullAliases":[]}},
+    {multi: true}
+)
+
+db.getCollection('dataset_imports').update({concreteClass : "org.ada.server.models.dataimport.TranSmartDataSetImport"},
+	{$set:{"explicitNullAliases":[]}},
+    {multi: true}
+)
+
+db.getCollection('dataset_imports').update({concreteClass : "org.ada.server.models.dataimport.RedCapDataSetImport"},
+	{$set:{"explicitNullAliases":[]}},
+    {multi: true}
+)
