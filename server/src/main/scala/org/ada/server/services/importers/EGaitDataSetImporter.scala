@@ -44,10 +44,7 @@ private class EGaitDataSetImporter @Inject()(
   )
 
   // Field type inferrer
-  private val fti = {
-    val ftf = FieldTypeHelper.fieldTypeFactory(nullAliases = Set("", "-"))
-    FieldTypeHelper.fieldTypeInferrerFactory(ftf).ofString
-  }
+  private val fti = FieldTypeHelper.fieldTypeInferrerFactory(nullAliases = Set("", "-")).ofString
 
   private val rawKineticDataDictionary = Seq(
     Field("sessionId", None, FieldTypeId.String),
@@ -129,7 +126,7 @@ private class EGaitDataSetImporter @Inject()(
             (columnNamesAndLabelsInOrder, values.toIterator)
       }
 
-      _ <- saveStringsAndDictionaryWithTypeInference(dsa, columnNameLabels, mergedValues, Some(saveBatchSize), Some(fti))
+      _ <- saveStringsAndDictionaryWithTypeInference(dsa, columnNameLabels, mergedValues, Some(saveBatchSize), fti)
     } yield
       ()
 

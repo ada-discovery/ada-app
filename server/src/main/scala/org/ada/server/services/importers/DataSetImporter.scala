@@ -31,10 +31,8 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
   @Inject var dsaf: DataSetAccessorFactory = _
 
   protected val logger = Logger
-
-  protected val defaultFti = FieldTypeHelper.fieldTypeInferrer
-  protected val ftf = FieldTypeHelper.fieldTypeFactory()
   protected val defaultCharset = "UTF-8"
+  private val defaultFtf = FieldTypeHelper.fieldTypeFactory()
 
   protected def createDataSetAccessor(
     importInfo: DataSetImport
@@ -55,10 +53,10 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
   protected def createJsonsWithFields(
     fieldNamesAndLabels: Seq[(String, String)],
     values: Seq[Seq[String]],
-    fti: Option[FieldTypeInferrer[String]] = None
+    fti: FieldTypeInferrer[String]
   ): (Seq[JsObject], Seq[Field]) = {
     // infer field types
-    val fieldTypes = values.transpose.par.map(fti.getOrElse(defaultFti).apply).toList
+    val fieldTypes = values.transpose.par.map(fti.apply).toList
 
     // create jsons
     val jsons = values.map( vals =>
@@ -83,7 +81,7 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
     values: Iterator[Seq[String]]
   ): (Iterator[JsObject], Seq[Field]) = {
     // use String types for all the fields
-    val fieldTypes = fieldNamesAndLabels.map(_ => ftf.stringScalar)
+    val fieldTypes = fieldNamesAndLabels.map(_ => defaultFtf.stringScalar)
 
     // create jsons
     val jsons = values.map( vals =>
@@ -179,12 +177,11 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
     fieldNamesAndLabels: Seq[(String, String)],
     values: Iterator[Seq[String]],
     saveBatchSize: Option[Int] = None,
-    fti: Option[FieldTypeInferrer[String]] = None
+    fti: FieldTypeInferrer[String]
   ): Future[Unit] = {
     // infer field types and create JSONSs
     logger.info(s"Inferring field types and creating JSONs...")
 
-    val fieldNames = fieldNamesAndLabels.map(_._1)
     val (jsons, fields) = createJsonsWithFields(fieldNamesAndLabels, values.toSeq, fti)
 
     saveJsonsAndDictionary(dsa, jsons, fields, saveBatchSize)

@@ -27,12 +27,16 @@ private class JsonDataSetImporter extends AbstractDataSetImporter[JsonDataSetImp
       // TODO: use an input stream here
       val fileContent = source.mkString
 
+      val nullAliases = FieldTypeHelper.nullAliasesOrDefault(importInfo.explicitNullAliases)
       val maxEnumValuesCount = importInfo.inferenceMaxEnumValuesCount.getOrElse(FieldTypeHelper.maxEnumValuesCount)
       val minAvgValuesPerEnum = importInfo.inferenceMinAvgValuesPerEnum.getOrElse(FieldTypeHelper.minAvgValuesPerEnum)
 
-      val ftf = FieldTypeHelper.fieldTypeFactory(booleanIncludeNumbers = importInfo.booleanIncludeNumbers)
-      val ftif = new FieldTypeInferrerFactory(ftf, maxEnumValuesCount, minAvgValuesPerEnum, FieldTypeHelper.arrayDelimiter)
-      val jsonFti = ftif.ofJson
+      val jsonFti = FieldTypeHelper.fieldTypeInferrerFactory(
+        nullAliases = nullAliases,
+        booleanIncludeNumbers = importInfo.booleanIncludeNumbers,
+        maxEnumValuesCount = maxEnumValuesCount,
+        minAvgValuesPerEnum = minAvgValuesPerEnum
+      ).ofJson
 
       Json.parse(fileContent) match {
         case JsArray(items) =>

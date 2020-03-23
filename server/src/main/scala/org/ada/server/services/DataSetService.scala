@@ -1756,8 +1756,10 @@ class DataSetServiceImpl @Inject()(
 
     val convertedStringValues = items.map(translate)
 
-    val noCommaFtf = FieldTypeHelper.fieldTypeFactory(arrayDelimiter = ",,,", booleanIncludeNumbers = false)
-    val noCommanFti = FieldTypeHelper.fieldTypeInferrerFactory(ftf = noCommaFtf, arrayDelimiter = ",,,").ofString
+    val noCommanFti = FieldTypeHelper.fieldTypeInferrerFactory(
+      booleanIncludeNumbers = false,
+      arrayDelimiter = ",,,"
+    ).ofString
 
     // infer new types
     val (jsons, fieldTypes) = createJsonsWithFieldTypes(

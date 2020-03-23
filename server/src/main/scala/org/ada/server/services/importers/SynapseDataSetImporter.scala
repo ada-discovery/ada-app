@@ -32,8 +32,12 @@ private class SynapseDataSetImporter @Inject() (
   private val keyFieldName = "ROW_ID"
   private val maxEnumValuesCount = 150
 
-  private val synapseFtf = FieldTypeHelper.fieldTypeFactory(FieldTypeHelper.nullAliases ++ Set("nan"))
-  private val fti = FieldTypeHelper.fieldTypeInferrerFactory(synapseFtf, maxEnumValuesCount).ofString
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
+
+  private val fti = FieldTypeHelper.fieldTypeInferrerFactory(
+    nullAliases = FieldTypeHelper.nullAliases ++ Set("nan"),
+    maxEnumValuesCount = maxEnumValuesCount
+  ).ofString
 
   private val prefixSuffixSeparators = Seq(
     ("\"[\"\"", "\"\"]\""),
@@ -142,7 +146,7 @@ private class SynapseDataSetImporter @Inject() (
           val keyField = newFields.find(_.name == keyFieldName).getOrElse(
             throw new AdaException(s"Synapse key field $keyFieldName not found.")
           )
-          val keyFieldType = synapseFtf(keyField.fieldTypeSpec)
+          val keyFieldType = ftf(keyField.fieldTypeSpec)
           val keys = JsonUtil.project(jsons, keyFieldName).map(keyFieldType.jsonToValue)
           dataSetService.deleteRecordsExcept(dataRepo, keyFieldName, keys.flatten.toSeq)
         }
