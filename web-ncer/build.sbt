@@ -17,8 +17,7 @@ routesImport ++= Seq(
   "reactivemongo.bson.BSONObjectID",
   "org.ada.web.controllers.PathBindables._",
   "org.ada.web.controllers.QueryStringBinders._",
-  "org.ada.web.controllers.pdchallenge.QueryStringBinders._",
-  "controllers.QueryStringBinders._"
+  "org.ada.web.controllers.pdchallenge.QueryStringBinders._"
 )
 
 val playVersion = "2.5.9"

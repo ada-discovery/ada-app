@@ -90,21 +90,21 @@ class BatchOrderRequestSettingController @Inject()(
       // save the request setting
       id <- repo.save(requestSetting)
 
-      // get the associated data set setting
-      dataSetSetting <- dataSetSettingRepo.find(
-        Seq("dataSetId" #== requestSetting.dataSetId),
-        limit = Some(1)
-      ).map(_.headOption)
-
-      // add a handy link to a new order request screen
-      _ <- {
-        val newMenuLink = Link("Order Request", routes.BatchOrderRequestController.createNew(requestSetting.dataSetId).url)
-
-        val newDataSetSetting = dataSetSetting.get.copy(
-          extraNavigationItems = dataSetSetting.get.extraNavigationItems :+ newMenuLink
-        )
-        dataSetSettingRepo.update(newDataSetSetting)
-      } if dataSetSetting.isDefined
+//      // get the associated data set setting
+//      dataSetSetting <- dataSetSettingRepo.find(
+//        Seq("dataSetId" #== requestSetting.dataSetId),
+//        limit = Some(1)
+//      ).map(_.headOption)
+//
+//      // add a handy link to a new order request screen
+//      _ <- {
+//        val newMenuLink = Link("Order Request", routes.BatchOrderRequestController.createNew(requestSetting.dataSetId).url)
+//
+//        val newDataSetSetting = dataSetSetting.get.copy(
+//          extraNavigationItems = dataSetSetting.get.extraNavigationItems :+ newMenuLink
+//        )
+//        dataSetSettingRepo.update(newDataSetSetting)
+//      } if dataSetSetting.isDefined
     } yield id
 
   // Create
