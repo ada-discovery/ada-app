@@ -18,4 +18,3 @@ POST        /requestSettings/update/:id                         controllers.orde
 POST        /requestSettings/delete/:id                         controllers.orderrequest.BatchOrderRequestSettingController.delete(id: BSONObjectID)
 GET         /requestSettings/dataSetIds                         controllers.orderrequest.BatchOrderRequestSettingController.dataSetIds
 GET         /requestSettings/userIdAndNames                     controllers.orderrequest.BatchOrderRequestSettingController.userIdAndNames
-POST        /requestSettings/addAdmin                           controllers.orderrequest.BatchOrderRequestSettingController.addAdmin

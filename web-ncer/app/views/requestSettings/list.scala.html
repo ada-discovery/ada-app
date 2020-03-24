@@ -16,10 +16,10 @@
 @import org.incal.play.security.SecurityRole
 
 @(
-    page: Page[BatchOrderRequestSetting],
-    conditions: Seq[FilterCondition]
+        page: Page[BatchOrderRequestSetting],
+        conditions: Seq[FilterCondition]
 )(
-    implicit context: WebContext
+        implicit context: WebContext
 )
 
 @modalBody = {
@@ -33,14 +33,7 @@
                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
                 Setting
             </a>
-            @restrict(roles = List(Array(SecurityRole.admin))) {
-                <a class="btn btn-info btn-sm" data-toggle="modal" data-target="#userSelectionModal" title="Add Request Setting Admin">
-                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-                    Admin
-                </a>
-                @typeaheadSelectionModal("userSelectionModal", "user", "User", settingRoutes.userIdAndNames, None)
-            }
-            </div>
+        </div>
         @modal("addSettingModal", "Add New Request Setting", modalBody, Some(settingRoutes.create()), None, None)
     </div>
 }
@@ -58,27 +51,17 @@
 }
 
 @bottomResources = {
-    @typeaheadJsImport()
+@typeaheadJsImport()
 
     <script type="text/javascript">
-        $(function () {
-            populateFieldTypeaheadFromUrl({
-                typeaheadElement: $('#dataSetIdTypeahead'),
-                fieldNameElement: $('#dataSetId'),
-                url: '@Html(settingRoutes.dataSetIds().url)',
-                showOption: @FilterShowFieldStyle.LabelsOnly.id
+            $(function () {
+                populateFieldTypeaheadFromUrl({
+                    typeaheadElement: $('#dataSetIdTypeahead'),
+                    fieldNameElement: $('#dataSetId'),
+                    url: '@Html(settingRoutes.dataSetIds().url)',
+                    showOption: @FilterShowFieldStyle.LabelsOnly.id
+                })
             })
-
-            $("#userSelectionModal #submitButton").one("click", addAsAdmin);
-        })
-
-        function addAsAdmin() {
-            var userId = $("#userSelectionModal #userId").val().trim()
-            if (userId) {
-                var params = {"userId" : userId}
-                submit('post', '@settingRoutes.addAdmin', params)
-            }
-        }
     </script>
 }
 

@@ -217,32 +217,4 @@ class BatchOrderRequestSettingController @Inject()(
     }
   }
 
-  def addAdmin = restrictAny { implicit request =>
-    {
-      val userId = request.body.asFormUrlEncoded.flatMap { form =>
-        form.get("userId").flatMap(params => BSONObjectID.parse(params.head).toOption)
-      }
-
-      userId match {
-        case Some(userId) =>
-          for {
-            user <- userRepo.get(userId)
-
-            // update the user (if found)
-            _ <- if (user.isDefined && !user.get.permissions.contains(settingPermission))
-              userRepo.update(user.get.copy(permissions = user.get.permissions ++ Seq(settingPermission)))
-            else
-              Future(())
-          } yield {
-            user match {
-              case Some(user) => goHome.flashing("success" -> s"User '${user.ldapDn}' was made a batch-order request admin.")
-              case None => goHome.flashing("errors" -> s"No user '${userId.stringify}' found.")
-            }
-          }
-
-        case None =>
-          Future(goHome.flashing("errors" -> s"No user id specified."))
-      }
-    }.recover(handleExceptions("an add-admin"))
-  }
 }
