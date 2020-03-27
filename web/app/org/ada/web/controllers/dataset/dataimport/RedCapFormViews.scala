@@ -12,13 +12,16 @@ object RedCapFormViews extends DataSetImportFormViews[RedCapDataSetImport] {
   override protected val imagePath = Some("images/logos/redcap.jpg")
   override protected val imageLink = Some("https://www.project-redcap.org")
 
+  private implicit val stringSeqFormatter = SeqFormatterFixed(nonEmptyStringsOnly = false)
+
   override protected val extraMappings = Seq(
 //    "url" -> nonEmptyText,
 //    "token" -> nonEmptyText,
 //    "importDictionaryFlag" -> boolean,
 //    "eventNames" -> of[Seq[String]],
 //    "categoriesToInheritFromFirstVisit" -> of[Seq[String]],
-    "saveBatchSize" -> optional(number(min = 1))
+    "saveBatchSize" -> optional(number(min = 1)),
+    "explicitNullAliases" -> of[Seq[String]]
   )
 
   override protected val viewElements =
