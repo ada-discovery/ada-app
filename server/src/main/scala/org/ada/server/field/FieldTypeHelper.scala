@@ -33,7 +33,7 @@ object FieldTypeHelper {
   val arrayDelimiter = ","
 
   def nullAliasesOrDefault(explicitAliases: Traversable[String]) =
-    if (explicitAliases.nonEmpty) explicitAliases.toSet else FieldTypeHelper.nullAliases
+    if (explicitAliases.nonEmpty) explicitAliases.map(_.toLowerCase).toSet else FieldTypeHelper.nullAliases
 
   def fieldTypeFactory(
     nullAliases: Set[String] = nullAliases,
