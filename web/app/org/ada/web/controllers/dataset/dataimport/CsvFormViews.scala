@@ -14,7 +14,8 @@ object CsvFormViews extends DataSetImportFormViews[CsvDataSetImport] {
 
   override protected val imagePath = Some("images/logos/csv_100.png")
 
-  private implicit val stringSeqFormatter = SeqFormatterFixed(nonEmptyStringsOnly = false)
+  private implicit val stringSeqFormatter =
+    SeqFormatterFixed(nonEmptyStringsOnly = false)
 
   override protected val extraMappings =
     Seq(
