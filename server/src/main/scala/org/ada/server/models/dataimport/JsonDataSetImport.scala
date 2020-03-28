@@ -20,6 +20,7 @@ case class JsonDataSetImport(
   inferenceMaxEnumValuesCount: Option[Int] = None,
   inferenceMinAvgValuesPerEnum: Option[Double] = None,
   booleanIncludeNumbers: Boolean = false,
+  explicitNullAliases: Seq[String] = Nil,
   saveBatchSize: Option[Int] = None,
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,

@@ -79,7 +79,7 @@ mappings in (Compile, packageBin) ~= { _.filter(!_._1.getName.endsWith("custom.c
 
 // Asset stages
 
-pipelineStages in Assets := Seq(digest, gzip)
+pipelineStages in Assets := Seq(digest, gzip) // rjs, uglify,
 
 excludeFilter in gzip := (excludeFilter in gzip).value || new SimpleFileFilter(file => new File(file.getAbsolutePath + ".gz").exists)
 

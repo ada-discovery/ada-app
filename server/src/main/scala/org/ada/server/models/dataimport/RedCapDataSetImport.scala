@@ -19,6 +19,7 @@ case class RedCapDataSetImport(
   importDictionaryFlag: Boolean,
   eventNames: Seq[String] = Nil,
   categoriesToInheritFromFirstVisit: Seq[String] = Nil,
+  explicitNullAliases: Seq[String] = Nil,
   saveBatchSize: Option[Int] = None,
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,

@@ -32,9 +32,8 @@ private class GenericMapping[R, A](
   def bind(data: Map[String, String]): Either[Seq[FormError], R] = {
     merge(fieldMappings.map(_.bind(data)).toSeq :_*) match {
       case Left(errors) => Left(errors)
-      case Right(values) => {
+      case Right(values) =>
         applyConstraints(apply(values.map(_.asInstanceOf[A])))
-      }
     }
   }
 

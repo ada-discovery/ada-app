@@ -129,20 +129,16 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
     importInfo: TranSmartDataSetImport
   ): Future[Unit] = {
 
+    val nullAliases = FieldTypeHelper.nullAliasesOrDefault(importInfo.explicitNullAliases)
+
     // infer field types and create JSONSs
     logger.info(s"Inferring field types and creating JSONs...")
     val fti =
-      if (importInfo.inferenceMaxEnumValuesCount.isDefined || importInfo.inferenceMinAvgValuesPerEnum.isDefined) {
-        Some(
-          new FieldTypeInferrerFactory(
-            FieldTypeHelper.fieldTypeFactory(),
-            importInfo.inferenceMaxEnumValuesCount.getOrElse(FieldTypeHelper.maxEnumValuesCount),
-            importInfo.inferenceMinAvgValuesPerEnum.getOrElse(FieldTypeHelper.minAvgValuesPerEnum),
-            FieldTypeHelper.arrayDelimiter
-          ).ofString
-        )
-      } else
-        None
+      FieldTypeHelper.fieldTypeInferrerFactory(
+        nullAliases = nullAliases,
+        maxEnumValuesCount = importInfo.inferenceMaxEnumValuesCount.getOrElse(FieldTypeHelper.maxEnumValuesCount),
+        minAvgValuesPerEnum = importInfo.inferenceMinAvgValuesPerEnum.getOrElse(FieldTypeHelper.minAvgValuesPerEnum)
+      ).ofString
 
     val (jsons, fields) = createJsonsWithFields(columnNamesAndLabels, values.toSeq, fti)
 

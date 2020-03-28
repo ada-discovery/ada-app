@@ -352,7 +352,9 @@ function populateFieldTypeaheadAux({typeaheadElement, fieldNameElement, source, 
         return '<div><span>' + item.value + '</span>' + nameBadge + '</div>';
     },
     updateValueElement: function(item) {
-      fieldNameElement.val(item.key);
+      if (item) {
+        fieldNameElement.val(item.key);
+      }
     },
     minLength
   });

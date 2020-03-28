@@ -32,6 +32,9 @@ object FieldTypeHelper {
 
   val arrayDelimiter = ","
 
+  def nullAliasesOrDefault(explicitAliases: Traversable[String]) =
+    if (explicitAliases.nonEmpty) explicitAliases.map(_.toLowerCase).toSet else FieldTypeHelper.nullAliases
+
   def fieldTypeFactory(
     nullAliases: Set[String] = nullAliases,
     dateFormats: Traversable[String] = dateFormats,
@@ -41,11 +44,29 @@ object FieldTypeHelper {
   ) = FieldTypeFactory(nullAliases, dateFormats, displayDateFormat, arrayDelimiter, booleanIncludeNumbers)
 
   def fieldTypeInferrerFactory(
-    ftf: FieldTypeFactory = fieldTypeFactory(),
+    nullAliases: Set[String] = nullAliases,
+    dateFormats: Traversable[String] = dateFormats,
+    displayDateFormat: String = displayDateFormat,
+    booleanIncludeNumbers: Boolean = true,
     maxEnumValuesCount: Int = maxEnumValuesCount,
     minAvgValuesPerEnum: Double = minAvgValuesPerEnum,
     arrayDelimiter: String = arrayDelimiter
-  ) = new FieldTypeInferrerFactory(ftf, maxEnumValuesCount, minAvgValuesPerEnum, arrayDelimiter)
+  ) = {
+    val ftf = fieldTypeFactory(
+      nullAliases,
+      dateFormats,
+      displayDateFormat,
+      arrayDelimiter,
+      booleanIncludeNumbers
+    )
+
+    new FieldTypeInferrerFactory(
+      ftf,
+      maxEnumValuesCount,
+      minAvgValuesPerEnum,
+      arrayDelimiter
+    )
+  }
 
   val fieldTypeInferrer = fieldTypeInferrerFactory().ofString
   val jsonFieldTypeInferrer = fieldTypeInferrerFactory().ofJson

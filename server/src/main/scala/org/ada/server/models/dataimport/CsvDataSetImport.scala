@@ -24,6 +24,7 @@ case class CsvDataSetImport(
   inferenceMinAvgValuesPerEnum: Option[Double] = None,
   arrayDelimiter: Option[String] = None,
   booleanIncludeNumbers: Boolean = false,
+  explicitNullAliases: Seq[String] = Nil,
   saveBatchSize: Option[Int] = None,
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,
