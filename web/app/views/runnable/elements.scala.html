@@ -1,0 +1,55 @@
+@import views.html.layout
+@import views.html.elements.editableTextElements
+@import org.ada.server.models.RunnableSpec
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
+@import org.ada.web.controllers.routes
+@import views.html.datasetimport.schedulePanel
+@import views.html.runnable.topInfoPanel
+@import views.html.elements.inputText
+
+@(
+	form: Form[RunnableSpec],
+	runnableClassName: String,
+	inputFields: Option[Html]
+)(
+    implicit context: WebContext
+)
+
+@elements = {
+
+	<input type="hidden" id="runnableClassName" name="runnableClassName" value="@runnableClassName">
+
+	@topInfoPanel(form)
+
+	<hr/>
+
+	<div class="panel panel-default">
+		<div class="panel-body">
+			@inputText("runnableSpec", "name", form)
+		</div>
+	</div>
+
+	@inputFields.map { inputs =>
+		<div class="panel panel-default">
+			<div class="panel-heading">Inputs</div>
+			<div class="panel-body">
+				@inputs
+				<a class="pull-right" href="#advancedSetting" data-toggle="collapse">Show Schedule</a>
+			</div>
+		</div>
+	}.getOrElse("")
+
+	<div id="advancedSetting" class="collapse">
+		@schedulePanel(form)
+	</div>
+}
+
+@layout.create(
+    "Runnable Spec",
+	"runnableSpec",
+	form = form,
+	elements = elements,
+	saveCall = routes.RunnableController.save(),
+	listCall = routes.RunnableController.listAll()
+)
