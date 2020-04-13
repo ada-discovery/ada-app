@@ -1,63 +1,110 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import views.html.filter.{filter, filterWithJs}
-@import org.ada.web.util.typeColumns
+@import org.ada.web.util.{formatScheduleTime, typeColumns}
 @import org.ada.server.models.Field
 @import org.ada.server.models.Filter
 @import org.ada.server.models.FilterShowFieldStyle
-@import org.ada.server.models.Translation
+@import org.ada.server.models.RunnableSpec
 @import org.incal.play.controllers.WebContext._
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.Page
 @import org.incal.core.FilterCondition
 @import org.ada.web.controllers.routes
+@import views.html.elements.typeahead
+@import org.incal.core.util.toHumanReadableCamel
 
 @(
-    page: Page[Translation],
+    page: Page[RunnableSpec],
     conditions: Seq[FilterCondition]
 )(
     implicit context: WebContext
 )
+
+@modalBody = {
+    @typeahead("runnableClassTypeahead", "runnableClassName", "Runnable Class", isLarge = true)
+}
 
 @actions = {
     <div class="row">
         <div class="col-md-8">
             @filterWithJs(
                 Filter(conditions),
-                routes.TranslationController.find(),
+                routes.RunnableController.find(),
                 Left(Seq(
-                    Field("original", Some("Original")),
-                    Field("translated", Some("Translated"))
+                    Field("runnableClassName", Some("Runnable Class Name")),
+                    Field("name", Some("Name"))
                 )),
                 None,
                 Some(FilterShowFieldStyle.LabelsOnly)
             )
         </div>
         <div class="col-md-4">
-            <a class="btn btn-success btn-sm pull-right" id="add" href="@routes.TranslationController.create()" title="Add New">
+            <a class="btn btn-info btn-sm pull-right" data-toggle="modal" data-target="#runnableSelectionModal" title="Add New">
                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
             </a>
+            @modal("runnableSelectionModal", "Runnable", modalBody, Some(routes.RunnableController.create()), None, None)
         </div>
     </div>
+}
+
+@scheduleCheckbox(runnableSpec: RunnableSpec) = {
+    <ul class="list-inline">
+        <li>
+            <input type="checkbox" class="no-rowClicked" @if(runnableSpec.scheduled) { checked="checked" } disabled="disabled"/>
+        </li>
+        @if(runnableSpec.scheduled) {
+            <li class="topVerticalAlign">
+                @Html(formatScheduleTime(runnableSpec.scheduledTime.get))
+            </li>
+        }
+    </ul>
+}
+
+@executeLink(runnableSpec: RunnableSpec) = {
+    <a class="btn btn-default btn-xs btn-clean no-rowClicked" href="#" onclick="submit('post', '@routes.RunnableController.execute(runnableSpec._id.get)'); return false;">
+        <span class="glyphicon glyphicon-play green" aria-hidden="true"></span>
+    </a>
 }
 
 @table = @{
     paginatedTable(
         page,
-        routes.TranslationController.find(_, _, conditions),
-        typeColumns[Translation](
-            (Some("original"), "Original", _.original),
-            (Some("translated"), "Translated", _.translated)
+        routes.RunnableController.find(_, _, conditions),
+        typeColumns[RunnableSpec](
+            (Some("runnableClassName"), "Runnable Class Name", _.runnableClassName),
+            (Some("name"), "Name", _.name),
+            (Some("timeCreated"), "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
+            (Some("timeLastExecuted"), "Time Last Executed", _.timeLastExecuted.map(_.format("yyyy-MM-dd HH:mm:ss")).getOrElse("")),
+            (Some("scheduled"), "Scheduled?", scheduleCheckbox),
+            (None, "Execute Now", executeLink)
         ),
-        Some({ item : Any => routes.TranslationController.get(item.asInstanceOf[Translation]._id.get)})
+        Some({ item : Any => routes.RunnableController.get(item.asInstanceOf[RunnableSpec]._id.get)})
     )
 }
 
+
+@bottomResources = {
+    @typeaheadJsImport()
+
+    <script type="text/javascript">
+        $(function () {
+            populateFieldTypeaheadFromUrl({
+                typeaheadElement: $('#runnableClassTypeahead'),
+                fieldNameElement: $('#runnableClassName'),
+                url: '@Html(routes.RunnableController.getRunnableNames().url)',
+                showOption: @FilterShowFieldStyle.LabelsOnly.id,
+                postFunction: function(){ setTimeout(function(){ $('#runnableClassTypeahead').focus();}, 250)}
+            })
+        })
+    </script>
+}
+
 @layout.list(
-    "translation",
+    "RunnableSpec",
     None,
     page.total,
     Some(actions),
     Some(table),
-    None
+    bottomResources = Some(bottomResources)
 )

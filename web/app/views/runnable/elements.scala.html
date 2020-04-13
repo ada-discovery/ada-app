@@ -16,40 +16,31 @@
     implicit context: WebContext
 )
 
-@elements = {
+<input type="hidden" id="runnableClassName" name="runnableClassName" value="@runnableClassName">
 
-	<input type="hidden" id="runnableClassName" name="runnableClassName" value="@runnableClassName">
+@topInfoPanel(form)
 
-	@topInfoPanel(form)
+<hr/>
 
-	<hr/>
+<div class="panel panel-default">
+	<div class="panel-body">
+		@inputText("runnableSpec", "name", form)
+		@if(inputFields.isEmpty) {
+			<a class="pull-right" href="#scheduleSetting" data-toggle="collapse">Show Schedule</a>
+		}
+	</div>
+</div>
 
+@inputFields.map { inputs =>
 	<div class="panel panel-default">
+		<div class="panel-heading">Inputs</div>
 		<div class="panel-body">
-			@inputText("runnableSpec", "name", form)
+			@inputs
+			<a class="pull-right" href="#scheduleSetting" data-toggle="collapse">Show Schedule</a>
 		</div>
 	</div>
+}.getOrElse("")
 
-	@inputFields.map { inputs =>
-		<div class="panel panel-default">
-			<div class="panel-heading">Inputs</div>
-			<div class="panel-body">
-				@inputs
-				<a class="pull-right" href="#advancedSetting" data-toggle="collapse">Show Schedule</a>
-			</div>
-		</div>
-	}.getOrElse("")
-
-	<div id="advancedSetting" class="collapse">
-		@schedulePanel(form)
-	</div>
-}
-
-@layout.create(
-    "Runnable Spec",
-	"runnableSpec",
-	form = form,
-	elements = elements,
-	saveCall = routes.RunnableController.save(),
-	listCall = routes.RunnableController.listAll()
-)
+<div id="scheduleSetting" class="collapse">
+	@schedulePanel(form)
+</div>

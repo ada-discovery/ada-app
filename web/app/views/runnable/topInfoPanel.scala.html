@@ -3,9 +3,10 @@
 @import views.html.elements._
 @import play.api.i18n.Messages
 @import org.ada.server.models.datatrans.DataSetMetaTransformation
+@import org.ada.server.models.RunnableSpec
 
 @(
-    form: Form[_ <: DataSetMetaTransformation])(
+    form: Form[RunnableSpec])(
     implicit msg: Messages
 )
 

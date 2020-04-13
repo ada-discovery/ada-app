@@ -1,39 +1,55 @@
 package org.ada.web.controllers
 
+import java.util.Date
+
 import javax.inject.Inject
-import org.ada.web.controllers.core.{AdaBaseController, GenericMapping}
-import org.ada.server.dataaccess.RepoTypes.MessageRepo
+import org.ada.web.controllers.core.{AdaBaseController, AdaCrudControllerImpl, GenericMapping}
+import org.ada.server.dataaccess.RepoTypes.{MessageRepo, RunnableSpecRepo}
 import org.ada.server.util.MessageLogger
 import org.ada.server.util.ClassFinderUtil.findClasses
-import org.incal.play.controllers.{BaseController, WebContext, WithNoCaching}
+import org.incal.play.controllers.{AdminRestrictedCrudController, BaseController, HasBasicFormCreateView, HasBasicFormCrudViews, HasBasicFormEditView, HasBasicListView, HasFormShowEqualEditView, WebContext, WithNoCaching}
 import play.api.{Configuration, Logger}
 import play.api.data.Form
-import play.api.mvc.AnyContent
-import play.api.mvc.Result
+import play.api.mvc.{AnyContent, Request, Result, WrappedRequest}
 import views.html.{runnable => runnableViews}
 import java.{util => ju}
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
+import org.ada.server.AdaException
 import org.ada.server.field.FieldUtil
+import org.ada.server.models.ScheduledTime.fillZeroes
+import org.ada.server.models.dataimport.DataSetImport
+import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, RunnableSpec, ScheduledTime, Translation, User}
+import org.ada.server.services.ServiceTypes.RunnableScheduler
 import org.ada.web.runnables.{InputView, RunnableFileOutput}
 import org.ada.web.util.WebExportUtil
-import org.incal.core.util.toHumanReadableCamel
+import org.incal.core.util.{retry, toHumanReadableCamel}
 import org.incal.core.runnables._
 import org.incal.core.util.ReflectionUtil.currentThreadClassLoader
-import org.incal.play.security.SecurityRole
+import org.incal.play.security.{AuthAction, SecurityRole}
+import play.api.data.Forms.{date, default, ignored, mapping, optional}
 import play.api.inject.Injector
 import play.api.libs.json.{JsArray, Json}
+import reactivemongo.bson.BSONObjectID
 import runnables.DsaInputFutureRunnable
 
+import scala.reflect.runtime.universe.{TypeTag, typeOf}
 import scala.reflect.ClassTag
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import play.api.data.Forms._
 
 class RunnableController @Inject() (
   messageRepo: MessageRepo,
+  runnableSpecRepo: RunnableSpecRepo,
+  runnableScheduler: RunnableScheduler,
   configuration: Configuration,
   injector: Injector
-) extends AdaBaseController {
+) extends AdaCrudControllerImpl[RunnableSpec, BSONObjectID](runnableSpecRepo)
+  with AdminRestrictedCrudController[BSONObjectID]
+  with HasBasicFormCrudViews[RunnableSpec, BSONObjectID]
+  with HasFormShowEqualEditView[RunnableSpec, BSONObjectID]
+  with MappingHelper {
 
   private val logger = Logger
   private val messageLogger = MessageLogger(logger, messageRepo)
@@ -53,6 +69,117 @@ class RunnableController @Inject() (
 
   private val runnablesHomeRedirect = Redirect(routes.RunnableController.selectRunnable())
   private val appHomeRedirect = Redirect(routes.AppController.index())
+
+  protected[controllers] lazy val form: Form[RunnableSpec] = Form(
+    mapping(
+      "_id" -> ignored(Option.empty[BSONObjectID]),
+      "input" -> ignored(Map.empty[String, String]),
+      "runnableClassName" -> nonEmptyText,
+      "name" -> nonEmptyText,
+      "scheduled" -> boolean,
+      "scheduledTime" -> optional(scheduledTimeMapping),
+      "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
+      "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
+    )(RunnableSpec.apply)(RunnableSpec.unapply).verifying(
+      "Runnable is marked as 'scheduled' but no time provided",
+      importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
+    )
+  )
+
+  override protected val homeCall = routes.RunnableController.find()
+
+  // Create
+
+  private val noRunnableClassNameRedirect = goHome.flashing("errors" -> "No runnable class name specified.")
+
+  override def create = AuthAction { implicit request =>
+    getRunnableClassName(request).map( dataSetId =>
+      if (dataSetId.trim.nonEmpty)
+        super.create(request)
+      else
+        Future(noRunnableClassNameRedirect)
+    ).getOrElse(
+      Future(noRunnableClassNameRedirect)
+    )
+  }
+
+  override protected def createView = { implicit ctx =>
+    val runnableClassName = runnableClassNameOrError
+
+    val instance = getInjectedInstance(runnableClassName)
+    val inputs = htmlInputs(instance)
+
+    runnableViews.create(_, runnableClassName, inputs)
+  }
+
+  // Edit
+
+  override protected def editView = { implicit ctx =>
+    data: EditViewData =>
+      val runnableClassName = data.form("runnableClassName").value.getOrElse(
+        runnableClassNameOrError
+      )
+      val instance = getInjectedInstance(runnableClassName)
+      val inputs = htmlInputs(instance)
+
+      runnableViews.edit(data, runnableClassName, inputs)
+  }
+
+  // Save / Form
+
+  override protected def formFromRequest(implicit request: Request[AnyContent]): Form[RunnableSpec] = {
+    implicit val authRequest = request.asInstanceOf[AuthenticatedRequest[AnyContent]]
+    val runnableClassName = runnableClassNameOrError
+
+    val instance = getInjectedInstance(runnableClassName)
+
+    instance match {
+      case inputRunnable: InputRunnable[_] =>
+        val (inputForm, _) = genericInputFormAndFields(inputRunnable)
+
+      case _ =>
+    }
+
+    println(request.body)
+
+    form.bindFromRequest
+  }
+
+  // List
+
+  override protected def listView = { implicit ctx =>
+    (runnableViews.list(_, _)).tupled
+  }
+
+  // Save
+
+  override protected def saveCall(
+    runnableSpec: RunnableSpec)(
+    implicit request: AuthenticatedRequest[AnyContent]
+  ) = {
+    val specWithFixedScheduledTime = runnableSpec.copy(
+      scheduledTime =  runnableSpec.scheduledTime.map(fillZeroes)
+    )
+
+    super.saveCall(specWithFixedScheduledTime).map { id =>
+      scheduleOrCancel(id, specWithFixedScheduledTime); id
+    }
+  }
+
+  // Update
+
+  override protected def updateCall(
+    runnableSpec: RunnableSpec)(
+    implicit request: AuthenticatedRequest[AnyContent]
+  ) = {
+    val specWithFixedScheduledTime = runnableSpec.copy(
+      scheduledTime =  runnableSpec.scheduledTime.map(fillZeroes)
+    )
+
+    super.updateCall(specWithFixedScheduledTime).map { id =>
+      scheduleOrCancel(id, specWithFixedScheduledTime); id
+    }
+  }
 
   /**
     * Creates view showing all runnables.
@@ -76,12 +203,12 @@ class RunnableController @Inject() (
 
     val foundClasses =
       findAux[Runnable] ++
-        findAux[InputRunnable[_]] ++
-        findAux[InputRunnableExt[_]] ++
-        findAux[FutureRunnable] ++
-        findAux[InputFutureRunnable[_]] ++
-        findAux[InputFutureRunnableExt[_]] ++
-        findAux[DsaInputFutureRunnable[_]]
+      findAux[InputRunnable[_]] ++
+      findAux[InputRunnableExt[_]] ++
+      findAux[FutureRunnable] ++
+      findAux[InputFutureRunnable[_]] ++
+      findAux[InputFutureRunnableExt[_]] ++
+      findAux[DsaInputFutureRunnable[_]]
 
     foundClasses.map(_.getName).sorted
   }
@@ -105,6 +232,31 @@ class RunnableController @Inject() (
         Redirect(routes.RunnableController.getScriptInputForm(className))
       }
   }
+
+  def execute(id: BSONObjectID) = restrictAny {
+    implicit request =>
+      repo.get(id).flatMap(_.fold(
+        Future(NotFound(s"Runnable #${id.stringify} not found"))
+      ) { runnableSpec =>
+        Future {
+          val start = new Date()
+          val instance = getInjectedInstance(runnableSpec.runnableClassName)
+
+          instance match {
+            case runnable: Runnable => runnable.run()
+
+            case _ => ???
+          }
+
+          val execTimeSec = (new Date().getTime - start.getTime) / 1000
+
+          render {
+            case Accepts.Html() => referrerOrHome().flashing("success" -> s"Runnable '${runnableSpec.runnableClassName}' has been executed in $execTimeSec sec(s).")
+            case Accepts.Json() => Created(Json.obj("message" -> s"Runnable executed in $execTimeSec sec(s)", "name" -> runnableSpec.runnableClassName))
+          }
+        }.recover(handleExceptions("execute"))
+      })
+   }
 
   def getScriptInputForm(className: String) = scriptActionAux(className) { implicit request =>
     instance =>
@@ -231,11 +383,6 @@ class RunnableController @Inject() (
     }
   }
 
-  private def getInjectedInstance(className: String) = {
-    val clazz = Class.forName(className, true, currentThreadClassLoader)
-    injector.instanceOf(clazz)
-  }
-
   def getRunnableNames = restrictAdminAny(noCaching = true) {
     implicit request => Future {
       val runnableIdAndNames =  findRunnableNames.map { runnableName =>
@@ -245,8 +392,47 @@ class RunnableController @Inject() (
     }
   }
 
+  // aux funs
+
+  private def htmlInputs(instance: Any)(implicit webContext: WebContext) =
+    instance match {
+      // input runnable
+      case inputRunnable: InputRunnable[_] =>
+        val (_, inputFields) = genericInputFormAndFields(inputRunnable)
+        Some(inputFields)
+
+      // plain runnable - no form
+      case _ => None
+    }
+
+  private def runnableClassNameOrError(implicit ctx: WebContext): String = {
+    val runnableClassName = getRunnableClassName(ctx.request.asInstanceOf[AuthenticatedRequest[AnyContent]])
+
+    runnableClassName.getOrElse(
+      throw new AdaException("No runnableClassName specified.")
+    )
+  }
+
+  private def getRunnableClassName(request: AuthenticatedRequest[AnyContent]): Option[String] =
+    request.queryString.get("runnableClassName") match {
+      case Some(matches) => Some(matches.head)
+      case None => request.body.asFormUrlEncoded.flatMap(_.get("runnableClassName").map(_.head))
+    }
+
   private def toShortHumanReadable(className: String) = {
     val shortName = className.split("\\.", -1).lastOption.getOrElse(className)
     toHumanReadableCamel(shortName)
+  }
+
+  private def getInjectedInstance(className: String) = {
+    val clazz = Class.forName(className, true, currentThreadClassLoader)
+    injector.instanceOf(clazz)
+  }
+
+  private def scheduleOrCancel(id: BSONObjectID, runnableSpec: RunnableSpec): Unit = {
+    if (runnableSpec.scheduled)
+      runnableScheduler.schedule(runnableSpec.scheduledTime.get)(id)
+    else
+      runnableScheduler.cancel(id)
   }
 }
