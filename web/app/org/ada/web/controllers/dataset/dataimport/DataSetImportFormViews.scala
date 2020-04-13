@@ -5,6 +5,7 @@ import java.util.Date
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.ada.server.models._
 import org.ada.server.models.dataimport.{CsvDataSetImport, DataSetImport}
+import org.ada.web.controllers.MappingHelper
 import org.ada.web.controllers.core.GenericMapping
 import org.incal.core.util.{firstCharToLowerCase, hasNonAlphanumericUnderscore}
 import org.incal.core.util.toHumanReadableCamel
@@ -22,7 +23,7 @@ import scala.reflect.runtime.universe.{TypeTag, typeOf}
 
 abstract protected[controllers] class DataSetImportFormViews[E <: DataSetImport: TypeTag](
   implicit manifest: Manifest[E]
-) extends CreateEditFormViews[E, BSONObjectID] {
+) extends CreateEditFormViews[E, BSONObjectID] with MappingHelper {
 
   private val domainNameSuffix = "DataSetImport"
   private val humanReadableSuffix = toHumanReadableCamel(domainNameSuffix)
@@ -37,24 +38,6 @@ abstract protected[controllers] class DataSetImportFormViews[E <: DataSetImport:
   private implicit val filterShowFieldStyleFormatter = EnumFormatter(FilterShowFieldStyle)
   private implicit val storageTypeFormatter = EnumFormatter(StorageType)
   private implicit val widgetGenerationMethodFormatter = EnumFormatter(WidgetGenerationMethod)
-  private implicit val weekDayFormatter = EnumFormatter(WeekDay)
-
-  protected val scheduledTimeMapping: Mapping[ScheduledTime] = mapping(
-    "weekDay" -> optional(of[WeekDay.Value]),
-    "hour" -> optional(number(min = 0, max = 23)),
-    "minute" -> optional(number(min = 0, max = 59)),
-    "second" -> optional(number(min = 0, max = 59))
-  )(ScheduledTime.apply)(ScheduledTime.unapply)
-
-  private val upperCasePattern = "[A-Z]".r
-
-  protected val dataSetIdMapping = nonEmptyText.verifying(
-    "Data Set Id must not contain any non-alphanumeric characters (except underscore)",
-    dataSetId => !hasNonAlphanumericUnderscore(dataSetId.replaceFirst("\\.",""))
-  ).verifying(
-    "Data Set Id must not contain any upper case letters",
-    dataSetId => !upperCasePattern.findFirstIn(dataSetId).isDefined
-  )
 
   protected val dataSetSettingMapping: Mapping[DataSetSetting] = mapping(
     "id" -> ignored(Option.empty[BSONObjectID]),
