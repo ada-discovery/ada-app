@@ -29,6 +29,16 @@ trait Scheduler[IN <: Schedulable, ID] {
   def cancel(id: ID): Unit
 }
 
+protected[services] abstract class CentralExecSchedulerImpl[IN <: Schedulable, ID] (
+  execName: String)(
+  implicit ec: ExecutionContext, identity: Identity[IN, ID]
+) extends SchedulerImpl[IN, ID](execName) {
+
+  protected val execCentral: LookupCentralExec[IN]
+
+  protected def exec(item: IN) = execCentral(item)
+}
+
 protected[services] abstract class SchedulerImpl[IN <: Schedulable, ID] (
     execName: String)(
     implicit ec: ExecutionContext, identity: Identity[IN, ID]
@@ -36,10 +46,9 @@ protected[services] abstract class SchedulerImpl[IN <: Schedulable, ID] (
 
   protected val system: ActorSystem
   protected val repo: AsyncReadonlyRepo[IN, ID]
-  protected val execCentral: LookupCentralExec[IN]
 
   private val scheduledExecs = MMap[ID, Cancellable]()
-  private val logger = Logger
+  protected val logger = Logger
 
   // schedule initial execs after five seconds
   system.scheduler.scheduleOnce(5 seconds) {
@@ -49,10 +58,10 @@ protected[services] abstract class SchedulerImpl[IN <: Schedulable, ID] (
   }
 
   protected def init =
-    repo.find().map(_.map { importInfo =>
-      if (importInfo.scheduled && importInfo.scheduledTime.isDefined) {
-        val id = identity.of(importInfo).get // must exist
-        schedule(importInfo.scheduledTime.get)(id)
+    repo.find().map(_.map { item =>
+      if (item.scheduled && item.scheduledTime.isDefined) {
+        val id = identity.of(item).get // must exist
+        schedule(item.scheduledTime.get)(id)
       }
     }).map(_ => ())
 
@@ -64,19 +73,21 @@ protected[services] abstract class SchedulerImpl[IN <: Schedulable, ID] (
     // cancel if already scheduled
     scheduledExecs.get(id).map(_.cancel)
 
-    val newScheduledExec = system.scheduler.schedule(initialDelay, interval)(exec(id))
+    val newScheduledExec = system.scheduler.schedule(initialDelay, interval)(execById(id))
     scheduledExecs.put(id, newScheduledExec)
     logger.info(s"${execName.capitalize} #${id.toString} scheduled.")
   }
 
-  private def exec(id: ID): Future[Unit] = {
+  protected def execById(id: ID): Future[Unit] = {
     for {
-      dataSetImportOption <- repo.get(id)
-      _ <- dataSetImportOption.map(execCentral(_)).getOrElse(Future(()))
+      dataOption <- repo.get(id)
+      _ <- dataOption.map(exec(_)).getOrElse(Future(()))
     } yield ()
-  }.recover {
+    }.recover {
     case e: Exception => logger.error(s"${execName.capitalize} '${id}' failed due to: ${e.getMessage}.")
   }
+
+  protected def exec(item: IN): Future[Unit]
 
   override def schedule(
     scheduledTime: ScheduledTime)(
