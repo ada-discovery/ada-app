@@ -1,11 +1,10 @@
 package org.ada.web.controllers
 
 import javax.inject.Inject
-
 import org.ada.web.controllers.core.AdaCrudControllerImpl
 import org.ada.server.models.Translation
 import org.ada.server.models.Translation._
-import org.incal.play.controllers.{AdminRestrictedCrudController, CrudControllerImpl, HasBasicFormCrudViews}
+import org.incal.play.controllers.{AdminRestrictedCrudController, CrudControllerImpl, HasBasicFormCrudViews, HasFormShowEqualEditView}
 import org.ada.server.dataaccess.RepoTypes._
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText}
@@ -17,7 +16,8 @@ class TranslationController @Inject() (
     translationRepo: TranslationRepo
   ) extends AdaCrudControllerImpl[Translation, BSONObjectID](translationRepo)
     with AdminRestrictedCrudController[BSONObjectID]
-    with HasBasicFormCrudViews[Translation, BSONObjectID] {
+    with HasBasicFormCrudViews[Translation, BSONObjectID]
+    with HasFormShowEqualEditView[Translation, BSONObjectID] {
 
   override protected[controllers] val form = Form(
     mapping(
@@ -28,7 +28,6 @@ class TranslationController @Inject() (
 
   override protected val homeCall = routes.TranslationController.find()
   override protected def createView = { implicit ctx => view.create(_) }
-  override protected def showView = editView
   override protected def editView = { implicit ctx => view.edit(_) }
   override protected def listView = { implicit ctx => (view.list(_, _)).tupled }
 }
