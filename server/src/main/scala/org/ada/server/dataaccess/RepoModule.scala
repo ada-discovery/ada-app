@@ -28,6 +28,7 @@ import org.ada.server.models.datatrans.DataSetMetaTransformation
 import org.ada.server.models.datatrans.DataSetTransformation.{DataSetMetaTransformationIdentity, dataSetMetaTransformationFormat}
 import org.apache.ignite.Ignite
 import org.incal.spark_ml.models.clustering.Clustering
+import org.ada.server.models.RunnableSpec._
 
 private object RepoDef extends Enumeration {
   abstract class AbstractRepo[T: Manifest] extends super.Val {
@@ -70,6 +71,9 @@ private object RepoDef extends Enumeration {
 
   val DataSetTransformationRepo = Repo[DataSetTransformationRepo](
     new MongoAsyncCrudRepo[DataSetMetaTransformation, BSONObjectID]("dataset_transformations"))
+
+  val RunnableSpecRepo = Repo[RunnableSpecRepo](
+    new MongoAsyncCrudRepo[RunnableSpec, BSONObjectID]("runnables"))
 }
 
 // repo module used to bind repo types/instances withing Guice IoC container

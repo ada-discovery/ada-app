@@ -43,6 +43,15 @@ GET         /runnables/names                                                    
 POST        /runnables/run                                                          org.ada.web.controllers.RunnableController.runScript(className : String)
 GET         /runnables/inputForm                                                    org.ada.web.controllers.RunnableController.getScriptInputForm(className : String)
 POST        /runnables/runForInput                                                  org.ada.web.controllers.RunnableController.runInputScript(className : String)
+GET         /runnables                                                              org.ada.web.controllers.RunnableController.find(p: Int ?= 0, s: String ?= "name", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /runnables/all                                                          org.ada.web.controllers.RunnableController.listAll(s: String ?= "name")
+GET         /runnables/new                                                          org.ada.web.controllers.RunnableController.create
+POST        /runnables/save                                                         org.ada.web.controllers.RunnableController.save
+GET         /runnables/get/:id                                                      org.ada.web.controllers.RunnableController.get(id: BSONObjectID)
+GET         /runnables/edit/:id                                                     org.ada.web.controllers.RunnableController.edit(id: BSONObjectID)
+POST        /runnables/update/:id                                                   org.ada.web.controllers.RunnableController.update(id: BSONObjectID)
+POST        /runnables/delete/:id                                                   org.ada.web.controllers.RunnableController.delete(id: BSONObjectID)
+POST        /runnables/execute/:id                                                  org.ada.web.controllers.RunnableController.execute(id: BSONObjectID)
 
 # Data Set Import
 GET         /admin/dataSetImport                                                    org.ada.web.controllers.dataset.dataimport.DataSetImportController.find(p: Int ?= 0, s: String ?= "dataSpaceName", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
