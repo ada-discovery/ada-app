@@ -3,8 +3,8 @@ package org.ada.server.json
 import play.api.libs.json.{JsObject, _}
 
 private class Tuple2Format[A, B](
-    implicit val firstFormat: Format[A], secondFormat: Format[B]
-  ) extends Tuple2Writes[A, B] with Format[(A, B)] {
+    val firstFormat: Format[A], secondFormat: Format[B]
+  ) extends Tuple2Writes[A, B](firstFormat, secondFormat) with Format[(A, B)] {
 
   override def reads(json: JsValue): JsResult[(A, B)] =
     json match {
@@ -26,7 +26,7 @@ private class Tuple2Format[A, B](
 }
 
 private class Tuple2Writes[A, B](
-    implicit val firstWrites: Writes[A], secondWrites: Writes[B]
+    val firstWrites: Writes[A], secondWrites: Writes[B]
   ) extends Writes[(A, B)] {
 
   override def writes(o: (A, B)): JsValue =
@@ -37,8 +37,8 @@ private class Tuple2Writes[A, B](
 }
 
 private class Tuple3Format[A, B, C](
-    implicit val firstFormat: Format[A], secondFormat: Format[B], thirdFormat: Format[C]
-  ) extends Tuple3Writes[A, B, C] with Format[(A, B, C)] {
+    val firstFormat: Format[A], secondFormat: Format[B], thirdFormat: Format[C]
+  ) extends Tuple3Writes[A, B, C](firstFormat, secondFormat, thirdFormat) with Format[(A, B, C)] {
 
   override def reads(json: JsValue): JsResult[(A, B, C)] =
     json match {
@@ -61,7 +61,7 @@ private class Tuple3Format[A, B, C](
 }
 
 private class Tuple3Writes[A, B, C](
-    implicit val firstWrites: Writes[A], secondWrites: Writes[B], thirdWrites: Writes[C]
+    val firstWrites: Writes[A], secondWrites: Writes[B], thirdWrites: Writes[C]
   ) extends Writes[(A, B, C)] {
 
   override def writes(o: (A, B, C)): JsValue =
@@ -73,11 +73,17 @@ private class Tuple3Writes[A, B, C](
 }
 
 object TupleFormat {
-  implicit def apply[A: Format, B: Format]: Format[(A, B)] = new Tuple2Format[A, B]
-  implicit def apply[A: Format, B: Format, C: Format]: Format[(A, B, C)] = new Tuple3Format[A, B, C]
+  implicit def apply[A: Format, B: Format]: Format[(A, B)] =
+    new Tuple2Format[A, B](implicitly[Format[A]], implicitly[Format[B]])
+
+  implicit def apply[A: Format, B: Format, C: Format]: Format[(A, B, C)] =
+    new Tuple3Format[A, B, C](implicitly[Format[A]], implicitly[Format[B]], implicitly[Format[C]])
 }
 
 object TupleWrites {
-  implicit def apply[A: Writes, B: Writes]: Writes[(A, B)] = new Tuple2Writes[A, B]
-  implicit def apply[A: Writes, B: Writes, C: Writes]: Writes[(A, B, C)] = new Tuple3Writes[A, B, C]
+  implicit def apply[A: Writes, B: Writes]: Writes[(A, B)] =
+    new Tuple2Writes[A, B](implicitly[Writes[A]], implicitly[Writes[B]])
+
+  implicit def apply[A: Writes, B: Writes, C: Writes]: Writes[(A, B, C)] =
+    new Tuple3Writes[A, B, C](implicitly[Writes[A]], implicitly[Writes[B]], implicitly[Writes[C]])
 }

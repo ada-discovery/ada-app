@@ -3,7 +3,7 @@ package org.ada.server.json
 import play.api.libs.json._
 
 private class EitherFormat[L, R](
-    implicit val leftFormat: Format[L], rightFormat: Format[R]
+    val leftFormat: Format[L], rightFormat: Format[R]
   ) extends Format[Either[L, R]] {
 
   override def reads(json: JsValue): JsResult[Either[L, R]] = {
@@ -27,5 +27,6 @@ private class EitherFormat[L, R](
 }
 
 object EitherFormat {
-  implicit def apply[L: Format, R: Format]: Format[Either[L, R]] = new EitherFormat[L, R]
+  implicit def apply[L: Format, R: Format]: Format[Either[L, R]] =
+    new EitherFormat[L, R](implicitly[Format[L]], implicitly[Format[R]])
 }
