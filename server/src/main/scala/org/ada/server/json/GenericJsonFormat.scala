@@ -2,26 +2,28 @@ package org.ada.server.json
 
 import org.ada.server.AdaException
 import org.incal.core.util.ReflectionUtil
-import org.incal.core.util.ReflectionUtil.getCaseClassMemberNamesAndTypes
+import org.incal.core.util.ReflectionUtil._
 import play.api.libs.json.{Format, OFormat}
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.json._
 import java.{util => ju}
 
-import com.bnd.network.domain.ActivationFunctionType
 import org.ada.server.models.{RunnableSpec, ScheduledTime, User, WeekDay}
 import play.api.libs.functional.syntax._
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
 import scala.reflect.runtime.universe._
-import org.incal.core.util.ReflectionUtil._
 
-object GenericJsonFormat {
+/**
+  * Generic JSON format supporting basic types such as double, and String, enums (Scala and Java), and nested case classes.
+  *
+  * NOTE: Due to the inherent genericity there is a non-negligible performance fine to pay (see <code>GenericJsonFormatTest</code>)
+  *       compared to a manual or macro-based JSON format (Json.format[E]), hence use it only when necessary.
+  */
+object GenericJson {
 
-  def apply[E: TypeTag]: Format[E] = {
-    val typ = typeOf[E]
-    genericFormat(typ, newCurrentThreadMirror).asInstanceOf[Format[E]]
-  }
+  def format[E: TypeTag]: Format[E] =
+    genericFormat(typeOf[E], newCurrentThreadMirror).asInstanceOf[Format[E]]
 
   private implicit class Infix(val typ: Type) {
     def matches(types: Type*) = types.exists(typ =:= _)
@@ -172,51 +174,52 @@ object GenericJsonFormat {
   ): Format[Any] = {
     val memberNamesAndTypes = getCaseClassMemberNamesAndTypes(typ)
 
-    val emptySeqFormat = OFormat.apply[Seq[Any]]((jsValue: JsValue) => JsSuccess(Nil), (seq: Seq[Any]) => Json.obj())
-
-    val finalMergedListFormat = memberNamesAndTypes.foldLeft(emptySeqFormat) {
-      case (cumFormat: OFormat[Seq[Any]], (fieldName: String, memberType: Type)) =>
+    val partialListFormats = memberNamesAndTypes.toSeq.map {
+      case (fieldName: String, memberType: Type) =>
         val format = genericFormat(memberType, mirror)
-        val currentFormat = (__ \ fieldName).format[Any](format)
-        val mergedListFormat: OFormat[Seq[Any]] = (cumFormat and currentFormat).apply[Seq[Any]](
-          (seq: Seq[Any], element: Any) => seq ++ Seq(element),
-          (seq: Seq[Any]) => (seq.dropRight(1), seq.last)
-        )
-        mergedListFormat
+        (__ \ fieldName).format[Any](format)
     }
 
-    val finalFormat = new CaseClassSeqFormat[Product](typ, finalMergedListFormat)
+    val finalFormat = new CaseClassFormat[Product](typ, partialListFormats)
     finalFormat.asInstanceOf[Format[Any]]
   }
 
-  private class CaseClassSeqFormat[E <: Product](typ: Type, listFormat: Format[Seq[Any]]) extends Format[E] {
+  private final class CaseClassFormat[E <: Product](typ: Type, partialFormats: Seq[OFormat[Any]]) extends Format[E] {
+    private val clazz = typeToClass(typ).asInstanceOf[Class[E]]
 
-    override def writes(o: E): JsValue =
-      listFormat.writes(o.productIterator.toSeq)
-
-    override def reads(json: JsValue): JsResult[E] =
-      listFormat.reads(json) match {
-        case JsSuccess(v, path) =>
-          val item = ReflectionUtil.construct[E](typ, v)
-          JsSuccess(item, path)
-
-        case JsError(e) =>
-          JsError(e)
+    override def writes(o: E): JsObject = {
+      val fields = partialFormats.zipWithIndex.map { case (format, index) =>
+        val value = o.productElement(index)
+        format.writes(value).fields.head
       }
+
+      JsObject(fields)
+    }
+
+    override def reads(json: JsValue): JsResult[E] = {
+      val results = partialFormats.map(_.reads(json))
+      val values = results.collect { case JsSuccess(v, _) => v }
+      val errors = results.collect { case JsError(e) => e }.flatten
+      if (errors.isEmpty) {
+        val item = ReflectionUtil.construct[E](clazz, values)
+        JsSuccess(item)
+      } else {
+        JsError(errors)
+      }
+    }
   }
 }
 
 object GenericJsonFormatTest extends App {
 
-  implicit val userFormat = GenericJsonFormat.apply[User]
+  private val repetitions = 100000
 
-  val user = User(None, "peter", "peter@peter.net", Seq("admin", "runner"))
-  val userJson = Json.toJson(user)
-  val user2 = userJson.as[User]
+  // user testing
+  val genericUserFormat = GenericJson.format[User]
+  val user = User(None, "peter", "lala@world.net", Seq("admin", "runner"))
+  testFromToJson(user)(genericUserFormat, User.userFormat)
 
-  println(Json.prettyPrint(userJson))
-  println(user2)
-
+  // runnbale spec testing
   val runnableSpec = RunnableSpec(
     _id = Some(BSONObjectID.generate),
     runnableClassName = "org.ada.Lala",
@@ -229,11 +232,26 @@ object GenericJsonFormatTest extends App {
       second = None
     ))
   )
+  val genericRunnableSpecFormat = GenericJson.format[RunnableSpec]
+  testFromToJson(runnableSpec)(genericRunnableSpecFormat, RunnableSpec.format)
 
-  implicit val runnableFormat = GenericJsonFormat.apply[RunnableSpec]
-  val runnableJson = Json.toJson(runnableSpec)
-  val runnableSpec2 = runnableJson.as[RunnableSpec]
+  def testFromToJson[E](item: E)(
+    genericFormat: Format[E],
+    classicFormat: Format[E]
+  ) = {
+    def test(implicit format: Format[E]) = {
+      val startDate = new ju.Date()
+      for (_ <- 1 to repetitions) {
+        val json = Json.toJson(item)
+        val item2 = json.as[E]
+        assert(item2 != null)
+      }
+      new ju.Date().getTime - startDate.getTime
+    }
 
-  println(Json.prettyPrint(runnableJson))
-  println(runnableSpec2)
+    val genericExecTime = test(genericFormat)
+    val classicExecTime = test(classicFormat)
+
+    println(s"JSON serialization performed in $genericExecTime ms using a generic format compared to $classicExecTime based on a classic one... Overhead is: ${100 * (genericExecTime - classicExecTime) / classicExecTime}%.")
+  }
 }
