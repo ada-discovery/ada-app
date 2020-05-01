@@ -21,8 +21,6 @@ final class SeqOptionFormatter[T](
           asOption(x.trim).flatMap(fromString)
         ).toSeq
 
-        println(items.mkString(", "))
-
         Right(items)
       }.getOrElse(
         Left(List(FormError(key, s"No value found for the key '$key'")))
