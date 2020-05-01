@@ -23,7 +23,10 @@ import scala.reflect.runtime.universe._
 object GenericJson {
 
   def format[E: TypeTag]: Format[E] =
-    genericFormat(typeOf[E], newCurrentThreadMirror).asInstanceOf[Format[E]]
+    format(typeOf[E]).asInstanceOf[Format[E]]
+
+  def format(typ: Type): Format[Any] =
+    genericFormat(typ, newCurrentThreadMirror)
 
   private implicit class Infix(val typ: Type) {
     def matches(types: Type*) = types.exists(typ =:= _)
@@ -180,12 +183,12 @@ object GenericJson {
         (__ \ fieldName).format[Any](format)
     }
 
-    val finalFormat = new CaseClassFormat[Product](typ, partialListFormats)
+    val finalFormat = new CaseClassFormat[Product](typ, mirror, partialListFormats)
     finalFormat.asInstanceOf[Format[Any]]
   }
 
-  private final class CaseClassFormat[E <: Product](typ: Type, partialFormats: Seq[OFormat[Any]]) extends Format[E] {
-    private val clazz = typeToClass(typ).asInstanceOf[Class[E]]
+  private final class CaseClassFormat[E <: Product](typ: Type, mirror: Mirror, partialFormats: Seq[OFormat[Any]]) extends Format[E] {
+    private val clazz = typeToClass(typ, mirror).asInstanceOf[Class[E]]
 
     override def writes(o: E): JsObject = {
       val fields = partialFormats.zipWithIndex.map { case (format, index) =>
