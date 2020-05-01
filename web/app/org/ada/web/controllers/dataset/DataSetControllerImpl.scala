@@ -173,7 +173,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   )
 
-  override protected val homeCall = router.getDefaultView
+  override protected lazy val homeCall = router.getDefaultView
 
   // list view and data
 

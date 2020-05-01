@@ -124,7 +124,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   protected val router = new DictionaryRouter(dataSetId)
   protected val jsRouter = new DictionaryJsRouter(dataSetId)
 
-  override protected val homeCall = router.plainList
+  override protected lazy val homeCall = router.plainList
 
   // create view and  data
 

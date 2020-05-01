@@ -59,7 +59,7 @@ class DataSetTransformationController @Inject()(
   // default form... unused
   override protected val form = CopyFormViews.form.asInstanceOf[Form[DataSetMetaTransformation]]
 
-  override protected val homeCall = routes.DataSetTransformationController.find()
+  override protected lazy val homeCall = routes.DataSetTransformationController.find()
 
   // List views
 

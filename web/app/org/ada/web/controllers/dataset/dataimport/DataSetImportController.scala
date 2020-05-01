@@ -68,7 +68,7 @@ class DataSetImportController @Inject()(
   // default form... unused
   override protected val form = CsvFormViews.form.asInstanceOf[Form[DataSetImport]]
 
-  override protected val homeCall = routes.DataSetImportController.find()
+  override protected lazy val homeCall = routes.DataSetImportController.find()
 
   override protected type ListViewData = (
     Page[DataSetImport],
