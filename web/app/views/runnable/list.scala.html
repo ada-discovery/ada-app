@@ -13,9 +13,10 @@
 @import org.ada.web.controllers.routes
 @import views.html.elements.typeahead
 @import org.incal.core.util.toHumanReadableCamel
+@import org.ada.server.models.BaseRunnableSpec
 
 @(
-    page: Page[RunnableSpec],
+    page: Page[BaseRunnableSpec],
     conditions: Seq[FilterCondition]
 )(
     implicit context: WebContext

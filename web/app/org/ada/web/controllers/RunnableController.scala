@@ -4,12 +4,12 @@ import java.util.Date
 
 import javax.inject.Inject
 import org.ada.web.controllers.core.{AdaBaseController, AdaCrudControllerImpl, GenericMapping}
-import org.ada.server.dataaccess.RepoTypes.{MessageRepo, RunnableSpecRepo}
+import org.ada.server.dataaccess.RepoTypes.{BaseRunnableSpecRepo, MessageRepo, RunnableSpecRepo}
 import org.ada.server.util.MessageLogger
 import org.ada.server.util.ClassFinderUtil.findClasses
 import org.incal.play.controllers.{AdminRestrictedCrudController, BaseController, HasBasicFormCreateView, HasBasicFormCrudViews, HasBasicFormEditView, HasBasicListView, HasFormShowEqualEditView, WebContext, WithNoCaching}
 import play.api.{Configuration, Logger}
-import play.api.data.Form
+import play.api.data.{Form, Mapping}
 import play.api.mvc.{AnyContent, Request, Result, WrappedRequest}
 import views.html.{runnable => runnableViews}
 import java.{util => ju}
@@ -18,12 +18,12 @@ import be.objectify.deadbolt.scala.AuthenticatedRequest
 import org.ada.server.AdaException
 import org.ada.server.field.FieldUtil
 import org.ada.server.models.ScheduledTime.fillZeroes
-import org.ada.server.models.dataimport.DataSetImport
-import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, RunnableSpec, ScheduledTime, Translation, User}
+import org.ada.server.models.{BaseRunnableSpec, DataSetSetting, InputRunnableSpec, RunnableSpec, Schedulable, ScheduledTime, User}
+import RunnableSpec.{baseFormat, BaseRunnableSpecIdentity}
 import org.ada.server.services.ServiceTypes.RunnableScheduler
 import org.ada.web.runnables.{InputView, RunnableFileOutput}
 import org.ada.web.util.WebExportUtil
-import org.incal.core.util.{retry, toHumanReadableCamel}
+import org.incal.core.util.{ReflectionUtil, retry, toHumanReadableCamel}
 import org.incal.core.runnables._
 import org.incal.core.util.ReflectionUtil.currentThreadClassLoader
 import org.incal.play.security.{AuthAction, SecurityRole}
@@ -41,14 +41,14 @@ import play.api.data.Forms._
 
 class RunnableController @Inject() (
   messageRepo: MessageRepo,
-  runnableSpecRepo: RunnableSpecRepo,
+  runnableSpecRepo: BaseRunnableSpecRepo,
   runnableScheduler: RunnableScheduler,
   configuration: Configuration,
   injector: Injector
-) extends AdaCrudControllerImpl[RunnableSpec, BSONObjectID](runnableSpecRepo)
+) extends AdaCrudControllerImpl[BaseRunnableSpec, BSONObjectID](runnableSpecRepo)
   with AdminRestrictedCrudController[BSONObjectID]
-  with HasBasicFormCrudViews[RunnableSpec, BSONObjectID]
-  with HasFormShowEqualEditView[RunnableSpec, BSONObjectID]
+  with HasBasicFormCrudViews[BaseRunnableSpec, BSONObjectID]
+  with HasFormShowEqualEditView[BaseRunnableSpec, BSONObjectID]
   with MappingHelper {
 
   private val logger = Logger
@@ -67,26 +67,45 @@ class RunnableController @Inject() (
   private val packages = basePackages ++ configuration.getStringSeq("runnables.extra_packages").getOrElse(Nil)
   private val searchRunnableSubpackages = configuration.getBoolean("runnables.subpackages.enabled").getOrElse(false)
 
-  private val runnablesHomeRedirect = Redirect(routes.RunnableController.selectRunnable())
-  private val appHomeRedirect = Redirect(routes.AppController.index())
+  private lazy val runnablesHomeRedirect = Redirect(routes.RunnableController.selectRunnable())
+  private lazy val appHomeRedirect = Redirect(routes.AppController.index())
 
-  protected[controllers] lazy val form: Form[RunnableSpec] = Form(
-    mapping(
-      "_id" -> ignored(Option.empty[BSONObjectID]),
-      "input" -> ignored(Map.empty[String, String]),
-      "runnableClassName" -> nonEmptyText,
-      "name" -> nonEmptyText,
-      "scheduled" -> boolean,
-      "scheduledTime" -> optional(scheduledTimeMapping),
-      "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
-      "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
-    )(RunnableSpec.apply)(RunnableSpec.unapply).verifying(
-      "Runnable is marked as 'scheduled' but no time provided",
-      importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
+  protected[controllers] lazy val form: Form[BaseRunnableSpec] = formWithNoInput.asInstanceOf[Form[BaseRunnableSpec]]
+
+  private val formWithNoInput: Form[RunnableSpec] = Form(
+      mapping(
+        "_id" -> ignored(Option.empty[BSONObjectID]),
+        "runnableClassName" -> nonEmptyText,
+        "name" -> nonEmptyText,
+        "scheduled" -> boolean,
+        "scheduledTime" -> optional(scheduledTimeMapping),
+        "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
+        "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
+      )(RunnableSpec.apply)(RunnableSpec.unapply).verifying(
+        "Runnable is marked as 'scheduled' but no time provided",
+        runnableSpec => (!runnableSpec.scheduled) || (runnableSpec.scheduledTime.isDefined)
+      )
     )
-  )
 
-  override protected val homeCall = routes.RunnableController.find()
+  private def formWithInput(inputMapping: Mapping[Any]) = {
+    Form(
+      mapping(
+        "_id" -> ignored(Option.empty[BSONObjectID]),
+        "input" -> inputMapping,
+        "runnableClassName" -> nonEmptyText,
+        "name" -> nonEmptyText,
+        "scheduled" -> boolean,
+        "scheduledTime" -> optional(scheduledTimeMapping),
+        "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
+        "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
+      )(InputRunnableSpec.apply)(InputRunnableSpec.unapply).verifying(
+        "Runnable is marked as 'scheduled' but no time provided",
+        runnableSpec => (!runnableSpec.scheduled) || (runnableSpec.scheduledTime.isDefined)
+      )
+    )
+  }
+
+  override protected lazy val homeCall = routes.RunnableController.find()
 
   // Create
 
@@ -104,13 +123,60 @@ class RunnableController @Inject() (
   }
 
   override protected def createView = { implicit ctx =>
-    val runnableClassName = runnableClassNameOrError
+    form: CreateViewData =>
+      val runnableClassName = runnableClassNameOrError
 
-    val instance = getInjectedInstance(runnableClassName)
-    val inputs = htmlInputs(instance)
+      val instance = getInjectedInstance(runnableClassName)
 
-    runnableViews.create(_, runnableClassName, inputs)
+      println(form.data.mkString("\n"))
+//      val form = instance match {
+//        case inputRunnable: InputRunnable[_] =>
+//          val (inputForm, _) = genericInputFormAndFields(inputRunnable, None)
+//          val inputMapping = inputForm.mapping
+//          formWithInput(inputMapping).asInstanceOf[Form[BaseRunnableSpec]]
+//
+//        case _ =>
+//          formWithNoInput.asInstanceOf[Form[BaseRunnableSpec]]
+//      }
+
+      val inputsHtml = instance match {
+        // input runnable
+        case inputRunnable: InputRunnable[_] =>
+          val inputForm = genericForm(inputRunnable, Some("input."))
+
+          if (form.hasErrors) {
+            val inputData = form.data.filter(_._1.startsWith("input."))
+            val inputFormWithData = inputForm.bind(inputData)
+            val inputs = htmlInputs2(inputRunnable, inputFormWithData)
+            Some(inputs)
+          } else {
+            val inputs = htmlInputs2(inputRunnable, inputForm)
+            Some(inputs)
+          }
+
+        // plain runnable - no form
+        case _ => None
+      }
+
+      runnableViews.create(form, runnableClassName, inputsHtml)
   }
+
+  private def htmlInputs2[T](
+    inputRunnable: InputRunnable[T],
+    form: Form[_],
+    fieldNamePrefix: Option[String] = None)(
+    implicit webContext: WebContext
+  ) =
+    inputRunnable match {
+      // input runnable with a custom fields view
+      case inputView: InputView[T] =>
+        inputView.inputFields(implicitly[WebContext])(form.asInstanceOf[Form[T]])
+
+      // input runnable with a generic fields view
+      case _ =>
+        val nameFieldTypeMap = FieldUtil.caseClassTypeToFlatFieldTypes(inputRunnable.inputType).toMap
+        runnableViews.genericFields(form, nameFieldTypeMap, fieldNamePrefix)
+    }
 
   // Edit
 
@@ -120,29 +186,47 @@ class RunnableController @Inject() (
         runnableClassNameOrError
       )
       val instance = getInjectedInstance(runnableClassName)
-      val inputs = htmlInputs(instance)
+      val inputs = htmlInputs(data.form, instance)
 
       runnableViews.edit(data, runnableClassName, inputs)
   }
 
   // Save / Form
 
-  override protected def formFromRequest(implicit request: Request[AnyContent]): Form[RunnableSpec] = {
+  override protected def formFromRequest(implicit request: Request[AnyContent]): Form[BaseRunnableSpec] = {
     implicit val authRequest = request.asInstanceOf[AuthenticatedRequest[AnyContent]]
     val runnableClassName = runnableClassNameOrError
 
     val instance = getInjectedInstance(runnableClassName)
 
-    instance match {
-      case inputRunnable: InputRunnable[_] =>
-        val (inputForm, _) = genericInputFormAndFields(inputRunnable)
-
-      case _ =>
-    }
-
     println(request.body)
 
-    form.bindFromRequest
+    val finalForm: Form[BaseRunnableSpec] = instance match {
+      case inputRunnable: InputRunnable[_] =>
+        val (inputForm, _) = genericInputFormAndFields(inputRunnable, None)
+        val inputMapping = inputForm.mapping
+        formWithInput(inputMapping).asInstanceOf[Form[BaseRunnableSpec]]
+
+      case _ => formWithNoInput.asInstanceOf[Form[BaseRunnableSpec]]
+    }
+
+    finalForm.bindFromRequest
+  }
+
+  override def fillForm(runnableSpec: BaseRunnableSpec): Form[BaseRunnableSpec] = {
+    runnableSpec match {
+      case x: RunnableSpec =>
+        formWithNoInput.fill(x).asInstanceOf[Form[BaseRunnableSpec]]
+
+      case x: InputRunnableSpec[_] =>
+        val mapping = GenericMapping.applyCaseClass[Any](
+          ReflectionUtil.classNameToRuntimeType(
+            x.input.getClass.getName, ReflectionUtil.newCurrentThreadMirror
+          )
+        )
+
+        formWithInput(mapping).fill(x).asInstanceOf[Form[BaseRunnableSpec]]
+    }
   }
 
   // List
@@ -154,32 +238,38 @@ class RunnableController @Inject() (
   // Save
 
   override protected def saveCall(
-    runnableSpec: RunnableSpec)(
+    runnableSpec: BaseRunnableSpec)(
     implicit request: AuthenticatedRequest[AnyContent]
   ) = {
-    val specWithFixedScheduledTime = runnableSpec.copy(
-      scheduledTime =  runnableSpec.scheduledTime.map(fillZeroes)
-    )
+    val specWithFixedTime = specWithFixedScheduledTime(runnableSpec)
 
-    super.saveCall(specWithFixedScheduledTime).map { id =>
-      scheduleOrCancel(id, specWithFixedScheduledTime); id
+    super.saveCall(specWithFixedTime).map { id =>
+      scheduleOrCancel(id, specWithFixedTime); id
     }
   }
 
   // Update
 
   override protected def updateCall(
-    runnableSpec: RunnableSpec)(
+    runnableSpec: BaseRunnableSpec)(
     implicit request: AuthenticatedRequest[AnyContent]
   ) = {
-    val specWithFixedScheduledTime = runnableSpec.copy(
-      scheduledTime =  runnableSpec.scheduledTime.map(fillZeroes)
-    )
+    val specWithFixedTime = specWithFixedScheduledTime(runnableSpec)
 
-    super.updateCall(specWithFixedScheduledTime).map { id =>
-      scheduleOrCancel(id, specWithFixedScheduledTime); id
+    super.updateCall(specWithFixedTime).map { id =>
+      scheduleOrCancel(id, specWithFixedTime); id
     }
   }
+
+  private def specWithFixedScheduledTime(runnableSpec: BaseRunnableSpec): BaseRunnableSpec =
+    runnableSpec match {
+      case x: RunnableSpec => x.copy(
+        scheduledTime =  runnableSpec.scheduledTime.map(fillZeroes)
+      )
+      case x: InputRunnableSpec[_] => x.copy(
+        scheduledTime =  runnableSpec.scheduledTime.map(fillZeroes)
+      )
+    }
 
   /**
     * Creates view showing all runnables.
@@ -300,31 +390,47 @@ class RunnableController @Inject() (
   }
 
   private def genericInputFormAndFields[T](
+    inputRunnable: InputRunnable[T],
+    fieldNamePrefix: Option[String] = None)(
+    implicit webContext: WebContext
+  ) = {
+    val form = genericForm(inputRunnable, fieldNamePrefix)
+
+    val inputFieldsView = inputRunnable match {
+      // input runnable with a custom fields view
+      case inputView: InputView[T] =>
+        inputView.inputFields(implicitly[WebContext])(form.asInstanceOf[Form[T]])
+
+      // input runnable with a generic fields view
+      case _ =>
+        val nameFieldTypeMap = FieldUtil.caseClassTypeToFlatFieldTypes(inputRunnable.inputType).toMap
+        runnableViews.genericFields(form, nameFieldTypeMap, None)
+    }
+
+    (form, inputFieldsView)
+  }
+
+  private def inputFields[T](
+    form: Form[_],
     inputRunnable: InputRunnable[T])(
     implicit webContext: WebContext
   ) =
     inputRunnable match {
       // input runnable with a custom fields view
       case inputView: InputView[T] =>
-
-        val form = genericForm(inputRunnable)
-        val inputFieldsView = inputView.inputFields(implicitly[WebContext])(form.asInstanceOf[Form[T]])
-
-        (form, inputFieldsView)
+        inputView.inputFields(implicitly[WebContext])(form.asInstanceOf[Form[T]])
 
       // input runnable with a generic fields view
       case _ =>
-
-        val form = genericForm(inputRunnable)
-
         val nameFieldTypeMap = FieldUtil.caseClassTypeToFlatFieldTypes(inputRunnable.inputType).toMap
-        val inputFieldsView = runnableViews.genericFields(form, nameFieldTypeMap)
-
-        (form, inputFieldsView)
+        runnableViews.genericFields(form, nameFieldTypeMap, Some("input."))
     }
 
-  private def genericForm(inputRunnable: InputRunnable[_]): Form[Any] = {
-    val mapping = GenericMapping[Any](inputRunnable.inputType)
+  private def genericForm(
+    inputRunnable: InputRunnable[_],
+    fieldNamePrefix: Option[String] = None
+  ): Form[Any] = {
+    val mapping = GenericMapping.applyCaseClass[Any](inputRunnable.inputType, fieldNamePrefix = fieldNamePrefix)
     Form(mapping)
   }
 
@@ -394,12 +500,15 @@ class RunnableController @Inject() (
 
   // aux funs
 
-  private def htmlInputs(instance: Any)(implicit webContext: WebContext) =
+  private def htmlInputs(
+    instance: Any)(
+    implicit webContext: WebContext
+  ) =
     instance match {
       // input runnable
       case inputRunnable: InputRunnable[_] =>
-        val (_, inputFields) = genericInputFormAndFields(inputRunnable)
-        Some(inputFields)
+        val (_, fields) = genericInputFormAndFields(inputRunnable)
+        Some(fields)
 
       // plain runnable - no form
       case _ => None
@@ -429,7 +538,7 @@ class RunnableController @Inject() (
     injector.instanceOf(clazz)
   }
 
-  private def scheduleOrCancel(id: BSONObjectID, runnableSpec: RunnableSpec): Unit = {
+  private def scheduleOrCancel(id: BSONObjectID, runnableSpec: BaseRunnableSpec): Unit = {
     if (runnableSpec.scheduled)
       runnableScheduler.schedule(runnableSpec.scheduledTime.get)(id)
     else

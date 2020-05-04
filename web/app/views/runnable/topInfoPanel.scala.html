@@ -1,12 +1,9 @@
-@import views.html.datasetimport.schedulePanel
-@import views.html.datasettrans.{resultDataSetInfoPanel, streamSpecPanel}
 @import views.html.elements._
 @import play.api.i18n.Messages
-@import org.ada.server.models.datatrans.DataSetMetaTransformation
-@import org.ada.server.models.RunnableSpec
+@import org.ada.server.models.BaseRunnableSpec
 
 @(
-    form: Form[RunnableSpec])(
+    form: Form[BaseRunnableSpec])(
     implicit msg: Messages
 )
 

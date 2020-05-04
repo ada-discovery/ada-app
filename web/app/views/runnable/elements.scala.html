@@ -7,9 +7,10 @@
 @import views.html.datasetimport.schedulePanel
 @import views.html.runnable.topInfoPanel
 @import views.html.elements.inputText
+@import org.ada.server.models.BaseRunnableSpec
 
 @(
-	form: Form[RunnableSpec],
+	form: Form[BaseRunnableSpec],
 	runnableClassName: String,
 	inputFields: Option[Html]
 )(
@@ -35,7 +36,9 @@
 	<div class="panel panel-default">
 		<div class="panel-heading">Inputs</div>
 		<div class="panel-body">
-			@inputs
+			<div id="input-div">
+				@inputs
+			</div>
 			<a class="pull-right" href="#scheduleSetting" data-toggle="collapse">Show Schedule</a>
 		</div>
 	</div>
