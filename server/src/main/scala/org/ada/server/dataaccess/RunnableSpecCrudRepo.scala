@@ -5,9 +5,11 @@ import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.{InputRunnableSpecRepo, RunnableSpecRepo}
 import org.ada.server.models.{BaseRunnableSpec, InputRunnableSpec, RunnableSpec}
 import org.incal.core.dataaccess.{AsyncCrudRepo, Criterion, Sort}
+import play.api.libs.json.JsResultException
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 private final class RunnableSpecCrudRepo extends AsyncCrudRepo[BaseRunnableSpec, BSONObjectID] {
 
@@ -28,12 +30,9 @@ private final class RunnableSpecCrudRepo extends AsyncCrudRepo[BaseRunnableSpec,
 
   // TODO: optimize this
   override def get(id: BSONObjectID): Future[Option[BaseRunnableSpec]] =
-    try {
-      inputRunnableSpecRepo.get(id)
-    } catch {
-      case e: AdaException =>
-        println((e))
-        runnableSpecRepo.get(id)
+    inputRunnableSpecRepo.get(id).recoverWith {
+      case e: JsResultException =>
+        runnableSpecRepo.get(id).map(_.asInstanceOf[Option[BaseRunnableSpec]])
     }
 
   override def save(entity: BaseRunnableSpec): Future[BSONObjectID] =
