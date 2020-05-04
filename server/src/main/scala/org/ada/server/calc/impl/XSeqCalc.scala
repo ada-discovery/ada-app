@@ -4,25 +4,21 @@ import akka.stream.scaladsl.Flow
 import org.ada.server.calc.{Calculator, CalculatorTypePack, NoOptionsCalculatorTypePack}
 import org.incal.core.akka.AkkaStreamUtil._
 
-trait Tuple3CalcTypePack[A, B ,C] extends NoOptionsCalculatorTypePack {
-  type IN = (Option[A], Option[B], Option[C])
-  type OUT = Traversable[(A, B, C)]
+trait XSeqCalcTypePack[T] extends NoOptionsCalculatorTypePack {
+  type IN = Seq[Option[T]]
+  type OUT = Seq[Option[T]]
   type INTER = OUT
 }
 
-private class Tuple3Calc[A, B, C] extends Calculator[Tuple3CalcTypePack[A, B, C]] {
+private class XSeqCalc[T] extends Calculator[XSeqCalcTypePack[T]] {
 
-  override def fun(options: Unit) =
-    _.collect { case (Some(a), Some(b), Some(c)) => (a, b, c)}
+  override def fun(options: Unit) = ???
 
-  override def flow(options: Unit) = {
-    val flatFlow = Flow[IN].collect { case (Some(a), Some(b), Some(c)) => (a, b, c)}
-    flatFlow.via(seqFlow)
-  }
+  override def flow(options: Unit) = ???
 
   override def postFlow(options: Unit) = identity
 }
 
-object Tuple3Calc {
-  def apply[A, B, C]: Calculator[Tuple3CalcTypePack[A, B, C]] = new Tuple3Calc[A, B, C]
+object XSeqCalc {
+  def apply[T]: Calculator[XSeqCalcTypePack[T]] = new XSeqCalc[T]
 }
