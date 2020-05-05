@@ -9,7 +9,10 @@ trait InputView[I] {
 
   self: InputRunnable[I] =>
 
-  def inputFields(implicit context: WebContext): Form[I] => Html
+  def inputFields(
+    fieldNamePrefix: Option[String] = None)(
+    implicit context: WebContext
+  ): Form[I] => Html
 
   protected def html(htmls: Html*): Html =
     Html(htmls.map(_.toString()).reduceLeft{_+_})

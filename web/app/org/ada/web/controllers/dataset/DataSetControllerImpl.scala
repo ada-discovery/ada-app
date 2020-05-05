@@ -1747,8 +1747,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filterOrId: FilterOrId,
     tableSelection: Boolean
   ) = Action.async { implicit request =>
-    println("Got table selection: " + tableSelection)
-
     val filterFuture = filterRepo.resolve(filterOrId)
     val fieldsFuture = getFields(fieldNames)
 
