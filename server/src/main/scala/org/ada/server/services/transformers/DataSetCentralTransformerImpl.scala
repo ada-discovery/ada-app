@@ -6,7 +6,7 @@ import javax.inject.Inject
 import org.ada.server.models.datatrans.DataSetTransformation._
 import org.ada.server.models.datatrans.DataSetMetaTransformation
 import org.ada.server.dataaccess.RepoTypes.{DataSetTransformationRepo, MessageRepo}
-import org.ada.server.services.LookupCentralExecImpl
+import org.ada.server.services.LookupCentralExec
 import org.ada.server.util.MessageLogger
 import play.api.Logger
 import play.api.inject.Injector
@@ -18,7 +18,7 @@ protected[services] class DataSetCentralTransformerImpl @Inject()(
   val injector: Injector,
   repo: DataSetTransformationRepo,
   messageRepo: MessageRepo
-) extends LookupCentralExecImpl[DataSetMetaTransformation, DataSetMetaTransformer[DataSetMetaTransformation]](
+) extends LookupCentralExec[DataSetMetaTransformation, DataSetMetaTransformer[DataSetMetaTransformation]](
   "org.ada.server.services.transformers",
   "data set transformer"
 ) {

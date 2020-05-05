@@ -29,14 +29,14 @@ trait Scheduler[IN <: Schedulable, ID] {
   def cancel(id: ID): Unit
 }
 
-protected[services] abstract class CentralExecSchedulerImpl[IN <: Schedulable, ID] (
+protected[services] abstract class InputExecSchedulerImpl[IN <: Schedulable, ID] (
   execName: String)(
   implicit ec: ExecutionContext, identity: Identity[IN, ID]
 ) extends SchedulerImpl[IN, ID](execName) {
 
-  protected val execCentral: LookupCentralExec[IN]
+  protected val inputExec: InputExec[IN]
 
-  protected def exec(item: IN) = execCentral(item)
+  protected def exec(item: IN) = inputExec(item)
 }
 
 protected[services] abstract class SchedulerImpl[IN <: Schedulable, ID] (
@@ -75,7 +75,7 @@ protected[services] abstract class SchedulerImpl[IN <: Schedulable, ID] (
 
     val newScheduledExec = system.scheduler.schedule(initialDelay, interval)(execById(id))
     scheduledExecs.put(id, newScheduledExec)
-    logger.info(s"${execName.capitalize} #${id.toString} scheduled.")
+    logger.info(s"${execName.capitalize} #${formatId(id)} scheduled.")
   }
 
   protected def execById(id: ID): Future[Unit] = {
@@ -98,8 +98,10 @@ protected[services] abstract class SchedulerImpl[IN <: Schedulable, ID] (
   override def cancel(id: ID) =
     scheduledExecs.get(id).map { job =>
       job.cancel()
-      logger.info(s"${execName.capitalize} #${id.toString} canceled/descheduled.")
+      logger.info(s"${execName.capitalize} #${formatId(id)} canceled/descheduled.")
     }
+
+  protected def formatId(id: ID) = id.toString
 
   private def toDelayAndInterval(scheduledTime: ScheduledTime): (FiniteDuration, FiniteDuration) = {
     val weekDay = scheduledTime.weekDay

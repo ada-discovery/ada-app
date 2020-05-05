@@ -5,7 +5,7 @@ import java.util.Date
 import javax.inject.Inject
 import org.ada.server.dataaccess.RepoTypes.{DataSetImportRepo, MessageRepo}
 import org.ada.server.models.dataimport.DataSetImport
-import org.ada.server.services.LookupCentralExecImpl
+import org.ada.server.services.LookupCentralExec
 import org.ada.server.util.MessageLogger
 import play.api.Logger
 import play.api.inject.Injector
@@ -17,7 +17,7 @@ protected[services] class DataSetCentralImporterImpl @Inject()(
   val injector: Injector,
   repo: DataSetImportRepo,
   messageRepo: MessageRepo
-) extends LookupCentralExecImpl[DataSetImport, DataSetImporter[DataSetImport]](
+) extends LookupCentralExec[DataSetImport, DataSetImporter[DataSetImport]](
   "org.ada.server.services.importers",
   "data set importer"
 ) {
