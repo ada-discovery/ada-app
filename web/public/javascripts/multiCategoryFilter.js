@@ -10,7 +10,8 @@ $.widget( "custom.multiCategoryFilter", {
         saveFilterAjaxFun: null,
         filterSubmitParamName: null,
         filterId: null, // not an element id but a persisted id of the filter if any
-        createSubmissionJson: null
+        createSubmissionJson: null,
+        typeaheadMinLength: null
     },
 
     // the constructor
@@ -56,7 +57,8 @@ $.widget( "custom.multiCategoryFilter", {
             filterId: this.options.filterId,
             createSubmissionJson: this.options.createSubmissionJson,
             initFilterIfNeededCallback: initFilterIfNeededTreeCallback,
-            fieldDisplayChoiceCallback: fieldDisplayChoiceCallback
+            fieldDisplayChoiceCallback: fieldDisplayChoiceCallback,
+            typeaheadMinLength: this.options.typeaheadMinLength
         })
     },
 

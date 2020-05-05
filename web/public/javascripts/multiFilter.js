@@ -12,7 +12,8 @@ $.widget("custom.multiFilter", {
         filterId: null, // not an element id but a persisted id of the filter if any
         createSubmissionJson: null,
         initFilterIfNeededCallback: null,
-        fieldDisplayChoiceCallback: null
+        fieldDisplayChoiceCallback: null,
+        typeaheadMinLength: null
     },
 
     // the constructor
@@ -507,7 +508,7 @@ $.widget("custom.multiFilter", {
                 fieldNameElement: this.fieldNameElement,
                 fieldNameAndLabels: this.fieldNameAndLabels,
                 showOption: choiceValue,
-                minLength: 2
+                minLength: that.options.typeaheadMinLength ? that.options.typeaheadMinLength : 2
             })
 
             this.fieldNameTypeaheadElement.typeahead('val', '');
