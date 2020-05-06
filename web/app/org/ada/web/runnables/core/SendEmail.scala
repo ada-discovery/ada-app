@@ -29,13 +29,19 @@ class SendEmail @Inject()(mailerClient: MailerClient, configuration: Configurati
   }
 
   override def inputFields(
+    fieldNamePrefix: Option[String] = None)(
     implicit webContext: WebContext
-  ) =  (form) => html(
-    inputText("sendEmail", "from", form),
-    inputText("sendEmail", "to", form),
-    inputText("sendEmail", "subject", form),
-    textarea("sendEmail", "body", form, Seq('cols -> 60, 'rows -> 20))
-  )
+  ) =  (form) => {
+    html(
+      inputText("sendEmail", fieldNamePrefix.getOrElse("") + "from", form),
+
+      inputText("sendEmail", fieldNamePrefix.getOrElse("") + "to", form),
+
+      inputText("sendEmail", fieldNamePrefix.getOrElse("") + "subject", form),
+
+      textarea("sendEmail", fieldNamePrefix.getOrElse("") + "body", form, Seq('cols -> 60, 'rows -> 20))
+    )
+  }
 }
 
 case class SendEmailSpec(

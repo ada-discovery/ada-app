@@ -59,7 +59,7 @@ class DataSetTransformationController @Inject()(
   // default form... unused
   override protected val form = CopyFormViews.form.asInstanceOf[Form[DataSetMetaTransformation]]
 
-  override protected val homeCall = routes.DataSetTransformationController.find()
+  override protected lazy val homeCall = routes.DataSetTransformationController.find()
 
   // List views
 
@@ -115,8 +115,6 @@ class DataSetTransformationController @Inject()(
     val transformationWithFixedScheduledTime = transformation.copyCore(
       transformation._id, transformation.timeCreated, transformation.timeLastExecuted, transformation.scheduled, transformation.scheduledTime.map(fillZeroes)
     )
-
-    println(transformationWithFixedScheduledTime)
 
     super.saveCall(transformationWithFixedScheduledTime).map { id =>
       scheduleOrCancel(id, transformationWithFixedScheduledTime); id

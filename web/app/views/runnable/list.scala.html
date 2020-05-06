@@ -13,9 +13,10 @@
 @import org.ada.web.controllers.routes
 @import views.html.elements.typeahead
 @import org.incal.core.util.toHumanReadableCamel
+@import org.ada.server.models.BaseRunnableSpec
 
 @(
-    page: Page[RunnableSpec],
+    page: Page[BaseRunnableSpec],
     conditions: Seq[FilterCondition]
 )(
     implicit context: WebContext
@@ -39,11 +40,26 @@
                 Some(FilterShowFieldStyle.LabelsOnly)
             )
         </div>
-        <div class="col-md-4">
-            <a class="btn btn-info btn-sm pull-right" data-toggle="modal" data-target="#runnableSelectionModal" title="Add New">
-                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-            </a>
-            @modal("runnableSelectionModal", "Runnable", modalBody, Some(routes.RunnableController.create()), None, None)
+        <div class="pull-right">
+            <div class="dropdown">
+                <button class="btn btn-info btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a data-toggle="modal" data-target="#runnableSelectionModal">
+                            Store/Schedule
+                        </a>
+                    </li>
+                    <li>
+                        <a href="@routes.RunnableController.selectRunnable()">
+                            Launch Directly
+                        </a>
+                    </li>
+                </ul>
+                @modal("runnableSelectionModal", "Store/Schedule Runnable", modalBody, Some(routes.RunnableController.create()), None, None)
+            </div>
         </div>
     </div>
 }
@@ -101,7 +117,7 @@
 }
 
 @layout.list(
-    "RunnableSpec",
+    "Runnable Spec",
     None,
     page.total,
     Some(actions),

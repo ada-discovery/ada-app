@@ -71,7 +71,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
   protected val jsRouter = new CategoryJsRouter(dataSetId)
   protected val fieldRouter = new DictionaryRouter(dataSetId)
 
-  override protected val homeCall = router.plainList
+  override protected lazy val homeCall = router.plainList
 
   // create view and data
 

@@ -39,6 +39,7 @@
     <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator"/>
     <logger name="org.codehaus.janino" level="WARN"/>
     <logger name="spark_ml" level="INFO"/>
+    <logger name="org.reflections.Reflections" level="error" additivity="false"/>
 
     <!-- Off these ones as they are annoying, and anyway we manage configuration ourself -->
     <logger name="com.avaje.ebean.config.PropertyMapLoader" level="OFF" />

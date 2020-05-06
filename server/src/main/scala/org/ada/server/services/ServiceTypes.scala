@@ -1,16 +1,17 @@
 package org.ada.server.services
 
-import org.ada.server.models.RunnableSpec
+import org.ada.server.models.{BaseRunnableSpec, RunnableSpec}
 import org.ada.server.models.dataimport.DataSetImport
 import org.ada.server.models.datatrans.DataSetMetaTransformation
 import reactivemongo.bson.BSONObjectID
 
 object ServiceTypes {
-  type DataSetCentralImporter = LookupCentralExec[DataSetImport]
+  type DataSetCentralImporter = InputExec[DataSetImport]
   type DataSetImportScheduler = Scheduler[DataSetImport, BSONObjectID]
 
-  type DataSetCentralTransformer = LookupCentralExec[DataSetMetaTransformation]
+  type DataSetCentralTransformer = InputExec[DataSetMetaTransformation]
   type DataSetTransformationScheduler = Scheduler[DataSetMetaTransformation, BSONObjectID]
 
-  type RunnableScheduler = Scheduler[RunnableSpec, BSONObjectID]
+  type RunnableExec = InputExec[BaseRunnableSpec]
+  type RunnableScheduler = Scheduler[BaseRunnableSpec, BSONObjectID]
 }

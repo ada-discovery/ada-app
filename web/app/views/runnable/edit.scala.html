@@ -6,9 +6,10 @@
 @import org.incal.play.controllers.WebContext._
 @import views.html.runnable.elements
 @import org.ada.web.controllers.routes
+@import org.ada.server.models.BaseRunnableSpec
 
 @(
-    data: IdForm[BSONObjectID, RunnableSpec],
+    data: IdForm[BSONObjectID, BaseRunnableSpec],
     runnableClassName: String,
     inputFields: Option[Html]
 )(

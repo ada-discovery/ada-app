@@ -13,7 +13,8 @@
     submitAjaxFun: Option[Html] = None,
     listFiltersCall: Option[Call] = None,
     saveFilterAjaxFun: Option[Html] = None,
-    isCategoricalTree: Boolean = false
+    isCategoricalTree: Boolean = false,
+    typeaheadMinLength: Int = 2
 )(
     implicit request: Request[_], webJarAssets: WebJarAssets
 )
@@ -65,7 +66,8 @@
                 saveFilterAjaxFun: saveFilterAjax,
                 filterSubmitParamName: '@filterSubmitParamName',
                 filterId: filterId,
-                createSubmissionJson: createSubmissionJson
+                createSubmissionJson: createSubmissionJson,
+                typeaheadMinLength: @typeaheadMinLength
             })
         } else {
             $("#@{filterElementId}").multiFilter({
@@ -78,7 +80,8 @@
                 saveFilterAjaxFun: saveFilterAjax,
                 filterSubmitParamName: '@filterSubmitParamName',
                 filterId: filterId,
-                createSubmissionJson: createSubmissionJson
+                createSubmissionJson: createSubmissionJson,
+                typeaheadMinLength: @typeaheadMinLength
             })
         }
     })

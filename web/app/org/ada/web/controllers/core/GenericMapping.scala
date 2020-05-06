@@ -93,13 +93,14 @@ object GenericMapping {
 
   def applyCaseClass[T](
     typ: Type,
-    explicitMappings: Traversable[(String, Mapping[_])] = Nil
+    explicitMappings: Traversable[(String, Mapping[_])] = Nil,
+    fieldNamePrefix: Option[String] = None
   ): Mapping[T] = {
     val cls = currentThreadClassLoader
     val currentMirror = newMirror(cls)
 
     val explicitMappingsMap = explicitMappings.asInstanceOf[Traversable[(String, Mapping[Any])]].toMap
-    val mappings = caseClassMapping(typ, currentMirror, explicitMappingsMap)
+    val mappings = caseClassMapping(typ, currentMirror, explicitMappingsMap, fieldNamePrefix)
     // ugly but somehow class information could be lost it the process (if a runtime type is used), hence we need to use a current thread class loader
     // TODO: try to replace with ReflectionUtil.classNameToRuntimeType and typeToClass
     val clazz = Class.forName(typ.typeSymbol.fullName, true, cls).asInstanceOf[Class[T]]
@@ -114,7 +115,8 @@ object GenericMapping {
   private def caseClassMapping(
     typ: Type,
     mirror: Mirror,
-    explicitMappings: Map[String, Mapping[Any]]
+    explicitMappings: Map[String, Mapping[Any]],
+    fieldNamePrefix: Option[String] = None
   ): Traversable[(String, Mapping[Any])] = {
     val memberNamesAndTypes = getCaseClassMemberNamesAndTypes(typ)
 
@@ -128,7 +130,7 @@ object GenericMapping {
           } catch {
             case e: AdaException => failover(memberType, e)
           }
-        (fieldName, mapping)
+        (fieldNamePrefix.getOrElse("") + fieldName, mapping)
       }
   }
 

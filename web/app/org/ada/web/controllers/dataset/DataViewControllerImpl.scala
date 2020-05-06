@@ -92,7 +92,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
-  override protected val homeCall = router.plainList
+  override protected lazy val homeCall = router.plainList
 
   // create view and data
 

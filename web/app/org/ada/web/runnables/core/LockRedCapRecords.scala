@@ -124,12 +124,16 @@ class LockRedCapRecords @Inject()(
   }
 
   override def inputFields(
+    fieldNamePrefix: Option[String] = None)(
     implicit webContext: WebContext
   ) =  (form) => html(
-    textarea("lockRedCapRecords", "records", form, Seq('cols -> 20, 'rows -> 5)),
-    select("lockRedCapRecords", "delimiter", form, enumToValueString(RedCapRecordDelimiter), false),
-    select("lockRedCapRecords", "visit", form, visits, false),
-    select("lockRedCapRecords", "action", form, enumToValueString(RedCapLockAction), false)
+    textarea("lockRedCapRecords", fieldNamePrefix.getOrElse("") + "records", form, Seq('cols -> 20, 'rows -> 5)),
+
+    select("lockRedCapRecords", fieldNamePrefix.getOrElse("") + "delimiter", form, enumToValueString(RedCapRecordDelimiter), false),
+
+    select("lockRedCapRecords", fieldNamePrefix.getOrElse("") + "visit", form, visits, false),
+
+    select("lockRedCapRecords", fieldNamePrefix.getOrElse("") + "action", form, enumToValueString(RedCapLockAction), false)
   )
 }
 
