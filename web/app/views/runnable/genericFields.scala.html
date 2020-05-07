@@ -10,7 +10,7 @@
 @import org.ada.server.models.FieldTypeSpec
 @import org.ada.server.models.FieldTypeId
 @import org.ada.web.controllers.routes
-@import org.incal.play.security.SecurityRole
+@import org.incal.core.util.toHumanReadableCamel
 
 @(
     form: Form[_],
@@ -21,25 +21,25 @@
 )
 
 @inputTextAux(fieldName: String, defaultValue: Option[Any] = None) = @{
-    defining(form(fieldName)) { field =>
+    defining(form(prefixFieldName.getOrElse("") + fieldName)) { field =>
         inputFieldText(
             "genericForm",
             if (field.value.isEmpty && defaultValue.isDefined)
                 field.copy(value = Some(defaultValue.get.toString))
             else
                 field,
-            Nil,
+            Seq('_label -> toHumanReadableCamel(fieldName)),
             3
         )
     }
 }
 
 @selectAux(fieldName: String, enumValues: Seq[String]) = {
-    @select("genericForm", fieldName, form, enumValues.map(x => (x, x)), true, Nil, 3)
+    @select("genericForm", prefixFieldName.getOrElse("") + fieldName, form, enumValues.map(x => (x, x)), true, Seq('_label -> toHumanReadableCamel(fieldName)), 3)
 }
 
 @checkboxAux(fieldName: String) = {
-    @checkbox("genericForm", fieldName, form, Nil, 3)
+    @checkbox("genericForm", prefixFieldName.getOrElse("") + fieldName, form, Seq('_label -> toHumanReadableCamel(fieldName))), 3)
 }
 
 @if(form.mapping.mappings.nonEmpty) {
@@ -48,14 +48,14 @@
             nameFieldTypeMap.get(mapping.key).map { fieldTypeSpec: FieldTypeSpec =>
                 defining(fieldTypeSpec.enumValues.map(_._2).toSeq.sorted){ enumValues: Seq[String] =>
                     if(fieldTypeSpec.fieldType == FieldTypeId.Boolean) {
-                        checkboxAux(prefixFieldName.getOrElse("") + mapping.key)
+                        checkboxAux(mapping.key)
                     } else if(fieldTypeSpec.fieldType == FieldTypeId.Enum) {
-                        selectAux(prefixFieldName.getOrElse("") + mapping.key, enumValues)
+                        selectAux(mapping.key, enumValues)
                     } else
-                        inputTextAux(prefixFieldName.getOrElse("") + mapping.key)
+                        inputTextAux(mapping.key)
                 }
             }.getOrElse(
-                inputTextAux(prefixFieldName.getOrElse("") + mapping.key)
+                inputTextAux(mapping.key)
             )
         }
     }
