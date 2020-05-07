@@ -25,7 +25,8 @@
             @filterWithJs(
                 Filter(conditions),
                 dataSetRouter.plainList,
-                Right(dataSetRouter.allFieldNamesAndLabels)
+                Right(dataSetRouter.allFieldNamesAndLabels),
+                typeaheadMinLength = 2
             )
         </div>
     </div>

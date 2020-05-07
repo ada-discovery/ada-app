@@ -79,9 +79,13 @@ mappings in (Compile, packageBin) ~= { _.filter(!_._1.getName.endsWith("custom.c
 
 // Asset stages
 
-pipelineStages in Assets := Seq(digest, gzip) // rjs, uglify,
+pipelineStages in Assets := Seq(uglify, digest, gzip)
 
 excludeFilter in gzip := (excludeFilter in gzip).value || new SimpleFileFilter(file => new File(file.getAbsolutePath + ".gz").exists)
+
+//excludeFilter in rjs := (excludeFilter in rjs).value || GlobFilter("typeahead.js")
+
+excludeFilter in uglify := (excludeFilter in uglify).value || GlobFilter("typeahead.js")
 
 // For licenses not automatically downloaded (need to list them manually)
 licenseOverrides := {

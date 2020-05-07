@@ -503,12 +503,14 @@ $.widget("custom.multiFilter", {
 
             this.fieldNameTypeaheadElement.typeahead('destroy');
 
+            var minLength = (typeof that.options.typeaheadMinLength === 'undefined') ? 2 : that.options.typeaheadMinLength;
+
             populateFieldTypeahead({
                 typeaheadElement: this.fieldNameTypeaheadElement,
                 fieldNameElement: this.fieldNameElement,
                 fieldNameAndLabels: this.fieldNameAndLabels,
                 showOption: choiceValue,
-                minLength: that.options.typeaheadMinLength ? that.options.typeaheadMinLength : 2
+                minLength: minLength
             })
 
             this.fieldNameTypeaheadElement.typeahead('val', '');

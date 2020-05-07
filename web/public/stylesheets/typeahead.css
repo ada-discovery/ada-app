@@ -33,7 +33,7 @@
 
 .tt-menu {
     width: 300px;
-    max-height: 155px;
+    max-height: 255px;
     overflow-y: auto;
     margin: 12px 0;
     padding: 8px 0;
