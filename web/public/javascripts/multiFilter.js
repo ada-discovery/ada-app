@@ -123,7 +123,9 @@ $.widget("custom.multiFilter", {
 
         this.showAddConditionButtonElement.click(function() { that._showAddConditionModal() });
         this.rollbackFilterButtonElement.click(function() { that._rollbackModelAndSubmit() });
-        this.loadFilterButtonElement.click(function() { that._loadFilterSelectionAndShowModal() });
+        this.loadFilterButtonElement.click(function() {
+            that._loadFilterSelectionAndShowModal()
+        });
     },
 
     _showAddConditionModal: function() {
@@ -433,7 +435,7 @@ $.widget("custom.multiFilter", {
                         if (successFun)
                             successFun()
                     } else {
-                        that.loadFilterButtonElement.hide();
+                        showError("Sorry. No filters available.");
                     }
                 },
                 error: function(data) {
