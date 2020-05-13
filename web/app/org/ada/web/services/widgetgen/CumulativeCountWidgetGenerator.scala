@@ -1,18 +1,64 @@
 package org.ada.web.services.widgetgen
 
-import org.ada.web.models.{Count, NumericalCountWidget}
-import org.incal.core.dataaccess.Criterion
-import org.ada.server.field.{FieldType, FieldTypeHelper}
+import org.ada.web.models.{CategoricalCountWidget, Count, NumericalCountWidget, Widget}
+import org.ada.server.field.{FieldType, FieldTypeHelper, FieldUtil}
+import FieldUtil.FieldOps
+import org.ada.server.AdaException
 import org.ada.server.models._
-import org.ada.server.calc.impl.UniqueDistributionCountsCalc.UniqueDistributionCountsCalcTypePack
 import org.ada.server.calc.impl.{GroupCumulativeOrderedCountsCalcTypePack, _}
 import org.ada.web.util.{fieldLabel, shorten}
 
-object CumulativeCountWidgetGenerator extends CalculatorWidgetGenerator[CumulativeCountWidgetSpec, NumericalCountWidget[Any], CumulativeOrderedCountsCalcTypePack[Any]]
-  with CumulativeCountWidgetGeneratorHelper
-  with NoOptionsCalculatorWidgetGenerator[CumulativeCountWidgetSpec] {
+/**
+  * Generator of a cumulative count widget for numeric field types.
+  */
+object NumericCumulativeCountWidgetGenerator extends CumulativeCountWidgetGenerator[NumericalCountWidget[Any]] {
+
+  override def apply(
+    spec: CumulativeCountWidgetSpec)(
+    fieldNameMap: Map[String, Field]
+  ) =
+    (valueCounts: CumulativeOrderedCountsCalcTypePack[Any]#OUT) => {
+      val field = fieldNameMap.get(spec.fieldName).get
+      if (field.isNumeric) {
+        val counts = valueCounts.map { case (value, count) => Count(value, count) }
+
+        // create a widget
+        createNumericWidget(spec, field, None)(Seq(("All", counts)))
+      } else {
+        throw new AdaException(s"Field '${field.name}' of type ${field.fieldType} is not numeric but called for a numeric cumulative count widget generation.")
+      }
+    }
+}
+
+/**
+  * Generator of a cumulative count widget for categorical field types.
+  */
+object CategoricalCumulativeCountWidgetGenerator extends CumulativeCountWidgetGenerator[CategoricalCountWidget] {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()
+
+  override def apply(
+    spec: CumulativeCountWidgetSpec)(
+    fieldNameMap: Map[String, Field]
+  ) =
+    (valueCounts: CumulativeOrderedCountsCalcTypePack[Any]#OUT) => {
+      val field = fieldNameMap.get(spec.fieldName).get
+      val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
+      val counts = createStringCountsDefined(valueCounts, fieldType)
+
+      // create a widget
+      createCategoricalWidget(spec, field, None)(Seq(("All", counts)))
+    }
+}
+
+/**
+  * Abstract generator of a cumulative count widget (both numeric and categorical)
+  *
+  * @tparam W Result widget type
+  */
+abstract class CumulativeCountWidgetGenerator[W <: Widget] extends CalculatorWidgetGenerator[CumulativeCountWidgetSpec, W, CumulativeOrderedCountsCalcTypePack[Any]]
+  with CumulativeCountWidgetGeneratorHelper
+  with NoOptionsCalculatorWidgetGenerator[CumulativeCountWidgetSpec] {
 
   override protected val seqExecutor = cumulativeOrderedCountsAnySeqExec
 
@@ -22,42 +68,13 @@ object CumulativeCountWidgetGenerator extends CalculatorWidgetGenerator[Cumulati
     spec: CumulativeCountWidgetSpec,
     fields: Seq[Field]
   ) = withNotNull(fields)
-
-  override def apply(
-    spec: CumulativeCountWidgetSpec)(
-    fieldNameMap: Map[String, Field]
-  ) =
-    (valueCounts: CumulativeOrderedCountsCalcTypePack[Any]#OUT) => {
-      val field = fieldNameMap.get(spec.fieldName).get
-      val counts = field.fieldType match {
-        // numeric
-        case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
-          valueCounts.map { case (value, count) => Count(value, count) }
-
-        // string
-        case _ =>
-          val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
-          createStringCountsDefined(valueCounts, fieldType)
-      }
-
-      createWidget(spec, field, None)(Seq(("All", counts)))
-    }
 }
 
-object GroupCumulativeCountWidgetGenerator extends CalculatorWidgetGenerator[CumulativeCountWidgetSpec, NumericalCountWidget[Any], GroupCumulativeOrderedCountsCalcTypePack[Any, Any]]
-  with CumulativeCountWidgetGeneratorHelper
-  with NoOptionsCalculatorWidgetGenerator[CumulativeCountWidgetSpec] {
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory()
-
-  override protected val seqExecutor = groupCumulativeOrderedCountsAnySeqExec[Any]
-
-  override protected val supportArray = true
-
-  override protected def extraStreamCriteria(
-    spec: CumulativeCountWidgetSpec,
-    fields: Seq[Field]
-  ) = withNotNull(fields.tail)
+/**
+  * Generator of a grouped cumulative count widget for numeric field types.
+  */
+object NumericGroupCumulativeCountWidgetGenerator extends GroupCumulativeCountWidgetGenerator[NumericalCountWidget[Any]] {
 
   override def apply(
     spec: CumulativeCountWidgetSpec)(
@@ -67,97 +84,57 @@ object GroupCumulativeCountWidgetGenerator extends CalculatorWidgetGenerator[Cum
       val field = fieldNameMap.get(spec.fieldName).get
       val groupField = fieldNameMap.get(spec.groupFieldName.get).get
 
-      val stringGroupCounts = field.fieldType match {
-        // group numeric
-        case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
-          val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
+      if (field.isNumeric) {
+        val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
+        val stringGroupCounts = toGroupStringValues(groupCounts, groupFieldType).map { case (groupString, valueCounts) =>
+          val counts = valueCounts.map { case (value, count) => Count(value, count)}
+          (groupString, counts)
+        }
 
-          toGroupStringValues(groupCounts, groupFieldType).map { case (groupString, valueCounts) =>
-            val counts = valueCounts.map { case (value, count) => Count(value, count)}
-            (groupString, counts)
-          }
-
-        // group string
-        case _ =>
-          val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
-          val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
-
-          toGroupStringValues(groupCounts, groupFieldType).map { case (groupString, valueCounts) =>
-            (groupString, createStringCountsDefined(valueCounts, fieldType))
-          }
+        // create a widget
+        createNumericWidget(spec, field, Some(groupField))(stringGroupCounts)
+      } else {
+        throw new AdaException(s"Field '${field.name}' of type ${field.fieldType} is not numeric but called for a numeric cumulative count widget generation.")
       }
-
-      // create a widget
-      createWidget(spec, field, Some(groupField))(stringGroupCounts)
     }
 }
 
-private class CumulativeNumericBinCountWidgetGenerator(
-    flowMin: Double,
-    flowMax: Double
-  ) extends CalculatorWidgetGenerator[CumulativeCountWidgetSpec, NumericalCountWidget[Any], CumulativeNumericBinCountsCalcTypePack]
-    with CumulativeCountWidgetGeneratorHelper {
-
-  override protected val seqExecutor = cumulativeNumericBinCountsSeqExec
-
-  override protected def specToOptions = (spec: CumulativeCountWidgetSpec) =>
-    NumericDistributionOptions(spec.numericBinCount.getOrElse(defaultNumericBinCount))
-
-  override protected def specToFlowOptions = (spec: CumulativeCountWidgetSpec) =>
-    NumericDistributionFlowOptions(spec.numericBinCount.getOrElse(defaultNumericBinCount), flowMin, flowMax)
-
-  override protected def specToSinkOptions = specToFlowOptions
-
-  override protected val supportArray = true
-
-  override protected def extraStreamCriteria(
-    spec: CumulativeCountWidgetSpec,
-    fields: Seq[Field]
-  ) = withNotNull(fields)
+/**
+  * Generator of a grouped cumulative count widget for categorical field types.
+  */
+object CategoricalGroupCumulativeCountWidgetGenerator extends GroupCumulativeCountWidgetGenerator[CategoricalCountWidget] {
 
   override def apply(
     spec: CumulativeCountWidgetSpec)(
     fieldNameMap: Map[String, Field]
   ) =
-    (valueCounts: CumulativeNumericBinCountsCalcTypePack#OUT) => {
+    (groupCounts:  GroupCumulativeOrderedCountsCalcTypePack[Any, Any]#OUT) => {
       val field = fieldNameMap.get(spec.fieldName).get
+      val groupField = fieldNameMap.get(spec.groupFieldName.get).get
+      val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
+      val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
 
-      val counts = createNumericCounts(valueCounts, convertNumeric(field.fieldType))
-      createWidget(spec, field, None)(Seq(("All", counts)))
+      val stringGroupCounts = toGroupStringValues(groupCounts, groupFieldType).map { case (groupString, valueCounts) =>
+        (groupString, createStringCountsDefined(valueCounts, fieldType))
+      }
+
+      // create a widget
+      createCategoricalWidget(spec, field, Some(groupField))(stringGroupCounts)
     }
 }
 
-object CumulativeNumericBinCountWidgetGenerator {
+/**
+  * Abstract generator of a grouped cumulative count widget (both numeric and categorical)
+  *
+  * @tparam W Result widget type
+  */
+abstract class GroupCumulativeCountWidgetGenerator[W <: Widget] extends CalculatorWidgetGenerator[CumulativeCountWidgetSpec, W, GroupCumulativeOrderedCountsCalcTypePack[Any, Any]]
+  with CumulativeCountWidgetGeneratorHelper
+  with NoOptionsCalculatorWidgetGenerator[CumulativeCountWidgetSpec] {
 
-  type GEN = CalculatorWidgetGenerator[CumulativeCountWidgetSpec, NumericalCountWidget[Any], CumulativeNumericBinCountsCalcTypePack]
+  protected val ftf = FieldTypeHelper.fieldTypeFactory()
 
-  def apply(
-    flowMin: Double,
-    flowMax: Double
-  ): GEN = new CumulativeNumericBinCountWidgetGenerator(flowMin, flowMax)
-
-  def apply(
-    flowMinMax: (Double, Double)
-  ): GEN = apply(flowMinMax._1, flowMinMax._2)
-}
-
-private class GroupCumulativeNumericBinCountWidgetGenerator(
-    flowMin: Double,
-    flowMax: Double
-  ) extends CalculatorWidgetGenerator[CumulativeCountWidgetSpec, NumericalCountWidget[Any], GroupCumulativeNumericBinCountsCalcTypePack[Any]]
-    with CumulativeCountWidgetGeneratorHelper {
-
-  private val ftf = FieldTypeHelper.fieldTypeFactory()
-
-  override protected val seqExecutor = groupCumulativeNumericBinCountsSeqExec[Any]
-
-  override protected def specToOptions = (spec: CumulativeCountWidgetSpec) =>
-    NumericDistributionOptions(spec.numericBinCount.getOrElse(defaultNumericBinCount))
-
-  override protected def specToFlowOptions = (spec: CumulativeCountWidgetSpec) =>
-    NumericDistributionFlowOptions(spec.numericBinCount.getOrElse(defaultNumericBinCount), flowMin, flowMax)
-
-  override protected def specToSinkOptions = specToFlowOptions
+  override protected val seqExecutor = groupCumulativeOrderedCountsAnySeqExec[Any]
 
   override protected val supportArray = true
 
@@ -165,101 +142,17 @@ private class GroupCumulativeNumericBinCountWidgetGenerator(
     spec: CumulativeCountWidgetSpec,
     fields: Seq[Field]
   ) = withNotNull(fields.tail)
-
-  override def apply(
-    spec: CumulativeCountWidgetSpec)(
-    fieldNameMap: Map[String, Field]
-  ) =
-    (valueCounts: GroupCumulativeNumericBinCountsCalcTypePack[Any]#OUT) => {
-      val field = fieldNameMap.get(spec.fieldName).get
-      val groupField = fieldNameMap.get(spec.groupFieldName.get).get
-      val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
-
-      val counts = createGroupNumericCounts(valueCounts, groupFieldType, field)
-      createWidget(spec, field, Some(groupField))(counts)
-    }
-
-  private def createGroupNumericCounts[G](
-    groupCounts: GroupNumericDistributionCountsCalcTypePack[G]#OUT,
-    groupFieldType: FieldType[G],
-    field: Field
-  ): Seq[(String, Traversable[Count[_]])] = {
-    // value converter
-    val convert = convertNumeric(field.fieldType)
-
-    // handle group string names and convert values
-    toGroupStringValues(groupCounts, groupFieldType).map { case (groupString, counts) =>
-      (groupString, createNumericCounts(counts, convert))
-    }
-  }
-}
-
-object GroupCumulativeNumericBinCountWidgetGenerator {
-
-  type GEN = CalculatorWidgetGenerator[CumulativeCountWidgetSpec, NumericalCountWidget[Any], GroupCumulativeNumericBinCountsCalcTypePack[Any]]
-
-  def apply(
-    flowMin: Double,
-    flowMax: Double
-  ): GEN = new GroupCumulativeNumericBinCountWidgetGenerator(flowMin, flowMax)
-
-  def apply(
-    flowMinMax: (Double, Double)
-  ): GEN = apply(flowMinMax._1, flowMinMax._2)
-}
-
-object UniqueCumulativeCountWidgetGenerator extends WidgetGenerator[CumulativeCountWidgetSpec, NumericalCountWidget[Any]] with CumulativeCountWidgetGeneratorHelper {
-
-  private val ftf = FieldTypeHelper.fieldTypeFactory()
-
-  override type IN = UniqueDistributionCountsCalcTypePack[Any]#OUT
-
-  override def apply(
-    spec: CumulativeCountWidgetSpec)(
-    fieldNameMap: Map[String, Field]
-  ) = (counts: IN) => {
-    val field = fieldNameMap.get(spec.fieldName).get
-    val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
-    val finalCounts = Seq(("All", createStringCounts(counts, fieldType)))
-    createWidget(spec, field, None)(toCumCounts(finalCounts))
-  }
 }
 
 
-object GroupUniqueCumulativeCountWidgetGenerator extends WidgetGenerator[CumulativeCountWidgetSpec, NumericalCountWidget[Any]] with CumulativeCountWidgetGeneratorHelper {
-
-  private val ftf = FieldTypeHelper.fieldTypeFactory()
-
-  override type IN = GroupUniqueDistributionCountsCalcTypePack[Any, Any]#OUT
-
-  override def apply(
-    spec: CumulativeCountWidgetSpec)(
-    fieldNameMap: Map[String, Field]
-  ) = (groupCounts: IN) => {
-    val field = fieldNameMap.get(spec.fieldName).get
-    val groupField = fieldNameMap.get(spec.groupFieldName.get).get
-    val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
-    val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
-
-    val finalCounts = createGroupStringCounts(groupCounts, groupFieldType, fieldType)
-    createWidget(spec, field, Some(groupField))(toCumCounts(finalCounts))
-  }
-
-  private def createGroupStringCounts[G, T](
-    groupCounts: Traversable[(Option[G], Traversable[(Option[T], Int)])],
-    groupFieldType: FieldType[G],
-    fieldType: FieldType[T]
-  ): Seq[(String, Traversable[Count[String]])] =
-    toGroupStringValues(groupCounts, groupFieldType).map { case (groupString, counts) =>
-      (groupString, createStringCounts(counts, fieldType))
-    }
-}
-
+/**
+  * Helper trait for generation of cumulative count widget(s).
+  */
 trait CumulativeCountWidgetGeneratorHelper {
 
   protected val defaultNumericBinCount = 20
 
-  protected def createWidget(
+  protected def createNumericWidget(
     spec: CumulativeCountWidgetSpec,
     field: Field,
     groupField: Option[Field]
@@ -272,6 +165,36 @@ trait CumulativeCountWidgetGeneratorHelper {
       if (nonZeroCountSeries.nonEmpty) {
         val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
         val widget = NumericalCountWidget(title, field.name, field.labelOrElseName, spec.relativeValues, true, nonZeroCountSeries.toSeq, initializedDisplayOptions)
+        Some(widget)
+      } else
+        None
+    }
+
+  protected def createCategoricalWidget(
+    spec: CumulativeCountWidgetSpec,
+    field: Field,
+    groupField: Option[Field]
+  ) =
+    (countSeries:  Seq[(String, Traversable[Count[String]])]) => {
+      val displayOptions = spec.displayOptions
+      val title = displayOptions.title.getOrElse(createTitle(field, groupField))
+
+      val nonZeroCountSeries = countSeries.filter(_._2.exists(_.count > 0))
+      if (nonZeroCountSeries.nonEmpty) {
+        val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Column)))
+
+        // create a categorical widget
+        val widget = CategoricalCountWidget(
+          title,
+          field.name,
+          field.labelOrElseName,
+          false,
+          true,
+          spec.relativeValues,
+          true,
+          nonZeroCountSeries,
+          initializedDisplayOptions
+        )
         Some(widget)
       } else
         None

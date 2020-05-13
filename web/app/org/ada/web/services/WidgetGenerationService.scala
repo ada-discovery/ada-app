@@ -446,7 +446,9 @@ class WidgetGenerationServiceImpl @Inject() (
 
     widgetSpec match {
 
-      // distribution
+      //////////////////
+      // distribution //
+      //////////////////
 
       case spec: DistributionWidgetSpec if spec.groupFieldName.isEmpty && fields(0).isNumeric && !fields(0).isArray =>
         val field = getField(spec.fieldName)
@@ -474,7 +476,9 @@ class WidgetGenerationServiceImpl @Inject() (
           GroupCategoricalDistributionWidgetGenerator(spec)(nameFieldMap)
         )
 
-      // categorical checkbox count
+      ////////////////////////////////
+      // categorical checkbox count //
+      ////////////////////////////////
 
       case spec: CategoricalCheckboxWidgetSpec if !fields(0).isArray =>
         val field = getField(spec.fieldName)
@@ -482,7 +486,9 @@ class WidgetGenerationServiceImpl @Inject() (
           CategoricalCheckboxCountWidgetGenerator(criteria).apply(spec)(nameFieldMap)
         )
 
-      // cumulative count
+      //////////////////////
+      // cumulative count //
+      //////////////////////
 
       case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isEmpty && fields(0).isNumeric && !fields(0).isArray =>
         val field = getField(spec.fieldName)
@@ -510,7 +516,9 @@ class WidgetGenerationServiceImpl @Inject() (
           GroupUniqueCumulativeCountWidgetGenerator(spec)(nameFieldMap)
         )
 
-      // box plot
+      //////////////
+      // box plot //
+      //////////////
 
       case spec: BoxWidgetSpec if spec.groupFieldName.isEmpty =>
         val field = getField(spec.fieldName)
@@ -525,7 +533,9 @@ class WidgetGenerationServiceImpl @Inject() (
           GroupBoxWidgetGenerator(spec)(nameFieldMap)
         )
 
-      // grid distribution count
+      /////////////////////////////
+      // grid distribution count //
+      /////////////////////////////
 
       case spec: GridDistributionCountWidgetSpec =>
         calcSeqNumericDistributionCountsFromRepo(
@@ -682,7 +692,9 @@ class WidgetGenerationServiceImpl @Inject() (
 
     widgetSpec match {
 
-      // distribution
+      //////////////////
+      // distribution //
+      //////////////////
 
       case spec: DistributionWidgetSpec if spec.groupFieldName.isEmpty && !fields(0).isNumeric =>
         aux(CategoricalDistributionWidgetGenerator)
@@ -702,12 +714,16 @@ class WidgetGenerationServiceImpl @Inject() (
       case spec: DistributionWidgetSpec if spec.groupFieldName.isDefined && fields(1).isInteger && spec.numericBinCount.isEmpty =>
         aux(GroupUniqueIntDistributionWidgetGenerator)
 
-      // categorical checkbox count
+      ////////////////////////////////
+      // categorical checkbox count //
+      ////////////////////////////////
 
-      case spec: CategoricalCheckboxWidgetSpec =>
+      case _: CategoricalCheckboxWidgetSpec =>
         aux(CategoricalCheckboxCountWidgetGenerator(criteria))
 
-      // cumulative count
+      //////////////////////
+      // cumulative Count //
+      //////////////////////
 
       case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isEmpty =>
         aux(CumulativeNumericBinCountWidgetGenerator(minMax))
@@ -715,13 +731,21 @@ class WidgetGenerationServiceImpl @Inject() (
       case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isDefined =>
         aux(GroupCumulativeNumericBinCountWidgetGenerator(minMax))
 
-      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && spec.groupFieldName.isEmpty =>
-        aux(CumulativeCountWidgetGenerator)
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && fields(0).isNumeric && spec.groupFieldName.isEmpty =>
+        aux(NumericCumulativeCountWidgetGenerator)
 
-      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && spec.groupFieldName.isDefined =>
-        aux(GroupCumulativeCountWidgetGenerator)
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && !fields(0).isNumeric && spec.groupFieldName.isEmpty =>
+        aux(CategoricalCumulativeCountWidgetGenerator)
 
-      // box plot
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && fields(0).isNumeric && spec.groupFieldName.isDefined =>
+        aux(NumericGroupCumulativeCountWidgetGenerator)
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && !fields(0).isNumeric && spec.groupFieldName.isDefined =>
+        aux(CategoricalGroupCumulativeCountWidgetGenerator)
+
+      //////////////
+      // box plot //
+      //////////////
 
       case spec: BoxWidgetSpec if spec.groupFieldName.isEmpty =>
         aux(BoxWidgetGenerator)
@@ -729,7 +753,9 @@ class WidgetGenerationServiceImpl @Inject() (
       case spec: BoxWidgetSpec if spec.groupFieldName.isDefined =>
         aux(GroupBoxWidgetGenerator)
 
-      // scatter
+      /////////////
+      // scatter //
+      /////////////
 
       case spec: ScatterWidgetSpec if spec.groupFieldName.isEmpty =>
         aux(ScatterWidgetGenerator[Any, Any])
@@ -740,19 +766,25 @@ class WidgetGenerationServiceImpl @Inject() (
       case _: ValueScatterWidgetSpec =>
         aux(ValueScatterWidgetGenerator[Any, Any, Any])
 
-      // heatmap aggregation
+      /////////////////////////
+      // heatmap aggregation //
+      /////////////////////////
 
       case spec: HeatmapAggWidgetSpec =>
         val minMaxValues = minMaxes
         aux(HeatmapAggWidgetGenerator.apply(spec.aggType, minMaxValues(0), minMaxValues(1)))
 
-      // grid distribution count
+      /////////////////////////////
+      // grid distribution count //
+      /////////////////////////////
 
       case _: GridDistributionCountWidgetSpec =>
         val minMaxValues = minMaxes
         aux(GridDistributionCountWidgetGenerator(minMaxValues(0), minMaxValues(1)))
 
-      // correlation
+      /////////////////
+      // correlation //
+      /////////////////
 
       case spec: CorrelationWidgetSpec if spec.correlationType == CorrelationType.Pearson =>
         aux(PearsonCorrelationWidgetGenerator(Some(streamedCorrelationCalcParallelism)))
@@ -760,12 +792,16 @@ class WidgetGenerationServiceImpl @Inject() (
       case spec: CorrelationWidgetSpec if spec.correlationType == CorrelationType.Matthews =>
         aux(MatthewsCorrelationWidgetGenerator(Some(streamedCorrelationCalcParallelism)))
 
-      // basic stats
+      /////////////////
+      // basic stats //
+      /////////////////
 
       case _: BasicStatsWidgetSpec =>
         aux(BasicStatsWidgetGenerator)
 
-      // independence test
+      ///////////////////////
+      // independence test //
+      ///////////////////////
 
       case spec: IndependenceTestWidgetSpec if spec.keepUndefined =>
         aux(ChiSquareTestWidgetGenerator) ++ aux(OneWayAnovaTestWidgetGenerator)

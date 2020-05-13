@@ -13,7 +13,8 @@
     filterElementId: String = "filterDiv",
     createSubmissionJson: Option[Html] = None,
     listFiltersCall: Option[Call] = None,
-    saveFilterAjaxFun: Option[Html] = None
+    saveFilterAjaxFun: Option[Html] = None,
+    typeaheadMinLength: Int = 0
 )(
     implicit request: Request[_], webJarAssets: WebJarAssets
 )
@@ -43,5 +44,6 @@
     None,
     listFiltersCall,
     saveFilterAjaxFun,
-    categoriesOrCall.map(_ => "categoryTree")
+    isCategoricalTree = categoriesOrCall.isDefined,
+    typeaheadMinLength
 )

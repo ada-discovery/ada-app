@@ -9,6 +9,7 @@ import play.api.Configuration
 import play.api.libs.mailer.{Email, MailerClient}
 import views.html.elements._
 import org.incal.play.controllers.WebContext._
+import org.incal.core.util.toHumanReadableCamel
 
 class SendEmail @Inject()(mailerClient: MailerClient, configuration: Configuration) extends InputRunnableExt[SendEmailSpec] with InputView[SendEmailSpec] {
 
@@ -32,14 +33,14 @@ class SendEmail @Inject()(mailerClient: MailerClient, configuration: Configurati
     fieldNamePrefix: Option[String] = None)(
     implicit webContext: WebContext
   ) =  (form) => {
+    def inputTextAux(fieldName: String) =
+      inputText("sendEmail", fieldNamePrefix.getOrElse("") + fieldName, form, Seq('_label -> toHumanReadableCamel(fieldName)))
+
     html(
-      inputText("sendEmail", fieldNamePrefix.getOrElse("") + "from", form),
-
-      inputText("sendEmail", fieldNamePrefix.getOrElse("") + "to", form),
-
-      inputText("sendEmail", fieldNamePrefix.getOrElse("") + "subject", form),
-
-      textarea("sendEmail", fieldNamePrefix.getOrElse("") + "body", form, Seq('cols -> 60, 'rows -> 20))
+      inputTextAux("from"),
+      inputTextAux("to"),
+      inputTextAux("subject"),
+      textarea("sendEmail", fieldNamePrefix.getOrElse("") + "body", form, Seq('cols -> 60, 'rows -> 20, '_label -> "Body"))
     )
   }
 }
