@@ -15,7 +15,7 @@ class SendEmail @Inject()(mailerClient: MailerClient, configuration: Configurati
 
   override def run(input: SendEmailSpec) = {
 
-    if (configuration.getString("play.mailer.host").isEmpty) {
+    if (!configuration.underlying.hasPath("play.mailer.host")) {
       throw new AdaException("Email cannot be sent. The configuration entry 'play.mailer.host' is not set.")
     }
 
