@@ -1,17 +1,11 @@
 @import views.html.layout.main
-@import play.api.i18n.Messages
-@import org.ada.server.models.DataSpaceMetaInfo
 @import org.ada.web.util
 @import views.html.elements._
-@import views.html.layout
 @import views.html.layout.formErrors
-@import views.html.runnable.genericFields
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
 @import org.incal.core.util.toHumanReadableCamel
 @import be.objectify.deadbolt.scala.views.html.restrictOr
-@import org.ada.server.models.FieldTypeSpec
-@import org.ada.server.models.FieldTypeId
 @import org.ada.web.controllers.routes
 @import org.incal.play.security.SecurityRole
 
@@ -53,7 +47,7 @@
             <div class="actions pull-right">
                 <input type="submit" value="Submit" class="btn btn-primary">
                 @restrictOr(roles = List(Array(SecurityRole.admin))) {
-                    <a href="@routes.RunnableController.selectRunnable" class="btn btn-default">Cancel</a>
+                    <a href="@routes.RunnableController.find()" class="btn btn-default">Cancel</a>
                 } {
                     <a href="@routes.AppController.index()" class="btn btn-default">Cancel</a>
                 }
