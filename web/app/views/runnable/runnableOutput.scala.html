@@ -45,7 +45,7 @@
                 <div class="actions pull-right">
                     <input type="submit" value="Relaunch" autofocus class="btn btn-primary">
                     @restrictOr(roles = List(Array(SecurityRole.admin))) {
-                        <a href="@routes.RunnableController.selectRunnable" class="btn btn-default">Back</a>
+                        <a href="@routes.RunnableController.find()" class="btn btn-default">Back</a>
                     } {
                         <a href="@routes.AppController.index()" class="btn btn-default">Cancel</a>
                     }

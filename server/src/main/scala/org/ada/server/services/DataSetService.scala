@@ -1785,7 +1785,7 @@ class DataSetServiceImpl @Inject()(
           logger.warn(s"Empty column name found. Replacing with '$emptyColumnName'.")
           emptyColumnName
         } else if (trimmedName.size > maxFieldNameLength) {
-          throw new AdaParseException(s"The field name '${trimmedName}' is too long. It exceeded the maximum allowed size ${maxFieldNameLength}.")
+          throw new AdaParseException(s"The field/column name '${trimmedName}' is too long. It exceeded the maximum allowed size of ${maxFieldNameLength}.")
         } else {
           trimmedName
         }

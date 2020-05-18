@@ -21,25 +21,39 @@
 )
 
 @inputTextAux(fieldName: String, defaultValue: Option[Any] = None) = @{
-    defining(form(prefixFieldName.getOrElse("") + fieldName)) { field =>
+    defining(form(fieldName)) { field =>
         inputFieldText(
             "genericForm",
             if (field.value.isEmpty && defaultValue.isDefined)
                 field.copy(value = Some(defaultValue.get.toString))
             else
                 field,
-            Seq('_label -> toHumanReadableCamel(fieldName)),
+            Seq('_label -> toHumanReadableCamel(fieldName.stripPrefix(prefixFieldName.getOrElse("")))),
             3
         )
     }
 }
 
 @selectAux(fieldName: String, enumValues: Seq[String]) = {
-    @select("genericForm", prefixFieldName.getOrElse("") + fieldName, form, enumValues.map(x => (x, x)), true, Seq('_label -> toHumanReadableCamel(fieldName)), 3)
+    @select(
+        "genericForm",
+        fieldName,
+        form,
+        enumValues.map(x => (x, x)),
+        true,
+        Seq('_label -> toHumanReadableCamel(fieldName.stripPrefix(prefixFieldName.getOrElse("")))),
+        3
+    )
 }
 
 @checkboxAux(fieldName: String) = {
-    @checkbox("genericForm", prefixFieldName.getOrElse("") + fieldName, form, Seq('_label -> toHumanReadableCamel(fieldName))), 3)
+    @checkbox(
+        "genericForm",
+        fieldName,
+        form,
+        Seq('_label -> toHumanReadableCamel(fieldName.stripPrefix(prefixFieldName.getOrElse("")))),
+        3
+    )
 }
 
 @if(form.mapping.mappings.nonEmpty) {

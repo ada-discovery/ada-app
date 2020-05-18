@@ -121,6 +121,7 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
           createSource.getLines
       }
     } catch {
+      case e: java.io.FileNotFoundException => throw AdaParseException(s"File '${path}' cannot be found.", e)
       case e: UnsupportedCharsetException => throw AdaParseException(s"Unsupported charset '${charsetName.get}' detected.", e)
       case e: MalformedInputException => throw AdaParseException("Malformed input detected. It's most likely due to some special characters. Try a different chartset.", e)
     }

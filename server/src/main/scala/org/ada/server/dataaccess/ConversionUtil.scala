@@ -25,13 +25,17 @@ object ConversionUtil {
   def toDateFromMsString = convert(toDateFromMsStringAux)_
 
   private def toDateAux(dateFormats: Traversable[String])(text: String) = {
+    if (text.isEmpty) {
+      throw typeExpectedException(text, classOf[Date])
+    }
+
     val dates = dateFormats.map { format =>
       try {
         val dateFormat = new SimpleDateFormat(format)
 //        dateFormat.setLenient(false)
         val parsePosition = new ParsePosition(0)
         val date = dateFormat.parse(text, parsePosition)
-        if (parsePosition.getIndex == text.length) {
+        if (date != null && parsePosition.getIndex == text.length) {
           val year1900 = date.getYear
           // we assume that a valid year is bounded
           if (year1900 > minValidYear - 1900 && year1900 < maxValidYear - 1900)

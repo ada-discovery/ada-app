@@ -21,8 +21,6 @@ private class InferDataSetTransformer extends AbstractDataSetTransformer[InferDa
   override protected def execInternal(
     spec: InferDataSetTransformation
   ) = {
-    val sourceDsa = dsaSafe(spec.sourceDataSetId)
-
     val fieldTypeInferrerFactory = new FieldTypeInferrerFactory(
       FieldTypeHelper.fieldTypeFactory(booleanIncludeNumbers = spec.booleanIncludeNumbers),
       spec.maxEnumValuesCount.getOrElse(FieldTypeHelper.maxEnumValuesCount),
@@ -35,8 +33,10 @@ private class InferDataSetTransformer extends AbstractDataSetTransformer[InferDa
     val inferenceGroupsInParallelInit = spec.inferenceGroupsInParallel.getOrElse(1)
     val inferenceGroupSizeInit = spec.inferenceGroupSize.getOrElse(1)
 
-
     for {
+      //source DSA
+      sourceDsa <- Future(dsaSafe(spec.sourceDataSetId))
+
       // all the fields
       fields <- sourceDsa.fieldRepo.find()
 
