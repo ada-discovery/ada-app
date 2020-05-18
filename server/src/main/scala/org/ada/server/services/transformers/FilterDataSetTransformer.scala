@@ -1,9 +1,10 @@
 package org.ada.server.services.transformers
 
 import org.ada.server.models.datatrans.FilterDataSetTransformation
-import  org.ada.server.field.FieldUtil.toDataSetCriteria
+import org.ada.server.field.FieldUtil.toDataSetCriteria
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 private class FilterDataSetTransformer extends AbstractDataSetTransformer[FilterDataSetTransformation] {
 
@@ -11,10 +12,11 @@ private class FilterDataSetTransformer extends AbstractDataSetTransformer[Filter
 
   override protected def execInternal(
     spec: FilterDataSetTransformation
-  ) = {
-    val sourceDsa = dsaSafe(spec.sourceDataSetId)
-
+  ) =
     for {
+      //source DSA
+      sourceDsa <- Future(dsaSafe(spec.sourceDataSetId))
+
       // get a filter
       filter <- sourceDsa.filterRepo.get(spec.filterId)
 
@@ -34,5 +36,4 @@ private class FilterDataSetTransformer extends AbstractDataSetTransformer[Filter
       inputStream <- sourceDsa.dataSetRepo.findAsStream(criteria)
     } yield
       (sourceDsa, fields, inputStream, saveViewsAndFilters)
-  }
 }

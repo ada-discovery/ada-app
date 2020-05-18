@@ -35,7 +35,7 @@ private[transformers] abstract class AbstractDataSetTransformer[T <: DataSetTran
   protected val defaultCharset = "UTF-8"
 
   protected def dsaSafe(dataSetId: String) =
-    dsaf(dataSetId).getOrElse(throw new AdaException(s"Data set ${dataSetId} not found"))
+    dsaf(dataSetId).getOrElse(throw new AdaException(s"Data set '${dataSetId}' not found."))
 
   override def runAsFuture(spec: T) =
     execInternal(spec).flatMap { case (sourceDsa, fields, inputSource, saveViewsAndFiltersFlag) =>
