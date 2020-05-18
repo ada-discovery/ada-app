@@ -68,8 +68,8 @@ class RunnableController @Inject() (
   private val packages = basePackages ++ configuration.getStringSeq("runnables.extra_packages").getOrElse(Nil)
   private val searchRunnableSubpackages = configuration.getBoolean("runnables.subpackages.enabled").getOrElse(false)
 
-  private lazy val runnablesHomeRedirect = Redirect(routes.RunnableController.selectRunnable())
   private lazy val appHomeRedirect = Redirect(routes.AppController.index())
+  override protected lazy val homeCall = routes.RunnableController.find()
 
   protected[controllers] lazy val form: Form[BaseRunnableSpec] = formWithNoInput.asInstanceOf[Form[BaseRunnableSpec]]
 
@@ -109,11 +109,9 @@ class RunnableController @Inject() (
   override protected val entityNameKey = "runnableSpec"
   override protected def formatId(id: BSONObjectID) = id.stringify
 
-  override protected lazy val homeCall = routes.RunnableController.find()
-
   // Create
 
-  private val noRunnableClassNameRedirect = goHome.flashing("errors" -> "No runnable class name specified.")
+  private lazy val noRunnableClassNameRedirect = goHome.flashing("errors" -> "No runnable class name specified.")
 
   override def create = AuthAction { implicit request =>
     getRunnableClassName(request).map( dataSetId =>
@@ -252,18 +250,6 @@ class RunnableController @Inject() (
       )
     }
 
-  /**
-    * Creates view showing all runnables.
-    * The view provides an option to launch the runnables and displays feedback once the job is finished.
-    *
-    * @return View listing all runnables in directory "runnables".
-    */
-  def selectRunnable = restrictAdminAny(noCaching = true) { implicit request =>
-    Future {
-      Ok(runnableViews.runnableSelection())
-    }
-  }
-
   private def findRunnableNames: Seq[String] = {
     def findAux[T](implicit m: ClassTag[T]) =
       packages.map { packageName =>
@@ -310,14 +296,16 @@ class RunnableController @Inject() (
       instance match {
         // input runnable
         case inputRunnable: InputRunnable[_] =>
-          val (_, inputFields) = genericFormAndHtmlInputs(inputRunnable)
+          val form = genericForm(inputRunnable)
+          val inputFields = htmlInputs(inputRunnable, form)
+
           Ok(runnableViews.runnableInput(
             className.split('.').last, routes.RunnableController.runInputScript(className), inputFields
           ))
 
         // plain runnable - no form
         case _ =>
-          runnablesHomeRedirect.flashing("errors" -> s"No form available for the script/runnable ${className}.")
+          goHome.flashing("errors" -> s"No form available for the script/runnable ${className}.")
       }
   }
 
@@ -326,10 +314,12 @@ class RunnableController @Inject() (
       val start = new ju.Date()
 
       val inputRunnable = instance.asInstanceOf[InputRunnable[Any]]
-      val (form, inputFields) = genericFormAndHtmlInputs(inputRunnable)
+      val form = genericForm(inputRunnable)
 
       form.bindFromRequest().fold(
         { formWithErrors =>
+          val inputFields = htmlInputs(inputRunnable, formWithErrors)
+
           BadRequest(runnableViews.runnableInput(
             instance.getClass.getSimpleName, routes.RunnableController.runInputScript(className), inputFields, formWithErrors.errors
           ))
@@ -373,7 +363,7 @@ class RunnableController @Inject() (
           user <- currentUser()
         } yield {
           val isAdmin = user.map(_.isAdmin).getOrElse(false)
-          val errorRedirect = if (isAdmin) runnablesHomeRedirect else appHomeRedirect
+          val errorRedirect = if (isAdmin) goHome else appHomeRedirect
 
           try {
             val instance = getInjectedInstance(className)
@@ -414,7 +404,7 @@ class RunnableController @Inject() (
 
       // no output
       case _ =>
-        runnablesHomeRedirect.flashing("success" -> message)
+        goHome.flashing("success" -> message)
     }
   }
 
@@ -429,17 +419,6 @@ class RunnableController @Inject() (
 
   // aux funs
 
-  private def genericFormAndHtmlInputs[T](
-    inputRunnable: InputRunnable[T],
-    fieldNamePrefix: Option[String] = None)(
-    implicit webContext: WebContext
-  ) = {
-    val form = genericForm(inputRunnable, fieldNamePrefix)
-    val inputFieldsView = htmlInputs(inputRunnable, form, fieldNamePrefix)
-
-    (form, inputFieldsView)
-  }
-
   private def htmlInputs[T](
     inputRunnable: InputRunnable[T],
     form: Form[_],
@@ -453,8 +432,11 @@ class RunnableController @Inject() (
 
       // input runnable with a generic fields view
       case _ =>
-        val nameFieldTypeMap = FieldUtil.caseClassTypeToFlatFieldTypes(inputRunnable.inputType).toMap
-        runnableViews.genericFields(form, nameFieldTypeMap, None)
+        val nameFieldTypeMap = FieldUtil.caseClassTypeToFlatFieldTypes(inputRunnable.inputType).map { case (fieldName, spec) =>
+          (fieldNamePrefix.getOrElse("") + fieldName, spec)
+        }.toMap
+
+        runnableViews.genericFields(form, nameFieldTypeMap, fieldNamePrefix)
     }
 
   private def genericForm(
