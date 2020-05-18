@@ -38,8 +38,6 @@ POST        /admin/lockMissingLdapUsers                                         
 GET         /admin/dataSetIds                                                       org.ada.web.controllers.AdminController.dataSetIds
 
 # Runnable
-GET         /runnables/select                                                       org.ada.web.controllers.RunnableController.selectRunnable
-GET         /runnables/names                                                        org.ada.web.controllers.RunnableController.getRunnableNames
 POST        /runnables/run                                                          org.ada.web.controllers.RunnableController.runScript(className : String)
 GET         /runnables/inputForm                                                    org.ada.web.controllers.RunnableController.getScriptInputForm(className : String)
 POST        /runnables/runForInput                                                  org.ada.web.controllers.RunnableController.runInputScript(className : String)
@@ -52,6 +50,7 @@ GET         /runnables/edit/:id                                                 
 POST        /runnables/update/:id                                                   org.ada.web.controllers.RunnableController.update(id: BSONObjectID)
 POST        /runnables/delete/:id                                                   org.ada.web.controllers.RunnableController.delete(id: BSONObjectID)
 POST        /runnables/execute/:id                                                  org.ada.web.controllers.RunnableController.execute(id: BSONObjectID)
+GET         /runnables/names                                                        org.ada.web.controllers.RunnableController.getRunnableNames
 
 # Data Set Import
 GET         /admin/dataSetImport                                                    org.ada.web.controllers.dataset.dataimport.DataSetImportController.find(p: Int ?= 0, s: String ?= "dataSpaceName", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
