@@ -22,7 +22,7 @@
 }
 
 @labelValueAux(key: String, label: Any)(valueElement : Any) = @{
-    labelValue(key, label, false, None, 4)(valueElement)
+    labelValue(key, label, false, labelGridWidth = 4)(valueElement)
 }
 
 @labelValueAux("inputFieldNames", "Input Fields") {

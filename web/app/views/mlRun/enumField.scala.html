@@ -6,6 +6,6 @@
     enum: Enumeration
 )
 
-@labelValue(fieldName, label, false, None, 4)(
+@labelValue(fieldName, label, false, labelGridWidth = 4)(
     selectEnum(fieldName, enum, true, Some("input-lg-full"))
 )
