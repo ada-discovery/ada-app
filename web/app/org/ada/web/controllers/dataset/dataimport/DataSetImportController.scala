@@ -68,7 +68,7 @@ class DataSetImportController @Inject()(
   // default form... unused
   override protected val form = CsvFormViews.form.asInstanceOf[Form[DataSetImport]]
 
-  override protected val homeCall = routes.DataSetImportController.find()
+  override protected lazy val homeCall = routes.DataSetImportController.find()
 
   override protected type ListViewData = (
     Page[DataSetImport],
@@ -102,12 +102,11 @@ class DataSetImportController @Inject()(
             dataSetCentralImporter(importInfo)
           ).map { _ =>
             val execTimeSec = (new Date().getTime - start.getTime) / 1000
-//            messageLogger.info()
             render {
-              case Accepts.Html() => referrerOrHome().flashing("success" -> s"Data set '${importInfo.dataSetName}' has been imported in $execTimeSec sec(s).")
+              case Accepts.Html() => Ok(s"Data set '${importInfo.dataSetName}' has been imported in $execTimeSec sec(s).")
               case Accepts.Json() => Created(Json.obj("message" -> s"Data set has been imported in $execTimeSec sec(s)", "name" -> importInfo.dataSetName))
             }
-          }.recover(handleExceptions("execute"))
+          }.recover(handleExceptionsWithErrorCodes("data set import"))
       })
   }
 

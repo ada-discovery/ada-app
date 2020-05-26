@@ -15,7 +15,6 @@ import org.ada.server.models.ml.regression.Regressor._
 import org.ada.server.models.ml.classification.Classifier._
 import net.codingwell.scalaguice.ScalaModule
 import org.ada.server.dataaccess.RepoTypes._
-import org.ada.server.dataaccess.RepoTypes._
 import com.google.inject.name.Names
 import com.sksamuel.elastic4s.http.HttpClient
 import org.ada.server.models.dataimport.DataSetImport
@@ -28,6 +27,8 @@ import org.ada.server.models.datatrans.DataSetMetaTransformation
 import org.ada.server.models.datatrans.DataSetTransformation.{DataSetMetaTransformationIdentity, dataSetMetaTransformationFormat}
 import org.apache.ignite.Ignite
 import org.incal.spark_ml.models.clustering.Clustering
+import org.ada.server.models.RunnableSpec._
+import org.ada.server.models.InputRunnableSpec._
 
 private object RepoDef extends Enumeration {
   abstract class AbstractRepo[T: Manifest] extends super.Val {
@@ -70,6 +71,16 @@ private object RepoDef extends Enumeration {
 
   val DataSetTransformationRepo = Repo[DataSetTransformationRepo](
     new MongoAsyncCrudRepo[DataSetMetaTransformation, BSONObjectID]("dataset_transformations"))
+
+  val RunnableSpecRepo = Repo[RunnableSpecRepo](
+    new MongoAsyncCrudRepo[RunnableSpec, BSONObjectID]("runnables"))
+
+  val InputRunnableSpecRepo = Repo[InputRunnableSpecRepo](
+    new MongoAsyncCrudRepo[InputRunnableSpec[Any], BSONObjectID]("runnables"))
+
+  val BaseRunnableSpecRepo = Repo[BaseRunnableSpecRepo](
+    new RunnableSpecCrudRepo()
+  )
 }
 
 // repo module used to bind repo types/instances withing Guice IoC container

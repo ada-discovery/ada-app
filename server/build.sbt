@@ -18,7 +18,7 @@ libraryDependencies ++= Seq(
   "org.reactivemongo" %% "play2-reactivemongo" % "0.18.1-play25" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11") exclude("com.typesafe.play", "play-iteratees_2.11") exclude("com.typesafe.play", "play-server_2.11") exclude("com.typesafe.play", "play-netty-server_2.11"),
   "org.reactivemongo" %% "reactivemongo-akkastream" % "0.18.1",
   "com.typesafe.play" %% "play-iteratees" % playVersion,
-  "org.in-cal" %% "incal-core" % "0.3.0-SNAPSHOT",                                                  // just temporary - remove later
+  "org.in-cal" %% "incal-core" % "0.3.0.RC.1",                                                      // just temporary - remove later
   "org.in-cal" %% "incal-access-elastic" % "0.2.4",                                                 // Elastic search
   "org.apache.ignite" % "ignite-core" % "1.6.0",
   "org.apache.ignite" % "ignite-spring" % "1.6.0",

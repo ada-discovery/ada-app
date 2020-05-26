@@ -23,16 +23,16 @@ trait AdaExceptionHandler extends ExceptionHandler {
       handleTimeoutException(functionName, extraMessage)
 
     case e: InCalDataAccessException =>
-      val message = s"Repo/db problem found while executing $functionName function${extraMessage.getOrElse("")}."
+      val message = s"Repo/db problem found while executing '$functionName' function${extraMessage.getOrElse("")}."
       Logger.error(message, e)
       Redirect(routes.AppController.index()).flashing("errors" -> message)
 
     case e: AdaConversionException =>
-      val message = s"Conversion problem found while executing $functionName function${extraMessage.getOrElse("")}. Cause: ${e.getMessage}"
+      val message = s"Conversion problem found while executing '$functionName' function${extraMessage.getOrElse("")}. Cause: ${e.getMessage}"
       handleBusinessException(message, e)
 
     case e: AdaException =>
-      val message = s"General problem found while executing $functionName function${extraMessage.getOrElse("")}. Cause: ${e.getMessage}"
+      val message = s"General problem found while executing '$functionName' function${extraMessage.getOrElse("")}. Cause: ${e.getMessage}"
       handleBusinessException(message, e)
 
     case e: Throwable =>
@@ -46,27 +46,27 @@ trait AdaExceptionHandler extends ExceptionHandler {
   ): PartialFunction[Throwable, Result] = {
 
     case e: TimeoutException =>
-      val message = s"The request timed out while executing $functionName function${extraMessage.getOrElse("")}."
+      val message = s"The request timed out while executing '$functionName' function${extraMessage.getOrElse("")}."
       Logger.error(message, e)
       InternalServerError(message)
 
     case e: InCalDataAccessException =>
-      val message = s"Repo/db problem found while executing $functionName function${extraMessage.getOrElse("")}."
+      val message = s"Repo/db problem found while executing '$functionName' function${extraMessage.getOrElse("")}."
       Logger.error(message, e)
       InternalServerError(message)
 
     case e: AdaConversionException =>
-      val message = s"Conversion problem found while executing $functionName function${extraMessage.getOrElse("")}. Cause: ${e.getMessage}"
+      val message = s"Conversion problem found while executing '$functionName' function${extraMessage.getOrElse("")}. Cause: ${e.getMessage}"
       Logger.warn(message, e)
       BadRequest(message)
 
     case e: AdaException =>
-      val message = s"General problem found while executing $functionName function${extraMessage.getOrElse("")}. Cause: ${e.getMessage}"
+      val message = s"General problem found while executing '$functionName' function${extraMessage.getOrElse("")}. Cause: ${e.getMessage}"
       Logger.warn(message, e)
       BadRequest(message)
 
     case e: Throwable =>
-      val message = s"Fatal problem found while executing $functionName function${extraMessage.getOrElse("")}."
+      val message = s"Fatal problem found while executing '$functionName' function${extraMessage.getOrElse("")}. Contact your admin."
       Logger.error(message, e)
       InternalServerError(message)
   }

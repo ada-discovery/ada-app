@@ -45,6 +45,9 @@ object RepoTypes {
 
   type DataSetImportRepo = AsyncCrudRepo[DataSetImport, BSONObjectID]
   type DataSetTransformationRepo = AsyncCrudRepo[DataSetMetaTransformation, BSONObjectID]
+  type RunnableSpecRepo = AsyncCrudRepo[RunnableSpec, BSONObjectID]
+  type InputRunnableSpecRepo = AsyncCrudRepo[InputRunnableSpec[Any], BSONObjectID]
+  type BaseRunnableSpecRepo = AsyncCrudRepo[BaseRunnableSpec, BSONObjectID]
 
   type ClassifierRepo = AsyncCrudRepo[Classifier, BSONObjectID]
   type RegressorRepo = AsyncCrudRepo[Regressor, BSONObjectID]

@@ -12,10 +12,13 @@ object JsonFormViews extends DataSetImportFormViews[JsonDataSetImport] {
 
   override protected val imagePath = Some("images/logos/json_100.png")
 
+  private implicit val stringSeqFormatter = SeqFormatterFixed(nonEmptyStringsOnly = false)
+
   override protected val extraMappings = Seq(
     "inferenceMaxEnumValuesCount" -> optional(number(min = 1)),
     "inferenceMinAvgValuesPerEnum" -> optional(of[Double]).verifying("Must be positive", _.map(_ > 0).getOrElse(true)),
-    "saveBatchSize" -> optional(number(min = 1))
+    "saveBatchSize" -> optional(number(min = 1)),
+    "explicitNullAliases" -> of[Seq[String]]
   )
 
   override protected val viewElements =

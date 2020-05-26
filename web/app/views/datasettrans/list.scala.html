@@ -81,7 +81,7 @@
 }
 
 @executeLink(dataSetTransformation: DataSetMetaTransformation) = {
-    <a class="btn btn-default btn-xs btn-clean no-rowClicked" href="#" onclick="submit('post', '@dataSetTransformationRoutes.execute(dataSetTransformation._id.get)'); return false;">
+    <a class="btn btn-default btn-xs btn-clean no-rowClicked" href="#" onclick="executeTransformation('@{dataSetTransformation._id.get.stringify}')">
         <span class="glyphicon glyphicon-play green" aria-hidden="true"></span>
     </a>
 }
@@ -106,6 +106,29 @@
     )
 }
 
+@bottomResources = {
+    @helper.javascriptRouter("dataSetTransformationRoutes")(
+        org.ada.web.controllers.dataset.datatrans.routes.javascript.DataSetTransformationController.execute
+    )
+
+    <script type="text/javascript">
+        function executeTransformation(id) {
+            if (id) {
+                showMessage("Data set transformation has been successfully launched. It might take a while...")
+                dataSetTransformationRoutes.org.ada.web.controllers.dataset.datatrans.DataSetTransformationController.execute(id).ajax({
+                    success: function (message) {
+                        showMessage(message)
+                    },
+                    error: function(data) {
+                        hideMessages();
+                        showErrorResponse(data)
+                    }
+                });
+            }
+        }
+    </script>
+}
+
 @layout.list(
     "Data Set Transformation",
     None,
@@ -113,5 +136,6 @@
     Some(actions),
     Some(table),
     None,
-    Some(datasetMenu(dataSpaceMetaInfos))
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    bottomResources = Some(bottomResources)
 )

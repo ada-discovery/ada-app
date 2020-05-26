@@ -17,7 +17,8 @@ function activateDataSetFilter(filterElement, jsonConditions, filterId, submitAj
         listFiltersUrl: listFiltersUrl,
         saveFilterAjaxFun: saveFilterAjaxFun,
         filterSubmitParamName: "filterOrId",
-        filterId: filterId
+        filterId: filterId,
+        typeaheadMinLength: 2
     })
 
     addAllowedValuesUpdateForFilter(filterElement)

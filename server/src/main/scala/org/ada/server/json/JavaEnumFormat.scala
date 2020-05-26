@@ -9,13 +9,13 @@ object JavaEnumFormat  {
 
   private def enumReads[E <: Enum[E]](clazz: Class[E]): Reads[E] = new Reads[E] {
     def reads(json: JsValue): JsResult[E] = json match {
-      case JsString(s) => {
+      case JsString(s) =>
         try {
           JsSuccess(Enum.valueOf[E](clazz, s))
         } catch {
           case _: IllegalArgumentException => JsError(s"Java enum expected of type: '${clazz.getName}', but it does not appear to contain the value: '$s'")
         }
-      }
+
       case _ => JsError("String value expected")
     }
   }
@@ -24,9 +24,11 @@ object JavaEnumFormat  {
     def writes(v: E): JsValue = JsString(v.toString)
   }
 
-  implicit def apply[E <: Enum[E]](implicit classTag: ClassTag[E]): Format[E] = {
+  implicit def apply[E <: Enum[E]](implicit classTag: ClassTag[E]): Format[E] =
     Format(enumReads[E](classTag.runtimeClass.asInstanceOf[Class[E]]), enumWrites[E])
-  }
+
+  implicit def applyClassUnsafe[E <: Enum[E]](clazz: Class[_]): Format[E] =
+    Format(enumReads[E](clazz.asInstanceOf[Class[E]]), enumWrites[E])
 }
 
 object JavaOrdinalEnumFormat  {

@@ -28,10 +28,11 @@ private class MatchGroupsWithConfoundersTransformer extends AbstractDataSetTrans
 
   override protected def execInternal(
     spec: MatchGroupsWithConfoundersTransformation
-  ) = {
-    val sourceDsa = dsaSafe(spec.sourceDataSetId)
-
+  ) =
     for {
+      //source DSA
+      sourceDsa <- Future(dsaSafe(spec.sourceDataSetId))
+
       // load a filter (if needed)
       filter <- spec.filterId.map(sourceDsa.filterRepo.get).getOrElse(Future(None))
 
@@ -47,7 +48,6 @@ private class MatchGroupsWithConfoundersTransformer extends AbstractDataSetTrans
       fields <- sourceDsa.fieldRepo.find()
     } yield
       (sourceDsa, fields, inputStream, saveViewsAndFilters)
-  }
 
   private def matchedGroupsStream(
     spec: MatchGroupsWithConfoundersTransformation,

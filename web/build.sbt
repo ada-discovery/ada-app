@@ -37,7 +37,7 @@ libraryDependencies ++= Seq(
   "org.webjars" % "typeaheadjs" % "0.11.1",              // typeahead (autocompletion)
   "org.webjars" % "html5shiv" % "3.7.0",
   "org.webjars" % "respond" % "1.4.2",
-  "org.webjars" % "highcharts" % "5.0.14",               // highcharts for plotting
+  "org.webjars" % "highcharts" % "6.2.0",                // highcharts for plotting
   "org.webjars.npm" % "bootstrap-select" % "1.13.2",     // bootstrap select element
   "org.webjars.bower" % "plotly.js" % "1.5.1",           // Plotly
   "org.webjars.bower" % "d3" % "3.5.16",
@@ -79,9 +79,13 @@ mappings in (Compile, packageBin) ~= { _.filter(!_._1.getName.endsWith("custom.c
 
 // Asset stages
 
-pipelineStages in Assets := Seq(digest, gzip)
+pipelineStages in Assets := Seq(uglify, digest, gzip)
 
 excludeFilter in gzip := (excludeFilter in gzip).value || new SimpleFileFilter(file => new File(file.getAbsolutePath + ".gz").exists)
+
+//excludeFilter in rjs := (excludeFilter in rjs).value || GlobFilter("typeahead.js")
+
+excludeFilter in uglify := (excludeFilter in uglify).value || GlobFilter("typeahead.js")
 
 // For licenses not automatically downloaded (need to list them manually)
 licenseOverrides := {

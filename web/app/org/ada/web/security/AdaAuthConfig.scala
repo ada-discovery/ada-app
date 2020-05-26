@@ -82,7 +82,7 @@ trait AdaAuthConfig extends AuthConfig {
       if (successfulLoginUrl.isDefined && successfulLoginUrl.get.nonEmpty)
         Redirect(successfulLoginUrl.get).withSession("successfulLoginUrl" -> "")
       else
-        Redirect(routes.UserProfileController.profile())
+        Redirect(routes.AppController.dataSets())
     )
   }
 

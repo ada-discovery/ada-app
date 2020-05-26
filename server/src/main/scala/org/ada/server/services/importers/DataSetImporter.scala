@@ -5,12 +5,11 @@ import java.nio.charset.{Charset, MalformedInputException, UnsupportedCharsetExc
 import javax.inject.Inject
 import org.ada.server.models.dataimport.DataSetImport
 import org.ada.server.AdaParseException
-import org.ada.server.field.FieldTypeHelper
+import org.ada.server.field.{FieldType, FieldTypeHelper}
 import org.ada.server.models._
 import org.ada.server.dataaccess.RepoTypes._
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.ada.server.services.DataSetService
-import org.ada.server.util.MessageLogger
 import org.ada.server.field.FieldUtil.specToField
 import org.ada.server.field.inference.FieldTypeInferrer
 import org.incal.core.runnables.InputFutureRunnable
@@ -32,10 +31,8 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
   @Inject var dsaf: DataSetAccessorFactory = _
 
   protected val logger = Logger
-
-  protected val defaultFti = FieldTypeHelper.fieldTypeInferrer
-  protected val ftf = FieldTypeHelper.fieldTypeFactory()
   protected val defaultCharset = "UTF-8"
+  private val defaultFtf = FieldTypeHelper.fieldTypeFactory()
 
   protected def createDataSetAccessor(
     importInfo: DataSetImport
@@ -56,10 +53,10 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
   protected def createJsonsWithFields(
     fieldNamesAndLabels: Seq[(String, String)],
     values: Seq[Seq[String]],
-    fti: Option[FieldTypeInferrer[String]] = None
+    fti: FieldTypeInferrer[String]
   ): (Seq[JsObject], Seq[Field]) = {
     // infer field types
-    val fieldTypes = values.transpose.par.map(fti.getOrElse(defaultFti).apply).toList
+    val fieldTypes = values.transpose.par.map(fti.apply).toList
 
     // create jsons
     val jsons = values.map( vals =>
@@ -84,7 +81,7 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
     values: Iterator[Seq[String]]
   ): (Iterator[JsObject], Seq[Field]) = {
     // use String types for all the fields
-    val fieldTypes = fieldNamesAndLabels.map(_ => ftf.stringScalar)
+    val fieldTypes = fieldNamesAndLabels.map(_ => defaultFtf.stringScalar)
 
     // create jsons
     val jsons = values.map( vals =>
@@ -116,14 +113,15 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
 
     try {
       eol match {
-        case Some(eol) => {
+        case Some(eol) =>
           // TODO: not effective... if a custom eol is used we need to read the whole file into memory and split again. It'd be better to use a custom BufferedReader
           createSource.mkString.split(eol).iterator
-        }
+
         case None =>
           createSource.getLines
       }
     } catch {
+      case e: java.io.FileNotFoundException => throw AdaParseException(s"File '${path}' cannot be found.", e)
       case e: UnsupportedCharsetException => throw AdaParseException(s"Unsupported charset '${charsetName.get}' detected.", e)
       case e: MalformedInputException => throw AdaParseException("Malformed input detected. It's most likely due to some special characters. Try a different chartset.", e)
     }
@@ -180,12 +178,11 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
     fieldNamesAndLabels: Seq[(String, String)],
     values: Iterator[Seq[String]],
     saveBatchSize: Option[Int] = None,
-    fti: Option[FieldTypeInferrer[String]] = None
+    fti: FieldTypeInferrer[String]
   ): Future[Unit] = {
     // infer field types and create JSONSs
     logger.info(s"Inferring field types and creating JSONs...")
 
-    val fieldNames = fieldNamesAndLabels.map(_._1)
     val (jsons, fields) = createJsonsWithFields(fieldNamesAndLabels, values.toSeq, fti)
 
     saveJsonsAndDictionary(dsa, jsons, fields, saveBatchSize)

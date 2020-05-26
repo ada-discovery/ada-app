@@ -12,7 +12,8 @@ $.widget("custom.multiFilter", {
         filterId: null, // not an element id but a persisted id of the filter if any
         createSubmissionJson: null,
         initFilterIfNeededCallback: null,
-        fieldDisplayChoiceCallback: null
+        fieldDisplayChoiceCallback: null,
+        typeaheadMinLength: null
     },
 
     // the constructor
@@ -122,7 +123,9 @@ $.widget("custom.multiFilter", {
 
         this.showAddConditionButtonElement.click(function() { that._showAddConditionModal() });
         this.rollbackFilterButtonElement.click(function() { that._rollbackModelAndSubmit() });
-        this.loadFilterButtonElement.click(function() { that._loadFilterSelectionAndShowModal() });
+        this.loadFilterButtonElement.click(function() {
+            that._loadFilterSelectionAndShowModal()
+        });
     },
 
     _showAddConditionModal: function() {
@@ -432,7 +435,7 @@ $.widget("custom.multiFilter", {
                         if (successFun)
                             successFun()
                     } else {
-                        that.loadFilterButtonElement.hide();
+                        showError("Sorry. No filters available.");
                     }
                 },
                 error: function(data) {
@@ -502,12 +505,14 @@ $.widget("custom.multiFilter", {
 
             this.fieldNameTypeaheadElement.typeahead('destroy');
 
+            var minLength = (typeof that.options.typeaheadMinLength === 'undefined') ? 2 : that.options.typeaheadMinLength;
+
             populateFieldTypeahead({
                 typeaheadElement: this.fieldNameTypeaheadElement,
                 fieldNameElement: this.fieldNameElement,
                 fieldNameAndLabels: this.fieldNameAndLabels,
                 showOption: choiceValue,
-                minLength: 2
+                minLength: minLength
             })
 
             this.fieldNameTypeaheadElement.typeahead('val', '');

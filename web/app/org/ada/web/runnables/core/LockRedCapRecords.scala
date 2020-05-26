@@ -6,12 +6,11 @@ import org.ada.server.models.redcap.LockRecordResponse
 import org.ada.server.services.importers.{RedCapLockAction, RedCapServiceFactory}
 import org.ada.web.runnables.InputView
 import org.incal.core.runnables.{InputFutureRunnableExt, RunnableHtmlOutput}
-import org.incal.core.util.seqFutures
+import org.incal.core.util.{GroupMapList, seqFutures, toHumanReadableCamel}
 import play.api.{Configuration, Logger}
-import org.incal.core.util.GroupMapList
 import org.incal.play.controllers.WebContext
 import org.incal.play.controllers.WebContext._
-import views.html.elements.{select, textarea}
+import views.html.elements.{inputText, select, textarea}
 import org.ada.web.util.enumToValueString
 
 import scala.collection.JavaConversions._
@@ -124,13 +123,22 @@ class LockRedCapRecords @Inject()(
   }
 
   override def inputFields(
+    fieldNamePrefix: Option[String] = None)(
     implicit webContext: WebContext
-  ) =  (form) => html(
-    textarea("lockRedCapRecords", "records", form, Seq('cols -> 20, 'rows -> 5)),
-    select("lockRedCapRecords", "delimiter", form, enumToValueString(RedCapRecordDelimiter), false),
-    select("lockRedCapRecords", "visit", form, visits, false),
-    select("lockRedCapRecords", "action", form, enumToValueString(RedCapLockAction), false)
-  )
+  ) =  (form) => {
+    def selectAux(fieldName: String, values: Seq[(String, String)]) =
+      select("lockRedCapRecords", fieldNamePrefix.getOrElse("") + fieldName, form, values, false, Seq('_label -> toHumanReadableCamel(fieldName)))
+
+    html(
+      textarea("lockRedCapRecords", fieldNamePrefix.getOrElse("") + "records", form, Seq('cols -> 20, 'rows -> 5, '_label -> "Records")),
+
+      selectAux("delimiter", enumToValueString(RedCapRecordDelimiter)),
+
+      selectAux("visit", visits),
+
+      selectAux("action", enumToValueString(RedCapLockAction))
+    )
+  }
 }
 
 case class LockRedCapRecordsSpec(

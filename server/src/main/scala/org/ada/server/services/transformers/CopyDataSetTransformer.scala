@@ -3,6 +3,7 @@ package org.ada.server.services.transformers
 import org.ada.server.models.datatrans.CopyDataSetTransformation
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 private class CopyDataSetTransformer extends AbstractDataSetTransformer[CopyDataSetTransformation] {
 
@@ -10,10 +11,10 @@ private class CopyDataSetTransformer extends AbstractDataSetTransformer[CopyData
 
   override protected def execInternal(
     spec: CopyDataSetTransformation
-  ) = {
-    val sourceDsa = dsaSafe(spec.sourceDataSetId)
-
+  ) =
     for {
+      sourceDsa <- Future(dsaSafe(spec.sourceDataSetId))
+
       // all the fields
       fields <- sourceDsa.fieldRepo.find()
 
@@ -21,5 +22,4 @@ private class CopyDataSetTransformer extends AbstractDataSetTransformer[CopyData
       inputStream <- sourceDsa.dataSetRepo.findAsStream()
     } yield
       (sourceDsa, fields, inputStream, saveViewsAndFilters)
-  }
 }

@@ -59,7 +59,7 @@ class DataSetTransformationController @Inject()(
   // default form... unused
   override protected val form = CopyFormViews.form.asInstanceOf[Form[DataSetMetaTransformation]]
 
-  override protected val homeCall = routes.DataSetTransformationController.find()
+  override protected lazy val homeCall = routes.DataSetTransformationController.find()
 
   // List views
 
@@ -100,10 +100,10 @@ class DataSetTransformationController @Inject()(
             val execTimeSec = (new Date().getTime - start.getTime) / 1000
 
             render {
-              case Accepts.Html() => referrerOrHome().flashing("success" -> s"Data set(s) '$sourceIdsString' has been transformed in $execTimeSec sec(s).")
+              case Accepts.Html() => Ok(s"Data set(s) '$sourceIdsString' has/have been transformed in $execTimeSec sec(s).")
               case Accepts.Json() => Created(Json.obj("message" -> s"Data set has been transformed in $execTimeSec sec(s)", "name" -> transformationInfo.sourceDataSetIds))
             }
-          }.recover(handleExceptions("execute"))
+          }.recover(handleExceptionsWithErrorCodes("data set transformation"))
         }
       )
   }
@@ -115,8 +115,6 @@ class DataSetTransformationController @Inject()(
     val transformationWithFixedScheduledTime = transformation.copyCore(
       transformation._id, transformation.timeCreated, transformation.timeLastExecuted, transformation.scheduled, transformation.scheduledTime.map(fillZeroes)
     )
-
-    println(transformationWithFixedScheduledTime)
 
     super.saveCall(transformationWithFixedScheduledTime).map { id =>
       scheduleOrCancel(id, transformationWithFixedScheduledTime); id

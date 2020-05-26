@@ -10,12 +10,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-trait LookupCentralExec[IN] extends (IN => Future[Unit])
-
-abstract protected[services] class LookupCentralExecImpl[IN, E <: InputFutureRunnable[IN] : ClassTag](
+abstract protected[services] class LookupCentralExec[IN, E <: InputFutureRunnable[IN] : ClassTag](
   lookupPackage: String,
   execName: String
-) extends LookupCentralExec[IN] {
+) extends InputExec[IN] {
 
   private val currentMirror = newCurrentThreadMirror
 

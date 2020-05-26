@@ -7,14 +7,14 @@ import org.ada.server.dataaccess.RepoTypes.CategoryRepo
 import org.ada.server.dataaccess.RepoTypes.FieldRepo
 import org.ada.server.dataaccess._
 import org.ada.server.models.{Category, Field, FieldTypeId, FieldTypeSpec}
-import org.ada.server.field.FieldType
+import org.ada.server.field.{FieldType, FieldTypeHelper}
 import org.ada.server.models.redcap.{Metadata, FieldType => RCFieldType}
 import org.ada.server.models.dataimport.RedCapDataSetImport
 import org.ada.server.{AdaException, AdaParseException}
 import org.ada.server.field.FieldUtil.FieldOps
+import org.ada.server.field.inference.FieldTypeInferrer
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.util.{hasNonAlphanumericUnderscore, seqFutures}
-
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 
@@ -45,6 +45,10 @@ private class RedCapDataSetImporter @Inject() (
     // Red cap service to pull the data from
     val redCapService = redCapServiceFactory(importInfo.url, importInfo.token)
 
+    // field type and inferrer
+    val nullAliases = FieldTypeHelper.nullAliasesOrDefault(importInfo.explicitNullAliases)
+    val ftf = FieldTypeHelper.fieldTypeFactory(nullAliases = nullAliases)
+    val fti = FieldTypeHelper.fieldTypeInferrerFactory(nullAliases = nullAliases).ofString
     val stringFieldType = ftf.stringScalar
 
     val batchSize = importInfo.saveBatchSize.getOrElse(defaultSaveBatchSize)
@@ -81,7 +85,7 @@ private class RedCapDataSetImporter @Inject() (
       categoryRepo = dsa.categoryRepo
 
       // import dictionary (if needed) otherwise use an existing one (should exist)
-      fieldsWithEnumFlag <- importOrGetDictionary(importInfo, redCapService, fieldRepo, categoryRepo, records)
+      fieldsWithEnumFlag <- importOrGetDictionary(importInfo, redCapService, fieldRepo, categoryRepo, records, fti, stringFieldType)
       fields = fieldsWithEnumFlag.map(_._1)
 
       // create a name -> field type (+ redcap enum flag) map for a quick lookup
@@ -168,12 +172,14 @@ private class RedCapDataSetImporter @Inject() (
     redCapService: RedCapService,
     fieldRepo: FieldRepo,
     categoryRepo: CategoryRepo,
-    records: Traversable[JsObject]
+    records: Traversable[JsObject],
+    fti: FieldTypeInferrer[String],
+    stringFieldType: FieldType[String]
   ): Future[Traversable[(Field, Boolean)]] = {
     if (importInfo.importDictionaryFlag) {
       logger.info(s"RedCap dictionary inference and import for data set '${importInfo.dataSetId}' initiated.")
 
-      val fieldsFuture = importAndInferRedCapDictionary(importInfo.dataSetId, redCapService, fieldRepo, categoryRepo, records)
+      val fieldsFuture = importAndInferRedCapDictionary(importInfo.dataSetId, redCapService, fieldRepo, categoryRepo, records, fti, stringFieldType)
 
       fieldsFuture.map { fields =>
         logger.info(s"RedCap dictionary inference and import for data set '${importInfo.dataSetId}' successfully finished.")
@@ -275,22 +281,24 @@ private class RedCapDataSetImporter @Inject() (
     redCapService: RedCapService,
     fieldRepo: FieldRepo,
     categoryRepo: CategoryRepo,
-    records: Traversable[JsObject]
+    records: Traversable[JsObject],
+    fti: FieldTypeInferrer[String],
+    stringFieldType: FieldType[String]
   ): Future[Traversable[(Field, Boolean)]] = {
 
-    def displayJsonToDisplayString[T](fieldType: FieldType[T], json: JsReadable): String = {
-      val value = fieldType.displayJsonToValue(json)
-      fieldType.valueToDisplayString(value)
+    def displayJsonToDisplayString[T](json: JsReadable): String = {
+      val value = stringFieldType.displayJsonToValue(json)
+      stringFieldType.valueToDisplayString(value)
     }
 
     val fieldNames = records.map(_.keys).flatten.toSet
-    val stringFieldType = ftf.stringScalar
+
     val inferredFieldNameTypeMap: Map[String, FieldType[_]] =
       fieldNames.map { fieldName =>
         val stringValues = records.map(record =>
-          displayJsonToDisplayString(stringFieldType, (record \ fieldName))
+          displayJsonToDisplayString(record \ fieldName)
         )
-        (fieldName, defaultFti(stringValues))
+        (fieldName, fti(stringValues))
       }.toMap
 
     // TODO: optimize this... introduce field groups to speed up inference

@@ -19,9 +19,6 @@ trait LinkDataSetsHelper[T <: DataSetTransformation] {
   protected def createDataSetInfo(
     spec: LinkedDataSetSpec
   ): Future[LinkedDataSetInfo] = {
-    // data set accessor
-    val dsa = dsaSafe(spec.dataSetId)
-
     // determine which fields to load (depending on whether preserve field names are specified)
     val fieldNamesToLoad = spec.explicitFieldNamesToKeep match {
       case Nil => Nil
@@ -29,6 +26,9 @@ trait LinkDataSetsHelper[T <: DataSetTransformation] {
     }
 
     for {
+      // data set accessor
+      dsa <- Future(dsaSafe(spec.dataSetId))
+
       // load fields
       fields <- fieldNamesToLoad match {
         case Nil => dsa.fieldRepo.find()
@@ -40,7 +40,7 @@ trait LinkDataSetsHelper[T <: DataSetTransformation] {
 
       val linkFieldTypes = spec.linkFieldNames.map { fieldName =>
         nameFieldMap.get(fieldName).map(_.toNamedTypeAny).getOrElse(
-          throw new AdaException(s"Link field $fieldName not found.")
+          throw new AdaException(s"Link field '$fieldName' not found.")
         )
       }
 

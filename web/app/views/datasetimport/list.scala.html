@@ -81,7 +81,7 @@
 }
 
 @executeLink(dataSetImport: DataSetImport) = {
-    <a class="btn btn-default btn-xs btn-clean no-rowClicked" href="#" onclick="submit('post', '@dataSetImportRoutes.execute(dataSetImport._id.get)'); return false;">
+    <a class="btn btn-default btn-xs btn-clean no-rowClicked" href="#" onclick="executeImport('@{dataSetImport._id.get.stringify}')">
         <span class="glyphicon glyphicon-play green" aria-hidden="true"></span>
     </a>
 }
@@ -103,6 +103,29 @@
     )
 }
 
+@bottomResources = {
+    @helper.javascriptRouter("dataSetImportRoutes")(
+        org.ada.web.controllers.dataset.dataimport.routes.javascript.DataSetImportController.execute
+    )
+
+    <script type="text/javascript">
+        function executeImport(id) {
+            if (id) {
+                showMessage("Data set import has been successfully launched. It might take a while...")
+                dataSetImportRoutes.org.ada.web.controllers.dataset.dataimport.DataSetImportController.execute(id).ajax({
+                    success: function (message) {
+                        showMessage(message)
+                    },
+                    error: function(data) {
+                        hideMessages();
+                        showErrorResponse(data)
+                    }
+                });
+            }
+        }
+    </script>
+}
+
 @layout.list(
     "Data Set Import",
     None,
@@ -110,5 +133,6 @@
     Some(actions),
     Some(table),
     None,
-    Some(datasetMenu(dataSpaceMetaInfos))
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    bottomResources = Some(bottomResources)
 )

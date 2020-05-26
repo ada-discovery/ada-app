@@ -198,10 +198,11 @@ class DataSetServiceImpl @Inject()(
   private val reportLineFreq = 0.1
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()
-  private val fti = FieldTypeHelper.fieldTypeInferrer
   private val jsonFti = FieldTypeHelper.jsonFieldTypeInferrer
 
   private val idName = JsObjectIdentity.name
+  private val emptyColumnName = "_empty_"
+  private val maxFieldNameLength = 100
 
   private type CreateJsonsWithFieldTypes =
     (Seq[String], Seq[Seq[String]]) => (Seq[JsObject], Seq[FieldType[_]])
@@ -1756,8 +1757,10 @@ class DataSetServiceImpl @Inject()(
 
     val convertedStringValues = items.map(translate)
 
-    val noCommaFtf = FieldTypeHelper.fieldTypeFactory(arrayDelimiter = ",,,", booleanIncludeNumbers = false)
-    val noCommanFti = FieldTypeHelper.fieldTypeInferrerFactory(ftf = noCommaFtf, arrayDelimiter = ",,,").ofString
+    val noCommanFti = FieldTypeHelper.fieldTypeInferrerFactory(
+      booleanIncludeNumbers = false,
+      arrayDelimiter = ",,,"
+    ).ofString
 
     // infer new types
     val (jsons, fieldTypes) = createJsonsWithFieldTypes(
@@ -1772,13 +1775,43 @@ class DataSetServiceImpl @Inject()(
   override def getColumnNameLabels(
     delimiter: String,
     lineIterator: Iterator[String]
-  ): Seq[(String, String)] =
-    lineIterator.take(1).flatMap {
+  ): Seq[(String, String)] = {
+    val columnNameLabels = lineIterator.take(1).flatMap {
       _.split(delimiter).map { columnName =>
         val trimmedName = columnName.trim.replaceAll("\"", "")
-        (nonAlphanumericToUnderscore(trimmedName), trimmedName)
+
+        // check if empty
+        val nonEmptyName = if (trimmedName.isEmpty) {
+          logger.warn(s"Empty column name found. Replacing with '$emptyColumnName'.")
+          emptyColumnName
+        } else if (trimmedName.size > maxFieldNameLength) {
+          throw new AdaParseException(s"The field/column name '${trimmedName}' is too long. It exceeded the maximum allowed size of ${maxFieldNameLength}.")
+        } else {
+          trimmedName
+        }
+
+        (nonAlphanumericToUnderscore(nonEmptyName), nonEmptyName)
       }
     }.toList
+
+    // check if unique
+    val columnNameSetMap = columnNameLabels.groupBy(_._1)
+
+    columnNameLabels.flatMap { case (name, _) =>
+      val columns = columnNameSetMap.get(name).getOrElse(
+        throw new AdaException(s"The column $name not found.")
+      )
+      if (columns.size > 1) {
+        logger.warn(s"Non-unique column name(s) found: '${name}'. Adding an index suffix.")
+        // non-unique columns... add indices
+        columns.zipWithIndex.map { case ((name, label), index) =>
+          (name + "_" + index, label + " " + index)
+        }
+      } else {
+        columns
+      }
+    }
+  }
 
   // parse the line, returns the parsed items
   override def parseLine(

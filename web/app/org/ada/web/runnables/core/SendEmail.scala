@@ -9,12 +9,13 @@ import play.api.Configuration
 import play.api.libs.mailer.{Email, MailerClient}
 import views.html.elements._
 import org.incal.play.controllers.WebContext._
+import org.incal.core.util.toHumanReadableCamel
 
 class SendEmail @Inject()(mailerClient: MailerClient, configuration: Configuration) extends InputRunnableExt[SendEmailSpec] with InputView[SendEmailSpec] {
 
   override def run(input: SendEmailSpec) = {
 
-    if (configuration.getString("play.mailer.host").isEmpty) {
+    if (!configuration.underlying.hasPath("play.mailer.host")) {
       throw new AdaException("Email cannot be sent. The configuration entry 'play.mailer.host' is not set.")
     }
 
@@ -29,13 +30,19 @@ class SendEmail @Inject()(mailerClient: MailerClient, configuration: Configurati
   }
 
   override def inputFields(
+    fieldNamePrefix: Option[String] = None)(
     implicit webContext: WebContext
-  ) =  (form) => html(
-    inputText("sendEmail", "from", form),
-    inputText("sendEmail", "to", form),
-    inputText("sendEmail", "subject", form),
-    textarea("sendEmail", "body", form, Seq('cols -> 60, 'rows -> 20))
-  )
+  ) =  (form) => {
+    def inputTextAux(fieldName: String) =
+      inputText("sendEmail", fieldNamePrefix.getOrElse("") + fieldName, form, Seq('_label -> toHumanReadableCamel(fieldName)))
+
+    html(
+      inputTextAux("from"),
+      inputTextAux("to"),
+      inputTextAux("subject"),
+      textarea("sendEmail", fieldNamePrefix.getOrElse("") + "body", form, Seq('cols -> 60, 'rows -> 20, '_label -> "Body"))
+    )
+  }
 }
 
 case class SendEmailSpec(

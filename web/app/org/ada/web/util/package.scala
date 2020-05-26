@@ -6,6 +6,7 @@ import org.ada.web.models._
 import org.incal.core.util.ReflectionUtil._
 import org.incal.core.util.{ReflectionUtil, toHumanReadableCamel}
 import org.incal.core.{ConditionType, FilterCondition}
+import org.incal.play.util.WebUtil
 import play.api.libs.json.{Json, Writes}
 import play.twirl.api.Html
 
@@ -157,6 +158,29 @@ package object util {
     widget.data.map { case (x, y, z) =>
       (numericValue(x), numericValue(y), numericValue(z))
     }
+  }
+
+  def matchesPath(
+    coreUrl: String,
+    url: String,
+    matchPrefixDepth: Option[Int] = None,
+    fixedUrlPrefix: Option[String] = None
+  ) = {
+    val routesPrefix: String = _root_.core.RoutesPrefix.prefix
+
+    val prefix = if (routesPrefix.nonEmpty && !routesPrefix.equals("/")) {
+      val tempPrefix = fixedUrlPrefix.getOrElse("") + routesPrefix
+      Some(tempPrefix.replaceAllLiterally("//","/")) // if two backslashes occur replace with just one
+    } else {
+      fixedUrlPrefix
+    }
+
+    WebUtil.matchesPath(
+      coreUrl,
+      url,
+      matchPrefixDepth,
+      prefix
+    )
   }
 
   def toJsonHtml[T](o: T)(implicit tjs: Writes[T]): Html =

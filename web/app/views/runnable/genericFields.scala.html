@@ -10,11 +10,12 @@
 @import org.ada.server.models.FieldTypeSpec
 @import org.ada.server.models.FieldTypeId
 @import org.ada.web.controllers.routes
-@import org.incal.play.security.SecurityRole
+@import org.incal.core.util.toHumanReadableCamel
 
 @(
     form: Form[_],
-    nameFieldTypeMap: Map[String, FieldTypeSpec]
+    nameFieldTypeMap: Map[String, FieldTypeSpec],
+    prefixFieldName: Option[String]
 )(
     implicit context: WebContext
 )
@@ -27,18 +28,32 @@
                 field.copy(value = Some(defaultValue.get.toString))
             else
                 field,
-            Nil,
+            Seq('_label -> toHumanReadableCamel(fieldName.stripPrefix(prefixFieldName.getOrElse("")))),
             3
         )
     }
 }
 
 @selectAux(fieldName: String, enumValues: Seq[String]) = {
-    @select("genericForm", fieldName, form, enumValues.map(x => (x, x)), true, Nil, 3)
+    @select(
+        "genericForm",
+        fieldName,
+        form,
+        enumValues.map(x => (x, x)),
+        true,
+        Seq('_label -> toHumanReadableCamel(fieldName.stripPrefix(prefixFieldName.getOrElse("")))),
+        3
+    )
 }
 
 @checkboxAux(fieldName: String) = {
-    @checkbox("genericForm", fieldName, form, Nil, 3)
+    @checkbox(
+        "genericForm",
+        fieldName,
+        form,
+        Seq('_label -> toHumanReadableCamel(fieldName.stripPrefix(prefixFieldName.getOrElse("")))),
+        3
+    )
 }
 
 @if(form.mapping.mappings.nonEmpty) {

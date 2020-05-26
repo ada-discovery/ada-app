@@ -9,6 +9,32 @@ import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 
+/**
+  * Specification (data holder) of CSV import.
+  *
+  * @param _id
+  * @param dataSpaceName
+  * @param dataSetId
+  * @param dataSetName
+  * @param path
+  * @param delimiter
+  * @param eol
+  * @param charsetName
+  * @param matchQuotes
+  * @param inferFieldTypes
+  * @param inferenceMaxEnumValuesCount
+  * @param inferenceMinAvgValuesPerEnum
+  * @param arrayDelimiter
+  * @param booleanIncludeNumbers
+  * @param explicitNullAliases
+  * @param saveBatchSize
+  * @param scheduled
+  * @param scheduledTime
+  * @param setting
+  * @param dataView
+  * @param timeCreated
+  * @param timeLastExecuted
+  */
 case class CsvDataSetImport(
   _id: Option[BSONObjectID] = None,
   dataSpaceName: String,
@@ -24,6 +50,7 @@ case class CsvDataSetImport(
   inferenceMinAvgValuesPerEnum: Option[Double] = None,
   arrayDelimiter: Option[String] = None,
   booleanIncludeNumbers: Boolean = false,
+  explicitNullAliases: Seq[String] = Nil,
   saveBatchSize: Option[Int] = None,
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,

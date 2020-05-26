@@ -2,7 +2,7 @@ package org.ada.server.services
 
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import net.codingwell.scalaguice.ScalaModule
-import org.ada.server.services.ServiceTypes.{DataSetCentralImporter, DataSetCentralTransformer, DataSetImportScheduler, DataSetTransformationScheduler}
+import org.ada.server.services.ServiceTypes.{DataSetCentralImporter, DataSetCentralTransformer, DataSetImportScheduler, DataSetTransformationScheduler, RunnableExec, RunnableScheduler}
 import org.ada.server.services.importers._
 import org.ada.server.services.transformers.{DataSetCentralTransformerImpl, DataSetTransformationSchedulerImpl}
 
@@ -17,6 +17,9 @@ class ServiceModule extends WebServiceModule {
 
     bind[DataSetCentralTransformer].to(classOf[DataSetCentralTransformerImpl]).asEagerSingleton
     bind[DataSetTransformationScheduler].to(classOf[DataSetTransformationSchedulerImpl]).asEagerSingleton
+
+    bind[RunnableExec].to(classOf[RunnableExecImpl]).asEagerSingleton
+    bind[RunnableScheduler].to(classOf[RunnableSchedulerImpl]).asEagerSingleton
   }
 }
 
