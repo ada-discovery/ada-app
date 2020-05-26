@@ -1,6 +1,9 @@
 logs
 project/project
 project/target
+web/project
+web-ncer/project
+server/project
 target
 tmp
 .history
