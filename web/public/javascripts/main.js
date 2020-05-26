@@ -94,7 +94,7 @@ function getCoreURL(url) {
 function registerMessageEventSource(url) {
 //  if (!!window.EventSource) {
   if (!window.messageSource)
-    window.messageSource = new self.EventSource(url);
+    window.messageSource = new self.EventSource(url, { withCredentials: true });
   window.messageSource.onmessage = function (e) {
     if (e.data) {
       var json = $.parseJSON(e.data);
