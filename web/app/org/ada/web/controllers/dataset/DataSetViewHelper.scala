@@ -12,6 +12,7 @@ import org.incal.core.dataaccess.Criterion._
 import org.incal.core.ConditionType.{In, NotIn}
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.{AscSort, Criterion, DescSort, Sort}
+import org.incal.play.util.WebUtil.toSort
 import play.api.libs.json.JsObject
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -221,17 +222,6 @@ trait DataSetViewHelper {
     } yield
       fields.map(field => (field.name, field)).toMap
   }
-
-  // TODO: Copy of DataSetControllerImpl.toSort - move to a util class
-  private def toSort(fieldName : String): Seq[Sort] =
-    if (fieldName.nonEmpty) {
-      val sort = if (fieldName.startsWith("-"))
-        DescSort(fieldName.substring(1, fieldName.length))
-      else
-        AscSort(fieldName)
-      Seq(sort)
-    } else
-      Nil
 }
 
 case class InitViewResponse(
