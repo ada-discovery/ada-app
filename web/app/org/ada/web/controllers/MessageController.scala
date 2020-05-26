@@ -64,11 +64,12 @@ class MessageController @Inject() (repo: MessageRepo) extends AdaBaseController 
   private def eventId(jsObject: JsValue) = Some(((jsObject \ "_id").get.as[BSONObjectID]).stringify)
   private implicit val idExtractor = new EventIdExtractor[JsValue](eventId)
 
-  def eventStream = Action {
-    implicit request =>
+  def eventStream = restrictSubjectPresentAny(noCaching = true) {
+    implicit request => Future {
       val requestStart = new java.util.Date()
       val messageStream = repo.stream.filter(_.timeCreated.after(requestStart)).map(message => Json.toJson(message))
       Ok.chunked(messageStream via EventSource.flow).as(ContentTypes.EVENT_STREAM) // as("text/event-stream")
+    }
   }
 
   private def removeScriptTags(text: String): String = {
