@@ -33,7 +33,7 @@ abstract protected[controllers] class DataSetImportFormViews[E <: DataSetImport:
   protected val imagePath: Option[String] = None
   protected val imageLink: Option[String] = None
 
-  protected implicit val seqFormatter = SeqFormatter.apply
+  protected implicit val seqFormatter = SeqFormatter()
   private implicit val mapFormatter = MapJsonFormatter.apply
   private implicit val filterShowFieldStyleFormatter = EnumFormatter(FilterShowFieldStyle)
   private implicit val storageTypeFormatter = EnumFormatter(StorageType)

@@ -3,6 +3,7 @@ package org.ada.web.controllers.dataset.dataimport
 import org.ada.server.models.dataimport.TranSmartDataSetImport
 import org.ada.server.models.{DataSetSetting, StorageType}
 import org.incal.play.controllers.WebContext
+import org.incal.play.formatters.SeqFormatter
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.data.format.Formats._
@@ -15,7 +16,7 @@ object TranSmartFormViews extends DataSetImportFormViews[TranSmartDataSetImport]
   override protected val imagePath = Some("images/logos/transmart.png")
   override protected val imageLink = Some("https://transmartfoundation.org")
 
-  private implicit val stringSeqFormatter = SeqFormatterFixed(nonEmptyStringsOnly = false)
+  private implicit val stringSeqFormatter = SeqFormatter(nonEmptyStringsOnly = false)
 
   override protected val extraMappings = Seq(
     "inferenceMaxEnumValuesCount" -> optional(number(min = 1)),

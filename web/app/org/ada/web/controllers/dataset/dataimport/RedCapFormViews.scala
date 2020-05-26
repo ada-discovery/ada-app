@@ -3,6 +3,7 @@ package org.ada.web.controllers.dataset.dataimport
 import org.ada.server.models.dataimport.RedCapDataSetImport
 import org.ada.server.models.{DataSetSetting, StorageType}
 import org.incal.play.controllers.WebContext
+import org.incal.play.formatters.SeqFormatter
 import play.api.data.Form
 import play.api.data.Forms._
 import views.html.{datasetimport => view}
@@ -12,7 +13,7 @@ object RedCapFormViews extends DataSetImportFormViews[RedCapDataSetImport] {
   override protected val imagePath = Some("images/logos/redcap.jpg")
   override protected val imageLink = Some("https://www.project-redcap.org")
 
-  private implicit val stringSeqFormatter = SeqFormatterFixed(nonEmptyStringsOnly = false)
+  private implicit val stringSeqFormatter = SeqFormatter(nonEmptyStringsOnly = false)
 
   override protected val extraMappings = Seq(
 //    "url" -> nonEmptyText,
