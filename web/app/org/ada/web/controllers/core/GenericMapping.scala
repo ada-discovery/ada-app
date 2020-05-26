@@ -162,7 +162,7 @@ object GenericMapping {
 
   private implicit val bsonObjectIdFormatter = BSONObjectIDStringFormatter
 
-  private implicit val stringSeqFormatter = SeqFormatter.apply
+  private implicit val stringSeqFormatter = SeqFormatter()
   private implicit val intSeqFormatter = SeqFormatter.asInt
   private implicit val doubleSeqFormatter = SeqFormatter.asDouble
   private implicit val bsonObjectIdSeqFormatter = BSONObjectIDSeqFormatter.apply
