@@ -12,6 +12,7 @@ import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Sort
 import org.incal.play.controllers.ReadonlyControllerImpl
+import org.incal.play.util.WebUtil.toSort
 
 import scala.concurrent.Future
 

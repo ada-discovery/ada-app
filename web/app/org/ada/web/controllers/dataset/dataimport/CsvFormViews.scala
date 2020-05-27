@@ -3,6 +3,7 @@ package org.ada.web.controllers.dataset.dataimport
 import org.ada.server.models.{DataSetSetting, StorageType}
 import org.ada.server.models.dataimport.CsvDataSetImport
 import org.incal.play.controllers.WebContext
+import org.incal.play.formatters.SeqFormatter
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.data.format.Formats._
@@ -14,8 +15,7 @@ object CsvFormViews extends DataSetImportFormViews[CsvDataSetImport] {
 
   override protected val imagePath = Some("images/logos/csv_100.png")
 
-  private implicit val stringSeqFormatter =
-    SeqFormatterFixed(nonEmptyStringsOnly = false)
+  private implicit val stringSeqFormatter = SeqFormatter(nonEmptyStringsOnly = false)
 
   override protected val extraMappings =
     Seq(

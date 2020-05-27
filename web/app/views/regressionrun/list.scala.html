@@ -37,10 +37,10 @@
 
 @modalBody = {
     <fieldset>
-        @labelValue("targetDataSetId", "Target Data Set Id", false, None, 4) {
+        @labelValue("targetDataSetId", "Target Data Set Id", false, labelGridWidth = 4) {
             <input id="targetDataSetId" name="targetDataSetId" type="text" value="@{context.dataSetId}_regression">
         }
-        @labelValue("targetDataSetName", "Target Data Set Name", false, None, 4) {
+        @labelValue("targetDataSetName", "Target Data Set Name", false, labelGridWidth = 4) {
             <input id="targetDataSetName" name="targetDataSetName" type="text" value="@dataSetName Regression">
         }
     </fieldset>

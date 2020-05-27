@@ -61,6 +61,11 @@
                         <span class="glyphicon glyphicon-duplicate"></span>
                     </a>
                 </li>
+                <li>
+                    <a class="btn btn-success btn-sm" href="@org.ada.web.controllers.routes.DocumentationController.dataSetImport()" title="Help">
+                        <span class="glyphicon glyphicon-question-sign"></span>
+                    </a>
+                </li>
             </ul>
             @typeaheadSelectionModal("dataSetImportSelectionModal", "dataSetImport", "Data Set Import", dataSetImportRoutes.idAndNames, Some(dataSetImportRoutes.copy(BSONObjectID.generate)))
         </div>

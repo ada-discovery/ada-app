@@ -12,7 +12,14 @@
         <div id="settingDiv" style="display:none">
             <input type="hidden" id="setting_dataSetId" name="setting.dataSetId" value="">
             <hr/>
-            @select("dataSetImport", "setting.storageType", form, enumToValueString(StorageType), true)
+            @select(
+                "dataSetImport",
+                "setting.storageType",
+                form,
+                enumToValueString(StorageType),
+                true,
+                Seq('_helpModal -> "<p>Which storage/database the data should be saved to. Currently <i>Elastic Search</i> and <i>Mongo</i> are supported.</p><p>Normally you want to choose Elastic Search (mainly for performance reasons), although if available resources are insufficient  or a data set has several array or nested-JSON fields, Mongo could be a better choice.</p>")
+            )
             <a class="pull-right" href="#moreSetting" data-toggle="collapse">Show More</a>
 
             <div id="moreSetting" class="collapse">

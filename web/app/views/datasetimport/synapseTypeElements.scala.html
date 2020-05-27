@@ -5,7 +5,7 @@
 
 @(form: Form[SynapseDataSetImport])(implicit webContext: WebContext)
 
-@inputText("synapseDataSetImport", "tableId", form)
+@inputText("synapseDataSetImport", "tableId", form, Seq('_helpModal -> "<p>Synapse table to load data from.</p><p><b>Example: <i>syn6128378</i></b>"))
 @inputText("synapseDataSetImport", "batchSize", form)
 @checkbox("synapseDataSetImport", "downloadColumnFiles", form)
 @inputText("synapseDataSetImport", "bulkDownloadGroupNumber", form)

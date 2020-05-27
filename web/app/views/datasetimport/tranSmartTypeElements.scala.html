@@ -6,15 +6,15 @@
 
 @(form: Form[TranSmartDataSetImport])(implicit webContext: WebContext)
 
-@fileOrPathInput("tranSmartDataSetImport", "dataSourceChoice", "Data Source", "dataFile", "dataPath", form)
-@fileOrPathInput("tranSmartDataSetImport", "mappingSourceChoice", "Mapping Source", "mappingFile", "mappingPath", form)
+@fileOrPathInput("tranSmartDataSetImport", "dataSourceChoice", "Data Source", "dataFile", "dataPath", form, "source tranSMART data")
+@fileOrPathInput("tranSmartDataSetImport", "mappingSourceChoice", "Mapping Source", "mappingFile", "mappingPath", form, "source tranSMART (column) mapping")
 @inputText("tranSmartDataSetImport", "charsetName", form)
 @checkbox("tranSmartDataSetImport", "matchQuotes", form)
-@checkbox("tranSmartDataSetImport", "inferFieldTypes", form)
+@checkbox("tranSmartDataSetImport", "inferFieldTypes", form, Seq('_helpModal -> "<p>Whether fields types (String, Double, Boolean, etc.) should be inferred based on given data. By default / normally it should be selected, otherwise <b>ALL</b> the fields will be treated and stored as Strings.</p>"))
 @inputText("tranSmartDataSetImport", "inferenceMaxEnumValuesCount", form)
 @inputText("tranSmartDataSetImport", "inferenceMinAvgValuesPerEnum", form)
-@inputText("csvDataSetImport", "explicitNullAliases", form)
 @inputText("tranSmartDataSetImport", "saveBatchSize", form)
+@inputText("tranSmartDataSetImport", "explicitNullAliases", form, Seq('_helpModal -> "<p>Comma-separated list of values that should be treated as <i>nulls</i>.</p><p>If not specified the default ones: \"\", \"na\", \"n/a\", \"null\" will be used.</p>"))
 
 <script type="text/javascript">
     $('form').submit(function(ev) {
