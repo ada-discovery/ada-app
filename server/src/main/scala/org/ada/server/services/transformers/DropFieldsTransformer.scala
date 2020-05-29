@@ -2,13 +2,37 @@ package org.ada.server.services.transformers
 
 import org.ada.server.AdaException
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
-import org.ada.server.models.datatrans.DropFieldsTransformation
+import org.ada.server.models.datatrans.{DropFieldsTransformation, ResultDataSetSpec}
 import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
+/**
+  * Transformer that drops certain fields from data set (and creates a new one)
+  * specified either by `fieldNamesToDrop` or `fieldNamesToKeep` attributes of [[DropFieldsTransformation]] spec.
+  * This transformer doesn't preserve views or filters.
+  *
+  * Because the transformer is private, in order to execute it (as it's with all other transformers),
+  * you need to obtain the central transformer [[org.ada.server.services.ServiceTypes.DataSetCentralTransformer]] through DI and pass a transformation spec as shown in an example bellow.
+  *
+  * Example:
+  * {{{
+  * // create a spec
+  * val spec = DropFieldsTransformation(
+  *   sourceDataSetId = "covid_19.clinical_visit",
+  *   fieldNamesToKeep = Seq("age", "gender"),
+  *   fieldNamesToDrop = Nil,
+  *   resultDataSetSpec = ResultDataSetSpec(
+  *     "covid_19.clinical_visit_age_gender_only",
+  *     "Covid-19 Clinical Visit w. Age and Gender"
+  *   )
+  * )
+  *
+  * // execute
+  * centralTransformer(spec)
+  * }}}
+  */
 private class DropFieldsTransformer extends AbstractDataSetTransformer[DropFieldsTransformation] {
 
   private val saveViewsAndFilters = false
@@ -17,8 +41,8 @@ private class DropFieldsTransformer extends AbstractDataSetTransformer[DropField
     spec: DropFieldsTransformation
   ) =
     for {
-      // source DSA
-      sourceDsa <- Future(dsaSafe(spec.sourceDataSetId))
+      // source data set accessor
+      sourceDsa <- dsaWithNoDataCheck(spec.sourceDataSetId)
 
       // check if the fields are specified correctly
       _ = if (spec.fieldNamesToKeep.nonEmpty && spec.fieldNamesToDrop.nonEmpty)
@@ -43,4 +67,18 @@ private class DropFieldsTransformer extends AbstractDataSetTransformer[DropField
 
     } yield
       (sourceDsa, fieldsToKeep, inputStream, saveViewsAndFilters)
+}
+
+object dsads extends App {
+  val spec = DropFieldsTransformation(
+    sourceDataSetId = "covid_19.clinical_visit",
+    fieldNamesToKeep = Seq("age", "gender"),
+    fieldNamesToDrop = Nil,
+    resultDataSetSpec = ResultDataSetSpec(
+      "covid_19.clinical_visit_age_gender_only",
+      "Covid 19 Clinical Visit w. Age and Gender"
+    )
+  )
+
+
 }

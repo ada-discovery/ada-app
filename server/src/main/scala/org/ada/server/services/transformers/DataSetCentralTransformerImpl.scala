@@ -14,6 +14,18 @@ import play.api.inject.Injector
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
+/**
+  * Implementation of a central transformer containing all available transformers, which are automatically registered via a package scan.
+  * Any transformer can be executed simply by passing its transformation spec.
+  * One caveat of this approach is that there could be only one transformer (i.e., executor) for a given transformation class (i.e., spec).
+  *
+  * Warning: Instead of using this impl. class callers should obtain it via its trait [[org.ada.server.services.ServiceTypes.DataSetCentralTransformer]]
+  * through DI (linked/registered in [[org.ada.server.services.ServiceModule]]).
+  *
+  * @param injector Injected injector :)
+  * @param repo Repo used purely to update a time-stamp in case a transformation spec is persisted (has a valid id).
+  * @param messageRepo Message repo to log a 'successfully completed' message.
+  */
 protected[services] class DataSetCentralTransformerImpl @Inject()(
   val injector: Injector,
   repo: DataSetTransformationRepo,

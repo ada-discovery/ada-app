@@ -7,6 +7,29 @@ import org.incal.core.util.GroupMapList3
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
+/**
+  * Transformer that changes values of given enum fields defined by triples `fieldNameOldNewEnums` of [[ChangeFieldEnumsTransformation]] -
+  * `fieldName`,`fromValue`, and `toValue`. Note that meta-data transformers as this one do not create a new data set but alters an existing one.
+  *
+  * Because the transformer is private, in order to execute it (as it's with all other transformers),
+  * you need to obtain the central transformer [[org.ada.server.services.ServiceTypes.DataSetCentralTransformer]] through DI and pass a transformation spec as shown in an example bellow.
+  *
+  * Example:
+  * {{{
+  * // create a spec
+  * val spec = ChangeFieldEnumsTransformation(
+  *   sourceDataSetId = "covid_19.clinical_visit",
+  *   fieldNameOldNewEnums = Seq(
+  *     ("gender", "M", "Male"),
+  *     ("gender", "F", "Female"),
+  *     ("visit", "V1", "Visit 1")
+  *   )
+  * )
+  *
+  * // execute
+  * centralTransformer(spec)
+  * }}}
+  */
 private class ChangeFieldEnumsTransformer extends AbstractDataSetMetaTransformer[ChangeFieldEnumsTransformation] {
 
   override protected def execInternal(
@@ -15,7 +38,7 @@ private class ChangeFieldEnumsTransformer extends AbstractDataSetMetaTransformer
     val fieldNameEnumMap = spec.fieldNameOldNewEnums.toGroupMap
 
     for {
-      // source DSA
+      // source data set accessor
       sourceDsa <- Future(dsaSafe(spec.sourceDataSetId))
 
       // all the fields

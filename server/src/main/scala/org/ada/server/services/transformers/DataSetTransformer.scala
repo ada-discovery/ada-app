@@ -37,6 +37,17 @@ private[transformers] abstract class AbstractDataSetTransformer[T <: DataSetTran
   protected def dsaSafe(dataSetId: String) =
     dsaf(dataSetId).getOrElse(throw new AdaException(s"Data set '${dataSetId}' not found."))
 
+  protected def dsaWithNoDataCheck(dataSetId: String): Future[DataSetAccessor] =
+    for {
+      dsa <- Future(dsaSafe(dataSetId))
+
+      count <- dsa.dataSetRepo.count()
+    } yield {
+      if (count == 0)
+        throw new AdaException(s"Won't perform a transformation because the data set '${dataSetId}' is empty.")
+      dsa
+    }
+
   override def runAsFuture(spec: T) =
     execInternal(spec).flatMap { case (sourceDsa, fields, inputSource, saveViewsAndFiltersFlag) =>
       dataSetService.saveDerivedDataSet(

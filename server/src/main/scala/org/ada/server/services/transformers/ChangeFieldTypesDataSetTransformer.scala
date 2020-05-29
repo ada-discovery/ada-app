@@ -7,6 +7,34 @@ import play.api.libs.json.{JsObject, JsReadable, JsValue}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+/**
+  * Transformer that changes field types of a given data set defined by an attribute `newFields` of [[ChangeFieldTypesDataSetTransformation]] spec.
+  * This results in creating a new data set where values of the affected fields are re-parsed and stored with new types.
+  *
+  * Because the transformer is private, in order to execute it (as it's with all other transformers),
+  * you need to obtain the central transformer [[org.ada.server.services.ServiceTypes.DataSetCentralTransformer]] through DI and pass a transformation spec as shown in an example bellow.
+  *
+  * Example:
+  * {{{
+  * // create a spec
+  * val spec = ChangeFieldTypesDataSetTransformation(
+  *   sourceDataSetId = "covid_19.clinical_visit",
+  *   newFields = Seq(
+  *     Field(name = "gender", fieldType = FieldTypeId.String),
+  *     Field(name = "visit", fieldType = FieldTypeId.Enum, enumValues = Map("1" -> "Visit 1", "2" -> "Visit 2")
+  *   ),
+  *   resultDataSetSpec = ResultDataSetSpec(
+  *     "covid_19.clinical_visit_types_changed",
+  *     "Covid-19 Clinical Visit w. Types Changed"
+  *   )
+  * )
+  *
+  * // execute
+  * centralTransformer(spec)
+  * }}}
+  *
+  * @see relates to [[InferDataSetTransformer]]
+  */
 private class ChangeFieldTypesDataSetTransformer extends AbstractDataSetTransformer[ChangeFieldTypesDataSetTransformation] {
 
   private val saveViewsAndFilters = true
