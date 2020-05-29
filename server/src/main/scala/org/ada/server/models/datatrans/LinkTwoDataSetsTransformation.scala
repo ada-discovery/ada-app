@@ -21,7 +21,7 @@ case class LinkTwoDataSetsTransformation(
   addDataSetIdToRightFieldNames: Boolean = true,
 
   resultDataSetSpec: ResultDataSetSpec,
-  streamSpec: StreamSpec,
+  streamSpec: StreamSpec = StreamSpec(),
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,
   timeCreated: Date = new Date(),

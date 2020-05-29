@@ -17,7 +17,7 @@ case class FilterDataSetTransformation(
   resultDataSetSpec: ResultDataSetSpec,
   filterId: BSONObjectID,
 
-  streamSpec: StreamSpec,
+  streamSpec: StreamSpec = StreamSpec(),
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,
   timeCreated: Date = new Date(),

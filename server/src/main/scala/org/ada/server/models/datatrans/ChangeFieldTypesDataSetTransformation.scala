@@ -16,7 +16,7 @@ case class ChangeFieldTypesDataSetTransformation(
 
   sourceDataSetId: String,
   resultDataSetSpec: ResultDataSetSpec,
-  newFields: Seq[Field],
+  newFields: Seq[Field], // TODO: rename to `fieldsToChange`
 
   streamSpec: StreamSpec = StreamSpec(),
   scheduled: Boolean = false,
