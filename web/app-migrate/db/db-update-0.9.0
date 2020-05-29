@@ -17,3 +17,9 @@ db.getCollection('dataset_imports').update({concreteClass : "org.ada.server.mode
 	{$set:{"explicitNullAliases":[]}},
     {multi: true}
 )
+
+db.getCollection('dataset_transformations').update({concreteClass : "org.ada.server.models.datatrans.SwapFieldsDataSetTransformation"},
+	{$set:{"concreteClass":"org.ada.server.models.datatrans.ChangeFieldTypesDataSetTransformation"}},
+    {multi: true}
+)
+
