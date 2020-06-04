@@ -20,20 +20,7 @@ Recommended resources:
 
 ```sh
 sudo apt-get install software-properties-common
-sudo add-apt-repository ppa:webupd8team/java
-sudo apt-get update
-sudo apt-get install oracle-java8-installer
-sudo apt install oracle-java8-set-default
-```
-Depending on your Linux distribution you might need to add a different repository, such as
-
-```
-sudo add-apt-repository "deb http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main"
-```
-or install JDK from a different provider, such as
-
-```
-sudo apt install openjdk-8-jdk
+sudo apt-get install openjdk-8-jdk
 ```
 
 &nbsp; 
