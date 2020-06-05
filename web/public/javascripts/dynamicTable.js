@@ -5,7 +5,9 @@ $.widget( "custom.dynamicTable", {
         rowToModel: null,
         itemToRow: null,
         sortable: false,
-        hideModalOnEnter: true
+        hideModalOnEnter: true,
+        modalName: null,
+        itemsName: null
     },
 
     // the constructor
@@ -13,13 +15,12 @@ $.widget( "custom.dynamicTable", {
         var that = this;
         var domainName = this.options.domainName;
         this.tableDiv = this.element;
-        this.tableBody = this.tableDiv.find("table tbody")
+        this.tableBody = this.tableDiv.find("table tbody").first()
 
-        this.modalName = 'add_' + domainName + 'Modal'
-        this.submitButtonName = domainName + 'SubmitButton'
-        this.itemsName = domainName + 's[]'
+        this.modalName = (this.options.modalName) || 'add_' + domainName + 'Modal'
+        this.itemsName = (this.options.itemsName) || domainName + 's[]'
 
-        handleModalButtonEnterPressed(this.modalName, this.submitButtonName, function() { that.addTableRowFromModal()}, that.options.hideModalOnEnter)
+        handleModalButtonEnterPressed(this.modalName, function() { that.addTableRowFromModal()}, that.options.hideModalOnEnter)
 
         $('form').submit(function(ev) {
             ev.preventDefault();
@@ -72,7 +73,7 @@ $.widget( "custom.dynamicTable", {
         this.tableBody.append(this.options.itemToRow(values))
     },
 
-    removeRows: function() {
+    removeCheckedRows: function() {
         var that = this;
         var count = 0
         this.tableBody.find('tr').each(function() {
@@ -81,6 +82,17 @@ $.widget( "custom.dynamicTable", {
                 $(this).remove();
                 count++;
             }
+        });
+
+        this.element.trigger("rowsRemoved", count);
+    },
+
+    removeAllRows: function() {
+        var that = this;
+        var count = 0
+        this.tableBody.find('tr').each(function() {
+            $(this).remove();
+             count++;
         });
 
         this.element.trigger("rowsRemoved", count);
@@ -110,6 +122,7 @@ $.widget( "custom.dynamicTable", {
             var item = that.options.rowToModel($(this));
             var map = {};
             map[that.itemsName] = item;
+
             addParams(that.tableDiv, map)
         });
     },
