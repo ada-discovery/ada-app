@@ -63,7 +63,8 @@ object DataSetFormattersAndIds {
       RuntimeClassFormat(Json.format[IndependenceTestWidgetSpec]),
       RuntimeClassFormat(Json.format[BasicStatsWidgetSpec]),
       RuntimeClassFormat(Json.format[CustomHtmlWidgetSpec]),
-      RuntimeClassFormat(Json.format[CategoricalCheckboxWidgetSpec])
+      RuntimeClassFormat(Json.format[CategoricalCheckboxWidgetSpec]),
+      RuntimeClassFormat(Json.format[XLineWidgetSpec])
     )
 
   val widgetSpecClasses: Seq[Class[_ <: WidgetSpec]] = widgetSpecManifestedFormats.map(_.runtimeClass)

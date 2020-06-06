@@ -156,6 +156,16 @@ case class BasicStatsWidgetSpec(
   override val fieldNames = Seq(fieldName)
 }
 
+case class XLineWidgetSpec(
+  xFieldName: String,
+  yFieldNames: Seq[String],
+  groupFieldName: Option[String],
+  subFilterId: Option[BSONObjectID] = None,
+  displayOptions: BasicDisplayOptions = BasicDisplayOptions()
+) extends WidgetSpec {
+  override val fieldNames = Seq(groupFieldName, Some(xFieldName)).flatten ++ yFieldNames
+}
+
 case class CustomHtmlWidgetSpec(
   content: String,
   subFilterId: Option[BSONObjectID] = None,
