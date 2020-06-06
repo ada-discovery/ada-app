@@ -1,20 +1,24 @@
 package org.ada.server.calc.impl
 
 import akka.stream.scaladsl.Flow
-import org.ada.server.calc.{Calculator, CalculatorTypePack, NoOptionsCalculatorTypePack}
+import org.ada.server.calc.{Calculator, NoOptionsCalculatorTypePack}
 import org.incal.core.akka.AkkaStreamUtil._
 
 trait XSeqCalcTypePack[T] extends NoOptionsCalculatorTypePack {
   type IN = Seq[Option[T]]
-  type OUT = Seq[Option[T]]
+  type OUT = Traversable[(T, Seq[Option[T]])]
   type INTER = OUT
 }
 
 private class XSeqCalc[T] extends Calculator[XSeqCalcTypePack[T]] {
 
-  override def fun(options: Unit) = ???
+  override def fun(options: Unit) =
+    (values: Traversable[IN]) => values.collect { case Some(head)::tail => (head, tail) }
 
-  override def flow(options: Unit) = ???
+  override def flow(options: Unit) = {
+    val flatHeadFlow = Flow[IN].collect { case Some(head)::tail => (head, tail) }
+    flatHeadFlow.via(seqFlow)
+  }
 
   override def postFlow(options: Unit) = identity
 }
