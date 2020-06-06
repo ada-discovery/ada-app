@@ -80,7 +80,7 @@
 
 @addCustomDataSetPermissionModalButtons = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="button" class="btn btn-primary" id="addCustomDataSetPermissionSubmitButton">OK</button>
+    <button type="button" class="btn btn-primary">OK</button>
 }
 
 @addViewOnlyDataSetPermissionsModalButtons = {
@@ -150,7 +150,7 @@
 
 <script type="text/javascript">
     $(function () {
-        handleModalButtonEnterPressed("addCustomDataSetPermissionModal", "addCustomDataSetPermissionSubmitButton", addCustomDataSetPermission, true)
+        handleModalButtonEnterPressed("addCustomDataSetPermissionModal", addCustomDataSetPermission, true)
         $("#permission-controller").val("")
 
         populateFieldTypeaheadFromUrl({
