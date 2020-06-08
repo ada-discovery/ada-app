@@ -50,4 +50,18 @@ export ADA_MONGO_DB_URI=mongodb://127.0.0.1:27017/ada
 sbt -jvm-debug 5005 "project web" "~run"
 ```
 
-Now ada should be running locally: http://localhost:9000/ 
+Now ada should be running locally: http://localhost:9000/
+
+## Quirks of current module system
+If you work with intellij you need to do the following to workaround some dependency issues:
+
+```
+git clone https://github.com/ada-discovery/ada-dream-pd-challenge.git
+cd ada-dream-pd-challenge/
+sbt publishLocal
+```
+
+```
+cd ada-app/
+sbt "project web" publishLocal
+```
