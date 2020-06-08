@@ -18,9 +18,8 @@ Recommended resources:
 
 ### 1. **Java** 1.8
 
-```sh
-sudo apt-get install software-properties-common
-sudo apt-get install openjdk-8-jdk
+```
+sudo apt install openjdk-8-jdk
 ```
 
 &nbsp; 
@@ -28,7 +27,7 @@ sudo apt-get install openjdk-8-jdk
 ### 2. **Mongo** DB
 
 * Install MongoDB (4.0.10)
-(Note that Ada is compatible with *any* 3.2, 3.4, 3.6, and 4.0 relaease of Mongo in case you fail to install the recommended version)
+(Note that Ada is compatible with *any* 3.2, 3.4, 3.6, and 4.0 release of Mongo in case you fail to install the recommended version)
 (Also if you want to use a non-Ubuntu Linux distribution check the supported platforms/OS [here](https://docs.mongodb.com/manual/installation/#supported-platforms]))
 
 ```sh
