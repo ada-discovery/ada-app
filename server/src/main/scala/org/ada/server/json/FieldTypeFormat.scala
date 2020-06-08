@@ -4,7 +4,7 @@ import org.ada.server.dataaccess.AdaConversionException
 import org.ada.server.field.FieldType
 import play.api.libs.json._
 
-private class OptionalFieldTypeFormat[T](fieldType: FieldType[T]) extends Format[Option[T]] {
+private final class OptionalFieldTypeFormat[T](fieldType: FieldType[T]) extends Format[Option[T]] {
 
   override def reads(json: JsValue): JsResult[Option[T]] =
     try {
@@ -17,7 +17,7 @@ private class OptionalFieldTypeFormat[T](fieldType: FieldType[T]) extends Format
     fieldType.valueToJson(o)
 }
 
-private class FieldTypeFormat[T](fieldType: FieldType[T]) extends Format[T] {
+private final class FieldTypeFormat[T](fieldType: FieldType[T]) extends Format[T] {
 
   override def reads(json: JsValue): JsResult[T] =
     try {
