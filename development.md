@@ -3,7 +3,7 @@
 Before you start here is a list of required dependencies:
 
 * jdk 8
-* scala 2
+* scala 2.11.12
 * sbt 0.13
 * Elasticsearch 5.6
 * mongo DB 4.0
