@@ -96,12 +96,12 @@
                     @inputTextAux("core.resultDataSetId", Some(context.dataSetId + "_derived"))
                     @inputTextAux("core.resultDataSetName", Some(dataSetName + " (Derived)"))
                     @selectAux("core.resultStorageType", enumToValueString(StorageType))
-                    @labelValue("seriesTransformationSpecs", "Series Transformation Specs", false, None, 3){
+                    @labelValue("seriesTransformationSpecs", "Series Transformation Specs", false, labelGridWidth = 3){
                         @seriesTransformationFieldTable(
                             form.value.map(_.seriesTransformationSpecs).getOrElse(Nil)
                         )
                     }
-                    @labelValue("preserveFieldNames", "Preserve Field Names", false, None, 3) {
+                    @labelValue("preserveFieldNames", "Preserve Field Names", false, labelGridWidth = 3) {
                         @dynamicFieldTable(
                             "preserveFieldName",
                             Nil,

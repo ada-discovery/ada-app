@@ -7,6 +7,6 @@
     value: Option[String] = None
 )
 
-@labelValue(fieldName, label, false, None, 4) {
+@labelValue(fieldName, label, false, labelGridWidth = 4) {
     <input id="@fieldName" type="text" class="input-lg-full" placeholder="@placeholder.getOrElse("")" value="@value.getOrElse("")">
 }

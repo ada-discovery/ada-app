@@ -29,7 +29,7 @@ abstract protected[controllers] class DataSetMetaTransformationFormViews[E <: Da
   protected[controllers] val displayName: String = toHumanReadableCamel(simpleClassName.replaceAllLiterally(domainNameSuffix, ""))
   protected val className =  manifest.runtimeClass.getName
 
-  protected implicit val seqFormatter = SeqFormatter.apply
+  protected implicit val seqFormatter = SeqFormatter()
   private implicit val mapFormatter = MapJsonFormatter.apply
   private implicit val filterShowFieldStyleFormatter = EnumFormatter(FilterShowFieldStyle)
   private implicit val widgetGenerationMethodFormatter = EnumFormatter(WidgetGenerationMethod)

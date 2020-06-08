@@ -1,7 +1,7 @@
 package org.ada.web.controllers.dataset.datatrans
 
 import org.ada.server.models.datatrans.MergeMultiDataSetsTransformation
-import org.ada.web.controllers.core.SeqOptionFormatter
+import org.incal.play.formatters.SeqOptionFormatter
 import org.incal.play.controllers.WebContext
 import play.api.data.Forms.{nonEmptyText, of, seq}
 import views.html.{datasettrans => view}

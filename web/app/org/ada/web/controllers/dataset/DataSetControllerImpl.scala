@@ -57,6 +57,7 @@ import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.{Page, PageOrder}
 import org.incal.play.controllers._
 import org.incal.play.formatters._
+import org.incal.play.util.WebUtil.toSort
 import org.incal.play.security.AuthAction
 import org.incal.spark_ml.models.VectorScalerType
 import org.ada.server.services.importers.TranSMARTService

@@ -439,7 +439,7 @@
 @modal("edit_widgetSpecModal", "Edit Widget Spec", modalInner("edit_widgetSpecModal"), None, Some(editModalButtons))
 
 @labelValueAux(key: String, label: Any)(valueElement : Any) = {
-    @labelValue(key, label, false, None, 4)(valueElement)
+    @labelValue(key, label, false, labelGridWidth = 4)(valueElement)
 }
 
 @modalInner(modalName: String) = {
