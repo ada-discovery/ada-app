@@ -135,8 +135,8 @@ function numericalCountWidget(elementId, widget, filterElement) {
 }
 
 function lineWidget(elementId, widget) {
-    var isDate = widget.fieldType == "Date"
-    var isDouble = widget.fieldType == "Double"
+    var isDate = widget.xFieldType == "Date"
+    var isDouble = widget.xFieldType == "Double"
     var dataType = (isDate) ? 'datetime' : null;
 
     var datas = widget.data.map(function(nameSeries){
@@ -155,7 +155,26 @@ function lineWidget(elementId, widget) {
     //     plotNumericalChart(chartType, datas, seriesSize, widget.title, widget.xAxisCaption, yAxisCaption, elementId, height, pointFormat, dataType)
     // });
 
-    lineChart(widget.title, elementId, null, datas, widget.xAxisCaption, widget.yAxisCaption, showLegend, true, pointFormat, height, dataType, false, false, false, widget.xMin, widget.xMax, widget.yMin, widget.yMax);
+    lineChart(
+        widget.title,
+        elementId,
+        null,
+        datas,
+        widget.xAxisCaption,
+        widget.yAxisCaption,
+        showLegend,
+        true,
+        pointFormat,
+        height,
+        dataType,
+        false,
+        false,
+        false,
+        widget.xMin,
+        widget.xMax,
+        widget.yMin,
+        widget.yMax
+    );
 }
 
 function boxWidget(elementId, widget) {
