@@ -163,7 +163,7 @@ case class XLineWidgetSpec(
   subFilterId: Option[BSONObjectID] = None,
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends WidgetSpec {
-  override val fieldNames = Seq(groupFieldName, Some(xFieldName)).flatten ++ yFieldNames
+  override val fieldNames = Seq(xFieldName) ++ yFieldNames++ Seq(groupFieldName).flatten
 }
 
 case class CustomHtmlWidgetSpec(
