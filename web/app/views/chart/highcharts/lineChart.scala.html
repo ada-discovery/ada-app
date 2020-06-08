@@ -2,7 +2,7 @@
 
 @(
     elementId: String,
-    widget: LineWidget[_]
+    widget: LineWidget[_, _]
 )
 
 <script type="text/javascript">
@@ -21,10 +21,10 @@
         }
         var yAxisCaption = '@widget.yAxisCaption'
 
-        var xMin = (@{widget.xMin.isDefined}) ? @{widget.xMin.get} : null
-        var xMax = (@{widget.xMax.isDefined}) ? @{widget.xMax.get} : null
-        var yMin = (@{widget.yMin.isDefined}) ? @{widget.yMin.get} : null
-        var yMax = (@{widget.yMax.isDefined}) ? @{widget.yMax.get} : null
+        var xMin = (@{widget.xMin.isDefined}) ? @{widget.xMin.getOrElse(0)} : null
+        var xMax = (@{widget.xMax.isDefined}) ? @{widget.xMax.getOrElse(0)} : null
+        var yMin = (@{widget.yMin.isDefined}) ? @{widget.yMin.getOrElse(0)} : null
+        var yMax = (@{widget.yMax.isDefined}) ? @{widget.yMax.getOrElse(0)} : null
 
         lineChart('@widget.title', '@{elementId}', null, datas, '@widget.xAxisCaption', '@widget.yAxisCaption', showLegend, true, pointFormat, height, dataType, false, false, false, xMin, xMax, yMin, yMax);
     })
