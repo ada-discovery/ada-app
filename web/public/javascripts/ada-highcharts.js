@@ -595,6 +595,8 @@
     }
 
     function defaultScatterPointFormatter(xDataType, yDataType) {
+        Highcharts.setOptions({global: {useUTC: false}});
+
         var formatter = function () {
             var xPoint = (xDataType == "datetime") ? Highcharts.dateFormat('%Y-%m-%d', this.point.x) : this.point.x
             var yPoint = (yDataType == "datetime") ? Highcharts.dateFormat('%Y-%m-%d', this.point.y) : this.point.y
@@ -916,6 +918,9 @@
 
     function getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) {
         var colorStartPart = '<span style="color:' + that.point.color + '">'
+
+        Highcharts.setOptions({global: {useUTC: false}});
+
         var valuePart =
             (isDate) ?
                 Highcharts.dateFormat('%Y-%m-%d', that.point.x)
