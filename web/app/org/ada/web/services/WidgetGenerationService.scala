@@ -766,6 +766,13 @@ class WidgetGenerationServiceImpl @Inject() (
       case _: ValueScatterWidgetSpec =>
         aux(ValueScatterWidgetGenerator[Any, Any, Any])
 
+      //////////
+      // Line //
+      //////////
+
+      case _: XLineWidgetSpec =>
+        aux(LineWidgetGenerator.apply)
+
       /////////////////////////
       // heatmap aggregation //
       /////////////////////////
