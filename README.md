@@ -34,6 +34,11 @@ There are essentially two ways how to install a full-stack _Ada Web_:
   
 - Use a dockerized version as described in [https://github.com/ada-discovery/ada-docker](https://github.com/ada-discovery/ada-docker), which is undoubtedly the easier option.
 
+#### Development
+
+[Here](development.md) are some guidelines for developers:
+
+
 #### Using the Libs
 
 If you want to use *Ada Server* in your own project all you need is *Scala 2.11*. To pull the library you have to add the following dependency to *build.sbt*
