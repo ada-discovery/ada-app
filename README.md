@@ -1,6 +1,6 @@
 # Ada App [![version](https://img.shields.io/badge/version-0.8.1-green.svg)](https://ada-discovery.github.io) [![License: CC BY-NC 3.0](https://img.shields.io/badge/License-CC%20BY--NC%203.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/3.0/) [![License](https://img.shields.io/badge/License-Apache%202.0-lightgrey.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Build Status](https://travis-ci.com/ada-discovery/ada-app.svg?branch=master)](https://travis-ci.com/ada-discovery/ada-app)
 
-<img src="https://ada-discovery.github.io/images/logo.png" width="450px">
+<img src="https://ada-discovery.github.io/images/logo.png" width="450px" alt="A Discovery Analytics">
 
 This source code repo represents the base of Ada Discovery Analytics platform. It contains three components:
 
@@ -30,9 +30,14 @@ Custom extension serving NCER-PD project in Luxembourg, primarily a batch order 
 
 There are essentially two ways how to install a full-stack _Ada Web_:
 
-- Install all the components including Mongo and Elastic Search _manually_, which gives a full control and all configurability options at the expense of moderate installation and maintenance effort. The complete guides are availble for  [Linux](Installation_Linux.md) and [MacOS](Installation_MacOS.md).
+- Install all the components including Mongo and Elastic Search _manually_, which gives a full control and all configurability options at the expense of moderate installation and maintenance effort. The complete guides are available for  [Linux](Installation_Linux.md) and [MacOS](Installation_MacOS.md).
   
-- Use a dockerized version as described in [https://github.com/ada-discovery/ada-docker](https://github.com/ada-discovery/ada-docker), which is undoubtly the easier option. 
+- Use a dockerized version as described in [https://github.com/ada-discovery/ada-docker](https://github.com/ada-discovery/ada-docker), which is undoubtedly the easier option.
+
+#### Development
+
+[Here](development.md) are some guidelines for developers:
+
 
 #### Using the Libs
 
@@ -59,7 +64,7 @@ Similarly, if instead of installing a stand alone Ada app, you want to use the _
 "org.adada" %% "ada-web" % "0.8.1" classifier "assets"
 ```
 
-Alternativelly if you use maven  your *pom.xml* has to contain
+Alternatively if you use maven  your *pom.xml* has to contain
 
 ```
 <dependency>
