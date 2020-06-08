@@ -17,7 +17,7 @@ case class LinkMultiDataSetsTransformation(
   addDataSetIdToRightFieldNames: Boolean,
 
   resultDataSetSpec: ResultDataSetSpec,
-  streamSpec: StreamSpec,
+  streamSpec: StreamSpec = StreamSpec(),
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,
   timeCreated: Date = new Date(),

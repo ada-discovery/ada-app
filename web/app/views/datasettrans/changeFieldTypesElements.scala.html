@@ -1,9 +1,6 @@
-@import play.api.i18n.Messages
 @import views.html.elements._
-@import org.ada.server.models.datatrans.SwapFieldsDataSetTransformation
+@import org.ada.server.models.datatrans.ChangeFieldTypesDataSetTransformation
 @import views.html.datasettrans.dataSetTypeahead
-@import org.ada.web.util.typeColumns
-@import views.html.table.dynamicTableJsImport
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
 @import reactivemongo.bson.BSONObjectID
@@ -11,12 +8,12 @@
 
 @(
     id: Option[BSONObjectID],
-    form: Form[SwapFieldsDataSetTransformation]
+    form: Form[ChangeFieldTypesDataSetTransformation]
 )(
     implicit webContext: WebContext
 )
 
-@dataSetTypeahead("swapFieldsDataSetTransformation", "sourceDataSetId", form, id, Some("Swap Fields"))
+@dataSetTypeahead("changeFieldTypesDataSetTransformation", "sourceDataSetId", form, id, Some("Change Field Types"))
 
 @dynamicThreeColumnTable(
     "newField",

@@ -284,7 +284,7 @@ function getRowId(rowElement, objectIdName) {
   return id
 }
 
-function handleModalButtonEnterPressed(modalName, submitButtonName, action, hideOnEnter) {
+function handleModalButtonEnterPressed(modalName, action, hideOnEnter) {
   $("#" + modalName).keypress(function (e) {
     if (e.keyCode == 13) {
       e.preventDefault();
@@ -295,7 +295,7 @@ function handleModalButtonEnterPressed(modalName, submitButtonName, action, hide
     }
   });
 
-  $("#" + submitButtonName).click(action);
+  $("#" + modalName + " .btn-primary").click(action);
 }
 
 function shorten(string, length) {
@@ -350,14 +350,24 @@ function preventEventPropagation(event) {
 function getModalValues(modalElementId) {
   var values = {};
   $('#' + modalElementId +' input, #' + modalElementId +' select, #' + modalElementId +' textarea').each(function () {
-    if (this.id) {
-      if ($(this).attr('type') != "checkbox") {
-        values[this.id] = $(this).val()
+    const id = (this.id) || (this.name)
+    if (id) {
+      const value = ($(this).attr('type') != "checkbox") ? $(this).val() : $(this).is(':checked')
+
+      if (id.endsWith("[]")) {
+        // is array
+        var array = values[id]
+        if (array == null) {
+          array = []
+          values[id] = array
+        }
+        array.push(value)
       } else {
-        values[this.id] = $(this).is(':checked')
+        values[id] = value
       }
     }
   })
+
   return values;
 }
 

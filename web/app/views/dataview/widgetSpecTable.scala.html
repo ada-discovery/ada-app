@@ -13,12 +13,19 @@
 @import org.incal.core.util.toHumanReadableCamel
 @import org.ada.server.field.FieldUtil.nameOrLabel
 @import org.ada.web.util.{shorten, getCaseClassMemberAndTypeNames}
+@import views.html.dataset.dynamicFieldTable
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import org.ada.web.controllers.dataset.DataSetWebContext._
 
+@import views.html.table.dynamicTableInnerModal
+@import views.html.dataset.dynamicFieldTableModalInner
 @(
     items: Traversable[WidgetSpec],
     nameFieldMap: Map[String,  Field],
     idFilterNameMap: Map[BSONObjectID, String],
     showFieldStyle: Option[FilterShowFieldStyle.Value]
+)(
+    implicit context: DataSetWebContext
 )
 
 @editableChartType(chartType: Option[ChartType.Value]) = {
@@ -94,6 +101,11 @@
                 fieldLabelElements(Seq(
                     ("xFieldNameTypeahead", x.xFieldName),
                     ("yFieldNameTypeahead", x.yFieldName)
+                ))
+            case x: XLineWidgetSpec =>
+                fieldLabelElements(Seq(
+                    ("xFieldNameTypeahead", x.xFieldName)) ++
+                    x.groupFieldName.map( ("groupFieldNameTypeahead", _)
                 ))
             case x: BasicStatsWidgetSpec =>
                 fieldLabelElements(Seq(
@@ -249,10 +261,12 @@
         var isCorrelationType = concreteClass == "@{classOf[CorrelationWidgetSpec].getName}"
         var isHeatmapAggType = concreteClass == "@{classOf[HeatmapAggWidgetSpec].getName}"
         var isGridDistributionCountType = concreteClass == "@{classOf[GridDistributionCountWidgetSpec].getName}"
+        var isXYLineWidgetType = concreteClass == "@{classOf[XLineWidgetSpec].getName}"
         var isIndependenceTest = concreteClass == "@{classOf[IndependenceTestWidgetSpec].getName}"
         var isTemplateHtmlType = concreteClass == "@{classOf[CustomHtmlWidgetSpec].getName}"
 
-        var xyFieldsDefined = values["xFieldName"] != null && values["xFieldName"].length > 0 && values["yFieldName"] != null && values["yFieldName"].length > 0
+        var xFieldDefined = values["xFieldName"] != null && values["xFieldName"].length > 0
+        var xyFieldsDefined = xFieldDefined && values["yFieldName"] != null && values["yFieldName"].length > 0
 
         if (isDistributionType || isCumulativeCountType || isBoxType || isCategoricalChecboxType) {
             isDefined = values["fieldName"] != null && values["fieldName"].length > 0
@@ -270,6 +284,14 @@
             isDefined = xyFieldsDefined && values["xBinCount"].length > 0 && values["yBinCount"].length > 0
         }
 
+        if (isXYLineWidgetType) {
+            var yFieldNamesDefined = values["yFieldNames[]"] != null && values["yFieldNames[]"].length > 0
+            if (yFieldNamesDefined) {
+                values["yFieldNames"] = values["yFieldNames[]"].join(',')
+            }
+            isDefined = xFieldDefined && yFieldNamesDefined
+        }
+
         if (isHeatmapAggType) {
             isDefined = xyFieldsDefined && values["valueFieldName"] != null && values["valueFieldName"].length > 0 && values["xBinCount"].length > 0 && values["yBinCount"].length > 0 && values["aggType"].length > 0
         }
@@ -285,7 +307,6 @@
         var row = null
 
         if (isDefined) {
-
             var labelFields = getWidgetLabelFields(concreteClass);
             fields.push("concreteClass")
             fields = fields.concat(labelFields)
@@ -294,8 +315,9 @@
             var dataColumn = $("<td></td>")
             $.each(fields, function( index, fieldName ) {
                 var value = values[fieldName]
-                if (value != null)
+                if (value != null) {
                     dataColumn.append("<input type='hidden' id='" + fieldName + "' value='" + value + "'/>");
+                }
             });
 
 
@@ -433,7 +455,7 @@
 
 @editModalButtons = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="button" class="btn btn-primary" id="editWidgetSpecSubmitButton" data-dismiss="modal">OK</button>
+    <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
 }
 
 @modal("edit_widgetSpecModal", "Edit Widget Spec", modalInner("edit_widgetSpecModal"), None, Some(editModalButtons))
@@ -492,6 +514,14 @@
         <div id="fieldNamesDiv" style="display: none">
             @labelValueAux("fieldNames", "Fields") {
                 <input type="text" id="fieldNames">
+            }
+        </div>
+
+        <div id="yFieldNamesDiv" style="display: none">
+            @labelValueAux("yFieldNames", "Y Fields") {
+                @dynamicFieldTable(
+                    modalName + "-yFieldName", Nil, createModal = false, itemsName = Some("yFieldNames[]"), gridWidth = 12
+                )
             }
         </div>
 
@@ -571,6 +601,10 @@
 
 @dynamicTable("widgetSpec", table, true, rowToModelJsFun, modalItemToRowJsFun, modalInner("add_widgetSpecModal"), None, 12, false, false)
 
+@dynamicTableInnerModal("add_widgetSpecModal-yFieldName", dynamicFieldTableModalInner(), false, title = Some("Add Y Field(s)"))
+
+@dynamicTableInnerModal("edit_widgetSpecModal-yFieldName", dynamicFieldTableModalInner(), false, title = Some("Add Y Field(s)"))
+
 <script type="text/javascript">
 
      $("#add_widgetSpecModal #content").keypress(function (e) {
@@ -585,7 +619,23 @@
         }
      });
 
-     handleModalButtonEnterPressed("edit_widgetSpecModal", "editWidgetSpecSubmitButton", function() {
+     $("#add_widgetSpecModal-yFieldNameDiv").on("rowAdded", function() {
+         $(this).dynamicTable('updateModelFromTable');
+     })
+
+     $("#add_widgetSpecModal-yFieldNameDiv").on("rowsRemoved",  function() {
+         $(this).dynamicTable('updateModelFromTable');
+     })
+
+     $("#edit_widgetSpecModal-yFieldNameDiv").on("rowAdded", function() {
+         $(this).dynamicTable('updateModelFromTable');
+     })
+
+     $("#edit_widgetSpecModal-yFieldNameDiv").on("rowsRemoved",  function() {
+         $(this).dynamicTable('updateModelFromTable');
+     })
+
+     handleModalButtonEnterPressed("edit_widgetSpecModal", function() {
          var groupFieldTypeaheadVal = $('#edit_widgetSpecModal #groupFieldNameTypeahead').val();
          if (!groupFieldTypeaheadVal)
              $('#edit_widgetSpecModal #groupFieldName').val("")
@@ -694,6 +744,9 @@
         // fieldNames (of correlation widget) is array  hence we need to do the setting again
         setIfNotNull(output, "fieldNames", getArray("fieldNames"))
 
+        // yFieldNames (of line widget) is array
+        setIfNotNull(output, "yFieldNames", getArray("yFieldNames"))
+
         // inputFieldNames (of the chi-square and anova widgets) is array hence we need to do the setting again
         setIfNotNull(output, "inputFieldNames", getArray("inputFieldNames"))
 
@@ -730,6 +783,7 @@
         $("#" + modalName + " #contentDiv").hide();
         $("#" + modalName + " #numericBinCountDiv").hide();
         $("#" + modalName + " #fieldNamesDiv").hide();
+        $("#" + modalName + " #yFieldNamesDiv").hide();
         $("#" + modalName + " #aggTypeDiv").hide();
         $("#" + modalName + " #relativeValuesDiv").hide();
         $("#" + modalName + " #xBinCountDiv").hide();
@@ -775,8 +829,23 @@
         $('#edit_widgetSpecModal #topCount').val(model["topCount"]);
 
         $('#edit_widgetSpecModal #correlationType').val(model["correlationType"]);
-
         $('#edit_widgetSpecModal #content').val(model["content"]);
+
+        if (model["yFieldNames"]) {
+            $("#edit_widgetSpecModal-yFieldNameDiv").dynamicTable("removeAllRows")
+
+            var values = $.map(model["yFieldNames"], function(fieldName, index) {
+                var entry = {};
+                entry["fieldName"] = fieldName;
+                entry["fieldTypeahead"] = fieldName;
+
+                return entry;
+            });
+
+            $("#edit_widgetSpecModal-yFieldNameDiv").dynamicTable('addTableRows', values)
+            $("#edit_widgetSpecModal-yFieldNameDiv").dynamicTable('updateModelFromTable')
+        }
+
 
         var subFilterId = model["subFilterId"]
         if (subFilterId)
@@ -846,6 +915,9 @@
                 break;
             case "@{classOf[GridDistributionCountWidgetSpec].getName}" :
                 labelFields = ["xFieldNameTypeahead", "yFieldNameTypeahead"];
+                break;
+            case "@{classOf[XLineWidgetSpec].getName}" :
+                labelFields = ["xFieldNameTypeahead", "groupFieldNameTypeahead"];
                 break;
             case "@{classOf[CorrelationWidgetSpec].getName}" :
                 break;

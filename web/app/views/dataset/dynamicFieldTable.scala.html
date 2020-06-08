@@ -1,8 +1,12 @@
 @import views.html.table.{dynamicTable, displayTable}
 @import views.html.filter.{jsTreeImport, categoricalTree}
+@import views.html.dataset.dynamicFieldTableModalInner
 @import org.ada.web.util.typeColumns
 @import org.ada.server.field.FieldUtil.nameOrLabel
 @import org.ada.server.models.{Field, Category, FilterShowFieldStyle}
+@import views.html.table.dynamicTableJs
+@import views.html.table.dynamicTableDiv
+@import views.html.table.dynamicTableInnerModal
 
 @(
     tableId: String,
@@ -12,46 +16,13 @@
     extraActions: Option[Html] = None,
     categoriesOrCall: Option[Either[Traversable[Category], Call]] = None,
     categoricalTreeId: String = "categoryTree",
-    showFieldStyle: Option[FilterShowFieldStyle.Value] = None
+    showFieldStyle: Option[FilterShowFieldStyle.Value] = None,
+    createModal: Boolean = true,
+    modalName: Option[String] = None,
+    itemsName: Option[String] = None
 )(
     implicit request: Request[_], webJarAssets: WebJarAssets
 )
-
-@categoryTreeNodeSelectedJsFun = {
-    function(node) {
-        if (node.type.startsWith("field-")) {
-            var text = node.text
-            var nonNullCount = node.data.nonNullCount
-            if (nonNullCount) {
-                var lastIndex = text.lastIndexOf(" (" + nonNullCount + ")")
-                text = text.substring(0, lastIndex)
-            }
-            $('#modal-fields #fieldName').val(node.id);
-            $('#modal-fields #fieldTypeahead').val(text)
-        }
-    }
-}
-
-@modalInner = {
-    <div id="categoryDiv" class="row collapse" style="padding-bottom: 20px">
-        @if(categoriesOrCall.isDefined) {
-            @categoricalTree(categoricalTreeId, categoriesOrCall.get, Some(categoryTreeNodeSelectedJsFun))
-        }
-    </div>
-    <div class="row">
-        <div id="modal-fields" class="col-md-6">
-            <input type="text" id="fieldTypeahead" class="typeahead typeahead-full-width">
-            <input type="hidden" id="fieldName">
-        </div>
-        @if(categoriesOrCall.isDefined) {
-            <div class="pull-right" style="padding-right: 17px">
-                <a id="showCategoryTreeButton" class="btn btn-sm btn-default" data-toggle="tooltip" onclick="initCategoricalTreeIfNeeded();" title="Show Category Tree">
-                    <span class="glyphicon glyphicon-leaf" aria-hidden="true"></span>
-                </a>
-            </div>
-        }
-    </div>
-}
 
 @fieldNameElement(field: Field) = {
     <input type="hidden" id="fieldName" value="@field.name">
@@ -95,23 +66,24 @@
 
 @jsTreeImport()
 
-@dynamicTable(tableId, table, sortable, rowToModelJsFun, itemToRowJsFun, modalInner, extraActions, gridWidth, false, false)
+@modalInner = @{
+    dynamicFieldTableModalInner(categoriesOrCall, categoricalTreeId)
+}
 
-<script type="text/javascript">
-    $(function () {
-        @if(categoriesOrCall.isDefined) {
-            $("#@categoricalTreeId").on('open_node.jstree', function (event, data) {
-                data.instance.set_type(data.node, 'category-open');
-            });
+@dynamicTableDiv(
+    tableId,
+    table,
+    if (createModal) Some(dynamicTableInnerModal(tableId, modalInner, false)) else None,
+    extraActions,
+    gridWidth
+)
 
-            $("#@categoricalTreeId").on('close_node.jstree', function (event, data) {
-                data.instance.set_type(data.node, 'category');
-            });
-        }
-    })
-
-    function initCategoricalTreeIfNeeded() {
-        $("#@categoricalTreeId").jsTreeWidget('init');
-        $('#categoryDiv').collapse("toggle")
-    }
-</script>
+@dynamicTableJs(
+    tableId,
+    sortable,
+    rowToModelJsFun,
+    itemToRowJsFun,
+    false,
+    modalName,
+    itemsName
+)

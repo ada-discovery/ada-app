@@ -14,6 +14,32 @@ import play.api.libs.json.{JsObject, JsReadable, JsValue}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
+/**
+  * Transformer that infers field types (e.g., Integer, Double, and String) from a given data set, re-parse all the values using the inferred types,
+  * and stores them as a new data set as specified by [[InferDataSetTransformation]] spec. In essence it is similar to a data set import.
+  * This transformer preserves views or filters.
+  *
+  * Because the transformer is private, in order to execute it (as it's with all other transformers),
+  * you need to obtain the central transformer [[org.ada.server.services.ServiceTypes.DataSetCentralTransformer]] through DI and pass a transformation spec as shown in an example bellow.
+  *
+  * Example:
+  * {{{
+  * // create a spec
+  * val spec = InferDataSetTransformation(
+  *   sourceDataSetId = "covid_19.clinical_visit",
+  *   maxEnumValuesCount = Some(100),
+  *   booleanIncludeNumbers = true,
+  *   resultDataSetSpec = ResultDataSetSpec(
+  *     "covid_19.clinical_visit_inferred",
+  *     "Covid-19 Clinical Visit Inferred"
+  *   )
+  * )
+  *
+  * // execute
+  * centralTransformer(spec)
+  * }}}
+  * @see relates to [[ChangeFieldTypesDataSetTransformer]]
+  */
 private class InferDataSetTransformer extends AbstractDataSetTransformer[InferDataSetTransformation] {
 
   private val saveViewsAndFilters = true
@@ -34,8 +60,8 @@ private class InferDataSetTransformer extends AbstractDataSetTransformer[InferDa
     val inferenceGroupSizeInit = spec.inferenceGroupSize.getOrElse(1)
 
     for {
-      //source DSA
-      sourceDsa <- Future(dsaSafe(spec.sourceDataSetId))
+      // source data set accessor
+      sourceDsa <- dsaWithNoDataCheck(spec.sourceDataSetId)
 
       // all the fields
       fields <- sourceDsa.fieldRepo.find()
@@ -70,6 +96,8 @@ private class InferDataSetTransformer extends AbstractDataSetTransformer[InferDa
 
       // transform the stream by applying inferred types and converting jsons
       newFieldNameAndTypeMap = newFieldNameAndTypes.toMap
+
+      // final transformed stream
       transformedStream = inputStream.map { json =>
         val newJsonValues = json.fields.map { case (fieldName, jsonValue) =>
           val newJsonValue = newFieldNameAndTypeMap.get(fieldName) match {

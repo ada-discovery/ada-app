@@ -38,7 +38,7 @@ trait DataSetTransformation extends DataSetMetaTransformation {
 case class ResultDataSetSpec(
   id: String,
   name: String,
-  storageType: StorageType.Value
+  storageType: StorageType.Value = StorageType.ElasticSearch
 )
 
 object DataSetTransformation {
