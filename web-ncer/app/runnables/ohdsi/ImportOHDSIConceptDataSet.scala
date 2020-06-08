@@ -2,7 +2,7 @@ package runnables.ohdsi
 
 import javax.inject.Inject
 import org.incal.core.dataaccess.StreamSpec
-import org.ada.server.models.datatrans.{ResultDataSetSpec, SwapFieldsDataSetTransformation}
+import org.ada.server.models.datatrans.{ResultDataSetSpec, ChangeFieldTypesDataSetTransformation}
 import org.ada.server.models.{Field, FieldTypeId, StorageType}
 import org.ada.server.services.ServiceTypes.DataSetCentralTransformer
 import org.incal.core.runnables.InputFutureRunnableExt
@@ -16,7 +16,7 @@ class ImportOHDSIConceptDataSet @Inject()(transformer: DataSetCentralTransformer
 
   override def runAsFuture(input: ImportOHDSIConceptDataSetSpec) = {
     transformer(
-      SwapFieldsDataSetTransformation(
+      ChangeFieldTypesDataSetTransformation(
         sourceDataSetId = input.rawOhdsiConceptDataSetId,
         resultDataSetSpec = ResultDataSetSpec(
           id = input.targetOhdsiConceptDataSetId,
