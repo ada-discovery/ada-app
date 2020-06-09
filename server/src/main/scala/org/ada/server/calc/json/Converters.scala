@@ -170,6 +170,15 @@ class NullExcludedMultiChiSquareTestConverter extends GroupSeqConverter[Any, Any
   override def specificUseClass = Some(classOf[NullExcludedMultiChiSquareTestCalc[_, _]])
 }
 
+class GroupXSeqConverter extends TupleOptionSeqConverter[Any, Any] {
+  override def specificUseClass = Some(classOf[GroupXSeqCalc[_, _]])
+}
+
+class GroupXOrderedSeqConverter extends TupleOptionSeqConverter[Any, Any] {
+  override def specificUseClass = Some(classOf[GroupXOrderedSeqCalc[_, _]])
+}
+
+
 ////////////////////
 // Helper Classes //
 ////////////////////
@@ -210,6 +219,19 @@ private[json] abstract class SeqConverter[T: TypeTag] extends JsonInputConverter
     jsonToValues(fields)
 
   override def inputType = typeOf[Seq[Option[T]]]
+}
+
+private[json] abstract class TupleOptionSeqConverter[G: TypeTag, T: TypeTag] extends JsonInputConverter[(Option[G], Seq[Option[T]])] {
+
+  override def apply(fields: Seq[Field]) = {
+    val groupConverter = jsonToValue[G](fields.last)
+    val valuesConverter = jsonToValues[T](fields.take(fields.size - 1))
+
+    (jsObject: JsObject) =>
+      (groupConverter(jsObject), valuesConverter(jsObject))
+  }
+
+  override def inputType = typeOf[(Option[G], Seq[Option[T]])]
 }
 
 private[json] abstract class ArrayDoubleConverter extends JsonInputConverter[Array[Option[Double]]] {

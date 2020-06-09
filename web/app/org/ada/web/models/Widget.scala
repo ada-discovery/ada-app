@@ -1,5 +1,6 @@
 package org.ada.web.models
 
+import org.ada.server.AdaException
 import org.ada.server.dataaccess.AdaConversionException
 import org.ada.server.field.FieldType
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
@@ -238,14 +239,17 @@ object Widget {
   }
 
   def lineWidgetFormat[T1, T2](
-    fieldType1: FieldType[T1],
-    fieldType2: FieldType[T2]
+    xFieldType: FieldType[T1],
+    yFieldTypes: Seq[FieldType[T2]]
   ): Format[LineWidget[T1, T2]] = {
-    implicit val value1Format = FieldTypeFormat.apply[T1](fieldType1)
-    implicit val value2Format = FieldTypeFormat.apply[T2](fieldType2)
+    if (yFieldTypes.isEmpty)
+      throw new AdaException("No y fields provided for a line widget.")
 
-    implicit val value1OptionalFormat = FieldTypeFormat.applyOptional[T1](fieldType1)
-    implicit val value2OptionalFormat = FieldTypeFormat.applyOptional[T2](fieldType2)
+    implicit val value1Format = FieldTypeFormat.apply[T1](xFieldType)
+    implicit val value2Format = FieldTypesFormat.apply[T2](yFieldTypes)
+
+    implicit val value1OptionalFormat = FieldTypeFormat.applyOptional[T1](xFieldType)
+    implicit val value2OptionalFormat = FieldTypeFormat.applyOptional[T2](yFieldTypes.head)
 
     implicit val tuple1Format = TupleFormat[T1, T2]
     implicit val tuple2Format = TupleFormat[String, Seq[(T1, T2)]]
@@ -365,7 +369,7 @@ object Widget {
           }
 
         case e: LineWidget[T, T]  =>
-          lineWidgetFormat(fieldTypes(0), fieldTypes(1)).writes(e)
+          lineWidgetFormat(fieldTypes.head, fieldTypes.tail).writes(e)
 
         case e: ScatterWidget[T, T] =>
           scatterWidgetFormat(fieldTypes(fieldTypes.size - 2), fieldTypes.last).writes(e)
