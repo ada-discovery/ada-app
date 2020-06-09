@@ -1,15 +1,21 @@
 package services
 
 import com.google.inject.Inject
+import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.field.FieldUtil
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.field.FieldUtil.{FieldOps, JsonFieldOps}
+import play.api.Configuration
+import play.api.libs.json.{JsObject, Json}
+import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 
+import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Try
 
 trait SampleRequestService {
   def createCsv(
@@ -19,13 +25,26 @@ trait SampleRequestService {
   ): Future[Any]
 
   def sendToRems(
-    csv: Any
-  )
+    csv: Any,
+    catalogueItemId: Int
+  ): Unit
 }
 
 class SampleRequestServiceImpl @Inject() (
-  dsaf: DataSetAccessorFactory
+  dsaf: DataSetAccessorFactory,
+  config: Configuration,
+  ws: WSClient
 ) extends SampleRequestService {
+
+  private val remsUrl = config.getString("rems.host").getOrElse(
+    throw new AdaException("Configuration issue: 'rems.host' was not found in the configuration file.")
+  )
+  private val remsUser = config.getString("rems.user").getOrElse(
+    throw new AdaException("Configuration issue: 'rems.user' was not found in the configuration file.")
+  )
+  private val remsApiKey = config.getString("rems.apiKey").getOrElse(
+    throw new AdaException("Configuration issue: 'rems.apiKey' was not found in the configuration file.")
+  )
 
   override def createCsv(
     dataSetId: String,
@@ -50,8 +69,29 @@ class SampleRequestServiceImpl @Inject() (
     }
   }
 
-  override def sendToRems(csv: Any): Unit = {
+  override def sendToRems(
+    csv: Any,
+    catalogueItemId: Int
+  ): Unit = {
+    for {
+      applicationId <- createApplication(catalogueItemId)
+    } yield {
 
+    }
   }
+
+  private def createApplication(catalogueItemId: Int): Future[Int] =
+    for {
+      res <- ws.url(remsUrl + "/api/applications/create").withHeaders(
+      "x-rems-user-id" -> remsUser,
+      "x-rems-api-key" -> remsApiKey,
+      "Content-Type" -> "application/json"
+      ).withBody(
+        Json.obj("catalogue-item-ids" -> Vector(catalogueItemId))
+      ).get()
+    } yield {
+      if (res.status != 200) throw new AdaException("Could not create application in REMS. Reason: " + res.body)
+      (res.json \ "application-id").as[Int]
+    }
 
 }
