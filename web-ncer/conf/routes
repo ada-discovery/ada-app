@@ -6,15 +6,3 @@
 #RC predictions (to remove)
 GET         /admin/showRCPrediction                             controllers.ml.RCPredictionController.showRCPrediction
 POST        /admin/runRCPrediction                              controllers.ml.RCPredictionController.runRCPrediction
-
-# Requests Settings
-GET         /requestSettings                                    controllers.orderrequest.BatchOrderRequestSettingController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
-GET         /requestSettings/all                                controllers.orderrequest.BatchOrderRequestSettingController.listAll(s: String ?= "timeCreated")
-GET         /requestSettings/new                                controllers.orderrequest.BatchOrderRequestSettingController.create
-POST        /requestSettings/save                               controllers.orderrequest.BatchOrderRequestSettingController.save
-GET         /requestSettings/get/:id                            controllers.orderrequest.BatchOrderRequestSettingController.get(id: BSONObjectID)
-GET         /requestSettings/edit:id                            controllers.orderrequest.BatchOrderRequestSettingController.edit(id: BSONObjectID)
-POST        /requestSettings/update/:id                         controllers.orderrequest.BatchOrderRequestSettingController.update(id: BSONObjectID)
-POST        /requestSettings/delete/:id                         controllers.orderrequest.BatchOrderRequestSettingController.delete(id: BSONObjectID)
-GET         /requestSettings/dataSetIds                         controllers.orderrequest.BatchOrderRequestSettingController.dataSetIds
-GET         /requestSettings/userIdAndNames                     controllers.orderrequest.BatchOrderRequestSettingController.userIdAndNames
