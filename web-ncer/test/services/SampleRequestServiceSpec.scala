@@ -1,14 +1,60 @@
 package services
 
-import org.scalatest.AsyncFlatSpec
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
+import org.ada.server.models.{DataSetSetting, StorageType}
+import org.ada.server.models.dataimport.CsvDataSetImport
+import org.ada.server.services.ServiceTypes.DataSetCentralImporter
+import org.scalatest.{AsyncFlatSpec, BeforeAndAfter}
+import scala.concurrent.duration._
 
-class SampleRequestServiceSpec extends AsyncFlatSpec {
+import scala.concurrent.Await
+
+class SampleRequestServiceSpec extends AsyncFlatSpec with BeforeAndAfter {
 
   implicit override def executionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   private val sampleRequestService = InjectorWrapper.instanceOf[SampleRequestService]
+  private val dataSetImporter = InjectorWrapper.instanceOf[DataSetCentralImporter]
+  private val dsaf = InjectorWrapper.instanceOf[DataSetAccessorFactory]
 
-  behavior of "SampleRequestService.getCatalogueItems"
+  private object Iris {
+    val path = getClass.getResource("/iris.csv").getPath
+    val id = "test.iris"
+    val name = "iris"
+    def importInfo(storageType: StorageType.Value) = CsvDataSetImport(
+      dataSpaceName = "test",
+      dataSetName = name,
+      dataSetId = id,
+      delimiter = ",",
+      matchQuotes = false,
+      inferFieldTypes = true,
+      path = Some(path),
+      setting = Some(new DataSetSetting(id, storageType))
+    )
+  }
+
+  before {
+    Await.result(
+      dataSetImporter(Iris.importInfo(StorageType.ElasticSearch)),
+      10 seconds
+    )
+  }
+
+  after {
+    dsaf(Iris.id) map { _.dataSetRepo.deleteAll }
+  }
+
+  behavior of "createCsv"
+
+  it should "return a string representing a CSV file" in {
+    for {
+      csv <- sampleRequestService.createCsv(Iris.id)
+    } yield {
+      assert(true)
+    }
+  }
+
+  behavior of "getCatalogueItems"
 
   it should "return a list of catalogue items" in {
     for {
