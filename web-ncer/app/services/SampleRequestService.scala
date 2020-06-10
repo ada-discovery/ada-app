@@ -1,5 +1,7 @@
 package services
 
+import java.nio.charset.StandardCharsets
+
 import com.google.inject.{ImplementedBy, Inject}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
@@ -24,7 +26,7 @@ trait SampleRequestService {
   ): Future[Any]
 
   def sendToRems(
-    csv: Any,
+    csv: String,
     catalogueItemId: Int
   ): Future[_]
 
@@ -71,14 +73,21 @@ class SampleRequestServiceImpl @Inject() (
   }
 
   override def sendToRems(
-    csv: Any,
+    csv: String,
     catalogueItemId: Int
   ): Future[_] = {
     for {
       applicationId <- createApplication(catalogueItemId)
-
+      res <- ws.url(remsUrl + "/api/applications/add-attachment").withQueryString(
+        "application-id" -> applicationId.toString
+      ).withHeaders(
+        "x-rems-user-id" -> remsUser,
+        "x-rems-api-key" -> remsApiKey
+      ).put(
+        csv.getBytes(StandardCharsets.UTF_8)
+      )
     } yield {
-
+      res.status
     }
   }
 
