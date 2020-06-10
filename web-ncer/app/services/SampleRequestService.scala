@@ -27,7 +27,7 @@ trait SampleRequestService {
   def sendToRems(
     csv: Any,
     catalogueItemId: Int
-  ): Unit
+  ): Future[_]
 
   def getCatalogueItems: Future[Map[String, Int]]
 }
@@ -74,7 +74,7 @@ class SampleRequestServiceImpl @Inject() (
   override def sendToRems(
     csv: Any,
     catalogueItemId: Int
-  ): Unit = {
+  ): Future[_] = {
     for {
       applicationId <- createApplication(catalogueItemId)
 

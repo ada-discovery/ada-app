@@ -1,28 +1,23 @@
 package controllers.sampleRequest
 
 import akka.stream.Materializer
-
 import com.google.inject.assistedinject.Assisted
 import javax.inject.Inject
-import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import org.ada.server.field.FieldType
-import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
-import org.ada.web.controllers.core.ExportableAction
-import org.incal.core.FilterCondition
 import org.incal.play.controllers.BaseController
-import org.incal.core.dataaccess.Criterion.Infix
-import play.api.libs.json.JsObject
-import play.api.mvc.Action
-import reactivemongo.bson.BSONObjectID
+import play.api.mvc.{Action, AnyContent}
+import services.SampleRequestService
+
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+
 
 class SampleRequestController @Inject()(
   @Assisted val dataSetId: String,
-  dsaf: DataSetAccessorFactory
+  sampleRequestService: SampleRequestService
 )(
   implicit materializer: Materializer
 ) extends BaseController {
 
-  private val dsa: DataSetAccessor = dsaf(dataSetId).get
 
 
 //  def submitRequestForFilteredTable(
@@ -57,4 +52,5 @@ class SampleRequestController @Inject()(
 //    }
 //
 //  }
+
 }
