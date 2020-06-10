@@ -1,22 +1,21 @@
 package services
 
-import com.google.inject.Inject
+import com.google.inject.{ImplementedBy, Inject}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.field.FieldUtil
+import org.ada.server.field.FieldUtil.{FieldOps, JsonFieldOps}
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion._
-import org.ada.server.field.FieldUtil.{FieldOps, JsonFieldOps}
 import play.api.Configuration
 import play.api.libs.json.{JsObject, Json}
-import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
+import play.api.libs.ws.WSClient
 
-import scala.concurrent.duration._
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Try
+import scala.concurrent.Future
 
+@ImplementedBy(classOf[SampleRequestServiceImpl])
 trait SampleRequestService {
   def createCsv(
     dataSetId: String,
@@ -38,8 +37,8 @@ class SampleRequestServiceImpl @Inject() (
   ws: WSClient
 ) extends SampleRequestService {
 
-  private val remsUrl = config.getString("rems.host").getOrElse(
-    throw new AdaException("Configuration issue: 'rems.host' was not found in the configuration file.")
+  private val remsUrl = config.getString("rems.url").getOrElse(
+    throw new AdaException("Configuration issue: 'rems.url' was not found in the configuration file.")
   )
   private val remsUser = config.getString("rems.user").getOrElse(
     throw new AdaException("Configuration issue: 'rems.user' was not found in the configuration file.")
