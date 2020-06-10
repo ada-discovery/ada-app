@@ -28,6 +28,8 @@ trait SampleRequestService {
     csv: Any,
     catalogueItemId: Int
   ): Unit
+
+  def getCatalogueItems: Future[Map[String, Int]]
 }
 
 class SampleRequestServiceImpl @Inject() (
@@ -75,10 +77,24 @@ class SampleRequestServiceImpl @Inject() (
   ): Unit = {
     for {
       applicationId <- createApplication(catalogueItemId)
+
     } yield {
 
     }
   }
+
+  override def getCatalogueItems: Future[Map[String, Int]] =
+    for {
+      res <- ws.url(remsUrl + "/api/catalogue").withHeaders(
+      "x-rems-user-id" -> remsUser,
+      "x-rems-api-key" -> remsApiKey
+      ).get()
+    } yield {
+      if (res.status != 200) throw new AdaException("Failed to retrieve catalogie items from REMS. Reason: " + res.body)
+      res.json.as[Seq[JsObject]] map { catalogueItemJson =>
+        (catalogueItemJson \ "resource-name").as[String] -> (catalogueItemJson \ "id").as[Int]
+      } toMap
+    }
 
   private def createApplication(catalogueItemId: Int): Future[Int] =
     for {
@@ -86,9 +102,9 @@ class SampleRequestServiceImpl @Inject() (
       "x-rems-user-id" -> remsUser,
       "x-rems-api-key" -> remsApiKey,
       "Content-Type" -> "application/json"
-      ).withBody(
+      ).post(
         Json.obj("catalogue-item-ids" -> Vector(catalogueItemId))
-      ).get()
+      )
     } yield {
       if (res.status != 200) throw new AdaException("Could not create application in REMS. Reason: " + res.body)
       (res.json \ "application-id").as[Int]
