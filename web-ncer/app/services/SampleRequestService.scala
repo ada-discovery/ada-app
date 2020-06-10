@@ -2,17 +2,21 @@ package services
 
 import java.nio.charset.StandardCharsets
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import com.google.inject.{ImplementedBy, Inject}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.field.FieldUtil
 import org.ada.server.field.FieldUtil.{FieldOps, JsonFieldOps}
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
+import org.asynchttpclient.DefaultAsyncHttpClientConfig
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion._
 import play.api.Configuration
 import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.WSClient
+import play.api.libs.ws.ahc.AhcWSClient
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -57,18 +61,22 @@ class SampleRequestServiceImpl @Inject() (
     val dsa = dsaf(dataSetId).getOrElse(throw new IllegalArgumentException(s"Dataset '$dataSetId' does not exist."))
     val fieldRepo = dsa.fieldRepo
     val dataSetRepo = dsa.dataSetRepo
-
+    val fieldCriteria = if (fieldNames.nonEmpty) Vector(FieldIdentity.name #-> fieldNames) else Nil
     for {
-      fields <- fieldRepo.find(Vector(FieldIdentity.name #-> fieldNames))
-      criteria <- FieldUtil.toDataSetCriteria(fieldRepo, filter)
-      items <- dataSetRepo.find(criteria)
+      fields <- fieldRepo.find(fieldCriteria)
+      valueCriteria <- FieldUtil.toDataSetCriteria(fieldRepo, filter)
+      items <- dataSetRepo.find(valueCriteria)
     } yield {
       val fieldNameTypes = fields.map(_.toNamedTypeAny).toSeq
-      val fieldNameValues = fieldNameTypes map { fieldNameType =>
+      val fieldNameValues: Map[String, Seq[Option[Any]]] = fieldNameTypes map { fieldNameType =>
         val values = items.map(_.toValue(fieldNameType)).toSeq
         (fieldNameType._1, values)
       } toMap
-      // TODO: return suitable format
+      val header = fieldNameValues.keySet.toVector
+      val csv = new StringBuilder("")
+      csv ++= header.mkString("\t")
+      csv += '\n'
+
     }
   }
 
@@ -98,7 +106,7 @@ class SampleRequestServiceImpl @Inject() (
       "x-rems-api-key" -> remsApiKey
       ).get()
     } yield {
-      if (res.status != 200) throw new AdaException("Failed to retrieve catalogie items from REMS. Reason: " + res.body)
+      if (res.status != 200) throw new AdaException("Failed to retrieve catalogue items from REMS. Reason: " + res.body)
       res.json.as[Seq[JsObject]] map { catalogueItemJson =>
         (catalogueItemJson \ "resource-name").as[String] -> (catalogueItemJson \ "id").as[Int]
       } toMap
