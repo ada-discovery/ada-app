@@ -21,6 +21,8 @@ class SampleRequestServiceSpec extends AsyncFlatSpec with BeforeAndAfter {
     val path = getClass.getResource("/iris.csv").getPath
     val id = "test.iris"
     val name = "iris"
+    val rowNum = 150
+    val colNum = 5
     def importInfo(storageType: StorageType.Value) = CsvDataSetImport(
       dataSpaceName = "test",
       dataSetName = name,
@@ -50,7 +52,9 @@ class SampleRequestServiceSpec extends AsyncFlatSpec with BeforeAndAfter {
     for {
       csv <- sampleRequestService.createCsv(Iris.id)
     } yield {
-      assert(true)
+      val rows = csv.split("\n")
+      assert(rows.length == Iris.rowNum + 1)
+      assert(rows.forall(_.split("\t").length == Iris.colNum))
     }
   }
 
