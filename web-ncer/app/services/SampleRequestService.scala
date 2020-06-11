@@ -2,21 +2,17 @@ package services
 
 import java.nio.charset.StandardCharsets
 
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import com.google.inject.{ImplementedBy, Inject}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.field.FieldUtil
 import org.ada.server.field.FieldUtil.{FieldOps, JsonFieldOps}
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
-import org.asynchttpclient.DefaultAsyncHttpClientConfig
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion._
 import play.api.Configuration
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsNull, JsObject, Json}
 import play.api.libs.ws.WSClient
-import play.api.libs.ws.ahc.AhcWSClient
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -27,7 +23,7 @@ trait SampleRequestService {
     dataSetId: String,
     filter: Seq[FilterCondition] = Nil,
     columNames: Seq[String] = Nil
-  ): Future[Any]
+  ): Future[String]
 
   def sendToRems(
     csv: String,
@@ -57,7 +53,7 @@ class SampleRequestServiceImpl @Inject() (
     dataSetId: String,
     filter: Seq[FilterCondition] = Nil,
     fieldNames: Seq[String] = Nil
-  ): Future[Any] = {
+  ): Future[String] = {
     val dsa = dsaf(dataSetId).getOrElse(throw new IllegalArgumentException(s"Dataset '$dataSetId' does not exist."))
     val fieldRepo = dsa.fieldRepo
     val dataSetRepo = dsa.dataSetRepo
@@ -67,16 +63,18 @@ class SampleRequestServiceImpl @Inject() (
       valueCriteria <- FieldUtil.toDataSetCriteria(fieldRepo, filter)
       items <- dataSetRepo.find(valueCriteria)
     } yield {
-      val fieldNameTypes = fields.map(_.toNamedTypeAny).toSeq
-      val fieldNameValues: Map[String, Seq[Option[Any]]] = fieldNameTypes map { fieldNameType =>
-        val values = items.map(_.toValue(fieldNameType)).toSeq
-        (fieldNameType._1, values)
-      } toMap
-      val header = fieldNameValues.keySet.toVector
+      val header = fields.map(_.name)
       val csv = new StringBuilder("")
       csv ++= header.mkString("\t")
       csv += '\n'
-
+      items foreach { item =>
+        val row = header map { header =>
+          (item \ header).getOrElse(JsNull).toString
+        }
+        csv ++= row.mkString("\t")
+        csv += '\n'
+      }
+      csv.toString
     }
   }
 
