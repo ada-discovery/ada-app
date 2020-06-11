@@ -1,4 +1,5 @@
 @import org.ada.web.models.LineWidget
+@import org.ada.web.util.toChartData
 
 @(
     elementId: String,
@@ -6,11 +7,11 @@
 )
 
 <script type="text/javascript">
-    (function() {
+    $(function() {
         var isDate = @{widget.data.headOption.map(_._2.headOption.map(_._1.isInstanceOf[java.util.Date])).flatten.getOrElse(false)};
         var isDouble = @{widget.data.headOption.map(_._2.headOption.map(_._1.isInstanceOf[Double])).flatten.getOrElse(false)};
         var dataType = (isDate) ? 'datetime' : null;
-        var datas = [@widget.data.map { singleSeries => {name: '@singleSeries._1', data: [@singleSeries._2.map { case (x, y) => [@x, @y], }]}, }];
+        var datas = [@toChartData(widget).map { singleSeries => {name: '@singleSeries._1', data: [@singleSeries._2.map { case (x, y) => [@x, @y], }]}, }];
 
         var seriesSize = datas.length
         var showLegend = seriesSize > 1
@@ -19,13 +20,31 @@
         var pointFormat = function () {
             return numericalPointFormat(isDate, isDouble, this, 3, 3);
         }
-        var yAxisCaption = '@widget.yAxisCaption'
 
         var xMin = (@{widget.xMin.isDefined}) ? @{widget.xMin.getOrElse(0)} : null
         var xMax = (@{widget.xMax.isDefined}) ? @{widget.xMax.getOrElse(0)} : null
         var yMin = (@{widget.yMin.isDefined}) ? @{widget.yMin.getOrElse(0)} : null
         var yMax = (@{widget.yMax.isDefined}) ? @{widget.yMax.getOrElse(0)} : null
 
-        lineChart('@widget.title', '@{elementId}', null, datas, '@widget.xAxisCaption', '@widget.yAxisCaption', showLegend, true, pointFormat, height, dataType, false, false, false, xMin, xMax, yMin, yMax);
+        lineChart(
+            '@widget.title',
+            '@{elementId}',
+            null,
+            datas,
+            '@widget.xAxisCaption',
+            '@widget.yAxisCaption',
+            showLegend,
+            true,
+            pointFormat,
+            height,
+            dataType,
+            false,
+            false,
+            false,
+            xMin,
+            xMax,
+            yMin,
+            yMax
+        );
     })
 </script>
