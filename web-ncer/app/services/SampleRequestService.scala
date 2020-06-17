@@ -106,7 +106,7 @@ class SampleRequestServiceImpl @Inject() (
     } yield {
       if (res.status != 200) throw new AdaException("Failed to retrieve catalogue items from REMS. Reason: " + res.body)
       res.json.as[Seq[JsObject]] map { catalogueItemJson =>
-        (catalogueItemJson \ "resource-name").as[String] -> (catalogueItemJson \ "id").as[Int]
+        (catalogueItemJson \ "localizations" \ "en" \ "title").as[String] -> (catalogueItemJson \ "id").as[Int]
       } toMap
     }
 
