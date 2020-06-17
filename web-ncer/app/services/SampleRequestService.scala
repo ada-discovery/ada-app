@@ -6,8 +6,8 @@ import com.google.inject.{ImplementedBy, Inject}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.field.FieldUtil
-import org.ada.server.field.FieldUtil.{FieldOps, JsonFieldOps}
 import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
+import org.ada.server.models.User
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion._
 import play.api.Configuration
@@ -27,7 +27,8 @@ trait SampleRequestService {
 
   def sendToRems(
     csv: String,
-    catalogueItemId: Int
+    catalogueItemId: Int,
+    user: User
   ): Future[_]
 
   def getCatalogueItems: Future[Map[String, Int]]
@@ -80,10 +81,31 @@ class SampleRequestServiceImpl @Inject() (
 
   override def sendToRems(
     csv: String,
-    catalogueItemId: Int
+    catalogueItemId: Int,
+    user: User
   ): Future[_] = {
     for {
       applicationId <- createApplication(catalogueItemId)
+      _ <- addAttachment(applicationId, csv)
+      _ <- inviteMember(applicationId, user.ldapDn, user.email)
+    } yield { }
+  }
+
+  override def getCatalogueItems: Future[Map[String, Int]] =
+    for {
+      res <- ws.url(remsUrl + "/api/catalogue").withHeaders(
+        "x-rems-user-id" -> remsUser,
+        "x-rems-api-key" -> remsApiKey
+      ).get()
+    } yield {
+      if (res.status != 200) throw new AdaException("Failed to retrieve catalogue items from REMS. Reason: " + res.body)
+      res.json.as[Seq[JsObject]] map { catalogueItemJson =>
+        (catalogueItemJson \ "localizations" \ "en" \ "title").as[String] -> (catalogueItemJson \ "id").as[Int]
+      } toMap
+    }
+
+  private def addAttachment(applicationId: Int, csv: String): Future[Unit] =
+    for {
       res <- ws.url(remsUrl + "/api/applications/add-attachment").withQueryString(
         "application-id" -> applicationId.toString
       ).withHeaders(
@@ -93,29 +115,15 @@ class SampleRequestServiceImpl @Inject() (
         csv.getBytes(StandardCharsets.UTF_8)
       )
     } yield {
-      res.status
-    }
-  }
-
-  override def getCatalogueItems: Future[Map[String, Int]] =
-    for {
-      res <- ws.url(remsUrl + "/api/catalogue").withHeaders(
-      "x-rems-user-id" -> remsUser,
-      "x-rems-api-key" -> remsApiKey
-      ).get()
-    } yield {
-      if (res.status != 200) throw new AdaException("Failed to retrieve catalogue items from REMS. Reason: " + res.body)
-      res.json.as[Seq[JsObject]] map { catalogueItemJson =>
-        (catalogueItemJson \ "localizations" \ "en" \ "title").as[String] -> (catalogueItemJson \ "id").as[Int]
-      } toMap
+      if (res.status != 200) throw new AdaException("Could not add attachment in REMS. Reason: " + res.body)
     }
 
   private def createApplication(catalogueItemId: Int): Future[Int] =
     for {
       res <- ws.url(remsUrl + "/api/applications/create").withHeaders(
-      "x-rems-user-id" -> remsUser,
-      "x-rems-api-key" -> remsApiKey,
-      "Content-Type" -> "application/json"
+        "x-rems-user-id" -> remsUser,
+        "x-rems-api-key" -> remsApiKey,
+        "Content-Type" -> "application/json"
       ).post(
         Json.obj("catalogue-item-ids" -> Vector(catalogueItemId))
       )
@@ -124,7 +132,7 @@ class SampleRequestServiceImpl @Inject() (
       (res.json \ "application-id").as[Int]
     }
 
-  private def inviteMember(applicationId: Int, remsUser: String, email: String): Future[_] = {
+  private def inviteMember(applicationId: Int, name: String, email: String): Future[Unit] = {
     for {
       res <- ws.url(remsUrl + "/api/applications/invite-member").withHeaders(
         "x-rems-user-id" -> remsUser,
@@ -134,7 +142,7 @@ class SampleRequestServiceImpl @Inject() (
         Json.obj(
           "application-id" -> applicationId,
           "member" -> Json.obj(
-            "name" -> member,
+            "name" -> name,
             "email" -> email
           )
         )

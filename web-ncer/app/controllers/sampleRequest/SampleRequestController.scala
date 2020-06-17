@@ -44,7 +44,7 @@ class SampleRequestController @Inject()(
 
     for {
       csv <- sampleRequestService.createCsv(dataSetId, filter :+ extraFilter, tableColumnNames)
-      _ <- sampleRequestService.sendToRems(csv, catalogueItemId)
+      _ <- sampleRequestService.sendToRems(csv, catalogueItemId, currentUser())
     } yield {
       Ok("")
     }
