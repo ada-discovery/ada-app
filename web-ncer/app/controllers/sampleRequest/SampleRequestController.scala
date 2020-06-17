@@ -1,16 +1,14 @@
 package controllers.sampleRequest
 
 import akka.stream.Materializer
-import com.google.inject.assistedinject.Assisted
 import javax.inject.Inject
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.incal.core.{ConditionType, FilterCondition}
 import org.incal.play.controllers.BaseController
-import play.api.libs.json.{JsNumber, JsObject, Json}
+import play.api.libs.json.{JsNumber, JsObject}
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import services.SampleRequestService
-import org.incal.core.dataaccess.Criterion.Infix
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -37,6 +35,7 @@ class SampleRequestController @Inject()(
 
   def submitRequest(
     catalogueItemId: Int,
+    dataSetId: String,
     tableColumnNames: Seq[String],
     filter: Seq[FilterCondition],
     selectedIds: Seq[BSONObjectID]
@@ -44,7 +43,7 @@ class SampleRequestController @Inject()(
     val extraFilter = FilterCondition(JsObjectIdentity.name, None, ConditionType.In, Some(selectedIds.mkString(",")), None)
 
     for {
-      csv <- sampleRequestService.createCsv("#TODO", filter :+ extraFilter, tableColumnNames)
+      csv <- sampleRequestService.createCsv(dataSetId, filter :+ extraFilter, tableColumnNames)
       _ <- sampleRequestService.sendToRems(csv, catalogueItemId)
     } yield {
       Ok("")

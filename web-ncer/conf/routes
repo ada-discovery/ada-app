@@ -9,4 +9,4 @@ POST        /admin/runRCPrediction                              controllers.ml.R
 
 # Sample Request
 GET         /sampleRequest/catalogueItems                       controllers.sampleRequest.SampleRequestController.catalogueItems
-POST        /sampleRequest/submitRequest                        controllers.sampleRequest.SampleRequestController.submitRequest(catalogueItemId : Int, tableColumnNames : Seq[String] ?= Nil, filter : Seq[org.incal.core.FilterCondition] ?= Nil, selectedIds : Seq[BSONObjectID] ?= Nil)
+POST        /sampleRequest/submitRequest                        controllers.sampleRequest.SampleRequestController.submitRequest(catalogueItemId : Int, dataSetId : String, tableColumnNames : Seq[String] ?= Nil, filter : Seq[org.incal.core.FilterCondition] ?= Nil, selectedIds : Seq[BSONObjectID] ?= Nil)
