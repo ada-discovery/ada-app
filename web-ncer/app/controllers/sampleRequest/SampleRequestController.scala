@@ -3,10 +3,14 @@ package controllers.sampleRequest
 import akka.stream.Materializer
 import com.google.inject.assistedinject.Assisted
 import javax.inject.Inject
+import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
+import org.incal.core.{ConditionType, FilterCondition}
 import org.incal.play.controllers.BaseController
 import play.api.libs.json.{JsNumber, JsObject, Json}
 import play.api.mvc.{Action, AnyContent}
+import reactivemongo.bson.BSONObjectID
 import services.SampleRequestService
+import org.incal.core.dataaccess.Criterion.Infix
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -30,37 +34,21 @@ class SampleRequestController @Inject()(
       Ok(json)
     }
   }
-//  def submitRequestForFilteredTable(
-//    tableColumnNames: Seq[String],
-//    filter: Seq[FilterCondition],
-//    selectedOnly: Boolean,
-//    selectedIds: Seq[BSONObjectID]
-//  ) = Action.async { implicit request =>
-//    val extraCriteria = if (selectedOnly)
-//      Seq(JsObjectIdentity.name #-> selectedIds)
-//    else
-//      Nil
-//
-//    for {
-//      dataSetSetting <- dsa.setting
-//      result <- {
-//        exportToCsv(
-//          "request.csv",
-//          "\t"
-//        )(
-//          tableColumnNames,
-//          dataSetSetting.exportOrderByFieldName,
-//          filter,
-//          extraCriteria,
-//          false,
-//          Map[String, FieldType[_]]()
-//        ).apply(request)
-//      }
-//      result.
-//    } yield {
-//
-//    }
-//
-//  }
+
+  def submitRequest(
+    catalogueItemId: Int,
+    tableColumnNames: Seq[String],
+    filter: Seq[FilterCondition],
+    selectedIds: Seq[BSONObjectID]
+  ) = Action.async { implicit request =>
+    val extraFilter = FilterCondition(JsObjectIdentity.name, None, ConditionType.In, Some(selectedIds.mkString(",")), None)
+
+    for {
+      csv <- sampleRequestService.createCsv("#TODO", filter :+ extraFilter, tableColumnNames)
+      _ <- sampleRequestService.sendToRems(csv, catalogueItemId)
+    } yield {
+      Ok("")
+    }
+  }
 
 }
