@@ -124,4 +124,24 @@ class SampleRequestServiceImpl @Inject() (
       (res.json \ "application-id").as[Int]
     }
 
+  private def inviteMember(applicationId: Int, remsUser: String, email: String): Future[_] = {
+    for {
+      res <- ws.url(remsUrl + "/api/applications/invite-member").withHeaders(
+        "x-rems-user-id" -> remsUser,
+        "x-rems-api-key" -> remsApiKey,
+        "Content-Type" -> "application/json"
+      ).post(
+        Json.obj(
+          "application-id" -> applicationId,
+          "member" -> Json.obj(
+            "name" -> member,
+            "email" -> email
+          )
+        )
+      )
+    } yield {
+      if (res.status != 200) throw new AdaException("Could not invite member in REMS. Reason: " + res.body)
+    }
+  }
+
 }
