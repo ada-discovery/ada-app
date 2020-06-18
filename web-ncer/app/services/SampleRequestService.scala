@@ -17,28 +17,11 @@ import play.api.libs.ws.WSClient
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-@ImplementedBy(classOf[SampleRequestServiceImpl])
-trait SampleRequestService {
-  def createCsv(
-    dataSetId: String,
-    filter: Seq[FilterCondition] = Nil,
-    columNames: Seq[String] = Nil
-  ): Future[String]
-
-  def sendToRems(
-    csv: String,
-    catalogueItemId: Int,
-    user: User
-  ): Future[_]
-
-  def getCatalogueItems: Future[Map[String, Int]]
-}
-
-class SampleRequestServiceImpl @Inject() (
+class SampleRequestService @Inject() (
   dsaf: DataSetAccessorFactory,
   config: Configuration,
   ws: WSClient
-) extends SampleRequestService {
+) {
 
   private val remsUrl = config.getString("rems.url").getOrElse(
     throw new AdaException("Configuration issue: 'rems.url' was not found in the configuration file.")
@@ -50,7 +33,7 @@ class SampleRequestServiceImpl @Inject() (
     throw new AdaException("Configuration issue: 'rems.apiKey' was not found in the configuration file.")
   )
 
-  override def createCsv(
+  def createCsv(
     dataSetId: String,
     filter: Seq[FilterCondition] = Nil,
     fieldNames: Seq[String] = Nil
@@ -79,7 +62,7 @@ class SampleRequestServiceImpl @Inject() (
     }
   }
 
-  override def sendToRems(
+  def sendToRems(
     csv: String,
     catalogueItemId: Int,
     user: User
@@ -91,7 +74,7 @@ class SampleRequestServiceImpl @Inject() (
     } yield { }
   }
 
-  override def getCatalogueItems: Future[Map[String, Int]] =
+  def getCatalogueItems: Future[Map[String, Int]] =
     for {
       res <- ws.url(remsUrl + "/api/catalogue").withHeaders(
         "x-rems-user-id" -> remsUser,
