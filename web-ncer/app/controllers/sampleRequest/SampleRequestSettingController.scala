@@ -113,11 +113,12 @@ class SampleRequestSettingController @Inject()(
     form: Form[SampleRequestSetting]
   ) = { implicit request =>
     for {
-      existingSetting <- repo.get(requestId)
-      _ = require(existingSetting.isDefined, s"No request setting found for the id '${requestId.stringify}'.")
-      dataSetId = existingSetting.get.dataSetId
-      dsa = dsaf(dataSetId).getOrElse(
-        throw new AdaException(s"No dsa found for the data set id '$dataSetId'.")
+      sampleRequestSettingOption <- repo.get(requestId)
+      sampleRequestSetting = sampleRequestSettingOption.getOrElse(
+        throw new AdaException(s"No request setting found for the id '${requestId.stringify}'.")
+      )
+      dsa = dsaf(sampleRequestSetting.dataSetId).getOrElse(
+        throw new AdaException(s"No dsa found for the data set id '${sampleRequestSetting.dataSetId}'.")
       )
       dataSetSetting <- dsa.setting
       dataSpaceTree <- dataSpaceService.getTreeForCurrentUser
@@ -151,7 +152,10 @@ class SampleRequestSettingController @Inject()(
       dataSetMetaInfos <- dataSpaceService.getDataSetMetaInfosForCurrentUser
     } yield {
       val dataSetIdJsons = dataSetMetaInfos.map { metaInfo =>
-        Json.obj("name" -> metaInfo.id , "label" -> metaInfo.id)
+        Json.obj(
+          "name" -> metaInfo.id,
+          "label" -> metaInfo.id
+        )
       }
       Ok(Json.toJson(dataSetIdJsons))
     }

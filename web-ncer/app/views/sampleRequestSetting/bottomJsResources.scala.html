@@ -8,11 +8,11 @@
 
 <script type="text/javascript">
         $(function () {
-            populateIdNameTypeahedFromUrl(
-                    $('#viewNameTypeahead'),
-                    $('#viewId'),
-                    '@Html(context.dataViewRouter.idAndNamesAccessible.url)',
-                    true
-            )
+            populateIdNameTypeaheadFromUrl({
+                typeaheadElement: $('#viewNameTypeahead'),
+                idElement: $('#viewId'),
+                url: '@Html(context.dataViewRouter.idAndNamesAccessible.url)',
+                initSelectByNameElement: true
+            })
         })
 </script>
