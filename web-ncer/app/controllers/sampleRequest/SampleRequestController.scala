@@ -11,6 +11,7 @@ import play.api.libs.json.{JsNumber, JsObject}
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.ws.rs.BadRequestException
 import org.ada.server.AdaException
+import org.incal.play.security.AuthAction
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import services.SampleRequestService
@@ -45,20 +46,23 @@ class SampleRequestController @Inject()(
     tableColumnNames: Seq[String],
     filter: Seq[FilterCondition],
     selectedIds: Seq[BSONObjectID]
-  )(
-    implicit request: AuthenticatedRequest[_]
-  ): Action[AnyContent] = Action.async {
+  ): Action[AnyContent] = AuthAction { implicit  request =>
     val extraFilter = FilterCondition(JsObjectIdentity.name, None, ConditionType.In, Some(selectedIds.mkString(",")), None)
     for {
-      deadBoltUserOption <- currentUser()
-      deadBoltUser = deadBoltUserOption.getOrElse(throw new BadRequestException("Request has no user associated with it."))
-      userOption <- userManager.findById(deadBoltUser.identifier)
-      user = userOption.getOrElse(throw new AdaException("Failed to lookup user information."))
+      user <- getUserForRequest()
       csv <- sampleRequestService.createCsv(dataSetId, filter :+ extraFilter, tableColumnNames)
       _ <- sampleRequestService.sendToRems(csv, catalogueItemId, user)
     } yield {
       Ok("")
     }
   }
+
+  private def getUserForRequest()(implicit request: AuthenticatedRequest[_]) =
+    for {
+      deadBoltUserOption <- currentUser()
+      deadBoltUser = deadBoltUserOption.getOrElse(throw new BadRequestException("Request has no user associated with it."))
+      userOption <- userManager.findById(deadBoltUser.identifier)
+      user = userOption.getOrElse(throw new AdaException("Failed to lookup user information."))
+    } yield user
 
 }
