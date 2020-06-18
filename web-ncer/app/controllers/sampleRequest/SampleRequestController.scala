@@ -15,14 +15,13 @@ import services.SampleRequestService
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
-
 class SampleRequestController @Inject()(
   sampleRequestService: SampleRequestService
 )(
   implicit materializer: Materializer
 ) extends AdaBaseController {
 
-  def catalogueItems: Action[AnyContent] = Action.async { implicit request =>
+  def catalogueItems = Action.async { implicit request =>
     for {
       items <- sampleRequestService.getCatalogueItems
     } yield {
@@ -41,7 +40,7 @@ class SampleRequestController @Inject()(
     tableColumnNames: Seq[String],
     filter: Seq[FilterCondition],
     selectedIds: Seq[BSONObjectID]
-  ): Action[AnyContent] = AuthAction { implicit  request =>
+  ) = AuthAction { implicit  request =>
     for {
       user <- getUserForRequest()
       csv <- sampleRequestService.createCsv(dataSetId, filter, tableColumnNames, selectedIds)
