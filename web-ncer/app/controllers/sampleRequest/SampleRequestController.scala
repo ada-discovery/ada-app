@@ -1,16 +1,13 @@
 package controllers.sampleRequest
 
 import akka.stream.Materializer
-import javax.inject.Inject
-import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
-import org.ada.server.services.UserManager
-import org.incal.core.{ConditionType, FilterCondition}
-import org.incal.play.controllers.BaseController
-import play.api.libs.json.{JsNumber, JsObject}
 import be.objectify.deadbolt.scala.AuthenticatedRequest
+import javax.inject.Inject
 import javax.ws.rs.BadRequestException
-import org.ada.server.AdaException
+import org.ada.web.controllers.core.AdaBaseController
+import org.incal.core.FilterCondition
 import org.incal.play.security.AuthAction
+import play.api.libs.json.{JsNumber, JsObject}
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import services.SampleRequestService
@@ -20,11 +17,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 
 class SampleRequestController @Inject()(
-  sampleRequestService: SampleRequestService,
-  userManager: UserManager
+  sampleRequestService: SampleRequestService
 )(
   implicit materializer: Materializer
-) extends BaseController {
+) extends AdaBaseController {
 
   def catalogueItems: Action[AnyContent] = Action.async { implicit request =>
     for {
@@ -59,8 +55,6 @@ class SampleRequestController @Inject()(
     for {
       deadBoltUserOption <- currentUser()
       deadBoltUser = deadBoltUserOption.getOrElse(throw new BadRequestException("Request has no user associated with it."))
-      userOption <- userManager.findById(deadBoltUser.identifier)
-      user = userOption.getOrElse(throw new AdaException("Failed to lookup user information."))
-    } yield user
+    } yield deadBoltUser.user
 
 }
