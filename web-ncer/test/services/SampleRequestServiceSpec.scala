@@ -43,7 +43,11 @@ class SampleRequestServiceSpec extends AsyncFlatSpec with BeforeAndAfter {
   }
 
   after {
-    dsaf(Iris.id) map { _.dataSetRepo.deleteAll }
+    for {
+      dsa <- dsaf(Iris.id)
+    } yield {
+      Await.result(dsa.dataSetRepo.deleteAll, 10 seconds)
+    }
   }
 
   behavior of "createCsv"
