@@ -10,3 +10,14 @@ POST        /admin/runRCPrediction                              controllers.ml.R
 # Sample Request
 GET         /sampleRequest/catalogueItems                       controllers.sampleRequest.SampleRequestController.catalogueItems
 POST        /sampleRequest/submitRequest                        controllers.sampleRequest.SampleRequestController.submitRequest(catalogueItemId : Int, dataSetId : String, tableColumnNames : Seq[String] ?= Nil, filter : Seq[org.incal.core.FilterCondition] ?= Nil, selectedIds : Seq[BSONObjectID] ?= Nil)
+
+# Sample Request Settings
+GET         /requestSettings                                    controllers.sampleRequest.SampleRequestSettingController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /requestSettings/all                                controllers.sampleRequest.SampleRequestSettingController.listAll(s: String ?= "timeCreated")
+GET         /requestSettings/new                                controllers.sampleRequest.SampleRequestSettingController.create
+POST        /requestSettings/save                               controllers.sampleRequest.SampleRequestSettingController.save
+GET         /requestSettings/get/:id                            controllers.sampleRequest.SampleRequestSettingController.get(id: BSONObjectID)
+GET         /requestSettings/edit:id                            controllers.sampleRequest.SampleRequestSettingController.edit(id: BSONObjectID)
+POST        /requestSettings/update/:id                         controllers.sampleRequest.SampleRequestSettingController.update(id: BSONObjectID)
+POST        /requestSettings/delete/:id                         controllers.sampleRequest.SampleRequestSettingController.delete(id: BSONObjectID)
+GET         /requestSettings/dataSetIds                         controllers.sampleRequest.SampleRequestSettingController.dataSetIds

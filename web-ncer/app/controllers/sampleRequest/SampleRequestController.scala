@@ -8,7 +8,7 @@ import org.ada.web.controllers.core.AdaBaseController
 import org.incal.core.FilterCondition
 import org.incal.play.security.AuthAction
 import play.api.libs.json.{JsNumber, JsObject}
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.Action
 import reactivemongo.bson.BSONObjectID
 import services.SampleRequestService
 

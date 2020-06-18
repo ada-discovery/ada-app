@@ -1,0 +1,18 @@
+@import views.html.table.dynamicTableJsImport
+@import views.html.elements._
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import org.ada.web.controllers.dataset.DataSetWebContext._
+
+@(
+        form: Form[SampleRequestSetting]
+)(
+        implicit context: DataSetWebContext
+)
+
+@labelValue("dataSetId", attributeLabel("requestSetting", "dataSetId")) {
+    <input id="dataSetId" name="dataSetId" value="@context.dataSetId" readonly="true">
+}
+
+@dynamicTableJsImport()
+
+@inputTypeahead("dataView", "viewId", "viewNameTypeahead", form, "Data View")

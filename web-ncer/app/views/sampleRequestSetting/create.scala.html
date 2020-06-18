@@ -1,0 +1,23 @@
+@import views.html.layout
+@import views.html.sampleRequestSetting.{elements, bottomJsResources}
+@import reactivemongo.bson.BSONObjectID
+@import org.ada.server.models.User
+@import controllers.sampleRequest.routes.{SampleRequestSettingController => settingRoutes}
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import org.ada.web.controllers.dataset.DataSetWebContext._
+
+@(
+        form: Form[SampleRequestSetting]
+)(
+        implicit context: DataSetWebContext
+)
+
+@layout.create(
+    "Request setting",
+    "requestSetting",
+    form = form,
+    elements = elements(form),
+    saveCall = settingRoutes.save(),
+    listCall = settingRoutes.find(),
+    bottomResources = Some(bottomJsResources())
+)

@@ -1,0 +1,18 @@
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import org.ada.web.controllers.dataset.DataSetWebContext._
+@import controllers.sampleRequest.routes.{SampleRequestSettingController => settingRoutes}
+
+@()(implicit context: DataSetWebContext)
+
+@typeaheadJsImport()
+
+<script type="text/javascript">
+        $(function () {
+            populateIdNameTypeahedFromUrl(
+                    $('#viewNameTypeahead'),
+                    $('#viewId'),
+                    '@Html(context.dataViewRouter.idAndNamesAccessible.url)',
+                    true
+            )
+        })
+</script>

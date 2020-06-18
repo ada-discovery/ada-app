@@ -8,7 +8,9 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import services.BatchOrderRequestRepoTypes.SampleRequestSettingRepo
 
+
 class SampleRequestModule extends ScalaModule {
+  import models.SampleRequestSetting._
   override def configure() = {
     bind[SampleRequestSettingRepo].toInstance(
       new MongoAsyncCrudRepo[SampleRequestSetting, BSONObjectID]("sample_request_settings")

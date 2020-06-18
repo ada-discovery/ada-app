@@ -1,0 +1,76 @@
+@import org.ada.web.util.typeColumns
+@import org.incal.core.FilterCondition
+@import org.incal.play.Page
+@import views.html.layout
+@import views.html.table.paginatedTable
+@import reactivemongo.bson.BSONObjectID
+@import views.html.elements.{inputTypeahead, typeahead}
+@import org.incal.core.ConditionType
+@import views.html.filter.filterWithJs
+@import org.ada.web.controllers.dataset.datatrans.routes
+@import org.ada.server.models.FilterShowFieldStyle
+@import be.objectify.deadbolt.scala.views.html.restrict
+@import controllers.sampleRequest.routes.{ SampleRequestSettingController => settingRoutes }
+@import org.incal.play.controllers.WebContext
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.security.SecurityRole
+
+@(
+        page: Page[SampleRequestSetting],
+        conditions: Seq[FilterCondition]
+)(
+        implicit context: WebContext
+)
+
+@modalBody = {
+@typeahead("dataSetIdTypeahead", "dataSetId", "Data Set Id", isLarge = true)
+}
+
+@actions = {
+    <div class="row">
+        <div class="pull-right">
+            <a class="btn btn-info btn-sm" data-toggle="modal" data-target="#addSettingModal" title="Add New">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                Setting
+            </a>
+        </div>
+        @modal("addSettingModal", "Add New Request Setting", modalBody, Some(settingRoutes.create()), None, None)
+    </div>
+}
+
+@table = @{
+    paginatedTable(
+        page,
+        settingRoutes.find(_, _, conditions),
+        typeColumns[SampleRequestSetting](
+            (Some("dataSetId"), "Dataset id", _.dataSetId)
+        ),
+        Some({ item: Any => settingRoutes.edit(item.asInstanceOf[SampleRequestSetting]._id.get) })
+    )
+}
+
+@bottomResources = {
+@typeaheadJsImport()
+
+    <script type="text/javascript">
+            $(function () {
+                populateFieldTypeahedFromUrl(
+                        $('#dataSetIdTypeahead'),
+                        $('#dataSetId'),
+                        '@Html(settingRoutes.dataSetIds().url)',
+                        @FilterShowFieldStyle.LabelsOnly.id
+                )
+
+                $("#userSelectionModal #submitButton").one("click", addAsAdmin);
+            })
+    </script>
+}
+
+@layout.list(
+    "request setting",
+    None,
+    page.total,
+    Some(actions),
+    Some(table),
+    bottomResources = Some(bottomResources)
+)
