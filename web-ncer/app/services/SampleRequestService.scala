@@ -6,13 +6,14 @@ import com.google.inject.{ImplementedBy, Inject}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.field.FieldUtil
-import org.ada.server.models.DataSetFormattersAndIds.FieldIdentity
+import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import org.ada.server.models.User
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion._
 import play.api.Configuration
 import play.api.libs.json.{JsNull, JsObject, Json}
 import play.api.libs.ws.WSClient
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -36,16 +37,18 @@ class SampleRequestService @Inject() (
   def createCsv(
     dataSetId: String,
     filter: Seq[FilterCondition] = Nil,
-    fieldNames: Seq[String] = Nil
+    fieldNames: Seq[String] = Nil,
+    selectedIds: Seq[BSONObjectID]
   ): Future[String] = {
     val dsa = dsaf(dataSetId).getOrElse(throw new IllegalArgumentException(s"Dataset '$dataSetId' does not exist."))
     val fieldRepo = dsa.fieldRepo
     val dataSetRepo = dsa.dataSetRepo
     val fieldCriteria = if (fieldNames.nonEmpty) Vector(FieldIdentity.name #-> fieldNames) else Nil
+    val selectCriteria = if (selectedIds.nonEmpty) Vector(JsObjectIdentity.name #-> selectedIds) else Nil
     for {
       fields <- fieldRepo.find(fieldCriteria)
       valueCriteria <- FieldUtil.toDataSetCriteria(fieldRepo, filter)
-      items <- dataSetRepo.find(valueCriteria)
+      items <- dataSetRepo.find(valueCriteria ++ selectCriteria)
     } yield {
       val header = fields.map(_.name)
       val csv = new StringBuilder("")

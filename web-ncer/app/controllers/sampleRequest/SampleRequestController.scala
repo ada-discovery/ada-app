@@ -2,7 +2,6 @@ package controllers.sampleRequest
 
 import akka.stream.Materializer
 import javax.inject.Inject
-import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.ada.server.services.UserManager
 import org.incal.core.{ConditionType, FilterCondition}
@@ -47,10 +46,9 @@ class SampleRequestController @Inject()(
     filter: Seq[FilterCondition],
     selectedIds: Seq[BSONObjectID]
   ): Action[AnyContent] = AuthAction { implicit  request =>
-    val extraFilter = FilterCondition(JsObjectIdentity.name, None, ConditionType.In, Some(selectedIds.mkString(",")), None)
     for {
       user <- getUserForRequest()
-      csv <- sampleRequestService.createCsv(dataSetId, filter :+ extraFilter, tableColumnNames)
+      csv <- sampleRequestService.createCsv(dataSetId, filter, tableColumnNames, selectedIds)
       _ <- sampleRequestService.sendToRems(csv, catalogueItemId, user)
     } yield {
       Ok("")
