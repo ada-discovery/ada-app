@@ -1,16 +1,11 @@
 package controllers.sampleRequest
 
-import java.util.Date
-
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
 import models.SampleRequestSetting
 import models.SampleRequestSetting.SampleRequestSettingIdentity
 import org.ada.server.AdaException
-import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInfoRepo, FieldRepo, UserRepo}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
-import org.ada.server.models.DataSetFormattersAndIds._
-import org.ada.server.models.User.UserIdentity
 import org.ada.server.models._
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaCrudControllerImpl
@@ -19,13 +14,11 @@ import org.ada.web.services.DataSpaceService
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.controllers._
 import org.incal.play.security.AuthAction
-import org.incal.play.security.SecurityUtil.toAuthenticatedAction
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, BodyParser}
+import play.api.mvc.{AnyContent, BodyParser}
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 import services.BatchOrderRequestRepoTypes.SampleRequestSettingRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -34,9 +27,7 @@ import scala.concurrent.Future
 class SampleRequestSettingController @Inject()(
   requestSettingRepo: SampleRequestSettingRepo,
   dsaf: DataSetAccessorFactory,
-  dataSetSettingRepo: DataSetSettingRepo,
-  dataSpaceService: DataSpaceService,
-  userRepo: UserRepo
+  dataSpaceService: DataSpaceService
 ) extends AdaCrudControllerImpl[SampleRequestSetting, BSONObjectID](requestSettingRepo)
   with AdminRestrictedCrudController[BSONObjectID]
   with HasBasicListView[SampleRequestSetting]
@@ -75,14 +66,9 @@ class SampleRequestSettingController @Inject()(
         limit = Some(1)
       ).map(_.nonEmpty)
 
-      _ = if (requestSettingExists)
-        throw new AdaException(s"A configuration already exists for dataset id '${requestSetting.dataSetId}'.")
+      _ = if (requestSettingExists) throw new AdaException(s"A configuration already exists for dataset id '${requestSetting.dataSetId}'.")
 
       id <- repo.save(requestSetting)
-      dataSetSetting <- dataSetSettingRepo.find(
-        Seq("dataSetId" #== requestSetting.dataSetId),
-        limit = Some(1)
-      ).map(_.headOption)
     } yield
       id
 
@@ -131,13 +117,11 @@ class SampleRequestSettingController @Inject()(
       _ = require(existingSetting.isDefined, s"No request setting found for the id '${requestId.stringify}'.")
       dataSetId = existingSetting.get.dataSetId
       dsa = dsaf(dataSetId).getOrElse(
-        throw new AdaException(s"No dsa found for the data set id '${dataSetId}'.")
+        throw new AdaException(s"No dsa found for the data set id '$dataSetId'.")
       )
       dataSetSetting <- dsa.setting
-      refUsers <- userRepo.find(Seq(UserIdentity.name #-> Nil))
       dataSpaceTree <- dataSpaceService.getTreeForCurrentUser
     } yield {
-      val idUserMap = refUsers.map(user => (user._id.get, user)).toMap
       (
         requestId,
         form,
