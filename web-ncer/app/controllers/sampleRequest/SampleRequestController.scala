@@ -50,6 +50,10 @@ class SampleRequestController @Inject()(
     }
   }
 
+  def submissionForm(dataSetId: String) = Action { implicit request =>
+    Ok("")
+  }
+
   private def getUserForRequest()(implicit request: AuthenticatedRequest[_]) =
     for {
       deadBoltUserOption <- currentUser()

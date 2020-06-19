@@ -5,6 +5,7 @@ import javax.inject.Inject
 import models.SampleRequestSetting
 import models.SampleRequestSetting.SampleRequestSettingIdentity
 import org.ada.server.AdaException
+import org.ada.server.dataaccess.RepoTypes.DataSetSettingRepo
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.models._
 import org.ada.web.controllers.BSONObjectIDStringFormatter
@@ -26,6 +27,7 @@ import scala.concurrent.Future
 
 class SampleRequestSettingController @Inject()(
   requestSettingRepo: SampleRequestSettingRepo,
+  dataSetSettingRepo: DataSetSettingRepo,
   dsaf: DataSetAccessorFactory,
   dataSpaceService: DataSpaceService
 ) extends AdaCrudControllerImpl[SampleRequestSetting, BSONObjectID](requestSettingRepo)
@@ -65,10 +67,20 @@ class SampleRequestSettingController @Inject()(
         Seq("dataSetId" #== requestSetting.dataSetId),
         limit = Some(1)
       ).map(_.nonEmpty)
-
       _ = if (requestSettingExists) throw new AdaException(s"A configuration already exists for dataset id '${requestSetting.dataSetId}'.")
-
       id <- repo.save(requestSetting)
+      dataSetSetting <- dataSetSettingRepo.find(
+        Seq("dataSetId" #== requestSetting.dataSetId),
+        limit = Some(1)
+      ).map(_.headOption)
+      _ <- {
+        val newMenuLink = Link("Sample Request", routes.SampleRequestController.submissionForm(requestSetting.dataSetId).url)
+
+        val newDataSetSetting = dataSetSetting.get.copy(
+          extraNavigationItems = dataSetSetting.get.extraNavigationItems :+ newMenuLink
+        )
+        dataSetSettingRepo.update(newDataSetSetting)
+      } if (dataSetSetting.isDefined)
     } yield
       id
 
