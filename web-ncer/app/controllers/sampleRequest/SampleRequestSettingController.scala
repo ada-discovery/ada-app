@@ -122,8 +122,8 @@ class SampleRequestSettingController @Inject()(
       dataSetSetting = dataSetSettings.head if dataSetSettings.nonEmpty
       newDataSetSetting = dataSetSetting.copy(
         extraNavigationItems = dataSetSetting.extraNavigationItems.filter({
-          case Link(label: String, _) => label == menuLinkName
-          case _ => false
+          case Link(label: String, _) => label != menuLinkName
+          case _ => true
         })
       )
       _ <- dataSetSettingRepo.update(newDataSetSetting)
