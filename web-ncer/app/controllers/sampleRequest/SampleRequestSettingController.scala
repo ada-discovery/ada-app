@@ -17,12 +17,13 @@ import org.incal.play.security.AuthAction
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, BodyParser}
+import play.api.mvc.{AnyContent, BodyParser}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.SampleRequestSettingRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 class SampleRequestSettingController @Inject()(
   sampleRequestSettingRepo: SampleRequestSettingRepo,
@@ -98,24 +99,9 @@ class SampleRequestSettingController @Inject()(
     )
   }
 
-  override def delete(id: BSONObjectID) = Action.async {
-    for {
-      sampleRequestSettingOption <- sampleRequestSettingRepo.get(id)
-      sampleRequestSetting = sampleRequestSettingOption.get if sampleRequestSettingOption.isDefined
-      dataSetId = sampleRequestSetting.dataSetId
-      dataSetSettings <- dataSetSettingRepo.find(Vector("dataSetId" #== dataSetId))
-      dataSetSetting = dataSetSettings.head if dataSetSettings.nonEmpty
-      newDataSetSetting = dataSetSetting.copy(
-        extraNavigationItems = dataSetSetting.extraNavigationItems.filter({
-          case Link(label: String, _: String) => label == menuLinkName
-          case _ => false
-        })
-      )
-      _ <- dataSetSettingRepo.update(newDataSetSetting)
-      _ = super.delete(id)
-    } yield {
-      Ok("")
-    }
+  override def delete(id: BSONObjectID) = {
+    Await.result(deleteMenuItemForSetting(id), 15 seconds)
+    super.delete(id)
   }
 
   override protected def createView = { implicit ctx =>
@@ -126,6 +112,22 @@ class SampleRequestSettingController @Inject()(
     implicit val dataSetWebCtx = dataSetWebContext(dataSetId.get)
     views.html.sampleRequestSetting.create(_)
   }
+
+  private def deleteMenuItemForSetting(id: BSONObjectID): Future[Unit] =
+    for {
+      sampleRequestSettingOption <- sampleRequestSettingRepo.get(id)
+      sampleRequestSetting = sampleRequestSettingOption.get if sampleRequestSettingOption.isDefined
+      dataSetId = sampleRequestSetting.dataSetId
+      dataSetSettings <- dataSetSettingRepo.find(Vector("dataSetId" #== dataSetId))
+      dataSetSetting = dataSetSettings.head if dataSetSettings.nonEmpty
+      newDataSetSetting = dataSetSetting.copy(
+        extraNavigationItems = dataSetSetting.extraNavigationItems.filter({
+          case Link(label: String, _) => label == menuLinkName
+          case _ => false
+        })
+      )
+      _ <- dataSetSettingRepo.update(newDataSetSetting)
+    } yield {}
 
   private def getDataSetId(request: AuthenticatedRequest[AnyContent]): Option[String] =
     request.queryString.get("dataSetId") match {
