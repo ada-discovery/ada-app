@@ -2,19 +2,21 @@ package services
 
 import java.nio.charset.StandardCharsets
 
+import be.objectify.deadbolt.scala.AuthenticatedRequest
 import com.google.inject.Inject
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.field.FieldUtil
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, User}
-import org.ada.web.controllers.dataset.TableViewData
+import org.ada.web.controllers.dataset.{DataSetViewHelper, TableViewData}
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion._
 import play.api.Configuration
 import play.api.libs.json.{JsNull, JsObject, Json}
 import play.api.libs.ws.WSClient
 import reactivemongo.bson.BSONObjectID
+import services.BatchOrderRequestRepoTypes.SampleRequestSettingRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -28,9 +30,10 @@ case class ActionFormViewData(
 
 class SampleRequestService @Inject() (
   dsaf: DataSetAccessorFactory,
+  sampleRequestSettingRepo: SampleRequestSettingRepo,
   config: Configuration,
   ws: WSClient
-) {
+) extends DataSetViewHelper {
 
   private val remsUrl = config.getString("rems.url").getOrElse(
     throw new AdaException("Configuration issue: 'rems.url' was not found in the configuration file.")
@@ -98,7 +101,26 @@ class SampleRequestService @Inject() (
       } toMap
     }
 
-  def getActionFormViewData(dataSetId: String): Future[ActionFormViewData] = ???
+  def getActionFormViewData(
+    dataSetId: String
+  )(
+    implicit request: AuthenticatedRequest[_]
+  ): Future[ActionFormViewData] = {
+    val dsa = dsaf(dataSetId).getOrElse(throw new IllegalArgumentException(s"Dataset with id '$dataSetId' not found."))
+    for {
+      (dataSetName, dataSpaceTree, dataSetSetting) <- getDataSetNameTreeAndSetting(dsa)
+      sampleRequestSettings <- sampleRequestSettingRepo.find(Seq("dataSetId" #== dataSetId))
+      _ = require(sampleRequestSettings.nonEmpty,
+        s"Sample Request settings have not been defined for dataset '$dataSetId'"
+      )
+      sampleRequestSetting = sampleRequestSettings.head
+      dataViewOption <- dsa.dataViewRepo.get(sampleRequestSetting.viewId)
+      dataView = dataViewOption.getOrElse(
+        throw new IllegalArgumentException(s"ViewId specified in Sample Request setting for dataset '$dataSetId' does no longer exist.")
+      )
+
+    } yield ActionFormViewData(sampleRequestSetting.viewId, Vector(), dataSetSetting, dataSpaceTree)
+  }
 
   private def addAttachment(applicationId: Int, csv: String): Future[Unit] =
     for {
