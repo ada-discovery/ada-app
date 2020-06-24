@@ -8,7 +8,7 @@ import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.field.FieldUtil
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
-import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, User}
+import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, Filter, User}
 import org.ada.web.controllers.dataset.{DataSetViewHelper, TableViewData}
 import org.ada.web.services.DataSpaceService
 import org.incal.core.FilterCondition
@@ -18,6 +18,9 @@ import play.api.libs.json.{JsNull, JsObject, Json}
 import play.api.libs.ws.WSClient
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.SampleRequestSettingRepo
+import org.ada.server.dataaccess.dataset.FilterRepoExtra._
+import org.incal.core.dataaccess.Criterion
+import org.incal.play.{Page, PageOrder}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -102,7 +105,7 @@ class SampleRequestService @Inject() (
         (catalogueItemJson \ "localizations" \ "en" \ "title").as[String] -> (catalogueItemJson \ "id").as[Int]
       } toMap
     }
-
+  
   def getActionFormViewData(
     dataSetId: String
   )(
@@ -120,9 +123,47 @@ class SampleRequestService @Inject() (
       dataView = dataViewOption.getOrElse(
         throw new IllegalArgumentException(s"ViewId specified in Sample Request setting for dataset '$dataSetId' does no longer exist.")
       )
+      resolvedFilters <- Future.sequence(dataView.filterOrIds.map(dsa.filterRepo.resolve)).map { filters =>
+        if (filters.isEmpty) Seq(org.ada.server.models.Filter()) else filters
+      }
+      conditions = resolvedFilters.map(_.conditions)
+      criteria <- Future.sequence(conditions.map(toCriteria))
+      tableColumnNames = dataView.tableColumnNames
+      tablePagesToUse = Seq.fill(resolvedFilters.size)(PageOrder(0, ""))
+      nameFieldMap <- createNameFieldMap(dsa.fieldRepo)(conditions, Nil, tableColumnNames)
+      viewTableResponses <-
+        Future.sequence(
+          (tablePagesToUse, criteria, resolvedFilters).zipped.map { case (tablePage, criteria, resolvedFilter) =>
+            getInitViewResponse(dsa.dataSetRepo)(
+              tablePage.page, tablePage.orderBy, resolvedFilter, criteria, nameFieldMap, tableColumnNames, 20
+            )
+          }
+        )
+    } yield {
+      val tableViewData = (viewTableResponses, tablePagesToUse).zipped.map {
+        case (viewResponse, tablePage) =>
+          val newPage = Page(viewResponse.tableItems, tablePage.page, tablePage.page * 20, viewResponse.count, tablePage.orderBy)
+          TableViewData(newPage, Some(viewResponse.filter), viewResponse.tableFields)
+      }
 
-    } yield ActionFormViewData(sampleRequestSetting.viewId, Vector(), dataSetSetting, dataSpaceTree)
+      ActionFormViewData(sampleRequestSetting.viewId, tableViewData, dataSetSetting, dataSpaceTree)
+    }
   }
+
+  private def toCriteria(
+    filter: Seq[FilterCondition]
+  ): Future[Seq[Criterion[Any]]] = {
+    val fieldNames = filter.seq.map(_.fieldName)
+    filterValueConverters(fieldNames).map(
+      FilterCondition.toCriteria(_, filter)
+    )
+  }
+
+  private def filterValueConverters(
+    fieldNames: Traversable[String]
+  ): Future[Map[String, String => Option[Any]]] =
+    Future(Map())
+
 
   private def addAttachment(applicationId: Int, csv: String): Future[Unit] =
     for {
