@@ -2,12 +2,13 @@ package services
 
 import java.nio.charset.StandardCharsets
 
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.Inject
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.field.FieldUtil
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
-import org.ada.server.models.User
+import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, User}
+import org.ada.web.controllers.dataset.TableViewData
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion._
 import play.api.Configuration
@@ -17,6 +18,13 @@ import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+
+case class ActionFormViewData(
+  dataViewId: BSONObjectID,
+  tableViewParts: Seq[TableViewData],
+  dataSetSetting: DataSetSetting,
+  dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)
 
 class SampleRequestService @Inject() (
   dsaf: DataSetAccessorFactory,
@@ -89,6 +97,8 @@ class SampleRequestService @Inject() (
         (catalogueItemJson \ "localizations" \ "en" \ "title").as[String] -> (catalogueItemJson \ "id").as[Int]
       } toMap
     }
+
+  def getActionFormViewData(dataSetId: String): Future[ActionFormViewData] = ???
 
   private def addAttachment(applicationId: Int, csv: String): Future[Unit] =
     for {

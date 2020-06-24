@@ -1,6 +1,6 @@
 package services
 
-import models.SampleRequestSetting
+import models.sampleRequest.SampleRequestSetting
 import net.codingwell.scalaguice.ScalaModule
 import org.ada.server.dataaccess.mongo.MongoAsyncCrudRepo
 import org.incal.core.dataaccess.AsyncCrudRepo
@@ -10,7 +10,6 @@ import services.BatchOrderRequestRepoTypes.SampleRequestSettingRepo
 
 
 class SampleRequestModule extends ScalaModule {
-  import models.SampleRequestSetting._
   override def configure() = {
     bind[SampleRequestSettingRepo].toInstance(
       new MongoAsyncCrudRepo[SampleRequestSetting, BSONObjectID]("sample_request_settings")

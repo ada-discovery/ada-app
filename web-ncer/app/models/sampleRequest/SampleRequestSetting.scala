@@ -1,4 +1,4 @@
-package models
+package models.sampleRequest
 
 import org.ada.server.dataaccess.BSONObjectIdentity
 import play.api.libs.json.Json

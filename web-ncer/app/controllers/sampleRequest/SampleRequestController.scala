@@ -4,22 +4,37 @@ import akka.stream.Materializer
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
 import javax.ws.rs.BadRequestException
+import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaBaseController
+import org.ada.web.controllers.dataset.DataSetWebContext
 import org.incal.core.FilterCondition
+import org.incal.play.controllers.{HasBasicFormCreateView, WebContext}
 import org.incal.play.security.AuthAction
+import play.api.data.Form
+import play.api.data.Forms._
 import play.api.libs.json.{JsNumber, JsObject}
 import play.api.mvc.Action
 import reactivemongo.bson.BSONObjectID
 import services.SampleRequestService
+import views.html.dataset.view.actionView
+import controllers.sampleRequest.routes.{SampleRequestController => sampleRequestRoutes}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+case class SampleRequest(
+  dataSetId: String,
+  itemIds: Seq[BSONObjectID]
+)
 
 class SampleRequestController @Inject()(
   sampleRequestService: SampleRequestService
 )(
   implicit materializer: Materializer
-) extends AdaBaseController {
+) extends AdaBaseController with HasBasicFormCreateView[SampleRequest] {
+
+  private implicit val idsFormatter = BSONObjectIDStringFormatter
+  private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
+
 
   def catalogueItems = Action.async { implicit request =>
     for {
@@ -50,8 +65,21 @@ class SampleRequestController @Inject()(
     }
   }
 
-  def submissionForm(dataSetId: String) = Action { implicit request =>
-    Ok("")
+  def submissionForm(dataSetId: String) = AuthAction { implicit request =>
+    implicit val dataSetWebCtx = dataSetWebContext(dataSetId)
+    for {
+      formViewData <- sampleRequestService.getActionFormViewData(dataSetId)
+    } yield Ok(actionView(
+      sampleRequestRoutes.submitRequest(0, ""),
+      "Request Samples",
+      "Sample Request,",
+      "Item",
+      formViewData.dataViewId,
+      formViewData.tableViewParts,
+      12,
+      formViewData.dataSetSetting,
+      formViewData.dataSpaceMetaInfos
+    ))
   }
 
   private def getUserForRequest()(implicit request: AuthenticatedRequest[_]) =
@@ -60,4 +88,12 @@ class SampleRequestController @Inject()(
       deadBoltUser = deadBoltUserOption.getOrElse(throw new BadRequestException("Request has no user associated with it."))
     } yield deadBoltUser.user
 
+  override protected def form = Form(
+    mapping(
+      "dataSetId" -> nonEmptyText,
+      "itemIds" -> seq(of[BSONObjectID])
+    )(SampleRequest.apply)(SampleRequest.unapply)
+  )
+
+  override protected def createView = ???
 }

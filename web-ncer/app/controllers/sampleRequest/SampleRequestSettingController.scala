@@ -2,8 +2,7 @@ package controllers.sampleRequest
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
-import models.SampleRequestSetting
-import models.SampleRequestSetting.SampleRequestSettingIdentity
+import models.sampleRequest.SampleRequestSetting
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.DataSetSettingRepo
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
@@ -80,7 +79,7 @@ class SampleRequestSettingController @Inject()(
           extraNavigationItems = dataSetSetting.get.extraNavigationItems :+ newMenuLink
         )
         dataSetSettingRepo.update(newDataSetSetting)
-      } if (dataSetSetting.isDefined)
+      } if dataSetSetting.isDefined
     } yield
       id
 
