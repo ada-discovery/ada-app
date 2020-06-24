@@ -10,6 +10,7 @@ import org.ada.server.field.FieldUtil
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, User}
 import org.ada.web.controllers.dataset.{DataSetViewHelper, TableViewData}
+import org.ada.web.services.DataSpaceService
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion._
 import play.api.Configuration
@@ -32,7 +33,8 @@ class SampleRequestService @Inject() (
   dsaf: DataSetAccessorFactory,
   sampleRequestSettingRepo: SampleRequestSettingRepo,
   config: Configuration,
-  ws: WSClient
+  ws: WSClient,
+  val dataSpaceService: DataSpaceService
 ) extends DataSetViewHelper {
 
   private val remsUrl = config.getString("rems.url").getOrElse(
@@ -169,5 +171,4 @@ class SampleRequestService @Inject() (
       if (res.status != 200) throw new AdaException("Could not invite member in REMS. Reason: " + res.body)
     }
   }
-
 }
