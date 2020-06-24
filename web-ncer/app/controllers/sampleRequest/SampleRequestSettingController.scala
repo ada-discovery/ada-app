@@ -17,7 +17,7 @@ import org.incal.play.security.AuthAction
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.libs.json.Json
-import play.api.mvc.{AnyContent, BodyParser}
+import play.api.mvc.{Action, AnyContent, BodyParser}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.SampleRequestSettingRepo
 
@@ -25,11 +25,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class SampleRequestSettingController @Inject()(
-  requestSettingRepo: SampleRequestSettingRepo,
+  sampleRequestSettingRepo: SampleRequestSettingRepo,
   dataSetSettingRepo: DataSetSettingRepo,
   dsaf: DataSetAccessorFactory,
   dataSpaceService: DataSpaceService
-) extends AdaCrudControllerImpl[SampleRequestSetting, BSONObjectID](requestSettingRepo)
+) extends AdaCrudControllerImpl[SampleRequestSetting, BSONObjectID](sampleRequestSettingRepo)
   with AdminRestrictedCrudController[BSONObjectID]
   with HasBasicListView[SampleRequestSetting]
   with HasBasicFormCreateView[SampleRequestSetting]
@@ -48,6 +48,8 @@ class SampleRequestSettingController @Inject()(
   private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
   private implicit val idFormatter = BSONObjectIDStringFormatter
+
+  private val menuLinkName = "Sample Request"
 
   override protected[controllers] val form = Form(
     mapping(
@@ -73,7 +75,7 @@ class SampleRequestSettingController @Inject()(
         limit = Some(1)
       ).map(_.headOption)
       _ <- {
-        val newMenuLink = Link("Sample Request", routes.SampleRequestController.submissionForm(requestSetting.dataSetId).url)
+        val newMenuLink = Link(menuLinkName, routes.SampleRequestController.submissionForm(requestSetting.dataSetId).url)
 
         val newDataSetSetting = dataSetSetting.get.copy(
           extraNavigationItems = dataSetSetting.get.extraNavigationItems :+ newMenuLink
@@ -94,6 +96,26 @@ class SampleRequestSettingController @Inject()(
     ).getOrElse(
       Future(noDataSetRedirect)
     )
+  }
+
+  override def delete(id: BSONObjectID) = Action.async {
+    for {
+      sampleRequestSettingOption <- sampleRequestSettingRepo.get(id)
+      sampleRequestSetting = sampleRequestSettingOption.get if sampleRequestSettingOption.isDefined
+      dataSetId = sampleRequestSetting.dataSetId
+      dataSetSettings <- dataSetSettingRepo.find(Vector("dataSetId" #== dataSetId))
+      dataSetSetting = dataSetSettings.head if dataSetSettings.nonEmpty
+      newDataSetSetting = dataSetSetting.copy(
+        extraNavigationItems = dataSetSetting.extraNavigationItems.filter({
+          case Link(label: String, _: String) => label == menuLinkName
+          case _ => false
+        })
+      )
+      _ <- dataSetSettingRepo.update(newDataSetSetting)
+      _ = super.delete(id)
+    } yield {
+      Ok("")
+    }
   }
 
   override protected def createView = { implicit ctx =>
@@ -171,5 +193,7 @@ class SampleRequestSettingController @Inject()(
       Ok(Json.toJson(dataSetIdJsons))
     }
   }
+
+
 
 }
