@@ -65,10 +65,10 @@ class SampleRequestController @Inject()(
     }
   }
 
-  def submissionForm(dataSetId: String) = AuthAction { implicit request =>
-    implicit val dataSetWebCtx = dataSetWebContext(dataSetId)
+  def submissionForm(dataSet: String) = AuthAction { implicit request =>
+    implicit val dataSetWebCtx = dataSetWebContext(dataSet)
     for {
-      formViewData <- sampleRequestService.getActionFormViewData(dataSetId)
+      formViewData <- sampleRequestService.getActionFormViewData(dataSet)
     } yield Ok(actionView(
       sampleRequestRoutes.submitRequest(0, ""),
       "Request Samples",
