@@ -2,7 +2,6 @@ package controllers.sampleRequest
 
 import akka.stream.Materializer
 import be.objectify.deadbolt.scala.AuthenticatedRequest
-import controllers.sampleRequest.routes.{SampleRequestController => sampleRequestRoutes}
 import javax.inject.Inject
 import javax.ws.rs.BadRequestException
 import org.ada.web.controllers.BSONObjectIDStringFormatter
@@ -11,11 +10,8 @@ import org.ada.web.controllers.dataset.DataSetWebContext
 import org.incal.core.FilterCondition
 import org.incal.play.controllers.WebContext
 import org.incal.play.security.AuthAction
-import play.api.libs.json.{JsNumber, JsObject}
-import play.api.mvc.Action
 import reactivemongo.bson.BSONObjectID
 import services.SampleRequestService
-import views.html.dataset.view.actionView
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -32,20 +28,6 @@ class SampleRequestController @Inject()(
 
   private implicit val idsFormatter = BSONObjectIDStringFormatter
   private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
-
-
-  def catalogueItems = Action.async { implicit request =>
-    for {
-      items <- sampleRequestService.getCatalogueItems
-    } yield {
-      val json = JsObject(
-        items map { case (name, id) =>
-          name -> JsNumber(id)
-        }
-      )
-      Ok(json)
-    }
-  }
 
   def submitRequest(
     catalogueItemId: Int,
@@ -67,16 +49,13 @@ class SampleRequestController @Inject()(
     implicit val dataSetWebCtx = dataSetWebContext(dataSet)
     for {
       formViewData <- sampleRequestService.getActionFormViewData(dataSet)
-    } yield Ok(actionView(
-      sampleRequestRoutes.submitRequest(0, ""),
-      "Request Samples",
-      "Sample Request",
-      "Item",
-      formViewData.dataViewId,
-      formViewData.tableViewParts,
-      12,
-      formViewData.dataSetSetting,
-      formViewData.dataSpaceMetaInfos
+      catalogueItems <- sampleRequestService.getCatalogueItems
+    } yield Ok(views.html.sampleRequest.submissionForm(
+        catalogueItems,
+        formViewData.dataViewId,
+        formViewData.tableViewParts,
+        formViewData.dataSetSetting,
+        formViewData.dataSpaceMetaInfos
     ))
   }
 

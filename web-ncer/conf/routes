@@ -8,7 +8,6 @@ GET         /admin/showRCPrediction                             controllers.ml.R
 POST        /admin/runRCPrediction                              controllers.ml.RCPredictionController.runRCPrediction
 
 # Sample Request
-GET         /sampleRequest/catalogueItems                       controllers.sampleRequest.SampleRequestController.catalogueItems
 GET         /sampleRequest/submissionForm                       controllers.sampleRequest.SampleRequestController.submissionForm(dataSet : String)
 POST        /sampleRequest/submitRequest                        controllers.sampleRequest.SampleRequestController.submitRequest(catalogueItemId : Int, dataSetId : String, tableColumnNames : Seq[String] ?= Nil, filter : Seq[org.incal.core.FilterCondition] ?= Nil, selectedIds : Seq[BSONObjectID] ?= Nil)
 
