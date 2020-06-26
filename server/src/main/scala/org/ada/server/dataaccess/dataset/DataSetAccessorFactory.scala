@@ -6,7 +6,7 @@ import org.ada.server.dataaccess._
 import org.ada.server.models.DataSetFormattersAndIds.DataSetMetaInfoIdentity
 import org.ada.server.models._
 import org.ada.server.dataaccess.RepoTypes._
-import org.ada.server.dataaccess.dataset.RefreshableCache
+import org.ada.server.dataaccess.dataset.SimpleInitializableCache
 import org.incal.core.dataaccess.Criterion.Infix
 import play.api.Logger
 import play.api.libs.json.JsObject
@@ -57,7 +57,7 @@ protected[dataaccess] class DataSetAccessorFactoryImpl @Inject()(
     dataSetMetaInfoRepoFactory: DataSetMetaInfoRepoFactory,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     dataSetSettingRepo: DataSetSettingRepo
-  ) extends RefreshableCache[String, DataSetAccessor](false) with DataSetAccessorFactory {
+  ) extends SimpleInitializableCache[String, DataSetAccessor](false) with DataSetAccessorFactory {
 
   override protected def createInstance(
     dataSetId: String
@@ -148,14 +148,13 @@ protected[dataaccess] class DataSetAccessorFactoryImpl @Inject()(
         cachedDataSetRepoFactory(collectionName, fieldNamesAndTypes, mongoAutoCreateIndex)
       } else
         storageType match {
-          case StorageType.Mongo => {
+          case StorageType.Mongo =>
             println(s"Creating Mongo based data set repo for '$dataSetId'.")
             mongoDataSetRepoFactory(collectionName, fieldNamesAndTypes, mongoAutoCreateIndex)
-          }
-          case StorageType.ElasticSearch => {
+
+          case StorageType.ElasticSearch =>
             println(s"Creating Elastic Search based data set repo for '$dataSetId'.")
             elasticDataSetRepoFactory(collectionName, collectionName, fieldNamesAndTypes, None, false)
-          }
         }
       }
     }
