@@ -1,5 +1,6 @@
 package org.ada.server.dataaccess.dataset
 
+import java.util.concurrent.Semaphore
 import org.ada.server.dataaccess.ElasticJsonCrudRepoFactory
 import org.ada.server.models.{DataSetMetaInfo, DataSetSetting, FieldTypeSpec}
 import org.incal.core.dataaccess.Criterion.Infix
@@ -59,6 +60,7 @@ protected class DataSetAccessorImpl(
     dataSetSettingRepo: DataSetSettingRepo
   ) extends DataSetAccessor {
 
+  private val dataSetUpdateSemaphore = new Semaphore(1) // couldn't use ReentrantLock here because a single thread must lock and unlock the lock, which doesn't hold in 'future'
   private var _dataSetRepo: Option[JsonCrudRepo] = None
   private var dataSetMetaInfoRepo = initDataSetMetaInfoRepo
 
@@ -80,16 +82,22 @@ protected class DataSetAccessorImpl(
       dataSetRepo
 
   override def updateDataSetRepo(setting: DataSetSetting) =
-    for {
-      newDataSetRepo <- createDataSetRepo(Some(setting))
-    } yield
-      _dataSetRepo = Some(newDataSetRepo)
+    updateDataSetRepoAux(Some(setting))
 
   override def updateDataSetRepo =
+    updateDataSetRepoAux(None)
+
+  private def updateDataSetRepoAux(
+    setting: Option[DataSetSetting]
+  ) =
     for {
-      newDataSetRepo <- createDataSetRepo(None)
-    } yield
+      // acquire lock/semaphore in a new future to have a creation of the entire 'updateDateSet' future non-blocking
+      _ <- Future(dataSetUpdateSemaphore.acquire())
+      newDataSetRepo <- createDataSetRepo(setting)
+    } yield {
       _dataSetRepo = Some(newDataSetRepo)
+      dataSetUpdateSemaphore.release()
+    }
 
   override def setting =
     for {
