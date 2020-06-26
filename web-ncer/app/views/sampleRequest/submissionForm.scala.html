@@ -31,7 +31,7 @@
         </div>
         <div class="pull-right">
             <button class="btn btn-info btn-sm" type="button" onclick="submitForm();">
-             Request Samples
+                Request Samples
             </button>
         </div>
         <div>
@@ -69,6 +69,9 @@
     @stringFilterId(filter: Option[Filter]) = @{
     filter.flatMap(_._id.map(_.stringify)).getOrElse("")
 }
+
+
+
 
     @bottomResources = {
 
@@ -178,8 +181,15 @@
         }
 
         function submitForm() {
-            const catalogueItemId = $('#remsCatalogueItemDropdown').val()
-            submit("post", '@{sampleRequestRoutes.submitRequest(0, dataSetSetting.dataSetId, Nil, Nil, Nil)}', {})
+            submit("post", '@{sampleRequestRoutes.submitRequest(
+                0,
+                dataSetSetting.dataSetId,
+                tableViewParts.head.tableFields.map(_.name).toVector,
+                Nil,
+                Nil
+            )}', {
+                catalogueItemId: $('#remsCatalogueItemDropdown').val()
+            })
         }
     </script>
 }
