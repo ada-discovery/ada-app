@@ -3,7 +3,7 @@ package controllers.sampleRequest
 import akka.stream.Materializer
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
-import javax.ws.rs.BadRequestException
+import org.ada.server.models.User
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaBaseController
 import org.ada.web.controllers.dataset.DataSetWebContext
@@ -14,6 +14,7 @@ import reactivemongo.bson.BSONObjectID
 import services.SampleRequestService
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 case class SampleRequest(
   dataSetId: String,
@@ -36,10 +37,22 @@ class SampleRequestController @Inject()(
     filter: Seq[FilterCondition],
     selectedIds: Seq[BSONObjectID]
   ) = AuthAction { implicit  request =>
+    val itemId = if (catalogueItemId == -1) {
+      val exc = new IllegalArgumentException("'catalogueItemId' not specified in URL or body.")
+      request.body
+        .asFormUrlEncoded
+        .getOrElse(throw exc)
+        .find({ case (key, _) => key == "catalogueItemId" })
+        .getOrElse(throw exc)
+        ._2
+        .head
+        .toInt
+    } else
+      catalogueItemId
     for {
       user <- getUserForRequest()
       csv <- sampleRequestService.createCsv(dataSetId, filter, tableColumnNames, selectedIds)
-      _ <- sampleRequestService.sendToRems(csv, catalogueItemId, user)
+      _ <- sampleRequestService.sendToRems(csv, itemId, user)
     } yield {
       Ok("")
     }

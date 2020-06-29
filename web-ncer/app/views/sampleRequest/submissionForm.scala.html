@@ -182,7 +182,7 @@
 
         function submitForm() {
             submit("post", '@{sampleRequestRoutes.submitRequest(
-                0,
+                -1,
                 dataSetSetting.dataSetId,
                 tableViewParts.head.tableFields.map(_.name).toVector,
                 Nil,
