@@ -2,6 +2,8 @@ package services
 
 import java.nio.charset.StandardCharsets
 
+import akka.stream.scaladsl
+import akka.stream.scaladsl.Source
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import com.google.inject.Inject
 import org.ada.server.AdaException
@@ -16,11 +18,15 @@ import org.incal.core.dataaccess.Criterion._
 import play.api.Configuration
 import play.api.libs.json.{JsNull, JsObject, Json}
 import play.api.libs.ws.WSClient
+import play.api.mvc.MultipartFormData.{DataPart, FilePart, Part}
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.SampleRequestSettingRepo
 import org.ada.server.dataaccess.dataset.FilterRepoExtra._
 import org.incal.core.dataaccess.Criterion
 import org.incal.play.{Page, PageOrder}
+import akka.stream.scaladsl._
+import akka.stream.scaladsl.FileIO
+import akka.util.ByteString
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -56,6 +62,7 @@ class SampleRequestService @Inject() (
     fieldNames: Seq[String] = Nil,
     selectedIds: Seq[BSONObjectID]
   ): Future[String] = {
+    val SEPARATOR = "\t"
     val dsa = dsaf(dataSetId).getOrElse(throw new IllegalArgumentException(s"Dataset '$dataSetId' does not exist."))
     val fieldRepo = dsa.fieldRepo
     val dataSetRepo = dsa.dataSetRepo
@@ -68,13 +75,13 @@ class SampleRequestService @Inject() (
     } yield {
       val header = fields.map(_.name)
       val csv = new StringBuilder("")
-      csv ++= header.mkString("\t")
+      csv ++= header.mkString(SEPARATOR)
       csv += '\n'
       items foreach { item =>
         val row = header map { header =>
           (item \ header).getOrElse(JsNull).toString
         }
-        csv ++= row.mkString("\t")
+        csv ++= row.mkString(SEPARATOR)
         csv += '\n'
       }
       csv.toString
@@ -171,9 +178,14 @@ class SampleRequestService @Inject() (
         "application-id" -> applicationId.toString
       ).withHeaders(
         "x-rems-user-id" -> remsUser,
-        "x-rems-api-key" -> remsApiKey
-      ).put(
-        csv.getBytes(StandardCharsets.UTF_8)
+        "x-rems-api-key" -> remsApiKey,
+        "Content-Type" -> "multipart/form-data; boundary=---------------------------244194806337621270012523953493"
+      ).post(
+        Source(
+          Vector(
+            FilePart("file", "samples.csv", Option("text/csv"), Source(Vector(ByteString(csv))))
+          )
+        )
       )
     } yield {
       if (res.status != 200) throw new AdaException("Could not add attachment in REMS. Reason: " + res.body)
