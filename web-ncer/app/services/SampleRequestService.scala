@@ -233,8 +233,8 @@ class SampleRequestService @Inject() (
           "field-values" -> Json.arr(
             Json.obj(
               "form" -> catalogueFormId,
-              "field" -> "fld1",
-              "value" -> attachmentId
+              "field" -> "fld1", // TODO: Lookup correct fieldId based on configurable field name
+              "value" -> attachmentId.toString
             )
           )
         )
