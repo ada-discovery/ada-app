@@ -38,6 +38,12 @@ case class ActionFormViewData(
   dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )
 
+case class CatalogueItem(
+  id: Int,
+  name: String,
+  formId: Int
+)
+
 class SampleRequestService @Inject() (
   dsaf: DataSetAccessorFactory,
   sampleRequestSettingRepo: SampleRequestSettingRepo,
@@ -49,11 +55,14 @@ class SampleRequestService @Inject() (
   private val remsUrl = config.getString("rems.url").getOrElse(
     throw new AdaException("Configuration issue: 'rems.url' was not found in the configuration file.")
   )
-  private val remsUser = config.getString("rems.user").getOrElse(
-    throw new AdaException("Configuration issue: 'rems.user' was not found in the configuration file.")
+  private val remsServiceUser = config.getString("rems.serviceUser").getOrElse(
+    throw new AdaException("Configuration issue: 'rems.serviceUser' was not found in the configuration file.")
   )
-  private val remsApiKey = config.getString("rems.apiKey").getOrElse(
-    throw new AdaException("Configuration issue: 'rems.apiKey' was not found in the configuration file.")
+  private val remsUserPrefix = config.getString("rems.userPrefix").getOrElse(
+    throw new AdaException("Configuration issue: 'rems.userPrefix' was not found in the configuration file.")
+  )
+  private val remsMasterApiKey = config.getString("rems.masterApiKey").getOrElse(
+    throw new AdaException("Configuration issue: 'rems.masterApiKey' was not found in the configuration file.")
   )
 
   def createCsv(
@@ -91,26 +100,33 @@ class SampleRequestService @Inject() (
   def sendToRems(
     csv: String,
     catalogueItemId: Int,
+    catalogueFormId: Int,
     user: User
-  ): Future[_] = {
+  ): Future[String] = {
     for {
-      applicationId <- createApplication(catalogueItemId)
-      _ <- addAttachment(applicationId, csv)
-      _ <- inviteMember(applicationId, user.ldapDn, user.email)
-    } yield { }
+      applicationId <- createApplication(catalogueItemId, user)
+      attachmentId <- addAttachment(applicationId, csv, user)
+      _ <- saveDraft(applicationId, attachmentId, catalogueFormId, user)
+    } yield {
+      s"$remsUrl/application/$applicationId"
+    }
   }
 
-  def getCatalogueItems: Future[Map[String, Int]] =
+  def getCatalogueItems: Future[Seq[CatalogueItem]] =
     for {
       res <- ws.url(remsUrl + "/api/catalogue").withHeaders(
-        "x-rems-user-id" -> remsUser,
-        "x-rems-api-key" -> remsApiKey
+        "x-rems-user-id" -> remsServiceUser,
+        "x-rems-api-key" -> remsMasterApiKey
       ).get()
     } yield {
       if (res.status != 200) throw new AdaException("Failed to retrieve catalogue items from REMS. Reason: " + res.body)
       res.json.as[Seq[JsObject]] map { catalogueItemJson =>
-        (catalogueItemJson \ "localizations" \ "en" \ "title").as[String] -> (catalogueItemJson \ "id").as[Int]
-      } toMap
+        CatalogueItem(
+          (catalogueItemJson \ "id").as[Int],
+          (catalogueItemJson \ "localizations" \ "en" \ "title").as[String],
+          (catalogueItemJson \ "formid").as[Int]
+        )
+      }
     }
   
   def getActionFormViewData(
@@ -171,14 +187,27 @@ class SampleRequestService @Inject() (
   ): Future[Map[String, String => Option[Any]]] =
     Future(Map())
 
+  private def createApplication(catalogueItemId: Int, user: User): Future[Int] =
+    for {
+      res <- ws.url(remsUrl + "/api/applications/create").withHeaders(
+        "x-rems-user-id" -> userToRemsUser(user),
+        "x-rems-api-key" -> remsMasterApiKey,
+        "Content-Type" -> "application/json"
+      ).post(
+        Json.obj("catalogue-item-ids" -> Vector(catalogueItemId))
+      )
+    } yield {
+      if (res.status != 200) throw new AdaException("Could not create application in REMS. Reason: " + res.body)
+      (res.json \ "application-id").as[Int]
+    }
 
-  private def addAttachment(applicationId: Int, csv: String): Future[Unit] =
+  private def addAttachment(applicationId: Int, csv: String, user: User): Future[Int] =
     for {
       res <- ws.url(remsUrl + "/api/applications/add-attachment").withQueryString(
         "application-id" -> applicationId.toString
       ).withHeaders(
-        "x-rems-user-id" -> remsUser,
-        "x-rems-api-key" -> remsApiKey,
+        "x-rems-user-id" -> userToRemsUser(user),
+        "x-rems-api-key" -> remsMasterApiKey,
         "Content-Type" -> "multipart/form-data; boundary=---------------------------244194806337621270012523953493"
       ).post(
         Source(
@@ -189,39 +218,32 @@ class SampleRequestService @Inject() (
       )
     } yield {
       if (res.status != 200) throw new AdaException("Could not add attachment in REMS. Reason: " + res.body)
+      (res.json \ "id").as[Int]
     }
 
-  private def createApplication(catalogueItemId: Int): Future[Int] =
+  private def saveDraft(applicationId: Int, attachmentId: Int, catalogueFormId: Int, user: User): Future[Unit] =
     for {
-      res <- ws.url(remsUrl + "/api/applications/create").withHeaders(
-        "x-rems-user-id" -> remsUser,
-        "x-rems-api-key" -> remsApiKey,
-        "Content-Type" -> "application/json"
-      ).post(
-        Json.obj("catalogue-item-ids" -> Vector(catalogueItemId))
-      )
-    } yield {
-      if (res.status != 200) throw new AdaException("Could not create application in REMS. Reason: " + res.body)
-      (res.json \ "application-id").as[Int]
-    }
-
-  private def inviteMember(applicationId: Int, name: String, email: String): Future[Unit] = {
-    for {
-      res <- ws.url(remsUrl + "/api/applications/invite-member").withHeaders(
-        "x-rems-user-id" -> remsUser,
-        "x-rems-api-key" -> remsApiKey,
+      res <- ws.url(remsUrl + "/api/applications/save-draft").withHeaders(
+        "x-rems-user-id" -> userToRemsUser(user),
+        "x-rems-api-key" -> remsMasterApiKey,
         "Content-Type" -> "application/json"
       ).post(
         Json.obj(
           "application-id" -> applicationId,
-          "member" -> Json.obj(
-            "name" -> name,
-            "email" -> email
+          "field-values" -> Json.arr(
+            Json.obj(
+              "form" -> catalogueFormId,
+              "field" -> "fld1",
+              "value" -> attachmentId
+            )
           )
         )
       )
     } yield {
-      if (res.status != 200) throw new AdaException("Could not invite member in REMS. Reason: " + res.body)
+      if (res.status != 200) throw new AdaException("Could not create application in REMS. Reason: " + res.body)
     }
-  }
+
+  private def userToRemsUser(user: User) =
+    remsUserPrefix + user.email.split("@").head
+
 }

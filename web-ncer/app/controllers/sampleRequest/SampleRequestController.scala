@@ -10,6 +10,7 @@ import org.ada.web.controllers.dataset.DataSetWebContext
 import org.incal.core.FilterCondition
 import org.incal.play.controllers.WebContext
 import org.incal.play.security.AuthAction
+import play.api.mvc.AnyContent
 import reactivemongo.bson.BSONObjectID
 import services.SampleRequestService
 
@@ -32,29 +33,28 @@ class SampleRequestController @Inject()(
 
   def submitRequest(
     catalogueItemId: Int,
+    catalogueFormId: Int,
     dataSetId: String,
     tableColumnNames: Seq[String],
     filter: Seq[FilterCondition],
     selectedIds: Seq[BSONObjectID]
   ) = AuthAction { implicit  request =>
     val itemId = if (catalogueItemId == -1) {
-      val exc = new IllegalArgumentException("'catalogueItemId' not specified in URL or body.")
-      request.body
-        .asFormUrlEncoded
-        .getOrElse(throw exc)
-        .find({ case (key, _) => key == "catalogueItemId" })
-        .getOrElse(throw exc)
-        ._2
-        .head
-        .toInt
+      lookupKeyValueInRequestBody("catalogueItemId", request)
     } else
       catalogueItemId
+
+    val formId = if (catalogueFormId == -1) {
+      lookupKeyValueInRequestBody("catalogueFormId", request)
+    } else
+      catalogueFormId
+
     for {
       user <- getUserForRequest()
       csv <- sampleRequestService.createCsv(dataSetId, filter, tableColumnNames, selectedIds)
-      _ <- sampleRequestService.sendToRems(csv, itemId, user)
+      url <- sampleRequestService.sendToRems(csv, itemId, formId, user)
     } yield {
-      Ok("")
+      PermanentRedirect(url)
     }
   }
 
@@ -70,6 +70,18 @@ class SampleRequestController @Inject()(
         formViewData.dataSetSetting,
         formViewData.dataSpaceMetaInfos
     ))
+  }
+
+  private def lookupKeyValueInRequestBody(key: String, request: AuthenticatedRequest[AnyContent]): Int = {
+    val exc = new IllegalArgumentException(s"'$key' not specified in URL or body.")
+    request.body
+      .asFormUrlEncoded
+      .getOrElse(throw exc)
+      .find({ case (k, _) => k == key })
+      .getOrElse(throw exc)
+      ._2
+      .head
+      .toInt
   }
 
   private def getUserForRequest()(implicit request: AuthenticatedRequest[_]) =

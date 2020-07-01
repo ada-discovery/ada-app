@@ -10,10 +10,10 @@
 @import views.html.dataset.view.{viewCountFilters, viewTables}
 @import views.html.dataset._
 @import views.html.layout
-
+@import services.CatalogueItem
 
 @(
-        catalogueItems: Map[String, Int],
+        catalogueItems: Seq[CatalogueItem],
         dataViewId: BSONObjectID,
         tableViewParts: Seq[TableViewData],
         dataSetSetting: DataSetSetting,
@@ -42,8 +42,8 @@
 
 @catalogueItemDropdown = {
     <select id="remsCatalogueItemDropdown">
-        @catalogueItems.map { case (name, id) =>
-            <option value="@id">@name</option>
+        @catalogueItems.map { item =>
+            <option value='{"id": @item.id, "formId": @item.formId}'>@item.name</option>
         }
     </select>
 }
@@ -181,14 +181,18 @@
         }
 
         function submitForm() {
+            const option = JSON.parse($('#remsCatalogueItemDropdown').val())
             submit("post", '@{sampleRequestRoutes.submitRequest(
+                -1,
                 -1,
                 dataSetSetting.dataSetId,
                 tableViewParts.head.tableFields.map(_.name).toVector,
                 Nil,
                 Nil
             )}', {
-                catalogueItemId: $('#remsCatalogueItemDropdown').val()
+                catalogueItemId: option.id,
+                catalogueFormId: option.formId,
+
             })
         }
     </script>
