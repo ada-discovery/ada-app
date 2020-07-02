@@ -54,7 +54,7 @@ class SampleRequestController @Inject()(
       csv <- sampleRequestService.createCsv(dataSetId, filter, tableColumnNames, selectedIds)
       url <- sampleRequestService.sendToRems(csv, itemId, formId, user)
     } yield {
-      PermanentRedirect(url)
+      Ok(url)
     }
   }
 

@@ -37,6 +37,9 @@
         <div>
             @catalogueItemDropdown
         </div>
+        <div>
+            <a id="remsLink" href="" target="_blank"></a>
+        </div>
     </div>
 }
 
@@ -181,19 +184,36 @@
         }
 
         function submitForm() {
-            const option = JSON.parse($('#remsCatalogueItemDropdown').val())
-            submit("post", '@{sampleRequestRoutes.submitRequest(
+            const action = '@Html(sampleRequestRoutes.submitRequest(
                 -1,
                 -1,
                 dataSetSetting.dataSetId,
                 tableViewParts.head.tableFields.map(_.name).toVector,
                 Nil,
                 Nil
-            )}', {
+            ).url)'
+            const option = JSON.parse($('#remsCatalogueItemDropdown').val())
+            const params = {
                 catalogueItemId: option.id,
-                catalogueFormId: option.formId,
-
-            })
+                catalogueFormId: option.formId
+            }
+            const form = $('<form></form>');
+            form.attr("method", "POST");
+            form.attr("action", action);
+            addParams(form, params)
+            $.ajax({
+                type: form.attr('method'),
+                url: form.attr('action'),
+                data: form.serialize(),
+                success: function(url) {
+                    const a = $('#remsLink')
+                    a.text(url)
+                    a.attr('href', url)
+                },
+                error: function(ctx) {
+                  alert(ctx.responseText)
+                }
+            });
         }
     </script>
 }
