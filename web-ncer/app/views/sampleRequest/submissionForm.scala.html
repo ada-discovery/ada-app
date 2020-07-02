@@ -34,17 +34,21 @@
                 Request Samples
             </button>
         </div>
-        <div>
-            @catalogueItemDropdown
+    </div>
+    <div class="row">
+        <div class="form-group">
+        @catalogueItemDropdown
         </div>
-        <div>
+        <div id="application-link" style="display: none;" class="form-group">
+            <label for="remsLink">Direct Link to Application:</label>
             <a id="remsLink" href="" target="_blank"></a>
         </div>
     </div>
 }
 
 @catalogueItemDropdown = {
-    <select id="remsCatalogueItemDropdown">
+    <label for="remsCatalogueItemDropdown">REMS Catalogue Items:</label>
+    <select id="remsCatalogueItemDropdown" class="form-control">
         @catalogueItems.map { item =>
             <option value='{"id": @item.id, "formId": @item.formId}'>@item.name</option>
         }
@@ -209,6 +213,7 @@
                     const a = $('#remsLink')
                     a.text(url)
                     a.attr('href', url)
+                    $('#application-link').show()
                 },
                 error: function(ctx) {
                   alert(ctx.responseText)
