@@ -7,12 +7,12 @@ import org.ada.server.models.User
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaBaseController
 import org.ada.web.controllers.dataset.DataSetWebContext
-import org.incal.core.FilterCondition
 import org.incal.play.controllers.WebContext
 import org.incal.play.security.AuthAction
-import play.api.mvc.AnyContent
+import play.api.data.Form
 import reactivemongo.bson.BSONObjectID
 import services.SampleRequestService
+import play.api.data.Forms._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -31,31 +31,50 @@ class SampleRequestController @Inject()(
   private implicit val idsFormatter = BSONObjectIDStringFormatter
   private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
-  def submitRequest(
-    catalogueItemId: Int,
-    catalogueFormId: Int,
+  case class SampleRequest(
     dataSetId: String,
     tableColumnNames: Seq[String],
-    filter: Seq[FilterCondition],
+    catalogueItemId: Int,
+    catalogueFormId: Int,
+//    filter: Seq[FilterCondition], TODO
     selectedIds: Seq[BSONObjectID]
-  ) = AuthAction { implicit  request =>
-    val itemId = if (catalogueItemId == -1) {
-      lookupKeyValueInRequestBody("catalogueItemId", request)
-    } else
-      catalogueItemId
+  )
 
-    val formId = if (catalogueFormId == -1) {
-      lookupKeyValueInRequestBody("catalogueFormId", request)
-    } else
-      catalogueFormId
+  val requestForm = Form(
+    mapping(
+      "dataSetId" -> nonEmptyText,
+      "tableColumnNames" -> seq(nonEmptyText),
+      "catalogueItemId" -> number,
+      "catalogueFormId" -> number,
+      "selectedIds" -> seq(of[BSONObjectID])
+    )(SampleRequest.apply)(SampleRequest.unapply)
+  )
 
-    for {
-      user <- getUserForRequest()
-      csv <- sampleRequestService.createCsv(dataSetId, filter, tableColumnNames, selectedIds)
-      url <- sampleRequestService.sendToRems(csv, itemId, formId, user)
-    } yield {
-      Ok(url)
-    }
+  def submitRequest = AuthAction { implicit  request =>
+    requestForm.bindFromRequest.fold(
+      formWithError => {
+        Future(BadRequest("Form submission failed. Please contact administrator."))
+      },
+      sampleRequest => {
+        for {
+          user <- getUserForRequest()
+          csv <- sampleRequestService.createCsv(
+            sampleRequest.dataSetId,
+            Nil,
+            sampleRequest.tableColumnNames,
+            sampleRequest.selectedIds
+          )
+          url <- sampleRequestService.sendToRems(
+            csv,
+            sampleRequest.catalogueItemId,
+            sampleRequest.catalogueFormId,
+            user
+          )
+        } yield {
+          Ok(url)
+        }
+      }
+    )
   }
 
   def submissionForm(dataSet: String) = AuthAction { implicit request =>
@@ -70,18 +89,6 @@ class SampleRequestController @Inject()(
         formViewData.dataSetSetting,
         formViewData.dataSpaceMetaInfos
     ))
-  }
-
-  private def lookupKeyValueInRequestBody(key: String, request: AuthenticatedRequest[AnyContent]): Int = {
-    val exc = new IllegalArgumentException(s"'$key' not specified in URL or body.")
-    request.body
-      .asFormUrlEncoded
-      .getOrElse(throw exc)
-      .find({ case (k, _) => k == key })
-      .getOrElse(throw exc)
-      ._2
-      .head
-      .toInt
   }
 
   private def getUserForRequest()(implicit request: AuthenticatedRequest[_]) =

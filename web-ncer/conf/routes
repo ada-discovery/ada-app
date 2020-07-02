@@ -9,7 +9,7 @@ POST        /admin/runRCPrediction                              controllers.ml.R
 
 # Sample Request
 GET         /sampleRequest/submissionForm                       controllers.sampleRequest.SampleRequestController.submissionForm(dataSet : String)
-POST        /sampleRequest/submitRequest                        controllers.sampleRequest.SampleRequestController.submitRequest(catalogueItemId : Int ?= -1, catalogueFormId : Int ?= -1, dataSetId : String, tableColumnNames : Seq[String] ?= Nil, filter : Seq[org.incal.core.FilterCondition] ?= Nil, selectedIds : Seq[BSONObjectID] ?= Nil)
+POST        /sampleRequest/submitRequest                        controllers.sampleRequest.SampleRequestController.submitRequest
 
 # Sample Request Settings
 GET         /sampleRequestSettings                              controllers.sampleRequest.SampleRequestSettingController.find(p: Int ?= 0, s: String ?= "-timeCreated", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
