@@ -3,16 +3,19 @@ package controllers.sampleRequest
 import akka.stream.Materializer
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import javax.inject.Inject
+import org.ada.server.models.Filter.filterConditionFormat
 import org.ada.server.models.User
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaBaseController
 import org.ada.web.controllers.dataset.DataSetWebContext
+import org.incal.core.FilterCondition
 import org.incal.play.controllers.WebContext
+import org.incal.play.formatters.JsonFormatter
 import org.incal.play.security.AuthAction
 import play.api.data.Form
+import play.api.data.Forms._
 import reactivemongo.bson.BSONObjectID
 import services.SampleRequestService
-import play.api.data.Forms._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -30,14 +33,16 @@ class SampleRequestController @Inject()(
 
   private implicit val idsFormatter = BSONObjectIDStringFormatter
   private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
+  private implicit val filterConditionFormatter = JsonFormatter[FilterCondition]
+
 
   case class SampleRequest(
     dataSetId: String,
     tableColumnNames: Seq[String],
     catalogueItemId: Int,
     catalogueFormId: Int,
-//    filter: Seq[FilterCondition], TODO
-    selectedIds: Seq[BSONObjectID]
+    selectedIds: Seq[BSONObjectID],
+    conditions: Seq[FilterCondition]
   )
 
   val requestForm = Form(
@@ -46,7 +51,8 @@ class SampleRequestController @Inject()(
       "tableColumnNames" -> seq(nonEmptyText),
       "catalogueItemId" -> number,
       "catalogueFormId" -> number,
-      "selectedIds" -> seq(of[BSONObjectID])
+      "selectedIds" -> seq(of[BSONObjectID]),
+      "conditions" -> seq(of[FilterCondition])
     )(SampleRequest.apply)(SampleRequest.unapply)
   )
 
@@ -60,7 +66,7 @@ class SampleRequestController @Inject()(
           user <- getUserForRequest()
           csv <- sampleRequestService.createCsv(
             sampleRequest.dataSetId,
-            Nil,
+            sampleRequest.conditions,
             sampleRequest.tableColumnNames,
             sampleRequest.selectedIds
           )
@@ -83,11 +89,12 @@ class SampleRequestController @Inject()(
       formViewData <- sampleRequestService.getActionFormViewData(dataSet)
       catalogueItems <- sampleRequestService.getCatalogueItems
     } yield Ok(views.html.sampleRequest.submissionForm(
-        catalogueItems,
-        formViewData.dataViewId,
-        formViewData.tableViewParts,
-        formViewData.dataSetSetting,
-        formViewData.dataSpaceMetaInfos
+      catalogueItems,
+      formViewData.dataViewId,
+      formViewData.tableViewParts,
+      formViewData.dataSetSetting,
+      formViewData.dataSpaceMetaInfos,
+      formViewData.elementGridWidth
     ))
   }
 

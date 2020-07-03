@@ -1,32 +1,27 @@
 package services
 
-import java.nio.charset.StandardCharsets
-
-import akka.stream.scaladsl
 import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import com.google.inject.Inject
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.FilterRepoExtra._
 import org.ada.server.field.FieldUtil
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
-import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, Filter, User}
+import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, User}
 import org.ada.web.controllers.dataset.{DataSetViewHelper, TableViewData}
 import org.ada.web.services.DataSpaceService
 import org.incal.core.FilterCondition
+import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion._
+import org.incal.play.{Page, PageOrder}
 import play.api.Configuration
 import play.api.libs.json.{JsNull, JsObject, Json}
 import play.api.libs.ws.WSClient
-import play.api.mvc.MultipartFormData.{DataPart, FilePart, Part}
+import play.api.mvc.MultipartFormData.FilePart
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.SampleRequestSettingRepo
-import org.ada.server.dataaccess.dataset.FilterRepoExtra._
-import org.incal.core.dataaccess.Criterion
-import org.incal.play.{Page, PageOrder}
-import akka.stream.scaladsl._
-import akka.stream.scaladsl.FileIO
-import akka.util.ByteString
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -35,7 +30,8 @@ case class ActionFormViewData(
   dataViewId: BSONObjectID,
   tableViewParts: Seq[TableViewData],
   dataSetSetting: DataSetSetting,
-  dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+  dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
+  elementGridWidth: Int
 )
 
 case class CatalogueItem(
@@ -67,20 +63,18 @@ class SampleRequestService @Inject() (
 
   def createCsv(
     dataSetId: String,
-    filter: Seq[FilterCondition] = Nil,
-    fieldNames: Seq[String] = Nil,
+    conditions: Seq[FilterCondition],
+    fieldNames: Seq[String],
     selectedIds: Seq[BSONObjectID]
   ): Future[String] = {
     val SEPARATOR = "\t"
     val dsa = dsaf(dataSetId).getOrElse(throw new IllegalArgumentException(s"Dataset '$dataSetId' does not exist."))
-    val fieldRepo = dsa.fieldRepo
-    val dataSetRepo = dsa.dataSetRepo
     val fieldCriteria = if (fieldNames.nonEmpty) Vector(FieldIdentity.name #-> fieldNames) else Nil
     val selectCriteria = if (selectedIds.nonEmpty) Vector(JsObjectIdentity.name #-> selectedIds) else Nil
     for {
-      fields <- fieldRepo.find(fieldCriteria)
-      valueCriteria <- FieldUtil.toDataSetCriteria(fieldRepo, filter)
-      items <- dataSetRepo.find(valueCriteria ++ selectCriteria)
+      fields <- dsa.fieldRepo.find(fieldCriteria)
+      valueCriteria <- FieldUtil.toDataSetCriteria(dsa.fieldRepo, conditions)
+      items <- dsa.dataSetRepo.find(valueCriteria ++ selectCriteria)
     } yield {
       val header = fields.map(_.name)
       val csv = new StringBuilder("")
@@ -169,7 +163,13 @@ class SampleRequestService @Inject() (
           TableViewData(newPage, Some(viewResponse.filter), viewResponse.tableFields)
       }
 
-      ActionFormViewData(sampleRequestSetting.viewId, tableViewData, dataSetSetting, dataSpaceTree)
+      ActionFormViewData(
+        sampleRequestSetting.viewId,
+        tableViewData,
+        dataSetSetting,
+        dataSpaceTree,
+        dataView.elementGridWidth
+      )
     }
   }
 
