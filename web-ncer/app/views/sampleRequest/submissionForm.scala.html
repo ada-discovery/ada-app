@@ -25,15 +25,17 @@
 }
 
 @actions = {
-    <button class="btn btn-info btn-sm" type="button" onclick="submitForm();">
-        Request Samples
-    </button>
-    <div class="row">
+    <div>
         <div class="form-group">
-        @catalogueItemDropdown
+            <button class="btn btn-info btn-sm" type="button" onclick="submitForm();">
+                Request Samples
+            </button>
         </div>
-        <div id="application-link" style="display: none;" class="form-group">
-            <label for="remsLink">Direct Link to Application:</label>
+        <div class="form-group">
+            @catalogueItemDropdown
+        </div>
+        <div id="application-link" class="form-group">
+            <label for="remsLink">Direct Link to Application:</label><br/>
             <a id="remsLink" href="" target="_blank"></a>
         </div>
         <p id="request-error" style="display: none;"></p>
@@ -59,7 +61,6 @@
             })
             function submitForm() {
                 $('#request-error').hide()
-                $('#application-link').hide()
                 const option = JSON.parse($('#remsCatalogueItemDropdown').val())
                 const action = '@Html(sampleRequestRoutes.submitRequest.url)'
                 const table = getSelectedRowIds($('#tablesTr .table-div'))
@@ -88,7 +89,6 @@
                         const a = $('#remsLink')
                         a.text(url)
                         a.attr('href', url)
-                        $('#application-link').show()
                     },
                     error: function(ctx) {
                         const p = $('#request-error')
