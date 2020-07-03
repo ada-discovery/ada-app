@@ -73,7 +73,7 @@
                     catalogueItemId: option.id,
                     catalogueFormId: option.formId,
                     'selectedIds[]': selectedIds,
-                    'conditions': JSON.stringify($('.filter-div').multiFilter('getModel'))
+                    'conditions[]': $('.filter-div').multiFilter('getModel').map(model => JSON.stringify(model))
                 }
 
                 const form = $('<form></form>');
@@ -90,7 +90,7 @@
                         a.attr('href', url)
                         $('#application-link').show()
                     },
-                    error: function(ctx) {xk
+                    error: function(ctx) {
                         const p = $('#request-error')
                         p.text(ctx.responseText)
                         p.show()
