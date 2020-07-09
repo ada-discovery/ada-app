@@ -7,6 +7,15 @@ import java.util.concurrent.ConcurrentHashMap
 
 import scala.concurrent.duration._
 
+/**
+  * Simple cache with hooks for initialization of stored objects via `createInstance(id: ID)` function.
+  * The only exposed (public) function is `apply(id: ID)`, which retrieves a cached object or tries to create one if possible.
+  * Note that when ids are provided and `eagerInit` is set to true, the corresponding objects are created and cached on startup.
+  *
+  * @param eagerInit The flag indicating eager initialization
+  * @tparam ID The key type
+  * @tparam T The cached object type
+  */
 abstract class SimpleInitializableCache[ID, T](eagerInit: Boolean) {
 
   private val locks = new ConcurrentHashMap[ID, AnyRef]()
