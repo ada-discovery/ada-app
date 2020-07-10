@@ -62,14 +62,13 @@
             function submitForm() {
                 $('#request-error').hide()
                 const option = JSON.parse($('#remsCatalogueItemDropdown').val())
-                const action = '@Html(sampleRequestRoutes.submitRequest.url)'
+                const action = '@Html(sampleRequestRoutes.submitRequest(dataSetSetting.dataSetId).url)'
                 const table = getSelectedRowIds($('#tablesTr .table-div'))
                 const selectedIds = []
                 $.each(table, function (index, id) {
                     selectedIds.push(id)
                 })
                 const params = {
-                    dataSetId: '@dataSetSetting.dataSetId',
                     'tableColumnNames[]': '@tableViewParts.head.tableFields.map(_.name).toVector.mkString("\t")'.split("\t"),
                     catalogueItemId: option.id,
                     catalogueFormId: option.formId,

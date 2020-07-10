@@ -61,7 +61,8 @@ class SampleRequestSettingController @Inject()(
   )
 
   override def saveCall(
-    requestSetting: SampleRequestSetting)(
+    requestSetting: SampleRequestSetting
+  )(
     implicit request: AuthenticatedRequest[AnyContent]
   ): Future[BSONObjectID] =
     for {
@@ -182,7 +183,7 @@ class SampleRequestSettingController @Inject()(
     bodyParser: BodyParser[A]
   ) = restrictAdminOrPermission[A](settingPermission, bodyParser, noCaching = true)
 
-  def dataSetIds = restrictAny { implicit request =>
+  def dataSetIds = restrictAdminAny() { implicit request =>
     for {
       dataSetMetaInfos <- dataSpaceService.getDataSetMetaInfosForCurrentUser
     } yield {

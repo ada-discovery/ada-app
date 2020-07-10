@@ -34,6 +34,7 @@ class SampleRequestController @Inject()(
   private implicit val idsFormatter = BSONObjectIDStringFormatter
   private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
   private implicit val filterConditionFormatter = JsonFormatter[FilterCondition]
+  private def sampleRequestPermission(dataSet: String) = s"DS:$dataSet.dataSet"
 
 
   case class SampleRequest(
@@ -56,47 +57,49 @@ class SampleRequestController @Inject()(
     )(SampleRequest.apply)(SampleRequest.unapply)
   )
 
-  def submitRequest = AuthAction { implicit  request =>
-    requestForm.bindFromRequest.fold(
-      formWithError => {
-        Future(BadRequest("Form submission failed. Please contact administrator."))
-      },
-      sampleRequest => {
-        for {
-          user <- getUserForRequest()
-          csv <- sampleRequestService.createCsv(
-            sampleRequest.dataSetId,
-            sampleRequest.conditions,
-            sampleRequest.tableColumnNames,
-            sampleRequest.selectedIds
-          )
-          url <- sampleRequestService.sendToRems(
-            csv,
-            sampleRequest.catalogueItemId,
-            sampleRequest.catalogueFormId,
-            user
-          )
-        } yield {
-          Ok(url)
+  def submitRequest(dataSetId: String) =
+    restrictAdminOrPermissionAny(sampleRequestPermission(dataSetId)) { implicit  request =>
+      requestForm.bindFromRequest.fold(
+        formWithError => {
+          Future(BadRequest("Form submission failed. Please contact administrator."))
+        },
+        sampleRequest => {
+          for {
+            user <- getUserForRequest()
+            csv <- sampleRequestService.createCsv(
+              dataSetId,
+              sampleRequest.conditions,
+              sampleRequest.tableColumnNames,
+              sampleRequest.selectedIds
+            )
+            url <- sampleRequestService.sendToRems(
+              csv,
+              sampleRequest.catalogueItemId,
+              sampleRequest.catalogueFormId,
+              user
+            )
+          } yield {
+            Ok(url)
+          }
         }
-      }
-    )
-  }
+      )
+    }
 
-  def submissionForm(dataSet: String) = AuthAction { implicit request =>
-    implicit val dataSetWebCtx = dataSetWebContext(dataSet)
-    for {
-      formViewData <- sampleRequestService.getActionFormViewData(dataSet)
-      catalogueItems <- sampleRequestService.getCatalogueItems
-    } yield Ok(views.html.sampleRequest.submissionForm(
-      catalogueItems,
-      formViewData.dataViewId,
-      formViewData.tableViewParts,
-      formViewData.dataSetSetting,
-      formViewData.dataSpaceMetaInfos,
-      formViewData.elementGridWidth
-    ))
-  }
+  def submissionForm(dataSet: String) =
+    restrictAdminOrPermissionAny(sampleRequestPermission(dataSet)) { implicit request =>
+      implicit val dataSetWebCtx = dataSetWebContext(dataSet)
+      for {
+        formViewData <- sampleRequestService.getActionFormViewData(dataSet)
+        catalogueItems <- sampleRequestService.getCatalogueItems
+      } yield Ok(views.html.sampleRequest.submissionForm(
+        catalogueItems,
+        formViewData.dataViewId,
+        formViewData.tableViewParts,
+        formViewData.dataSetSetting,
+        formViewData.dataSpaceMetaInfos,
+        formViewData.elementGridWidth
+      ))
+    }
 
   private def getUserForRequest()(implicit request: AuthenticatedRequest[_]) =
     for {
