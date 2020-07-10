@@ -27,6 +27,7 @@ import org.incal.play.{Page, PageOrder}
 import org.incal.play.controllers._
 import org.incal.play.formatters.EnumFormatter
 import org.incal.play.security.SecurityUtil.toAuthenticatedAction
+import org.incal.play.util.WebUtil.toSort
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, _}
 import play.api.libs.json.JsObject
