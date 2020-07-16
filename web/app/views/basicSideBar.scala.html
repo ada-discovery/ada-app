@@ -3,6 +3,7 @@
 @import org.incal.play.controllers.WebContext._
 
 @(
+    routesPrefix: String,
     menus: Traversable[(String, Traversable[(Call, String, Option[Int])])]
 )(implicit context: WebContext)
 
@@ -22,7 +23,7 @@
 }
 
 @listItem(call: Call, text: String, matchPrefixDepth : Option[Int] = None) = {
-    <li @if(matchesPath(call.url, context.request.path, matchPrefixDepth, toConfiguration.getString("play.http.context"))) {class="inner-node active"} else {class="inner-node"}>
+    <li @if(matchesPath(routesPrefix)(call.url, context.request.path, matchPrefixDepth, toConfiguration.getString("play.http.context"))) {class="inner-node active"} else {class="inner-node"}>
         <a href="@call">
             <ul class="list-inline">
                 <li>
