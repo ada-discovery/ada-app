@@ -24,7 +24,7 @@ trait AdaAuthConfig extends AuthConfig {
 
   /**
     * Play2-auth specific.
-    * Type defintion for User object.
+    * Type definition for User object.
     * Set to AbstractUser, a class extending deadbolt's Subject.
     */
   type User = AdaUser
