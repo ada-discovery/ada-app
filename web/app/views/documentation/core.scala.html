@@ -1,7 +1,6 @@
 @import views.html.layout.main
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
-@import org.ada.web.util.matchesPath
 @import org.ada.web.controllers.routes.{DocumentationController => docRoutes}
 @import views.html.basicSideBar
 
@@ -11,30 +10,33 @@
 )(implicit context: WebContext)
 
 @sideBar = @{
-    basicSideBar(Seq(
-        ("Introduction", Seq(
-            (docRoutes.intro, "Overview", None),
-            (docRoutes.basic, "Basics", None)
-        )),
-        ("Analytics", Seq(
-            (docRoutes.stats, "Statistics", None),
-            (docRoutes.filters, "Filters", None),
-            (docRoutes.views, "Views", None)
-        )),
-        ("Machine Learning", Seq(
-            (docRoutes.ml, "Overview", None),
-            (docRoutes.mlClassification, "Classification", None),
-            (docRoutes.mlRegression, "Regression", None),
-            (docRoutes.mlClusterization, "Clustering", None)
-        )),
-        ("Administration", Seq(
-            (docRoutes.dataSetImport, "Data Set Import", None),
-            (docRoutes.userManagement, "User Management", None)
-        )),
-        ("Other", Seq(
-            (docRoutes.technology, "Technology", None)
-        ))
-    ))
+    basicSideBar(
+        _root_.core.RoutesPrefix.prefix,
+        Seq(
+            ("Introduction", Seq(
+                (docRoutes.intro, "Overview", None),
+                (docRoutes.basic, "Basics", None)
+            )),
+            ("Analytics", Seq(
+                (docRoutes.stats, "Statistics", None),
+                (docRoutes.filters, "Filters", None),
+                (docRoutes.views, "Views", None)
+            )),
+            ("Machine Learning", Seq(
+                (docRoutes.ml, "Overview", None),
+                (docRoutes.mlClassification, "Classification", None),
+                (docRoutes.mlRegression, "Regression", None),
+                (docRoutes.mlClusterization, "Clustering", None)
+            )),
+            ("Administration", Seq(
+                (docRoutes.dataSetImport, "Data Set Import", None),
+                (docRoutes.userManagement, "User Management", None)
+            )),
+            ("Other", Seq(
+                (docRoutes.technology, "Technology", None)
+            ))
+        )
+    )
 }
 
 @main(
