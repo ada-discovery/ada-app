@@ -4,7 +4,7 @@
 @import views.html.restrictOrPattern
 @import org.incal.play.security.SecurityRole
 @import org.ada.web.models.security.DataSetPermission
-@import org.ada.web.util.matchesPath
+@import org.ada.web.util.matchesCorePath
 @import org.incal.core.util.nonAlphanumericToUnderscore
 @import org.ada.web.controllers.dataset.ControllerName
 @import org.ada.web.controllers.dataset.DataSetWebContext
@@ -25,7 +25,7 @@
 }
 
 @listItemAux(url: String, text: String, matchPrefixDepth: Option[Int] = None) = {
-    <li @if(matchesPath(url, toRequest.uri, matchPrefixDepth, configuration.getString("play.http.context"))) { class="active"}>
+    <li @if(matchesCorePath(url, toRequest.uri, matchPrefixDepth, configuration.getString("play.http.context"))) { class="active"}>
         <a href="@url">@text</a>
     </li>
 }
