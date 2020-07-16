@@ -2,6 +2,7 @@ package org.ada.web.security
 
 import be.objectify.deadbolt.scala.cache.HandlerCache
 import be.objectify.deadbolt.scala.{DeadboltExecutionContextProvider, DeadboltModule, TemplateFailureListener}
+import net.codingwell.scalaguice.ScalaModule
 import play.api.{Configuration, Environment}
 
 /**
@@ -16,3 +17,13 @@ class AdaDeadboltModule extends DeadboltModule {
       bind[DeadboltExecutionContextProvider].to[AdaDeadboltExecutionContextProvider]
     )
 }
+
+//class AdaDeadboltModule extends ScalaModule {
+//
+//  override def configure(): Unit = {
+//    bind[TemplateFailureListener].to[AdaTemplateFailureListener].asEagerSingleton()
+//    bind[HandlerCache].to[CustomHandlerCacheImpl].asEagerSingleton()
+//    bind[DeadboltExecutionContextProvider].to[AdaDeadboltExecutionContextProvider].asEagerSingleton()
+//  }
+//}
+
