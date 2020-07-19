@@ -150,6 +150,16 @@ class DataSetDispatcher @Inject() (
     filterOrId: FilterOrId
   ) = dispatchAjax(_.testIndependence(filterOrId))
 
+  override def getLineChart(
+    filterOrId: FilterOrId
+  ) = dispatch(_.getLineChart(filterOrId))
+
+  override def calcLineChart(
+    xFieldName: String,
+    groupFieldName: Option[String],
+    filterOrId: FilterOrId
+  ) = dispatchAjax(_.calcLineChart(xFieldName, groupFieldName, filterOrId))
+
   override def getClusterization = dispatch(_.getClusterization)
 
   override def cluster(

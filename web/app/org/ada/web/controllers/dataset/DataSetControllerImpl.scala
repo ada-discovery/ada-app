@@ -140,6 +140,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private val scatterGenMethod = WidgetGenerationMethod.FullData
   private val correlationsGenMethod = WidgetGenerationMethod.StreamedAll
   private val comparisonGenMethod = WidgetGenerationMethod.RepoAndFullData
+  private val xLineChartGenMethod = WidgetGenerationMethod.StreamedAll
   private val independenceTestKeepUndefined = false
 
   private val resultDataSetMapping: Mapping[ResultDataSetSpec] = mapping(
@@ -1413,7 +1414,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ) = AuthAction { implicit request =>
     {
       for {
-      // the x field
+        // the x field
         xField <- fieldRepo.get(xFieldName)
 
         // the x field
@@ -1732,6 +1733,70 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val jsons = widgetsToJsons(widgets, Seq.fill(widgets.size)(Seq(field.name)), Map(field.name -> field))
       Seq(jsons)
     }
+  }
+
+  override def getLineChart(
+    filterOrId: FilterOrId
+  ) = AuthAction { implicit request => {
+    for {
+      // get the filter (with labels), data set name, the data space tree, and the setting
+      (filter, dataSetName, dataSpaceTree, setting) <- getFilterAndEssentials(filterOrId)
+    } yield
+
+      render {
+        case Accepts.Html() => Ok(dataset.lineChart(
+          dataSetName,
+          filter,
+          setting,
+          dataSpaceTree
+        ))
+        case Accepts.Json() => BadRequest("The function getLineChart function doesn't support JSON response.")
+      }
+    }.recover(handleExceptions("a line chart"))
+  }
+
+  override def calcLineChart(
+    xFieldName: String,
+    groupFieldName: Option[String],
+    filterOrId: FilterOrId
+  ) = AuthAction { implicit request =>
+    val yFieldNames = request.body.asFormUrlEncoded.flatMap(_.get("yFieldNames[]")).getOrElse(Nil)
+
+    {
+      for {
+        // the x field
+        xField <- fieldRepo.get(xFieldName)
+
+        // y fields
+        yFields <- getFields(yFieldNames)
+
+        // generate the required widget(s)
+        response <- yFields match {
+          case Nil =>
+            Future(BadRequest(s"No y fields provided."))
+
+          case _ =>
+            val widgetSpecs = Seq(
+              XLineWidgetSpec(
+                xFieldName,
+                yFieldNames,
+                groupFieldName,
+                displayOptions = BasicDisplayOptions(
+                  gridWidth = Some(6),
+                  height = Some(550)
+                )
+              )
+            )
+
+            getFilterAndWidgetsCallbackAux(
+              widgetSpecs,
+              xLineChartGenMethod,
+              filterOrId
+            )
+        }
+      } yield
+        response
+      }.recover(handleExceptionsWithErrorCodes("Line chart"))
   }
 
   private def formatDouble(x: Double) = x match {
