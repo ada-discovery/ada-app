@@ -43,7 +43,8 @@
         $(function () {
             $("#widgetsDiv").html("<div id='spinnerDiv' class='row'></div><div id='heatmapDiv' class='chart-holder'></div>")
 
-            populateNumericalTypeahead("field")
+            populateMultiNumericalTypeahead(["xField", "field"], true);
+            populateCategoricalTypeahead("groupField")
 
             $("#dataViewSelectionModal #submitButton").on("click", addLineChartToView);
 
@@ -53,8 +54,22 @@
 
             // drag-and-drop funs
 
+            enableFieldDragover(
+                $('#inputDiv #xFieldName'),
+                $('#inputDiv #xFieldTypeahead'),
+                calcLineChart,
+                ["field-Date", "field-Integer", "field-Double"]
+            )
+
+            enableFieldDragover(
+                $('#inputDiv #groupFieldName'),
+                $('#inputDiv #groupFieldTypeahead'),
+                calcLineChart,
+                ["field-Boolean", "field-Enum", "field-String"]
+            )
+
             enableFieldTableDragover(
-                $('#yFieldNameDiv'),
+                $('#inputDiv #yFieldNameDiv'),
                 calcLineChart,
                 ["field-Date", "field-Integer", "field-Double"]
             );
@@ -79,7 +94,7 @@
 
             var groupFieldName = $("#inputDiv #groupFieldName").val();
             var groupFieldLabel = $("#inputDiv #groupFieldTypeahead").val();
-            if (!groupFieldName)
+            if (!groupFieldName || !groupFieldLabel)
                 groupFieldName = null
 
             var inputYFieldNames = getYFieldNames()
@@ -90,13 +105,12 @@
             if (inputYFieldNames.length == 0) {
                 showError("Line chart generation cannot be launched. No y fields specified.");
             } else {
+                var ajaxHandler = handleResponse("Line chart generation finished.")
+                ajaxHandler["data"] = {
+                    "yFieldNames": inputYFieldNames
+                };
 
-                xFieldName: String,
-                        groupFieldName: Option[String],
-
-                dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.calcLineChart(xFieldName, groupFieldName, filterOrIdJson).ajax(
-                    handleResponse("Line chart generation finished.")
-                );
+                dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.calcLineChart(xFieldName, groupFieldName, filterOrIdJson).ajax(ajaxHandler)
 
                 hideErrors();
                 showMessage("Line chart generation for " + inputYFieldNames.length + " fields launched.")
@@ -156,13 +170,10 @@
 
     @dynamicTableJsImport()
 
-    <div class="row">
-        @fieldTypeaheadDiv(None, Some("col-lg-3 col-md-6"), "xField", "X Field")
-        @fieldTypeaheadDiv(None, Some("col-lg-3 col-md-6"), "groupField", "Group Field")
-    </div>
+    @fieldTypeaheadDiv(None, Some("col-md-12"), "xField", "X Field")
+    @fieldTypeaheadDiv(None, Some("col-md-12"), "groupField", "Group Field")
 
-    <div class="row">
-        <div style="margin-left: 20px;">
+    <div class="col-md-12" style="margin-left: 20px; margin-top: 20px">
         @dynamicFieldTable(
             "yFieldName",
             Nil,
@@ -172,7 +183,6 @@
             Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
             "categoryTree2"
         )
-        </div>
     </div>
 }
 
