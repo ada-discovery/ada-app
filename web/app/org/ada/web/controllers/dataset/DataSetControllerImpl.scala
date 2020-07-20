@@ -1782,7 +1782,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
                 yFieldNames,
                 groupFieldName,
                 displayOptions = BasicDisplayOptions(
-                  gridWidth = Some(6),
+                  gridWidth = Some(12),
                   height = Some(550)
                 )
               )
