@@ -36,7 +36,7 @@
     )
 
     @helper.javascriptRouter("dataViewJsRoutes")(
-        dataViewJsRouter.addCorrelation
+        dataViewJsRouter.addLineChart
     )
 
     <script type="text/javascript">
@@ -74,6 +74,13 @@
                 ["field-Date", "field-Integer", "field-Double"]
             );
 
+            $('#inputDiv #xFieldTypeahead, #inputDiv #groupFieldTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    calcLineChart();
+                    return false;
+                }
+            });
+
             $('#sideCategoricalTree').on('nodeSelected', function (event, data) {
                 if(["field-Date", "field-Integer", "field-Double"].includes(data.type)) {
                     var newRow = {
@@ -102,7 +109,9 @@
             var filterOrId = $(".filter-div").multiFilter('getIdOrModel')
             var filterOrIdJson = JSON.stringify(filterOrId);
 
-            if (inputYFieldNames.length == 0) {
+            if (!xFieldName) {
+                showError("Line chart generation cannot be launched. No x field specified.");
+            } else if (inputYFieldNames.length == 0) {
                 showError("Line chart generation cannot be launched. No y fields specified.");
             } else {
                 var ajaxHandler = handleResponse("Line chart generation finished.")
@@ -121,14 +130,24 @@
             var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
             var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
 
+            var xFieldName = $("#inputDiv #xFieldName").val();
+            var xFieldLabel = $("#inputDiv #xFieldTypeahead").val();
+
+            var groupFieldName = $("#inputDiv #groupFieldName").val();
+            var groupFieldLabel = $("#inputDiv #groupFieldTypeahead").val();
+            if (!groupFieldName || !groupFieldLabel)
+                groupFieldName = null
+
             var yFieldNames = getYFieldNames()
 
-            if (yFieldNames.length == 0) {
-                showError("No fields defined.");
+            if (!xFieldName) {
+                showError("No x field specified.");
+            } else if (yFieldNames.length == 0) {
+                showError("No y fields specified.");
             } else {
-                dataViewJsRoutes.org.ada.web.controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId, null).ajax({
+                dataViewJsRoutes.org.ada.web.controllers.dataset.DataViewDispatcher.addLineChart(dataViewId, xFieldName, groupFieldName).ajax({
                     data: {
-                        "fieldNames": yFieldNames
+                        "yFieldNames": yFieldNames
                     },
                     success: function() {
                         showMessage("Line chart for the field(s) '" + yFieldNames.join(", ") + "' has been successfully added to the view '" + dataViewName + "'.");
