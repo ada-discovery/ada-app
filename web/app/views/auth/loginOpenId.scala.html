@@ -4,30 +4,26 @@
 @import org.ada.web.controllers.routes
 
 @(
-    form: Form[(String, String)]
+    form: Form[String]
 )(
     implicit context: WebContext
 )
 
-@layout.main(title = "Ada Login", extraMessages = Some(formErrors("login", form.errors))) {
+@layout.main(title = "Ada OpenID Login", extraMessages = Some(formErrors("login", form.errors))) {
 
     <div class="page-header">
         <h1>Login</h1>
     </div>
 
     <div class="row">
-        @helper.form(routes.AuthController.authenticate){
+        @helper.form(routes.AuthController.loginOpenIdPost){
             <div class="login well well-lg col-md-6">
 
                 <div class="form-group">
-                    <label form="user"> User ID: <br></label>
-                    <input type="text" class="form-control" id="id" name="id" value="" placeholder="User login">
+                    <label form="user">Open ID<br></label>
+                    <input type="text" class="form-control" id="openid" name="openid" value="" placeholder="User's open id">
                 </div>
 
-                <div class="form-group">
-                    <label form="password"> Password: <br></label>
-                    <input type="password" class="form-control" id="password" name="password" value="" placeholder="Password">
-                </div>
                 <div class="col-md-12 row">
                     <input type="submit" id="submit" value="Login" class="btn btn-primary btn-sm btn-block">
                 </div>
