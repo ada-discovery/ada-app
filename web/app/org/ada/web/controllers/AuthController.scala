@@ -134,19 +134,20 @@ class AuthController @Inject() (
 
           case t: Throwable =>
             Logger.error("Open ID auth failed.", t)
-            Redirect(routes.AuthController.loginOpenId).flashing("errors" -> s"Open ID auth failed. ${t.getMessage}")
+            Redirect(routes.AuthController.loginOpenId).flashing("errors" -> s"Open ID auth failed.")
         }
     })
   }
 
   def openIdCallback = Action.async { implicit request =>
-    openIdClient.verifiedId(request).map { info =>
-      Ok(info.id + "\n" + info.attributes)
-      // gotoLoginSucceeded(info.id)
+    openIdClient.verifiedId(request).flatMap { info =>
+      Logger.info(s"OpenId verified ${info.id}.")
+      println("Open id attributes: " + info.attributes)
+      gotoLoginSucceeded(info.id)
     }.recover {
         case t: Throwable =>
-          // Here you should look at the error, and give feedback to the user
-          Redirect(routes.AuthController.loginOpenId)
+          Logger.error("Open ID auth (callback) failed.", t)
+          Redirect(routes.AuthController.loginOpenId).flashing("errors" -> s"Open ID auth failed.")
       }
   }
 
