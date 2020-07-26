@@ -737,10 +737,10 @@ class WidgetGenerationServiceImpl @Inject() (
       case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && !fields(0).isNumeric && spec.groupFieldName.isEmpty =>
         aux(CategoricalCumulativeCountWidgetGenerator)
 
-      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && fields(0).isNumeric && spec.groupFieldName.isDefined =>
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && fields(1).isNumeric && spec.groupFieldName.isDefined =>
         aux(NumericGroupCumulativeCountWidgetGenerator)
 
-      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && !fields(0).isNumeric && spec.groupFieldName.isDefined =>
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && !fields(1).isNumeric && spec.groupFieldName.isDefined =>
         aux(CategoricalGroupCumulativeCountWidgetGenerator)
 
       //////////////
