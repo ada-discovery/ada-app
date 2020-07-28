@@ -153,14 +153,16 @@ package object util {
       case _ => x.toString
     }
 
+  def matchesCorePath =
+    matchesPath(_root_.core.RoutesPrefix.prefix)(_,_,_,_)
+
   def matchesPath(
+    routesPrefix: String)(
     coreUrl: String,
     url: String,
     matchPrefixDepth: Option[Int] = None,
     fixedUrlPrefix: Option[String] = None
-  ) = {
-    val routesPrefix: String = _root_.core.RoutesPrefix.prefix
-
+  ): Boolean = {
     val prefix = if (routesPrefix.nonEmpty && !routesPrefix.equals("/")) {
       val tempPrefix = fixedUrlPrefix.getOrElse("") + routesPrefix
       Some(tempPrefix.replaceAllLiterally("//","/")) // if two backslashes occur replace with just one

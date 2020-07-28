@@ -91,6 +91,12 @@ class DataViewDispatcher @Inject()(
     groupOrValueFieldName: Option[String]
   ) = dispatchIsAdminOrPermissionAndOwnerAjax(dataViewId, _.addScatter(dataViewId, xFieldName, yFieldName, groupOrValueFieldName))
 
+  override def addLineChart(
+    dataViewId: BSONObjectID,
+    xFieldName: String,
+    groupFieldName: Option[String]
+  ) = dispatchIsAdminOrPermissionAndOwnerAjax(dataViewId, _.addLineChart(dataViewId, xFieldName, groupFieldName))
+
   def addHeatmap(
     dataViewId: BSONObjectID,
     xFieldName: String,

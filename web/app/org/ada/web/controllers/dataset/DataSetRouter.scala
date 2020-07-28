@@ -21,6 +21,7 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val getPearsonCorrelations = routes.getPearsonCorrelations _ map route
   val getMatthewsCorrelations = routes.getMatthewsCorrelations _ map route
   val getHeatmap = routes.getHeatmap _ map route
+  val getLineChart = routes.getLineChart _ map route
   val getComparison = routes.getComparison _ map route
   val getClusterization = routeFun(_.getClusterization)
   val getIndependenceTest = routes.getIndependenceTest _ map route
@@ -61,6 +62,7 @@ final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.ja
   val calcCumulativeCount = routeFun(_.calcCumulativeCount)
   val calcScatter = routeFun(_.calcScatter)
   val calcHeatmap = routeFun(_.calcHeatmap)
+  val calcLineChart = routeFun(_.calcLineChart)
   val calcComparison = routeFun(_.calcComparison)
   val cluster = routeFun(_.cluster)
   val testIndependence = routeFun(_.testIndependence)

@@ -461,6 +461,21 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       ()
   }
 
+  override def addLineChart(
+    dataViewId: BSONObjectID,
+    xFieldName: String,
+    groupFieldName: Option[String]
+  ) = Action.async { implicit request =>
+    val yFieldNames = request.body.asFormUrlEncoded.flatMap(_.get("yFieldNames[]")).getOrElse(Nil)
+
+    if (yFieldNames.isEmpty)
+      Future(BadRequest("No y field names provided for addLineChart function."))
+    else
+      processDataViewAux(dataViewId)(
+        addWidgetsAndUpdateView(Seq(XLineWidgetSpec(xFieldName, yFieldNames, groupFieldName)))
+      )
+  }
+
   override def addCorrelation(
     dataViewId: BSONObjectID,
     correlationType: CorrelationType.Value

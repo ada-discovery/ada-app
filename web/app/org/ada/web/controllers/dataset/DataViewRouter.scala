@@ -27,6 +27,7 @@ final class DataViewJsRouter(dataSetId: String) extends GenericJsRouter(routes.j
   val addBoxPlot = routeFun(_.addBoxPlot)
   val addBasicStats = routeFun(_.addBasicStats)
   val addScatter = routeFun(_.addScatter)
+  val addLineChart = routeFun(_.addLineChart)
   val addCorrelation = routeFun(_.addCorrelation)
   val addGridDistribution = routeFun(_.addGridDistribution)
   val addHeatmap = routeFun(_.addHeatmap)

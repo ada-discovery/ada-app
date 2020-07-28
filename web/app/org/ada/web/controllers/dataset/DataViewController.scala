@@ -63,6 +63,12 @@ trait DataViewController extends CrudController[BSONObjectID] {
     groupOrValueFieldName: Option[String]
   ): Action[AnyContent]
 
+  def addLineChart(
+    dataViewId: BSONObjectID,
+    xFieldName: String,
+    groupFieldName: Option[String]
+  ): Action[AnyContent]
+
   def addCorrelation(
     dataViewId: BSONObjectID,
     correlationType: CorrelationType.Value
