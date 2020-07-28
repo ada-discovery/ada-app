@@ -26,6 +26,15 @@ import services.BatchOrderRequestRepoTypes.SampleRequestSettingRepo
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
+/**
+ * Data needed for creating a view used for sample request submission
+ *
+ * @param dataViewId The id of an existing view to use as a base
+ * @param tableViewParts Information of the data frame (table) to display
+ * @param dataSetSetting Sample request settings associated with a dataset
+ * @param dataSpaceMetaInfos Meta information
+ * @param elementGridWidth Grid width to use for charts
+ */
 case class ActionFormViewData(
   dataViewId: BSONObjectID,
   tableViewParts: Seq[TableViewData],
@@ -34,12 +43,22 @@ case class ActionFormViewData(
   elementGridWidth: Int
 )
 
+/**
+ * A REMS catalogue item
+ *
+ * @param id The id of the item
+ * @param name The readable name of the item
+ * @param formId The id associated with the catalogue item
+ */
 case class CatalogueItem(
   id: Int,
   name: String,
   formId: Int
 )
 
+/**
+ * Service providing functionality to submit requests to REMS
+ */
 class SampleRequestService @Inject() (
   dsaf: DataSetAccessorFactory,
   sampleRequestSettingRepo: SampleRequestSettingRepo,
@@ -61,6 +80,15 @@ class SampleRequestService @Inject() (
     throw new AdaException("Configuration issue: 'rems.masterApiKey' was not found in the configuration file.")
   )
 
+  /**
+   * Create a valid CSV which can be attached to an REMS application
+   *
+   * @param dataSetId The data set id to use
+   * @param conditions The filter conditions. If empty no filter is applied
+   * @param fieldNames The field/column names to use. If empty all fields are selected
+   * @param selectedIds The selected row ids to use. If empty all are selected
+   * @return A string representing a valid CSV file.
+   */
   def createCsv(
     dataSetId: String,
     conditions: Seq[FilterCondition],
@@ -91,6 +119,15 @@ class SampleRequestService @Inject() (
     }
   }
 
+  /**
+   * Creates an application in REMS
+   *
+   * @param csv A String representing a valid CSV file used as an application attachment
+   * @param catalogueItemId A REMS catalogue item to create an application for
+   * @param catalogueFormId The REMS form id used by the catalogue item
+   * @param user The Ada user who makes the request
+   * @return The URL pointing to the newly created application
+   */
   def sendToRems(
     csv: String,
     catalogueItemId: Int,
@@ -106,6 +143,11 @@ class SampleRequestService @Inject() (
     }
   }
 
+  /**
+   * Get available REMS catalogue items
+   *
+   * @return A sequence of catalogue items
+   */
   def getCatalogueItems: Future[Seq[CatalogueItem]] =
     for {
       res <- ws.url(remsUrl + "/api/catalogue").withHeaders(
@@ -122,7 +164,14 @@ class SampleRequestService @Inject() (
         )
       }
     }
-  
+
+  /**
+   * Build object containing all data needed to render the sample request submission form
+   *
+   * @param dataSetId The data set id used
+   * @param request The current request
+   * @return An ActionFormViewData object
+   */
   def getActionFormViewData(
     dataSetId: String
   )(

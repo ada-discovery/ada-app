@@ -46,7 +46,7 @@ class SampleRequestController @Inject()(
    * @param dataSetId The ID of the data set
    * @param tableColumnNames The field names that will be submitted
    * @param catalogueItemId The ID of a REMS catalogue item that will be target of the submission
-   * @param catalogueFormId The ID of the form item to which the data frame will be submitted to. Must be an attachment!
+   * @param catalogueFormId The ID of the REMS form to use
    * @param selectedIds The data set row IDs selected for submission. If empty, all are selected.
    * @param conditions The present filter conditions. If none are present, no filters are applied.
    */

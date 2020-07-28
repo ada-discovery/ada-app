@@ -25,6 +25,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
+/**
+ * Controller providing functionality for enabling a data set to be "requestable"
+ */
 class SampleRequestSettingController @Inject()(
   sampleRequestSettingRepo: SampleRequestSettingRepo,
   dataSetSettingRepo: DataSetSettingRepo,
