@@ -30,8 +30,8 @@ private class MatchGroupsWithConfoundersTransformer extends AbstractDataSetTrans
     spec: MatchGroupsWithConfoundersTransformation
   ) =
     for {
-      //source DSA
-      sourceDsa <- Future(dsaSafe(spec.sourceDataSetId))
+      // source data set accessor
+      sourceDsa <- dsaWithNoDataCheck(spec.sourceDataSetId)
 
       // load a filter (if needed)
       filter <- spec.filterId.map(sourceDsa.filterRepo.get).getOrElse(Future(None))

@@ -2,13 +2,13 @@ package org.ada.web.controllers.dataset.datatrans
 
 import org.ada.server.json.{EnumFormat, TupleFormat}
 import org.ada.server.models.{Field, FieldTypeId}
-import org.ada.server.models.datatrans.SwapFieldsDataSetTransformation
+import org.ada.server.models.datatrans.ChangeFieldTypesDataSetTransformation
 import org.incal.play.controllers.WebContext
 import org.incal.play.formatters.JsonFormatter
 import play.api.data.Forms._
 import views.html.{datasettrans => view}
 
-object SwapFieldsFormViews extends DataSetTransformationFormViews[SwapFieldsDataSetTransformation] {
+object ChangeFieldTypesFormViews extends DataSetTransformationFormViews[ChangeFieldTypesDataSetTransformation] {
 
   private implicit val fieldTypeFormat = EnumFormat(FieldTypeId)
   private implicit val tupleFormat = TupleFormat[String, String, FieldTypeId.Value]
@@ -24,5 +24,5 @@ object SwapFieldsFormViews extends DataSetTransformationFormViews[SwapFieldsData
     )
 
   override protected def viewElements(implicit webContext: WebContext) =
-    idForm => view.swapFieldsElements(idForm.id, idForm.form)
+    idForm => view.changeFieldTypesElements(idForm.id, idForm.form)
 }

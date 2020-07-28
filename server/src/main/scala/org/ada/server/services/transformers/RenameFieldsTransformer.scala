@@ -1,11 +1,42 @@
 package org.ada.server.services.transformers
 
-import akka.stream.Materializer
 import org.ada.server.models.datatrans.RenameFieldsTransformation
+import org.ada.server.services.ServiceTypes.DataSetCentralTransformer
 import play.api.libs.json.{JsNull, JsObject}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+/**
+  * Transformer that renames fields of a given data set specified by `fieldOldNewNames` attribute
+  * of [[org.ada.server.models.datatrans.RenameFieldsTransformation]] spec, which contains pairs of old -> new field names.
+  *
+  * Note that if you want to change field labels as opposed to field names (unique field identifiers), which are the scope of this transformer,
+  * you can do so without creating a new data set.
+  *
+  * Because the transformer is private, in order to execute it (as it's with all other transformers),
+  * you need to obtain the central transformer [[DataSetCentralTransformer]] through DI and pass a transformation spec as shown in an example bellow.
+  *
+  * Example:
+  * {{{
+  * // create a spec
+  * val spec = RenameFieldsTransformation(
+  *   sourceDataSetId = "covid_19.clinical_visit",
+  *   fieldOldNewNames = Seq(
+  *     ("age", "age_baseline"),
+  *     ("gender", "gender_baseline")
+  *   ),
+  *   resultDataSetSpec = ResultDataSetSpec(
+  *     "covid_19.clinical_visit_altered",
+  *     "Covid-19 Clinical Visit Altered"
+  *   )
+  * )
+  *
+  * // execute
+  * centralTransformer(spec)
+  * }}}
+  *
+  * @todo support for transforming views and filters
+  */
 private class RenameFieldsTransformer extends AbstractDataSetTransformer[RenameFieldsTransformation] {
 
   private val saveViewsAndFilters = false
@@ -13,10 +44,12 @@ private class RenameFieldsTransformer extends AbstractDataSetTransformer[RenameF
   override protected def execInternal(
     spec: RenameFieldsTransformation
   ) = {
-    val sourceDsa = dsaSafe(spec.sourceDataSetId)
     val oldNewFieldNameMap = spec.fieldOldNewNames.toMap
 
     for {
+      // source data set accessor
+      sourceDsa <- dsaWithNoDataCheck(spec.sourceDataSetId)
+
       // all the fields
       fields <- sourceDsa.fieldRepo.find()
 

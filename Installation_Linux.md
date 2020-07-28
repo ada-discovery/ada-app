@@ -18,20 +18,6 @@ Recommended resources:
 
 ### 1. **Java** 1.8
 
-```sh
-sudo apt-get install software-properties-common
-sudo add-apt-repository ppa:webupd8team/java
-sudo apt-get update
-sudo apt-get install oracle-java8-installer
-sudo apt install oracle-java8-set-default
-```
-Depending on your Linux distribution you might need to add a different repository, such as
-
-```
-sudo add-apt-repository "deb http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main"
-```
-or install JDK from a different provider, such as
-
 ```
 sudo apt install openjdk-8-jdk
 ```
@@ -41,7 +27,7 @@ sudo apt install openjdk-8-jdk
 ### 2. **Mongo** DB
 
 * Install MongoDB (4.0.10)
-(Note that Ada is compatible with *any* 3.2, 3.4, 3.6, and 4.0 relaease of Mongo in case you fail to install the recommended version)
+(Note that Ada is compatible with *any* 3.2, 3.4, 3.6, and 4.0 release of Mongo in case you fail to install the recommended version)
 (Also if you want to use a non-Ubuntu Linux distribution check the supported platforms/OS [here](https://docs.mongodb.com/manual/installation/#supported-platforms]))
 
 ```sh

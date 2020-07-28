@@ -114,29 +114,13 @@ function numericalCountWidget(elementId, widget, filterElement) {
     plotNumericalChart(widget.displayOptions.chartType, datas, seriesSize, widget.title, widget.fieldLabel, yAxisCaption, elementId, height, pointFormat, dataType)
 
     if (filterElement) {
-        function toTypedStringValue(value, ceiling) {
-            var intValue = (ceiling) ? Math.ceil(value) : Math.floor(value)
-
-            return (isDate) ? msToStandardDateString(intValue) : (isDouble) ? value.toString() : intValue.toString()
-        }
-
-        $('#' + elementId).on('intervalSelected', function (event, data) {
-            var xMin = toTypedStringValue(data.xMin, true);
-            var xMax = toTypedStringValue(data.xMax, false);
-
-            var conditions = [
-                {fieldName: widget.fieldName, conditionType: ">=", value: xMin},
-                {fieldName: widget.fieldName, conditionType: "<=", value: xMax}
-            ]
-
-            $(filterElement).multiFilter('addConditionsAndSubmit', conditions);
-        });
+        addIntervalSelected($('#' + elementId), filterElement, widget.fieldName, isDouble, isDate)
     }
 }
 
-function lineWidget(elementId, widget) {
-    var isDate = widget.fieldType == "Date"
-    var isDouble = widget.fieldType == "Double"
+function lineWidget(elementId, widget, filterElement) {
+    var isDate = widget.xFieldType == "Date"
+    var isDouble = widget.xFieldType == "Double"
     var dataType = (isDate) ? 'datetime' : null;
 
     var datas = widget.data.map(function(nameSeries){
@@ -155,7 +139,50 @@ function lineWidget(elementId, widget) {
     //     plotNumericalChart(chartType, datas, seriesSize, widget.title, widget.xAxisCaption, yAxisCaption, elementId, height, pointFormat, dataType)
     // });
 
-    lineChart(widget.title, elementId, null, datas, widget.xAxisCaption, widget.yAxisCaption, showLegend, true, pointFormat, height, dataType, false, false, false, widget.xMin, widget.xMax, widget.yMin, widget.yMax);
+    lineChart(
+        widget.title,
+        elementId,
+        null,
+        datas,
+        widget.xAxisCaption,
+        widget.yAxisCaption,
+        showLegend,
+        true,
+        pointFormat,
+        height,
+        dataType,
+        false,
+        true,
+        false,
+        widget.xMin,
+        widget.xMax,
+        widget.yMin,
+        widget.yMax
+    );
+
+    if (filterElement) {
+        addIntervalSelected($('#' + elementId), filterElement, widget.xFieldName, isDouble, isDate)
+    }
+}
+
+function addIntervalSelected(chartElement, filterElement, xFieldName, isDouble, isDate) {
+    function toTypedStringValue(value, ceiling) {
+        var intValue = (ceiling) ? Math.ceil(value) : Math.floor(value)
+
+        return (isDate) ? msToStandardDateString(intValue) : (isDouble) ? value.toString() : intValue.toString()
+    }
+
+    chartElement.on('intervalSelected', function (event, data) {
+        var xMin = toTypedStringValue(data.xMin, true);
+        var xMax = toTypedStringValue(data.xMax, false);
+
+        var conditions = [
+            {fieldName: xFieldName, conditionType: ">=", value: xMin},
+            {fieldName: xFieldName, conditionType: "<=", value: xMax}
+        ]
+
+        $(filterElement).multiFilter('addConditionsAndSubmit', conditions);
+    });
 }
 
 function boxWidget(elementId, widget) {
@@ -307,7 +334,7 @@ function genericWidgetForElement(widgetId, widget, filterElement) {
             case "org.ada.web.models.ValueScatterWidget": valueScatterWidget(widgetId, widget, filterElement); break;
             case "org.ada.web.models.HeatmapWidget": heatmapWidget(widgetId, widget); break;
             case "org.ada.web.models.HtmlWidget": htmlWidget(widgetId, widget); break;
-            case 'org.ada.web.models.LineWidget': lineWidget(widgetId, widget); break;
+            case 'org.ada.web.models.LineWidget': lineWidget(widgetId, widget, filterElement); break;
             case "org.ada.web.models.BasicStatsWidget": basicStatsWidget(widgetId, widget); break;
             case "org.ada.web.models.IndependenceTestWidget": independenceTestWidget(widgetId, widget); break;
             default: console.log("Widget type" + widget.concreteClass + " unrecognized.")

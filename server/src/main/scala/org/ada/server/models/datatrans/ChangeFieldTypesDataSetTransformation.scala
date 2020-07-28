@@ -11,14 +11,14 @@ import reactivemongo.bson.BSONObjectID
 import org.ada.server.models.datatrans.DataSetTransformation._
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
-case class SwapFieldsDataSetTransformation(
+case class ChangeFieldTypesDataSetTransformation(
   _id: Option[BSONObjectID] = None,
 
   sourceDataSetId: String,
   resultDataSetSpec: ResultDataSetSpec,
-  newFields: Seq[Field],
+  newFields: Seq[Field], // TODO: rename to `fieldsToChange`
 
-  streamSpec: StreamSpec,
+  streamSpec: StreamSpec = StreamSpec(),
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,
   timeCreated: Date = new Date(),
@@ -42,6 +42,6 @@ case class SwapFieldsDataSetTransformation(
   )
 }
 
-object SwapFieldsDataSetTransformation extends HasFormat[SwapFieldsDataSetTransformation] {
-  val format = Json.format[SwapFieldsDataSetTransformation]
+object ChangeFieldTypesDataSetTransformation extends HasFormat[ChangeFieldTypesDataSetTransformation] {
+  val format = Json.format[ChangeFieldTypesDataSetTransformation]
 }

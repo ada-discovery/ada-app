@@ -91,6 +91,30 @@ trait CalculatorExecutors {
     implicit inputTypeTag: TypeTag[GroupCumulativeNumericBinCountsCalcTypePack[G]#IN]
   ) = withSeq(GroupCumulativeNumericBinCountsCalc.apply[G])
 
+  // x seq
+
+  def xSeqExec[T](
+    implicit inputTypeTag: TypeTag[XSeqCalcTypePack[T]#IN]
+  ) = withSeq(XSeqCalc.apply[T])
+
+  def groupXSeqExec[G, T](
+    implicit inputTypeTag: TypeTag[GroupXSeqCalcTypePack[G, T]#IN]
+  ) = withSeq(GroupXSeqCalc.apply[G, T])
+
+  def xOrderedSeqExec[T: Ordering](
+    implicit inputTypeTag: TypeTag[XOrderedSeqCalcTypePack[T]#IN]
+  ) = withSeq(XOrderedSeqCalc.apply[T])
+
+  def groupXOrderedSeqExec[G, T: Ordering](
+    implicit inputTypeTag: TypeTag[GroupXOrderedSeqCalcTypePack[G, T]#IN]
+  ) = withSeq(GroupXOrderedSeqCalc.apply[G, T])
+
+  def xOrderedSeqAnyExec =
+    XOrderedSeqAnyExec.withSeq
+
+  def groupXOrderedSeqAnyExec[G: TypeTag] =
+    GroupXOrderedSeqAnyExec.withSeq[G]
+
   // Basic stats
 
   def basicStatsExec =

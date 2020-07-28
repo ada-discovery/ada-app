@@ -22,7 +22,7 @@ case class InferDataSetTransformation(
   inferenceGroupSize: Option[Int] = None,
   inferenceGroupsInParallel: Option[Int]  = None,
 
-  streamSpec: StreamSpec,
+  streamSpec: StreamSpec = StreamSpec(),
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,
   timeCreated: Date = new Date(),

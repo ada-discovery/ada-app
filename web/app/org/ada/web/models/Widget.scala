@@ -1,5 +1,6 @@
 package org.ada.web.models
 
+import org.ada.server.AdaException
 import org.ada.server.dataaccess.AdaConversionException
 import org.ada.server.field.FieldType
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
@@ -69,15 +70,16 @@ case class ValueScatterWidget[T1, T2, T3](
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends Widget
 
-case class LineWidget[T](
+case class LineWidget[T1, T2](
   title: String,
+  xFieldName: String,
   xAxisCaption: String,
   yAxisCaption: String,
-  data: Seq[(String, Seq[(T,T)])],
-  xMin: Option[T] = None,
-  xMax: Option[T] = None,
-  yMin: Option[T] = None,
-  yMax: Option[T] = None,
+  data: Seq[(String, Seq[(T1, T2)])],
+  xMin: Option[T1] = None,
+  xMax: Option[T1] = None,
+  yMin: Option[T2] = None,
+  yMax: Option[T2] = None,
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends Widget
 
@@ -236,23 +238,34 @@ object Widget {
     )(NumericalCountWidget[T](_, _, _, _, _, _, _), {x => (x.title, x.fieldName, x.fieldLabel, x.useRelativeValues, x.isCumulative, x.data, x.displayOptions)})
   }
 
-  def lineWidgetFormat[T](fieldType: FieldType[T]): Format[LineWidget[T]] = {
-    implicit val valueFormat = FieldTypeFormat.apply[T](fieldType)
-    implicit val valueOptionalFormat = FieldTypeFormat.applyOptional[T](fieldType)
-    implicit val tuple1Format = TupleFormat[T, T]
-    implicit val tuple2Format = TupleFormat[String, Seq[(T, T)]]
+  def lineWidgetFormat[T1, T2](
+    xFieldType: FieldType[T1],
+    yFieldTypes: Seq[FieldType[T2]]
+  ): Format[LineWidget[T1, T2]] = {
+    if (yFieldTypes.isEmpty)
+      throw new AdaException("No y fields provided for a line widget.")
+
+    implicit val value1Format = FieldTypeFormat.apply[T1](xFieldType)
+    implicit val value2Format = FieldTypesFormat.apply[T2](yFieldTypes)
+
+    implicit val value1OptionalFormat = FieldTypeFormat.applyOptional[T1](xFieldType)
+    implicit val value2OptionalFormat = FieldTypeFormat.applyOptional[T2](yFieldTypes.head)
+
+    implicit val tuple1Format = TupleFormat[T1, T2]
+    implicit val tuple2Format = TupleFormat[String, Seq[(T1, T2)]]
 
     (
       (__ \ "title").format[String] and
+      (__ \ "xFieldName").format[String] and
       (__ \ "xAxisCaption").format[String] and
       (__ \ "yAxisCaption").format[String] and
-      (__ \ "data").format[Seq[(String, Seq[(T,T)])]] and
-      (__ \ "xMin").format[Option[T]] and
-      (__ \ "xMax").format[Option[T]] and
-      (__ \ "yMin").format[Option[T]] and
-      (__ \ "yMax").format[Option[T]] and
+      (__ \ "data").format[Seq[(String, Seq[(T1,T2)])]] and
+      (__ \ "xMin").format[Option[T1]] and
+      (__ \ "xMax").format[Option[T1]] and
+      (__ \ "yMin").format[Option[T2]] and
+      (__ \ "yMax").format[Option[T2]] and
       (__ \ "displayOptions").format[DisplayOptions]
-    )(LineWidget[T](_, _, _, _, _, _, _, _, _), {x => (x.title, x.xAxisCaption, x.yAxisCaption, x.data, x.xMin, x.xMax, x.yMin, x.yMax, x.displayOptions)})
+    )(LineWidget[T1,T2](_, _, _, _, _, _, _, _, _, _), {x => (x.title, x.xFieldName, x.xAxisCaption, x.yAxisCaption, x.data, x.xMin, x.xMax, x.yMin, x.yMax, x.displayOptions)})
   }
 
   implicit def scatterWidgetFormat[T1, T2](
@@ -355,8 +368,8 @@ object Widget {
               ).getOrElse(throw ex)
           }
 
-        case e: LineWidget[T]  =>
-          lineWidgetFormat(fieldTypes.head).writes(e)
+        case e: LineWidget[T, T]  =>
+          lineWidgetFormat(fieldTypes.head, fieldTypes.tail).writes(e)
 
         case e: ScatterWidget[T, T] =>
           scatterWidgetFormat(fieldTypes(fieldTypes.size - 2), fieldTypes.last).writes(e)
@@ -388,6 +401,15 @@ object Widget {
         case e: ScatterWidget[T, T] =>
           val xFieldType = fieldTypes(fieldTypes.size - 2)
           val yFieldType = fieldTypes.last
+
+          Json.obj(
+            "xFieldType" -> JsString(xFieldType.spec.fieldType.toString),
+            "yFieldType" -> JsString(yFieldType.spec.fieldType.toString)
+          )
+
+        case e: LineWidget[T, T] =>
+          val xFieldType = fieldTypes(0)
+          val yFieldType = fieldTypes(1)
 
           Json.obj(
             "xFieldType" -> JsString(xFieldType.spec.fieldType.toString),
