@@ -20,7 +20,7 @@ GET         /logout                                                             
 GET         /loggedout                                                              org.ada.web.controllers.AuthController.loggedOut
 GET         /loginOpenId                                                            org.ada.web.controllers.AuthController.loginOpenId
 POST        /loginOpenId                                                            org.ada.web.controllers.AuthController.loginOpenIdPost
-GET         /openIdCallback                                                         org.ada.web.controllers.AuthController.openIdCallback
+GET         /oidc/callback                                                          org.ada.web.controllers.AuthController.openIdCallback
 
 # for no-authentication access
 GET         /loginBasic                                                             org.ada.web.controllers.AuthController.loginBasic
