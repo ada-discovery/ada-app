@@ -19,7 +19,7 @@ import org.ada.web.controllers.core.AdaBaseController
 import org.incal.play.security.AuthAction
 import org.ada.web.security.AdaAuthConfig
 import play.api.libs.mailer.MailerClient
-import play.api.libs.openid.OpenIdClient
+import play.api.libs.openid.{OpenID, OpenIdClient}
 
 class AuthController @Inject() (
     val userManager: UserManager,
@@ -120,13 +120,25 @@ class AuthController @Inject() (
     )
   }
 
-  def loginOpenIdPost = Action.async { implicit request =>
+  def loginOpenIdPostOld = Action.async { implicit request =>
     openIdForm.bindFromRequest.fold({ error =>
       Logger.info(s"bad request ${error.toString}")
       Future.successful(BadRequest(error.toString))
     }, { openId =>
-      openIdClient.redirectURL(openId, routes.AuthController.openIdCallback.absoluteURL())
-        .map(url => Redirect(url))
+      println("Open ID: " + openId)
+
+//      openIdClient.redirectURL(
+//        openId,
+//        routes.AuthController.openIdCallback.absoluteURL()
+//      )
+
+      OpenID.redirectURL(
+        openId,
+        routes.AuthController.openIdCallback.absoluteURL()(request)
+      ).map { url =>
+        println("Redirecting to " + url)
+        Redirect(url)
+      }
         .recover {
           case e: UnknownHostException =>
             Logger.error("Open ID auth failed.", e)
@@ -139,7 +151,18 @@ class AuthController @Inject() (
     })
   }
 
+  def loginOpenIdPost =
+    Action.async { implicit request =>
+      openIdForm.bindFromRequest.fold({ error =>
+        Logger.info(s"bad request ${error.toString}")
+        Future(BadRequest(error.toString))
+      }, { openId =>
+        Future(Redirect(openId))
+      })
+    }
+
   def openIdCallback = Action.async { implicit request =>
+    println(request.queryString.mkString("\n"))
     openIdClient.verifiedId(request).flatMap { info =>
       Logger.info(s"OpenId verified ${info.id}.")
       println("Open id attributes: " + info.attributes)
