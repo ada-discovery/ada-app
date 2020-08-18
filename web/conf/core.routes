@@ -19,6 +19,11 @@ POST        /login                                                              
 GET         /logout                                                                 org.ada.web.controllers.AuthController.logout
 GET         /loggedout                                                              org.ada.web.controllers.AuthController.loggedOut
 
+# OIDC auth
+GET         /loginOIDC                                                              org.ada.web.controllers.OidcAuthController.oidcLogin
+GET         /oidc/callback                                                          @org.pac4j.play.CallbackController.callback()
+GET         /logoutOIDC                                                             @org.pac4j.play.LogoutController.logout()
+
 # for no-authentication access
 GET         /loginBasic                                                             org.ada.web.controllers.AuthController.loginBasic
 GET         /loginAdmin                                                             org.ada.web.controllers.AuthController.loginAdmin
