@@ -40,7 +40,7 @@ class InputAllOHDSIConceptColumns @Inject() (
   }
 
   private def dsaSafe(dataSetId: String) =
-    dsaf(dataSetId).getOrElse(throw new AdaException(s"Data set ${dataSetId} not found"))
+    dsaf.applySync(dataSetId).getOrElse(throw new AdaException(s"Data set ${dataSetId} not found"))
 }
 
 case class InputAllOHDSIConceptColumnsSpec(

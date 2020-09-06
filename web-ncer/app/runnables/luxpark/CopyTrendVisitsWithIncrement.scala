@@ -48,8 +48,8 @@ class CopyTrendVisitsWithIncrement @Inject()(dsaf: DataSetAccessorFactory) exten
   )
 
   override def runAsFuture = {
-    val sourceDsa = dsaf(sourceDataSetId).get
-    val targetDsa = dsaf(targetDataSetId).get
+    val sourceDsa = dsaf.applySync(sourceDataSetId).get
+    val targetDsa = dsaf.applySync(targetDataSetId).get
 
     for {
       inputSource <- sourceDsa.dataSetRepo.findAsStream(Seq(visitFieldName #-> visitMap.keys.toSeq))

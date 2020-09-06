@@ -21,12 +21,12 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
   ) extends FutureRunnable {
 
   private val clinicalDataSetId = "lux_park.clinical"
-  private val clinicalDsa = dsaf(clinicalDataSetId).get
+  private val clinicalDsa = dsaf.applySync(clinicalDataSetId).get
   private val clinicalDataSetRepo = clinicalDsa.dataSetRepo
   private val clinicalFieldRepo = clinicalDsa.fieldRepo
 
   private val biosampleDataSetId = "lux_park.ibbl_biosamples"
-  private val biosampleDsa = dsaf(biosampleDataSetId).get
+  private val biosampleDsa = dsaf.applySync(biosampleDataSetId).get
   private val biosampleDataSetRepo = biosampleDsa.dataSetRepo
   private val biosampleFieldRepo = biosampleDsa.fieldRepo
 

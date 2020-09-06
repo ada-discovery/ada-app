@@ -22,9 +22,9 @@ class DeNoPaPlayground2 @Inject() (
     dsaf: DataSetAccessorFactory
   ) extends FutureRunnable {
 
-  private val baseLineDsa = dsaf("denopa.raw_clinical_baseline").get
-  private val firstVisitDsa = dsaf("denopa.raw_clinical_first_visit").get
-  private val secondVisitDsa = dsaf("denopa.raw_clinical_second_visit").get
+  private val baseLineDsa = dsaf.applySync("denopa.raw_clinical_baseline").get
+  private val firstVisitDsa = dsaf.applySync("denopa.raw_clinical_first_visit").get
+  private val secondVisitDsa = dsaf.applySync("denopa.raw_clinical_second_visit").get
 
   override def runAsFuture =
     for {

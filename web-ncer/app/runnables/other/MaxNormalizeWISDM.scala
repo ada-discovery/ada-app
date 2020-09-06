@@ -31,7 +31,7 @@ class MaxNormalizeWISDM @Inject()(
   private val flatFlow = Flow[Option[JsObject]].collect{ case Some(a) => a }
 
   override def runAsFuture(input: MaxNormalizeWISDMSpec) = {
-    val dsa = dsaf(input.sourceDataSetId).get
+    val dsa = dsaf.applySync(input.sourceDataSetId).get
 
     for {
       // x, y, and z maxes

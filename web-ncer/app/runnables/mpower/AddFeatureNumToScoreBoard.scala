@@ -21,7 +21,7 @@ class AddFeatureNumToScoreBoard @Inject()(
   private val featureNumField = Field("featureNum", Some("Feature Num"), FieldTypeId.Integer)
 
   override def runAsFuture(spec: AddFeatureNumToScoreBoardSpec) = {
-    val dsa = dsaf(spec.scoreBoardDataSetId).get
+    val dsa = dsaf.applySync(spec.scoreBoardDataSetId).get
     val newDataSetId = spec.scoreBoardDataSetId + "_ext"
 
     for {
@@ -77,7 +77,7 @@ class AddFeatureNumToScoreBoard @Inject()(
     val defaultJsonFuture = Future(json + (featureNumField.name, JsNull))
 
     submissionId.map { submissionId =>
-      dsaf(submissionDataSetPrefix + "." + submissionId) match {
+      dsaf.applySync(submissionDataSetPrefix + "." + submissionId) match {
         case Some(featureSetDsa) =>
           featureSetDsa.fieldRepo.count().map { count =>
             val featureNumJson = JsNumber(count - 1)

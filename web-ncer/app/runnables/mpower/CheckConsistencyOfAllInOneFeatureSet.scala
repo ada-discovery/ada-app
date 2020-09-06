@@ -28,8 +28,8 @@ class CheckConsistencyOfAllInOneFeatureSet @Inject()(
   private val logger = Logger
 
   override def runAsFuture(spec: CheckConsistencyOfAllInOneFeatureSetSpec) = {
-    val scoreBoardDataSetRepo = dsaf(spec.scoreBoardDataSetId).get.dataSetRepo
-    val allInOneDataSetRepo = dsaf(spec.allInOneFeatureSetId).get.dataSetRepo
+    val scoreBoardDataSetRepo = dsaf.applySync(spec.scoreBoardDataSetId).get.dataSetRepo
+    val allInOneDataSetRepo = dsaf.applySync(spec.allInOneFeatureSetId).get.dataSetRepo
 
     def keyValue(json: JsObject): Any = {
       val keyJsValue = (json \ spec.keyFieldName)
@@ -77,7 +77,7 @@ class CheckConsistencyOfAllInOneFeatureSet @Inject()(
     })
 
     submissionId.flatMap { submissionId =>
-      dsaf(submissionDataSetPrefix + "." + submissionId).map(dsa =>
+      dsaf.applySync(submissionDataSetPrefix + "." + submissionId).map(dsa =>
         (submissionId, dsa.dataSetRepo)
       )
     }

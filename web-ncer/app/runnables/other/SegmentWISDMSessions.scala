@@ -35,7 +35,7 @@ class SegmentWISDMSessions @Inject()(
   private val newSegmentIdField = Field("segmentId", Some("Segment Id"), FieldTypeId.Integer)
 
   override def runAsFuture(input: SegmentWISDMSessionsSpec) = {
-    val dsa = dsaf(input.sourceDataSetId).get
+    val dsa = dsaf.applySync(input.sourceDataSetId).get
 
     for {
       // user ids

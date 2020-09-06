@@ -22,7 +22,7 @@ class FindDuplicateRCResults @Inject()(
   private val groupSize = 4
 
   override def runAsFuture(input: FindDuplicateRCResultsSpec) = {
-    val dsa = dsaf(input.dataSetId).getOrElse(
+    val dsa = dsaf.applySync(input.dataSetId).getOrElse(
       throw new AdaException(s"Data set ${input.dataSetId} not found.")
     )
 
@@ -50,7 +50,7 @@ class FindDuplicateRCResults @Inject()(
   private def findDuplicateRecordIds(dataSetId: String): Future[Traversable[String]] = {
     logger.info(s"Finding duplicates in $dataSetId...")
 
-    val dsa = dsaf(dataSetId).getOrElse(
+    val dsa = dsaf.applySync(dataSetId).getOrElse(
       throw new AdaException(s"Data set ${dataSetId} not found.")
     )
 

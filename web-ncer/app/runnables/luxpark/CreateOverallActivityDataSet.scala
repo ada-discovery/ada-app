@@ -129,7 +129,7 @@ class CreateOverallActivityDataSet  @Inject()(
     val MPowerId = Value("dm_mpowerid")
   }
 
-  private val luxParkDsa = dsaf(luxParkDataSetId).get
+  private val luxParkDsa = dsaf.applySync(luxParkDataSetId).get
 
   private val appVersionFieldType = ftf(appVersionField.fieldTypeSpec)
   private val externalIdFieldType = ftf(externalIdField.fieldTypeSpec)
@@ -162,7 +162,7 @@ class CreateOverallActivityDataSet  @Inject()(
       externalIdMPowerItemsItems <- Future.sequence(
         dataSetIds.map { dataSetId =>
 
-          val dsa = dsaf(dataSetId).get
+          val dsa = dsaf.applySync(dataSetId).get
           val dataSetRepo = dsa.dataSetRepo
 
           for {

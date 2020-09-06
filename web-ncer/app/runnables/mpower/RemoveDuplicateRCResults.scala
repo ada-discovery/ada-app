@@ -28,7 +28,7 @@ class RemoveDuplicateRCResults @Inject()(
   private val idName = JsObjectIdentity.name
 
   override def runAsFuture(input: RemoveDuplicateRCResultsSpec) = {
-    val resultsDsa = dsaf(input.dataSetId).getOrElse(
+    val resultsDsa = dsaf.applySync(input.dataSetId).getOrElse(
       throw new AdaException(s"Data set ${input.dataSetId} not found.")
     )
 
@@ -41,7 +41,7 @@ class RemoveDuplicateRCResults @Inject()(
       idDuplicates <- seqFutures(dataSetIds.grouped(groupSize)) { ids =>
         Future.sequence(ids.map { id =>
           logger.info(s"Finding duplicates in $id...")
-          val dsa = dsaf(id).getOrElse(
+          val dsa = dsaf.applySync(id).getOrElse(
             throw new AdaException(s"Data set ${id} not found.")
           )
           val repo = dsa.dataSetRepo

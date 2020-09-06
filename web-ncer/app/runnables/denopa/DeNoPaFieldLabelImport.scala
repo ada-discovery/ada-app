@@ -18,7 +18,7 @@ class DeNoPaFieldLabelImport @Inject() (dsaf: DataSetAccessorFactory) extends Fu
   private val delimiter = ";"
 
   override def runAsFuture: Future[Unit] = {
-    val fieldRepo = dsaf(dataSetId).get.fieldRepo
+    val fieldRepo = dsaf.applySync(dataSetId).get.fieldRepo
 
     for {
       fields <- fieldRepo.find()

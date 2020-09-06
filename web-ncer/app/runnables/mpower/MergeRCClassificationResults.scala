@@ -41,7 +41,7 @@ class MergeRCClassificationResults @Inject() (
   private val groupSize = 10
 
   override def runAsFuture(input: MergeRCClassificationResultsSpec) = {
-    val dsa = dsaf(input.dataSetId).getOrElse(
+    val dsa = dsaf.applySync(input.dataSetId).getOrElse(
       throw new AdaException(s"Data set ${input.dataSetId} not found.")
     )
 

@@ -35,7 +35,7 @@ class TrendAddPDFlagToConversionVisits @Inject()(
   private val visitIndexMap = orderedVisits.zipWithIndex.toMap
 
   override def runAsFuture(input: TrendAddPDFlagToConversionVisitsSpec) = {
-    val dsa = dsaf(dataSetId).get
+    val dsa = dsaf.applySync(dataSetId).get
 
     for {
       conversionField <- dsa.fieldRepo.get(conversionVisitFieldName).map(_.get)

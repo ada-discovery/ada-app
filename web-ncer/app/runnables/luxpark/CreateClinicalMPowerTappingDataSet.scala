@@ -72,10 +72,10 @@ class CreateClinicalMPowerTappingDataSet @Inject()(dsaf: DataSetAccessorFactory)
 
   private val luxParkDataSetId = "lux_park.clinical"
 
-  private val luxParkDsa = dsaf(luxParkDataSetId).get
+  private val luxParkDsa = dsaf.applySync(luxParkDataSetId).get
 
-  private val mPowerTappingDsa = dsaf("lux_park.mpower_tapping_activity").get
-  private val mPowerTapping2Dsa = dsaf("lux_park.mpower_tapping_activity2").get
+  private val mPowerTappingDsa = dsaf.applySync("lux_park.mpower_tapping_activity").get
+  private val mPowerTapping2Dsa = dsaf.applySync("lux_park.mpower_tapping_activity2").get
 
   private val mergedDsa =
     result(

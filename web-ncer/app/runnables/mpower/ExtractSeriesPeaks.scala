@@ -23,7 +23,7 @@ class ExtractSeriesPeaks @Inject() (
   private val seriesFieldName = "deviceMotion_walking_outboundu002ejsonu002eitems.gravity.x"
   private val recordId = "602681c6-fb35-4513-be00-4992ad00c215"
 
-  private val dsa = dsaf(dataSetId).get
+  private val dsa = dsaf.applySync(dataSetId).get
 
   // helper method to extract series
   def extractSeries(json: JsObject): Seq[Double] = {

@@ -30,8 +30,8 @@ class VerifySubjectInfoForPlateSamples @Inject()(dsaf: DataSetAccessorFactory) e
   private val idName = JsObjectIdentity.name
 
   override def runAsFuture = {
-    val plateSampleDsa = dsaf(plateSampleDataSetId).get
-    val clinicalDsa = dsaf(clinicalDataSetId).get
+    val plateSampleDsa = dsaf.applySync(plateSampleDataSetId).get
+    val clinicalDsa = dsaf.applySync(clinicalDataSetId).get
 
     for {
       // get all the sample items

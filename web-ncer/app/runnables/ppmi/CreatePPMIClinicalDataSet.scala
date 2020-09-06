@@ -66,7 +66,7 @@ class CreatePPMIClinicalDataSet @Inject()(
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   override def runAsFuture = {
-    val dsa = dsaf(dataSetId).get
+    val dsa = dsaf.applySync(dataSetId).get
     val repo = dsa.dataSetRepo
     val fieldRepo = dsa.fieldRepo
 

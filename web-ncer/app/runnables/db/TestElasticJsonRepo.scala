@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class TestElasticJsonRepo @Inject() (dsaf: DataSetAccessorFactory) extends FutureRunnable {
 
-  private val dsa = dsaf("lux_park.ibbl_biosamples").get
+  private val dsa = dsaf.applySync("lux_park.ibbl_biosamples").get
   private val dataSetRepo = dsa.dataSetRepo
   private val idName = JsObjectIdentity.name
 

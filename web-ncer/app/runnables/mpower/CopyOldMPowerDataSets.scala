@@ -42,7 +42,7 @@ class CopyOldMPowerDataSets @Inject() (
     ).map(_ => ())
 
   private def copy(sourceDataSetId: String, targetDataSetId: String) = {
-    val targetDsa = dsaf(targetDataSetId).get
+    val targetDsa = dsaf.applySync(targetDataSetId).get
 
     for {
       setting <- targetDsa.setting

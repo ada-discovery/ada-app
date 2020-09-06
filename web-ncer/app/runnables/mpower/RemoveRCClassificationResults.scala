@@ -21,7 +21,7 @@ class RemoveRCClassificationResults @Inject()(
   private val dataSetFieldName = "inputOutputSpec-resultDataSetId"
 
   override def runAsFuture(input: RemoveRCClassificationResultsSpec) = {
-    val resultsDsa = dsaf(input.dataSetId).getOrElse(
+    val resultsDsa = dsaf.applySync(input.dataSetId).getOrElse(
       throw new AdaException(s"Data set ${input.dataSetId} not found.")
     )
 

@@ -19,8 +19,8 @@ import scala.concurrent.Future
 
 class TestElasticJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends FutureRunnable {
 
-  private val biosampleTestDsa = dsaf("lux_park.ibbl_biosample_tests").get
-  private val mPowerFeatureSetDsa = dsaf("mpower_challenge.9638887").get
+  private val biosampleTestDsa = dsaf.applySync("lux_park.ibbl_biosample_tests").get
+  private val mPowerFeatureSetDsa = dsaf.applySync("mpower_challenge.9638887").get
 
   private val biosampleTestDataSetRepo = biosampleTestDsa.dataSetRepo
   private val mPowerFeatureSetRepo = mPowerFeatureSetDsa.dataSetRepo

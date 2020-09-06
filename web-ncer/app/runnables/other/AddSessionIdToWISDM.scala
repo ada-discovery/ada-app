@@ -33,7 +33,7 @@ class AddSessionIdToWISDM @Inject()(
   private val newSessionIdField = Field("sessionId", Some("Session Id"), FieldTypeId.Integer)
 
   override def runAsFuture(input: AddSessionIdToWISDMSpec) = {
-    val dsa = dsaf(input.sourceDataSetId).get
+    val dsa = dsaf.applySync(input.sourceDataSetId).get
 
     for {
       // user ids

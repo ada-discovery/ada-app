@@ -20,12 +20,12 @@ class LinkADSMTBAndDrugDataSet @Inject()(
   ) extends FutureRunnable {
 
   private val globalDataSetId = "adsm-tb.global"
-  private val globalDsa = dsaf(globalDataSetId).get
+  private val globalDsa = dsaf.applySync(globalDataSetId).get
   private val globalDataSetRepo = globalDsa.dataSetRepo
   private val globalFieldRepo = globalDsa.fieldRepo
 
   private val drugDataSetId = "adsm-tb.drug"
-  private val drugDsa = dsaf(drugDataSetId).get
+  private val drugDsa = dsaf.applySync(drugDataSetId).get
   private val drugDataSetRepo = drugDsa.dataSetRepo
   private val drugFieldRepo = drugDsa.fieldRepo
 

@@ -24,8 +24,8 @@ class CheckFeatureDiscrepancies @Inject()(
   private val featureNumField = Field("featureNum", Some("Feature Num"), FieldTypeId.Integer)
 
   override def runAsFuture(spec: CheckFeatureDiscrepanciesSpec) = {
-    val submissionMetaDataDsa = dsaf(spec.submissionMetaDataSetId).get
-    val submissionTemplateDsa = dsaf(spec.submissionTemplateDataSetId).get
+    val submissionMetaDataDsa = dsaf.applySync(spec.submissionMetaDataSetId).get
+    val submissionTemplateDsa = dsaf.applySync(spec.submissionTemplateDataSetId).get
 
     for {
       // retrieve all the submission meta data
@@ -64,7 +64,7 @@ class CheckFeatureDiscrepancies @Inject()(
     val unitFuture = Future(())
 
     submissionId.map { submissionId =>
-      dsaf(submissionDataSetPrefix + "." + submissionId) match {
+      dsaf.applySync(submissionDataSetPrefix + "." + submissionId) match {
         case Some(featureSetDsa) =>
           for {
             jsons <- featureSetDsa.dataSetRepo.find(projection = Seq(keyFieldName))

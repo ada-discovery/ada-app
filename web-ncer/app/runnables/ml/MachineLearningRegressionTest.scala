@@ -23,7 +23,7 @@ class MachineLearningRegressionTest @Inject()(
   private val outputField = "sepal-width"
 
   override def run = {
-    val dsa = dsaf(dataSetId).get
+    val dsa = dsaf.applySync(dataSetId).get
     val (jsons, fields) = result(dss.loadDataAndFields(dsa), 2 minutes)
     val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
 

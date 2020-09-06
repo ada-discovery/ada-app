@@ -25,7 +25,7 @@ class CreateMPowerTestingDistanceDataSet @Inject()(
   ) extends FutureRunnable {
 
   private val dataSetId = "mpower_challenge.walking_activity_testing"
-  private val dsa = dsaf(dataSetId).get
+  private val dsa = dsaf.applySync(dataSetId).get
   private val dataSetRepo = dsa.dataSetRepo
   private val fieldRepo = dsa.fieldRepo
 

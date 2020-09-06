@@ -26,7 +26,7 @@ class SetClazzFieldToEnum @Inject()(
 
       _ <- seqFutures(dataSpace.dataSetMetaInfos) { dataSetMetaInfo =>
         val dataSetId = dataSetMetaInfo.id
-        val dsa = dsaf(dataSetId).get
+        val dsa = dsaf.applySync(dataSetId).get
 
         val index = dataSetId.indexOf("kmeans_")
         if (index > 0) {

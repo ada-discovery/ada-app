@@ -32,7 +32,7 @@ protected abstract class ImportDeNoPaCategories(
   @Inject() protected var dsaf: DataSetAccessorFactory = _
 
   def runAsFuture = {
-    val dsa = dsaf(dataSetId).get
+    val dsa = dsaf.applySync(dataSetId).get
     val categoryRepo = dsa.categoryRepo
     val fieldRepo = dsa.fieldRepo
 

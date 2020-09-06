@@ -20,7 +20,7 @@ class CreateHealthCodeActivityNumDataSet @Inject()(
   private val recordNumField = Field(recordNumFieldName, Some("Record Num"), FieldTypeId.Integer)
 
   override def runAsFuture(spec: CreateHealthCodeActivityNumDataSetSpec) = {
-    val dsa = dsaf(spec.dataSetId).get
+    val dsa = dsaf.applySync(spec.dataSetId).get
     val newDataSetId = spec.dataSetId + "_records_num"
 
     for {

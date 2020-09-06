@@ -27,7 +27,7 @@ class SplitCorrelationsByCategory @Inject()(
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   override def runAsFuture(input: SplitCorrelationsByCategorySpec) = {
-    val metaInfoDsa = dsaf(input.featureMetaInfoDataSetId).get
+    val metaInfoDsa = dsaf.applySync(input.featureMetaInfoDataSetId).get
 
     for {
       // category field type

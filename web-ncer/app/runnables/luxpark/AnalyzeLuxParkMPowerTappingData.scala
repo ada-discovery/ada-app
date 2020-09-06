@@ -38,8 +38,8 @@ class AnalyzeLuxParkMPowerTappingData @Inject()(
   private val timeout = 120000 millis
   private val luxParkDataSetId = "lux_park.clinical"
 
-  private val luxParkDsa = dsaf(luxParkDataSetId).get
-  private val mPowerTappingDsa = dsaf("lux_park.mpower_tapping_activity").get
+  private val luxParkDsa = dsaf.applySync(luxParkDataSetId).get
+  private val mPowerTappingDsa = dsaf.applySync("lux_park.mpower_tapping_activity").get
   private val luxParkDataRepo = luxParkDsa.dataSetRepo
   private val mPowerTappingDataRepo = mPowerTappingDsa.dataSetRepo
 

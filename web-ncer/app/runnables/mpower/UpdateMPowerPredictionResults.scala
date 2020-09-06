@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class UpdateMPowerPredictionResults @Inject() (dsaf: DataSetAccessorFactory) extends FutureRunnable {
 
   private val dataSetId = "mpower_challenge.walking_activity_training_w_demographics_results"
-  private val dataSetRepo = dsaf(dataSetId).get.dataSetRepo
+  private val dataSetRepo = dsaf.applySync(dataSetId).get.dataSetRepo
 
   private val inputFieldPaths = Seq(
     "accel_walking_outboundu002ejsonu002eitems.x",

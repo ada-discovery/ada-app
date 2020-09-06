@@ -41,8 +41,8 @@ class AddMissingSubjectsForPlateSamples @Inject()(dsaf: DataSetAccessorFactory) 
   private val fixedSampleIdsBloodKitMap = fixedBloodKitNumMap.map { case (blookKit, bloodKit2) => (blookKit + "-BLD-DNA-01", bloodKit2) }
 
   override def runAsFuture = {
-    val plateSampleDsa = dsaf(plateSampleDataSetId).get
-    val clinicalDsa = dsaf(clinicalDataSetId).get
+    val plateSampleDsa = dsaf.applySync(plateSampleDataSetId).get
+    val clinicalDsa = dsaf.applySync(clinicalDataSetId).get
 
     for {
       // get the clinical items matching the given values

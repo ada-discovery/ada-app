@@ -17,7 +17,7 @@ class FindNoNullZeroNumericFields @Inject() (dsaf: DataSetAccessorFactory) exten
   private val logger = Logger
 
   override def runAsFuture(input: FindNoNullZeroNumericFieldsSpec) = {
-    val dsa = dsaf(input.dataSetId).get
+    val dsa = dsaf.applySync(input.dataSetId).get
 
     for {
       numericFields <- dsa.fieldRepo.find(Seq("fieldType" #-> numericFieldTypeIds))

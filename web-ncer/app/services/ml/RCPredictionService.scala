@@ -89,7 +89,7 @@ class RCPredictionServiceImpl @Inject()(
     preserveWeightFieldNames: Seq[String]
   ): Future[Unit] = {
     val start = new ju.Date
-    val dsa = dsaf(ioSpec.sourceDataSetId).get
+    val dsa = dsaf.applySync(ioSpec.sourceDataSetId).get
     val dataSetRepo = dsa.dataSetRepo
 
     val inputDim = ioSpec.inputSeriesFieldPaths.size
