@@ -229,7 +229,7 @@ class DataSetTransformationController @Inject()(
   def filterIdAndNames(
     dataSetId: String
   ) = restrictAny { implicit request =>
-    dsaf(dataSetId).map { dsa =>
+    dsaf.applySync(dataSetId).map { dsa =>
       for {
         filters <- dsa.filterRepo.find()
       } yield {

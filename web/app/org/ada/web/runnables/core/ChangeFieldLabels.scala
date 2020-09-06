@@ -22,7 +22,7 @@ class ChangeFieldLabels @Inject() (
   override def runAsFuture(
     input: ChangeFieldLabelsSpec
   ) = {
-    val dsa = dsaf(input.dataSetId).get
+    val dsa = dsaf.applySync(input.dataSetId).get
 
     val nameLabelMap = input.fieldNameLabels.grouped(2).toSeq.map(seq => (seq(0), seq(1))).toMap
     val names = nameLabelMap.map(_._1).toSeq

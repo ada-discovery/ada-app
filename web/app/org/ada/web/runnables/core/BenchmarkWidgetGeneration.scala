@@ -58,7 +58,7 @@ trait BenchmarkWidgetGenerationHelper extends RunnableHtmlOutput {
     repetitions: Int,
     warmUp: Boolean
   ): Future[Unit] = {
-    val dsa = dsaf(dataSetId).get
+    val dsa = dsaf.applySync(dataSetId).get
     val dataSetRepo = dsa.dataSetRepo
 
     for {

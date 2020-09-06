@@ -90,7 +90,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     with DistributionWidgetGeneratorHelper
     with DataSetViewHelper {
 
-  protected val dsa: DataSetAccessor = dsaf(dataSetId).get
+  protected val dsa: DataSetAccessor = dsaf.applySync(dataSetId).get
 
   protected val fieldRepo = dsa.fieldRepo
   protected val categoryRepo = dsa.categoryRepo

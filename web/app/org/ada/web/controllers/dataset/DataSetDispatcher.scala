@@ -313,7 +313,7 @@ class DataSetDispatcher @Inject() (
   private def dataViewOwnerOrPublicFun(id: BSONObjectID) = {
     request: Request[AnyContent] =>
       val dataSetId = getControllerId(request)
-      val dsa = dsaf(dataSetId).getOrElse(throw new AdaException(s"Data set id $dataSetId not found."))
+      val dsa = dsaf.applySync(dataSetId).getOrElse(throw new AdaException(s"Data set id $dataSetId not found."))
 
       for {
         dataView <- dsa.dataViewRepo.get(id)

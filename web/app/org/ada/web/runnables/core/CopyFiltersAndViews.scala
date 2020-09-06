@@ -98,7 +98,7 @@ class CopyFiltersAndViews @Inject()(dsaf: DataSetAccessorFactory) extends InputF
   }
 
   protected def dsaSafe(dataSetId: String) =
-    dsaf(dataSetId).getOrElse(
+    dsaf.applySync(dataSetId).getOrElse(
       throw new AdaException(s"Data set id ${dataSetId} not found.")
     )
 }

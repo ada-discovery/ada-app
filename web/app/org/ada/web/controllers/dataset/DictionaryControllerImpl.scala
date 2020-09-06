@@ -52,13 +52,13 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     dataSpaceService: DataSpaceService,
     val wgs: WidgetGenerationService)(
     implicit materializer: Materializer
-  ) extends AdaCrudControllerImpl[Field, String](dsaf(dataSetId).get.fieldRepo)
+  ) extends AdaCrudControllerImpl[Field, String](dsaf.applySync(dataSetId).get.fieldRepo)
     with DictionaryController
     with WidgetRepoController[Field]
     with HasFormShowEqualEditView[Field, String]
     with ExportableAction[Field] {
 
-  protected val dsa: DataSetAccessor = dsaf(dataSetId).get
+  protected val dsa: DataSetAccessor = dsaf.applySync(dataSetId).get
   protected val categoryRepo: CategoryRepo = dsa.categoryRepo
 
   override protected val listViewColumns = Some(Seq("name", "fieldType", "isArray", "label", "categoryId"))

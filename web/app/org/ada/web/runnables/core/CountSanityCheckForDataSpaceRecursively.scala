@@ -81,7 +81,7 @@ trait CountSanityCheckHelper extends RunnableHtmlOutput {
   ): Future[(String, Int, Int)] = {
     logger.info(s"Checking the count for the data set $dataSetId.")
 
-    val dsa = dsaf(dataSetId).get
+    val dsa = dsaf.applySync(dataSetId).get
 
     for {
       count <- dsa.dataSetRepo.count()
