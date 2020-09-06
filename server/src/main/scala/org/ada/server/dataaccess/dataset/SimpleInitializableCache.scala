@@ -28,6 +28,9 @@ abstract class SimpleInitializableCache[ID, T](eagerInit: Boolean) {
   }
 
   def apply(id: ID): Option[T] =
+    Await.result(applyAsync(id), 10 minutes)
+
+  def applyAsync(id: ID): Future[Option[T]] =
     getItemOrElse(id) {
 
       // get a lock... if doesn't exist, register one
@@ -46,22 +49,19 @@ abstract class SimpleInitializableCache[ID, T](eagerInit: Boolean) {
 
   private def getItemOrElse(
     id: ID)(
-    initialize: => Option[T]
-  ): Option[T] =
+    initialize: => Future[Option[T]]
+  ): Future[Option[T]] =
     cache.get(id) match {
-      case Some(item) => Some(item)
+      case Some(item) => Future(Some(item))
       case None => initialize
     }
 
-  private def createAndCacheInstance(id: ID) = {
-    val future = createInstance(id).map { instance =>
+  private def createAndCacheInstance(id: ID) =
+    createInstance(id).map { instance =>
       if (instance.isDefined)
         cache.put(id, instance.get)
       instance
     }
-    // TODO: change to Future
-    Await.result(future, 10 minutes)
-  }
 
   protected def cacheMissGet(id: ID): Future[Option[T]] = Future(None)
 
