@@ -34,7 +34,7 @@ class ImputeOrderedGroupValuesFromPrevious @Inject() (
   override def runAsFuture(
     input: ImputeOrderedGroupValuesFromPreviousSpec
   ) = {
-    val dsa = dsaf(input.sourceDataSetId).get
+    val dsa = dsaf.applySync(input.sourceDataSetId).get
 
     for {
       // order field (and type)

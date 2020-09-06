@@ -46,7 +46,7 @@ class ClassifyRCResults @Inject() (
 
   private def dataSetIds(input: ClassifyRCResultsSpec) = {
     def resultsDataSetIds(dataSetId: String) = {
-      val dsa = dsaf(dataSetId).getOrElse(
+      val dsa = dsaf.applySync(dataSetId).getOrElse(
         throw new AdaException(s"Data set ${dataSetId} not found.")
       )
 
@@ -72,7 +72,7 @@ class ClassifyRCResults @Inject() (
   }
 
   private def classify(dataSetId: String, spec: ClassifyRCResultsSpec): Future[Unit] = {
-    val dsa = dsaf(dataSetId).getOrElse(
+    val dsa = dsaf.applySync(dataSetId).getOrElse(
       throw new AdaException(s"Data set $dataSetId not found.")
     )
 

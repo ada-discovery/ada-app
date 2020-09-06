@@ -31,7 +31,7 @@ class CalcCorrelations @Inject()(
   import statsService._
 
   def runAsFuture(input: CalcCorrelationsSpec) = {
-    val dsa = dsaf(input.dataSetId).get
+    val dsa = dsaf.applySync(input.dataSetId).get
     val dataSetRepo = dsa.dataSetRepo
 
     for {

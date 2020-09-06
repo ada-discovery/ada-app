@@ -54,7 +54,7 @@ class RunIndependenceTestForDataSpace @Inject()(
     dataSetId: String
   ): Future[String] = {
     logger.info(s"Running an independence test for the data set $dataSetId using the target field '$targetFieldName'.")
-    val dsa = dsaf(dataSetId).get
+    val dsa = dsaf.applySync(dataSetId).get
 
     for {
       inputField <- dsa.fieldRepo.get(inputFieldName)

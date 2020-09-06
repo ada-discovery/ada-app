@@ -46,7 +46,7 @@ class CalculateMultipleVariances @Inject()(
 
     logger.info(s"Calculating variances for the data set ${input.dataSetId} using the ${input.fieldNames.size} fields.")
 
-    val dsa = dsaf(input.dataSetId).get
+    val dsa = dsaf.applySync(input.dataSetId).get
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(input.exportDelimiter)
 
     for {

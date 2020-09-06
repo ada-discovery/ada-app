@@ -29,8 +29,8 @@ class CompareAllValuesInTwoDataSets @Inject()(
   private implicit val materializer = ActorMaterializer()
 
   override def runAsFuture(spec: CompareAllValuesInTwoDataSetsSpec) = {
-    val dsa1 = dsaf(spec.dataSetId1).get
-    val dsa2 = dsaf(spec.dataSetId2).get
+    val dsa1 = dsaf.applySync(spec.dataSetId1).get
+    val dsa2 = dsaf.applySync(spec.dataSetId2).get
 
     for {
       // setting1

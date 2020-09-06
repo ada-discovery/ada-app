@@ -33,7 +33,8 @@ trait DataSetAccessorFactory {
     dataView: Option[DataView]
   ): Future[DataSetAccessor]
 
-  def apply(dataSetId: String): Option[DataSetAccessor]
+  @Deprecated
+  def applySync(dataSetId: String): Option[DataSetAccessor]
 
   @Deprecated
   def dataSetRepoCreate(

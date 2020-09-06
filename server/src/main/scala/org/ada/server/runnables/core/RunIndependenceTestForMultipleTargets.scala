@@ -42,7 +42,7 @@ class RunIndependenceTestForMultipleTargets @Inject()(
     input: RunIndependenceTestForMultipleTargetsSpec
   ): Future[Traversable[String]] = {
     logger.info(s"Running independence tests for the data set ${input.dataSetId} using the target fields '${input.targetFieldNames.mkString(", ")}'.")
-    val dsa = dsaf(input.dataSetId).get
+    val dsa = dsaf.applySync(input.dataSetId).get
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(input.exportDelimiter)
 
     for {

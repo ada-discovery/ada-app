@@ -38,7 +38,7 @@ class MoveDataSets @Inject() (
     dataSetId: String,
     newDataSpaceId: BSONObjectID
   ): Future[Unit] = {
-    val dsa = dsaf(dataSetId).getOrElse(
+    val dsa = dsaf.applySync(dataSetId).getOrElse(
       throw new AdaException(s"Data set $dataSetId not found.")
     )
 

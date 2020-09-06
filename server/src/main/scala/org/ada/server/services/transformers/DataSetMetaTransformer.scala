@@ -36,7 +36,7 @@ private[transformers] abstract class AbstractDataSetMetaTransformer[T <: DataSet
   protected val deleteNonReferenced = true
 
   protected def dsaSafe(dataSetId: String) =
-    dsaf(dataSetId).getOrElse(throw new AdaException(s"Data set ${dataSetId} not found"))
+    dsaf.applySync(dataSetId).getOrElse(throw new AdaException(s"Data set ${dataSetId} not found"))
 
   override def runAsFuture(spec: T) =
     for {

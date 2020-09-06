@@ -31,7 +31,7 @@ class CalcEuclideanDistances @Inject()(
   private val logger = Logger
 
   def runAsFuture(input: CalcEuclideanDistancesSpec) = {
-    val dsa = dsaf(input.dataSetId).get
+    val dsa = dsaf.applySync(input.dataSetId).get
     val dataSetRepo = dsa.dataSetRepo
 
     for {

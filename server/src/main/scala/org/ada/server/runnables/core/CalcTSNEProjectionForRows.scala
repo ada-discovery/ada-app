@@ -24,7 +24,7 @@ class CalcTSNEProjectionForRows @Inject()(
   implicit val ftf = FieldTypeHelper.fieldTypeFactory()
 
   def runAsFuture(input: CalcTSNEProjectionForRowsSpec) = {
-    val dsa = dsaf(input.dataSetId).get
+    val dsa = dsaf.applySync(input.dataSetId).get
     val dataSetRepo = dsa.dataSetRepo
 
     for {

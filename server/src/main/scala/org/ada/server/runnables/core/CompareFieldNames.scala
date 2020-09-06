@@ -19,7 +19,7 @@ class CompareFieldNames @Inject() (dsaf: DataSetAccessorFactory) extends InputFu
       fieldNames <-
         Future.sequence(
           input.dataSetIds.map { dataSetId =>
-            val dsa = dsaf(dataSetId).getOrElse(
+            val dsa = dsaf.applySync(dataSetId).getOrElse(
               throw new AdaException(s"Data set id ${dataSetId} not found."))
 
             dsa.fieldRepo.find().map(_.map(_.name))

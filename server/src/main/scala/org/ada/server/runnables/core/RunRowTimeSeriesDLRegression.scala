@@ -28,7 +28,7 @@ class RunRowTimeSeriesDLRegression @Inject() (
   override def runAsFuture(
     input: RunRowTimeSeriesDLRegressionSpec
   ): Future[Unit] = {
-    val dsa = dsaf(input.dataSetId).get
+    val dsa = dsaf.applySync(input.dataSetId).get
 
     val ioSpec = input.ioSpec
     val fieldNames = ioSpec.allFieldNames

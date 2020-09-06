@@ -34,9 +34,7 @@ class RunRowTimeSeriesRCRegression @Inject() (
   override def runAsFuture(
     input: RunRowTimeSeriesRCRegressionSpec
   ): Future[Unit] = {
-    println(input)
-
-    val dsa = dsaf(input.dataSetId).get
+    val dsa = dsaf.applySync(input.dataSetId).get
 
     val fieldNames = (input.inputFieldNames ++ Seq(input.outputFieldName, input.orderFieldName)).toSet.toSeq
 

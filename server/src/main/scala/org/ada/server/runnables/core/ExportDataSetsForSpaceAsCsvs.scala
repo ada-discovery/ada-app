@@ -43,7 +43,7 @@ class ExportDataSetsForSpaceAsCsvs @Inject() (
   ) = {
     logger.info(s"Exporting the data set $dataSetId to the folder '$exportFolder'.")
 
-    val dsa = dsaf(dataSetId).get
+    val dsa = dsaf.applySync(dataSetId).get
 
     for {
       jsons <- dsa.dataSetRepo.find()

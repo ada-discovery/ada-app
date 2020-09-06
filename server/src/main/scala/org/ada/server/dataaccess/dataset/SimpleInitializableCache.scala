@@ -27,7 +27,8 @@ abstract class SimpleInitializableCache[ID, T](eagerInit: Boolean) {
     map
   }
 
-  def apply(id: ID): Option[T] =
+  @Deprecated
+  def applySync(id: ID): Option[T] =
     Await.result(applyAsync(id), 10 minutes)
 
   def applyAsync(id: ID): Future[Option[T]] =

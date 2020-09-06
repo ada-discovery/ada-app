@@ -10,7 +10,7 @@ abstract class DsaInputFutureRunnable[I](implicit override val typeTag: TypeTag[
 
   @Inject var dsaf: DataSetAccessorFactory = _
 
-  protected def createDsa(dataSetId: String) = dsaf(dataSetId).getOrElse(
+  protected def createDsa(dataSetId: String) = dsaf.applySync(dataSetId).getOrElse(
     throw new AdaException(s"Data set id ${dataSetId} not found.")
   )
 

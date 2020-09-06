@@ -16,7 +16,7 @@ class RemoveUnreferencedFilters @Inject() (dsaf: DataSetAccessorFactory) extends
   override def runAsFuture(
     input: RemoveUnreferencedFiltersSpec
   ) = {
-    val dsa = dsaf(input.dataSetId).get
+    val dsa = dsaf.applySync(input.dataSetId).get
 
     for {
       // get all the views for a given data set
