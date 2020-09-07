@@ -119,13 +119,7 @@ package object util {
       (name, data)
     }
 
-  def toChartData(widget: NumericalCountWidget[_]) = {
-    def numericValue(x: Any) =
-      x match {
-        case x: java.util.Date => x.getTime.toString
-        case _ => x.toString
-      }
-
+  def toChartData(widget: NumericalCountWidget[_]) =
     widget.data.map { case (name, series) =>
       val sum = if (widget.isCumulative) series.map(_.count).max else series.map(_.count).sum
       val data = series.map { case Count(value, count, _) =>
@@ -133,32 +127,31 @@ package object util {
       }
       (name, data)
     }
-  }
 
-  def toChartData(widget: ScatterWidget[_, _]) = {
-    def numericValue(x: Any) =
-      x match {
-        case x: java.util.Date => x.getTime.toString
-        case _ => x.toString
+  def toChartData(widget: LineWidget[_, _]) =
+    widget.data.map { case (name, series) =>
+      val data = series.map { case (x, y) =>
+        (numericValue(x), numericValue(y))
       }
+      (name, data)
+    }
 
+  def toChartData(widget: ScatterWidget[_, _]) =
     widget.data.map { case (name, points) =>
-      var numPoints = points.map { case (point1, point2) => (numericValue(point1), numericValue(point2)) }
+      val numPoints = points.map { case (point1, point2) => (numericValue(point1), numericValue(point2)) }
       (name, numPoints)
     }
-  }
 
-  def toChartData(widget: ValueScatterWidget[_, _, _]) = {
-    def numericValue(x: Any) =
-      x match {
-        case x: java.util.Date => x.getTime.toString
-        case _ => x.toString
-      }
-
+  def toChartData(widget: ValueScatterWidget[_, _, _]) =
     widget.data.map { case (x, y, z) =>
       (numericValue(x), numericValue(y), numericValue(z))
     }
-  }
+
+  private def numericValue(x: Any) =
+    x match {
+      case x: java.util.Date => x.getTime.toString
+      case _ => x.toString
+    }
 
   def matchesPath(
     coreUrl: String,

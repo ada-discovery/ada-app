@@ -13,11 +13,16 @@ GET         /profile                                                            
 GET         /settings                                                               org.ada.web.controllers.UserProfileController.settings
 POST        /settings                                                               org.ada.web.controllers.UserProfileController.updateSettings
 
-# logins
+# Authentication
 GET         /login                                                                  org.ada.web.controllers.AuthController.login
-POST        /login                                                                  org.ada.web.controllers.AuthController.authenticate
+GET         /loginForm                                                              org.ada.web.controllers.AuthController.loginWithForm
+POST        /loginForm                                                              org.ada.web.controllers.AuthController.authenticate
+GET         /loginOIDC                                                              org.ada.web.controllers.OidcAuthController.oidcLogin
+GET         /oidc/callback                                                          @org.pac4j.play.CallbackController.callback()
+
 GET         /logout                                                                 org.ada.web.controllers.AuthController.logout
 GET         /loggedout                                                              org.ada.web.controllers.AuthController.loggedOut
+GET         /logoutOIDC                                                             @org.pac4j.play.LogoutController.logout()
 
 # for no-authentication access
 GET         /loginBasic                                                             org.ada.web.controllers.AuthController.loginBasic

@@ -20,6 +20,7 @@ import play.api.libs.mailer.MailerClient
 
 class AuthController @Inject() (
     val userManager: UserManager,
+    configuration: Configuration,
     mailerClient: MailerClient
   ) extends AdaBaseController with LoginLogout with AdaAuthConfig {
 
@@ -33,11 +34,13 @@ class AuthController @Inject() (
       "id" -> nonEmptyText,
       "password" -> nonEmptyText
     )
-//      .verifying(
-//        "Invalid LUMS ID or password",
-//        idPassword => Await.result(userManager.authenticate(idPassword._1, idPassword._2), 120000 millis)
-//      )
   }
+
+  private val openIdForm = Form(
+    single(
+    "openid" -> nonEmptyText
+    )
+  )
 
   private val unauthorizedMessage = "It appears that you don't have sufficient rights for access. Please login to proceed."
   private val unauthorizedRedirect = loginRedirect(unauthorizedMessage)
@@ -45,10 +48,21 @@ class AuthController @Inject() (
   private def loginRedirect(errorMessage: String) =
     Redirect(routes.AuthController.login).flashing("errors" -> errorMessage)
 
+
   /**
-    * Redirect to login page.
+    * Login switch - if OIDC available use it, otherwise redirect to a standard form login (LDAP)
     */
-  def login = AuthAction { implicit request =>
+  def login = Action { implicit request =>
+    if (configuration.getString(s"oidc.baseUrl").isDefined)
+      Redirect(org.ada.web.controllers.routes.OidcAuthController.oidcLogin())
+    else
+      Redirect(org.ada.web.controllers.routes.AuthController.loginWithForm())
+  }
+
+  /**
+    * Standard login page with a form.
+    */
+  def loginWithForm = AuthAction { implicit request =>
     Future(
       Ok(views.html.auth.login(loginForm))
     )
@@ -58,9 +72,12 @@ class AuthController @Inject() (
     * Remember log out state and redirect to main page.
     */
   def logout = Action.async { implicit request =>
-    gotoLogoutSucceeded.map(_.flashing(
-      "success" -> "Logged out"
-    ).removingFromSession("rememberme"))
+    if (configuration.getString(s"oidc.baseUrl").isDefined)
+      Future(Redirect(org.pac4j.play.routes.LogoutController.logout()))
+    else
+      gotoLogoutSucceeded.map(_.flashing(
+        "success" -> "Logged out"
+      ).removingFromSession("rememberme"))
   }
 
   /**

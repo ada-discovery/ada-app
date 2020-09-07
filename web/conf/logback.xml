@@ -47,6 +47,11 @@
     <logger name="com.avaje.ebeaninternal.server.lib.BackgroundThread" level="OFF" />
     <logger name="com.gargoylesoftware.htmlunit.javascript" level="OFF" />
 
+    <!-- PAC4J debug
+    <logger name="org.pac4j.play" level="DEBUG" />
+    <logger name="org.pac4j.core.engine" level="DEBUG" />
+    -->
+
     <root level="WARN">
         <appender-ref ref="ASYNCFILE" />
         <appender-ref ref="ASYNCSTDOUT" />
