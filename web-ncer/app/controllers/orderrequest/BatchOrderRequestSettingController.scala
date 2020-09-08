@@ -217,7 +217,7 @@ class BatchOrderRequestSettingController @Inject()(
       users <- userRepo.find()
     } yield {
       val idAndNames = users.toSeq.map( user =>
-        Json.obj("_id" -> user._id, "name" -> user.ldapDn)
+        Json.obj("_id" -> user._id, "name" -> user.userId)
       )
       Ok(Json.toJson(idAndNames))
     }
@@ -241,7 +241,7 @@ class BatchOrderRequestSettingController @Inject()(
               Future(())
           } yield {
             user match {
-              case Some(user) => goHome.flashing("success" -> s"User '${user.ldapDn}' was made a batch-order request admin.")
+              case Some(user) => goHome.flashing("success" -> s"User '${user.userId}' was made a batch-order request admin.")
               case None => goHome.flashing("errors" -> s"No user '${userId.stringify}' found.")
             }
           }

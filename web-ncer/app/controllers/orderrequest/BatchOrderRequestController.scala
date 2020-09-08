@@ -110,7 +110,7 @@ class BatchOrderRequestController @Inject()(
     } yield {
 
       val itemsForUserWithCall = page.items.map { orderRequest =>
-        val userName = users.get(orderRequest.createdById).map(_.ldapDn)
+        val userName = users.get(orderRequest.createdById).map(_.userId)
         val roles = requestIdUserRolesMap.get(orderRequest._id.get).getOrElse(
           throw new IllegalStateException(s"No roles found for the batch order request ${orderRequest._id.get.stringify}.")
         )
@@ -240,7 +240,7 @@ class BatchOrderRequestController @Inject()(
                   itemIds = selectedIds,
                   state = BatchRequestState.Created,
                   createdById = userId,
-                  history = Seq(ActionInfo(BatchRequestState.Created, BatchRequestState.Created, user.ldapDn))
+                  history = Seq(ActionInfo(BatchRequestState.Created, BatchRequestState.Created, user.userId))
                 )
 
                 repo.save(batchRequest)
@@ -256,14 +256,14 @@ class BatchOrderRequestController @Inject()(
                 fromState = createAction.fromState,
                 toState = createAction.toState,
                 possibleActions =  ActionGraph.asMap.get(createAction.toState).get.map(_.action),
-                createdByUser = user.ldapDn,
-                targetUser = user.ldapDn,
+                createdByUser = user.userId,
+                targetUser = user.userId,
                 description = None,
                 targetUserEmail = user.email,
                 updateDate = date,
                 getRequestUrl = orderRoutes.action(id, Role.Requester).absoluteURL(),  // orderRoutes.get(id).absoluteURL(),
                 notificationType = NotificationType.Solicitation,
-                updatedByUser = user.ldapDn,
+                updatedByUser = user.userId,
                 items = None
               )
 
@@ -469,7 +469,7 @@ class BatchOrderRequestController @Inject()(
       backgroundCount <- repo.count(backgroundPageCriteria)
       users <- getIdUserMap(items.map(_.createdById))
     } yield {
-      val itemsWithName = items.map(i => (i, users.get(i.createdById).map(_.ldapDn)))
+      val itemsWithName = items.map(i => (i, users.get(i.createdById).map(_.userId)))
       (itemsWithName, count, backgroundCount)
     }
   }
@@ -606,14 +606,14 @@ class BatchOrderRequestController @Inject()(
               fromState = allowedStateAction.fromState,
               toState = allowedStateAction.toState,
               possibleActions =  ActionGraph.asMap.get(allowedStateAction.toState).get.map(_.action),
-              createdByUser = roleUsersToNotify.get(Role.Requester).get.toSeq(0).ldapDn,
-              targetUser = user.ldapDn,
+              createdByUser = roleUsersToNotify.get(Role.Requester).get.toSeq(0).userId,
+              targetUser = user.userId,
               description = description,
               targetUserEmail = user.email,
               updateDate = new Date(),
               getRequestUrl = notificationUrlToShow,
               notificationType = notificationType,
-              updatedByUser = user.ldapDn,
+              updatedByUser = user.userId,
               items = items
             )
           }
@@ -622,7 +622,7 @@ class BatchOrderRequestController @Inject()(
         // update the batch order request with new state and history
         _ <- {
           val newState = allowedStateAction.toState
-          val actionInfo = ActionInfo(orderRequest.state, newState, user.ldapDn, description)
+          val actionInfo = ActionInfo(orderRequest.state, newState, user.userId, description)
 
           val updatedHistory = orderRequest.history :+ actionInfo
           val updatedOrderRequest = orderRequest.copy(state = newState, history = updatedHistory)
