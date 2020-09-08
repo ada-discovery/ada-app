@@ -23,3 +23,4 @@ db.getCollection('dataset_transformations').update({concreteClass : "org.ada.ser
     {multi: true}
 )
 
+db.getCollection('users').updateMany( {}, { $rename: { "ldapDn": "userId" } } )
