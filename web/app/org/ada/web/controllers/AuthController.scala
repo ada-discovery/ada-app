@@ -142,7 +142,7 @@ class AuthController @Inject() (
               Future(authenticationUnsuccessfulResult)
             } else
               userOption match {
-                case Some(user) => if (user.locked) Future(userNotFoundOrLockedResult) else loginSuccessfulResult(user.ldapDn)
+                case Some(user) => if (user.locked) Future(userNotFoundOrLockedResult) else loginSuccessfulResult(user.userId)
                 case None => Future(userNotFoundOrLockedResult)
               }
         } yield
@@ -153,7 +153,7 @@ class AuthController @Inject() (
   // immediately login as basic user
   def loginBasic = Action.async { implicit request =>
     if(userManager.debugUsers.nonEmpty)
-      gotoLoginSucceeded(userManager.basicUser.ldapDn)
+      gotoLoginSucceeded(userManager.basicUser.userId)
     else
       Future(unauthorizedRedirect)
   }
@@ -161,7 +161,7 @@ class AuthController @Inject() (
   // immediately login as admin user
   def loginAdmin = Action.async { implicit request =>
     if (userManager.debugUsers.nonEmpty)
-      gotoLoginSucceeded(userManager.adminUser.ldapDn)
+      gotoLoginSucceeded(userManager.adminUser.userId)
     else
       Future(unauthorizedRedirect)
   }

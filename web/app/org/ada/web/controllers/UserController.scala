@@ -147,13 +147,13 @@ class UserController @Inject() (
     permissionPrefix: Option[String]
   ) = restrictAdminAny(noCaching = true) { implicit request =>
     for {
-      allUsers <- repo.find(sort = Seq(AscSort("ldapDn")))
+      allUsers <- repo.find(sort = Seq(AscSort("userId")))
     } yield {
       val filteredUsers = if (permissionPrefix.isDefined)
         allUsers.filter(_.permissions.exists(_.startsWith(permissionPrefix.get)))
       else
         allUsers
-      val page = Page(filteredUsers, 0, 0, filteredUsers.size, "ldapDn")
+      val page = Page(filteredUsers, 0, 0, filteredUsers.size, "userId")
       Ok(view.list(page, Nil))
     }
   }
@@ -187,7 +187,7 @@ class UserController @Inject() (
       users <- userRepo.find()
     } yield {
       val idAndNames = users.toSeq.map( user =>
-        Json.obj("_id" -> user._id, "name" -> user.ldapDn)
+        Json.obj("_id" -> user._id, "name" -> user.userId)
       )
       Ok(JsArray(idAndNames))
     }
