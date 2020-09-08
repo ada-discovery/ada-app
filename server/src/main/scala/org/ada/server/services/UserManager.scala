@@ -69,10 +69,10 @@ private class UserManagerImpl @Inject()(
   override def synchronizeRepos: Future[Unit] = {
     val futures = ldapService.listUsers.map { ldapUser: LdapUser =>
       for {
-        found <- userRepo.find(Seq("ldapDn" #== ldapUser.uid)).map(_.headOption)
+        found <- userRepo.find(Seq("userId" #== ldapUser.uid)).map(_.headOption)
         _ <- found match {
           case Some(usr) =>
-            userRepo.update(usr.copy(ldapDn = ldapUser.uid, email = ldapUser.email))
+            userRepo.update(usr.copy(userId = ldapUser.uid, email = ldapUser.email))
           case None =>
             userRepo.save(User(None, ldapUser.uid, ldapUser.email, Seq(), Seq()))
         }
@@ -95,7 +95,7 @@ private class UserManagerImpl @Inject()(
       // retrieve all LDAP users and remove those who are not matched
       _ <- {
         val ldapUserUids = ldapService.listUsers.map(_.uid).toSet
-        val nonMatchingLocalUsers = localUsers.filterNot(user => ldapUserUids.contains(user.ldapDn))
+        val nonMatchingLocalUsers = localUsers.filterNot(user => ldapUserUids.contains(user.userId))
         val nonMatchingIds = nonMatchingLocalUsers.map(_._id.get)
 
         userRepo.delete(nonMatchingIds).map(_ =>
@@ -116,7 +116,7 @@ private class UserManagerImpl @Inject()(
       // retrieve all LDAP users and remove those who are not matched
       _ <- {
         val ldapUserUids = ldapService.listUsers.map(_.uid).toSet
-        val nonMatchingLocalUsers = localUsers.filterNot(user => ldapUserUids.contains(user.ldapDn))
+        val nonMatchingLocalUsers = localUsers.filterNot(user => ldapUserUids.contains(user.userId))
         val usersToLock = nonMatchingLocalUsers.map(_.copy(locked = true))
 
         userRepo.update(usersToLock).map(_ =>
@@ -140,7 +140,7 @@ private class UserManagerImpl @Inject()(
     }
 
   private def addUserIfNotPresent(user: User) =
-    userRepo.find(Seq("ldapDn" #== user.ldapDn)).map { users =>
+    userRepo.find(Seq("userId" #== user.userId)).map { users =>
       if (users.isEmpty)
         userRepo.save(user)
     }
@@ -161,5 +161,5 @@ private class UserManagerImpl @Inject()(
     * @return Option containing Account with matching ID; None otherwise
     */
   override def findById(id: String): Future[Option[User]] =
-    userRepo.find(Seq("ldapDn" #== id)).map(_.headOption)
+    userRepo.find(Seq("userId" #== id)).map(_.headOption)
 }

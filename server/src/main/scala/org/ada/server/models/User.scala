@@ -7,17 +7,17 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 
 /**
-  *  User object - holds info about a user such as ldapDn, email, roles, and  permissions.
+  *  User object - holds info about a user such as userId, email, roles, and  permissions.
   *
   * @param _id BSON ID of entry/ user
-  * @param ldapDn LDAP DN of user on LDAP server.
+  * @param userId User's id.
   * @param email Email of user (can be used to send notifications.
   * @param roles Roles for Deadbolt.
   * @param permissions Permissions for Deadbolt.
   */
 case class User(
   _id: Option[BSONObjectID],
-  ldapDn: String, // TODO: rename to userName
+  userId: String,
   email: String,
   roles: Seq[String],
   permissions: Seq[String] = Nil,
