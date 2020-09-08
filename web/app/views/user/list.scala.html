@@ -26,7 +26,7 @@
     <fieldset>
         <select id="sourceUserId" name="sourceUserId">
             @page.items.map { user =>
-                <option value="@user._id.get.stringify">@user.ldapDn</option>
+                <option value="@user._id.get.stringify">@user.userId</option>
             }
         </select>
         <span>
@@ -34,7 +34,7 @@
         </span>
         <select id="targetUserId" name="targetUserId">
             @page.items.map { user =>
-                <option value="@user._id.get.stringify">@user.ldapDn</option>
+                <option value="@user._id.get.stringify">@user.userId</option>
             }
         </select>
     </fieldset>
@@ -52,7 +52,7 @@
                 Filter(conditions),
                 routes.UserController.find(),
                 Left(Seq(
-                    Field("ldapDn", Some("Id")),
+                    Field("userId", Some("Id")),
                     Field("email", Some("Email"))
                 )),
                 None,
@@ -98,7 +98,7 @@
         page,
         routes.UserController.find(_, _, conditions),
         typeColumns[User](
-            (Some("id"), "Id", _.ldapDn),
+            (Some("id"), "Id", _.userId),
             (Some("email"), "Email", _.email),
             (Some("locked"), "Locked", lockedCheckbox)
         ),
