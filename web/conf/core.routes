@@ -85,8 +85,8 @@ GET         /admin/dataSetTransformation/filterIdAndNames                       
 
 
 # User Management
-GET         /users                                                                  org.ada.web.controllers.UserController.find(p: Int ?= 0, s: String ?= "ldapDn", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
-GET         /users/all                                                              org.ada.web.controllers.UserController.listAll(s: String ?= "ldapDn")
+GET         /users                                                                  org.ada.web.controllers.UserController.find(p: Int ?= 0, s: String ?= "userId", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
+GET         /users/all                                                              org.ada.web.controllers.UserController.listAll(s: String ?= "userId")
 GET         /users/new                                                              org.ada.web.controllers.UserController.create
 POST        /users/save                                                             org.ada.web.controllers.UserController.save
 GET         /users/get/:id                                                          org.ada.web.controllers.UserController.get(id: BSONObjectID)
