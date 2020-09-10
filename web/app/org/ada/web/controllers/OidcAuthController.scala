@@ -2,6 +2,7 @@ package org.ada.web.controllers
 
 import javax.inject.Inject
 import jp.t2v.lab.play2.auth.Login
+import org.ada.server.AdaException
 import org.ada.server.services.UserManager
 import org.ada.web.security.AdaAuthConfig
 import org.pac4j.core.config.Config
@@ -12,6 +13,9 @@ import play.api.Logger
 import play.api.mvc._
 import play.libs.concurrent.HttpExecutionContext
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.collection.JavaConversions._
+import scala.concurrent.Future
 
 class OidcAuthController @Inject() (
   val config: Config,                       // for PAC4J
@@ -25,8 +29,24 @@ class OidcAuthController @Inject() (
 
   def oidcLogin = Secure("OidcClient") { profiles =>
     Action.async { implicit request =>
-      Logger.info(s"Successful authentication for the user '${profiles.head.getUsername}' using the OIDC provider.")
-      gotoLoginSucceeded(profiles.head.getUsername)
+      val userId = profiles.head.getUsername
+      println(profiles.head.getAttributes().toMap.mkString("\n"))
+
+      for {
+        user <- userManager.findById(userId)
+
+        result <- if (user.nonEmpty) {
+          // user exists locally... all is good
+          Logger.info(s"Successful authentication for the user '${userId}' using the OIDC provider.")
+          gotoLoginSucceeded(userId)
+        } else {
+          // user doesn't exist locally... show an error message
+          val errorMessage = s"User '${userId} doesn't exist locally."
+          logger.warn(errorMessage)
+          Future(Redirect(routes.AppController.index()).flashing("errors" -> errorMessage))
+        }
+      } yield
+        result
     }
   }
 }
