@@ -10,8 +10,8 @@ GET         /issues                                                             
 
 # User profiles
 GET         /profile                                                                org.ada.web.controllers.UserProfileController.profile
-GET         /settings                                                               org.ada.web.controllers.UserProfileController.settings
-POST        /settings                                                               org.ada.web.controllers.UserProfileController.updateSettings
+GET         /profile/settings                                                       org.ada.web.controllers.UserProfileController.settings
+POST        /profile/settings                                                       org.ada.web.controllers.UserProfileController.updateSettings
 
 # Authentication
 GET         /login                                                                  org.ada.web.controllers.AuthController.login
