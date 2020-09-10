@@ -6,7 +6,7 @@ import org.ada.web.controllers.core.AdaCrudControllerImpl
 import org.ada.web.controllers.dataset._
 import org.ada.server.dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
 import play.api.data.Form
-import play.api.data.Forms.{email, ignored, mapping, boolean, nonEmptyText, seq, text}
+import play.api.data.Forms.{email, optional, ignored, mapping, boolean, nonEmptyText, seq, text}
 import org.ada.server.models.{DataSpaceMetaInfo, User}
 import org.incal.core.dataaccess.AscSort
 import reactivemongo.bson.BSONObjectID
@@ -34,6 +34,8 @@ class UserController @Inject() (
   override protected[controllers] val form = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
+      "userId" -> nonEmptyText,
+      "oidcId" -> optional(nonEmptyText),
       "name" -> nonEmptyText,
       "email" -> email,
       "roles" -> seq(text),
@@ -115,7 +117,7 @@ class UserController @Inject() (
     // send an email
     val email = Email(
       "Ada: User Created",
-      "Ada Admin <admin@ada-discovery.org>",
+      "Ada Admin <admin@ada-discovery.github.io>",
       Seq(user.email),
       // sends text, HTML or both...
       bodyText = Some(
