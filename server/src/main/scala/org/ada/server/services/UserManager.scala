@@ -7,6 +7,7 @@ import org.ada.server.models.LdapUser
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.models.User
 import org.incal.core.dataaccess.Criterion.Infix
+import org.incal.core.util.toHumanReadableCamel
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits._
@@ -33,8 +34,8 @@ trait UserManager {
 
   def debugUsers: Traversable[User]
 
-  val adminUser = User(None, "admin.user", "admin@mail", Seq("admin"))
-  val basicUser = User(None, "basic.user", "basic@mail", Seq("basic"))
+  val adminUser = User(userId = "admin.user", name = "Dummy Admin User", email = "admin@mail", roles = Seq("admin"))
+  val basicUser = User(userId = "basic.user", name = "Dummy Basic User", email = "basic@mail", roles = Seq("basic"))
 }
 
 /**
@@ -74,7 +75,7 @@ private class UserManagerImpl @Inject()(
           case Some(usr) =>
             userRepo.update(usr.copy(userId = ldapUser.uid, email = ldapUser.email))
           case None =>
-            userRepo.save(User(None, ldapUser.uid, ldapUser.email, Seq(), Seq()))
+            userRepo.save(User(userId = ldapUser.uid, name = toHumanReadableCamel(ldapUser.uid), email = ldapUser.email))
         }
       } yield
         ()
