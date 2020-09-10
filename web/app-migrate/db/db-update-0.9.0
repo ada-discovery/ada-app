@@ -24,3 +24,15 @@ db.getCollection('dataset_transformations').update({concreteClass : "org.ada.ser
 )
 
 db.getCollection('users').updateMany( {}, { $rename: { "ldapDn": "userId" } } )
+
+String.prototype.toCamelCase = function() {
+  return this.replace(/\b(\w)/g, function(match, capture) {
+    return capture.toUpperCase();
+  })
+}
+
+db.getCollection('users').find({}).forEach(function(user)
+{
+    user.name = user.userId.replace(/\./g,' ').toCamelCase();
+    db.getCollection('users').save(user);
+})
