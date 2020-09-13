@@ -42,25 +42,30 @@ class OidcAuthController @Inject() (
 
         result <- if (user.nonEmpty) {
           // user exists locally... all is good
-          Logger.info(s"Successful authentication for the user '${userId}' using the OIDC provider.")
+          Logger.info(s"Successful authentication for the user '${userId}' using the associated OIDC provider.")
           gotoLoginSucceeded(userId)
         } else {
-          // user doesn't exist locally...
+          // user doesn't exist locally
           if (configuration.getBoolean("oidc.importUserAfterLogin").getOrElse(true)) {
-            // import the new user locally.... // TODO: import an OIDC id
+            val oidcId = configuration.getString("oidc.returnAttributeIdName").flatMap( oidcIdName =>
+              Option(profile.getAttribute(oidcIdName)).asInstanceOf[Option[String]]
+            )
+
+            // import the new user locally...
             val newUser = User(
               userId = userId,
               name = profile.getDisplayName,
-              email = profile.getEmail
+              email = profile.getEmail,
+              oidcId = oidcId
             )
 
             userRepo.save(newUser).flatMap { _ =>
-              Logger.info(s"Successful authentication for the user '${userId}' using the OIDC provider (user imported).")
+              Logger.info(s"Successful authentication for the user '${userId}' using the associated OIDC provider (user imported).")
               gotoLoginSucceeded(userId)
             }
           } else {
             // show an error message
-            val errorMessage = s"User '${userId} doesn't exist locally."
+            val errorMessage = s"OIDC login cannot be fully completed. The user '${userId} doesn't exist locally."
             logger.warn(errorMessage)
             Future(Redirect(routes.AppController.index()).flashing("errors" -> errorMessage))
           }
