@@ -72,12 +72,17 @@ class AuthController @Inject() (
     * Remember log out state and redirect to main page.
     */
   def logout = Action.async { implicit request =>
-    if (configuration.getString(s"oidc.baseUrl").isDefined)
-      Future(Redirect(org.pac4j.play.routes.LogoutController.logout()))
-    else
+    def logoutLocally =
       gotoLogoutSucceeded.map(_.flashing(
         "success" -> "Logged out"
       ).removingFromSession("rememberme"))
+
+    if (configuration.getString(s"oidc.baseUrl").isDefined) {
+      logoutLocally.map( _ =>
+        Redirect(org.pac4j.play.routes.LogoutController.logout())
+      )
+    } else
+      logoutLocally
   }
 
   /**
