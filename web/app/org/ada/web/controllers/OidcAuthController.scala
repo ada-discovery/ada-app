@@ -2,7 +2,6 @@ package org.ada.web.controllers
 
 import javax.inject.Inject
 import jp.t2v.lab.play2.auth.Login
-import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.models.User
 import org.ada.server.services.UserManager
@@ -35,34 +34,51 @@ class OidcAuthController @Inject() (
     Action.async { implicit request =>
       val profile = profiles.head
       val userId = profile.getUsername
-      println(profile.getAttributes().toMap.mkString("\n"))
+
+      val importUserAfterLogin = configuration.getBoolean("oidc.importUserAfterLogin").getOrElse(true)
+
+      // get a user info from the OIDC return data (profile)
+      val oidcId = configuration.getString("oidc.returnAttributeIdName").flatMap( oidcIdName =>
+        Option(profile.getAttribute(oidcIdName)).asInstanceOf[Option[String]]
+      )
+
+      val oidcUser = User(
+        userId = userId,
+        name = profile.getDisplayName,
+        email = profile.getEmail,
+        oidcId = oidcId
+      )
+
+      def successfulResult(extraMessage: String = "") = {
+        Logger.info(s"Successful authentication for the user '${userId}' using the associated OIDC provider.$extraMessage")
+        gotoLoginSucceeded(userId)
+      }
 
       for {
         user <- userManager.findById(userId)
 
-        result <- if (user.nonEmpty) {
-          // user exists locally... all is good
-          Logger.info(s"Successful authentication for the user '${userId}' using the associated OIDC provider.")
-          gotoLoginSucceeded(userId)
-        } else {
-          // user doesn't exist locally
-          if (configuration.getBoolean("oidc.importUserAfterLogin").getOrElse(true)) {
-            val oidcId = configuration.getString("oidc.returnAttributeIdName").flatMap( oidcIdName =>
-              Option(profile.getAttribute(oidcIdName)).asInstanceOf[Option[String]]
+        result <- user.map { user =>
+          // user exists locally... update (if needed)
+          if (importUserAfterLogin) {
+            userRepo.update(
+              user.copy(
+                name = oidcUser.name,
+                email = oidcUser.email,
+                oidcId = oidcId
+              )
+            ).flatMap(_ =>
+              successfulResult()
             )
+          } else
+            successfulResult()
 
+        }.getOrElse {
+          // user doesn't exist locally... import/save if allowed
+          if (importUserAfterLogin) {
             // import the new user locally...
-            val newUser = User(
-              userId = userId,
-              name = profile.getDisplayName,
-              email = profile.getEmail,
-              oidcId = oidcId
+            userRepo.save(oidcUser).flatMap(_ =>
+              successfulResult(" new user imported")
             )
-
-            userRepo.save(newUser).flatMap { _ =>
-              Logger.info(s"Successful authentication for the user '${userId}' using the associated OIDC provider (user imported).")
-              gotoLoginSucceeded(userId)
-            }
           } else {
             // show an error message
             val errorMessage = s"OIDC login cannot be fully completed. The user '${userId} doesn't exist locally."
