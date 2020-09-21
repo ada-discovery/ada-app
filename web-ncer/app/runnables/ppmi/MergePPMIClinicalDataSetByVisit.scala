@@ -31,12 +31,13 @@ class MergePPMIClinicalDataSetByVisit @Inject()(
 
   private val subjectProcessingGroupSize = 10
 
-  override def runAsFuture = {
-    val dsa = dsaf.applySync(dataSetId).get
-    val repo = dsa.dataSetRepo
-    val fieldRepo = dsa.fieldRepo
-
+  override def runAsFuture =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
+      repo = dsa.dataSetRepo
+      fieldRepo = dsa.fieldRepo
+
       // register a data set
       newDsa <- dataSetService.register(dsa, newDataSetId, newDataSetName, StorageType.ElasticSearch)
 
@@ -77,5 +78,4 @@ class MergePPMIClinicalDataSetByVisit @Inject()(
       }
     } yield
       ()
-  }
 }

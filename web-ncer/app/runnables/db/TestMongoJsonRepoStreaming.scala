@@ -6,10 +6,11 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.google.inject.Inject
+import org.ada.server.dataaccess.RepoTypes.JsonCrudRepo
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.incal.core.runnables.FutureRunnable
 import org.incal.core.dataaccess.AscSort
-import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json.JsObject
 import reactivemongo.play.json.BSONObjectIDFormat
 import org.incal.core.util.seqFutures
@@ -19,11 +20,6 @@ import scala.concurrent.Future
 
 class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends FutureRunnable {
 
-  private val biosampleTestDsa = dsaf.applySync("lux_park.ibbl_biosample_tests_2").get
-  private val mPowerFeatureSetDsa = dsaf.applySync("mpower_challenge.9638887_2").get
-
-  private val biosampleTestDataSetRepo = biosampleTestDsa.dataSetRepo
-  private val mPowerFeatureSetRepo = mPowerFeatureSetDsa.dataSetRepo
   private val idName = JsObjectIdentity.name
 
   implicit val system = ActorSystem()
@@ -34,7 +30,10 @@ class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends
     sum + timeMs
   }
 
-  def calcCreationDateSum(withProjection: Boolean): Future[Long] =
+  def calcCreationDateSum(
+    biosampleTestDataSetRepo: JsonCrudRepo,
+    withProjection: Boolean
+  ): Future[Long] =
     biosampleTestDataSetRepo.findAsStream(
       sort = Seq(AscSort("createdt")),
       projection = if (withProjection) Seq("createdt") else Nil
@@ -43,7 +42,10 @@ class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends
       source.runWith(creationDateSumSink)
     }
 
-  def calcCreationDateSumOld(withProjection: Boolean): Future[Long] =
+  def calcCreationDateSumOld(
+    biosampleTestDataSetRepo: JsonCrudRepo,
+    withProjection: Boolean
+  ): Future[Long] =
     biosampleTestDataSetRepo.find(
       sort = Seq(AscSort("createdt")),
       projection = if (withProjection) Seq("createdt") else Nil
@@ -63,7 +65,10 @@ class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends
       PersonNumeratorAccum(sum1 + feature1, sum2 + feature2, productSum + feature1 * feature2, count + 1)
   }
 
-  def calcTwoFeaturePearsonNumerator(withProjection: Boolean): Future[Double] =
+  def calcTwoFeaturePearsonNumerator(
+    mPowerFeatureSetRepo: JsonCrudRepo,
+    withProjection: Boolean
+  ): Future[Double] =
     mPowerFeatureSetRepo.findAsStream(
       sort = Seq(AscSort("Feature1")),
       projection = if (withProjection) Seq("Feature1", "Feature2") else Nil
@@ -78,7 +83,10 @@ class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends
       }
     }
 
-  def calcTwoFeaturePearsonNumeratorOld(withProjection: Boolean): Future[Double] =
+  def calcTwoFeaturePearsonNumeratorOld(
+    mPowerFeatureSetRepo: JsonCrudRepo,
+    withProjection: Boolean
+  ): Future[Double] =
     mPowerFeatureSetRepo.find(
       sort = Seq(AscSort("Feature1")),
       projection = if (withProjection) Seq("Feature1", "Feature2") else Nil
@@ -102,9 +110,15 @@ class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends
 
   def runAsFuture =
     for {
+      biosampleTestDsa <- dsaf.getOrError("lux_park.ibbl_biosample_tests_2")
+      mPowerFeatureSetDsa <- dsaf.getOrError("mpower_challenge.9638887_2")
+
+      biosampleTestDataSetRepo = biosampleTestDsa.dataSetRepo
+      mPowerFeatureSetRepo = mPowerFeatureSetDsa.dataSetRepo
+
       creationDateSum <- {
         val calcStart = new ju.Date
-        seqFutures(0 to 10) { _ => calcCreationDateSum(false) }.map { results =>
+        seqFutures(0 to 10) { _ => calcCreationDateSum(biosampleTestDataSetRepo, false) }.map { results =>
           println(s"Creation date sum using STREAMS finished in ${new ju.Date().getTime - calcStart.getTime} ms.")
           results.head
         }
@@ -112,7 +126,7 @@ class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends
 
       creationDateSumOld <- {
         val calcStart = new ju.Date
-        seqFutures(0 to 10) { _ => calcCreationDateSumOld(false) }.map { results =>
+        seqFutures(0 to 10) { _ => calcCreationDateSumOld(biosampleTestDataSetRepo, false) }.map { results =>
           println(s"Creation date sum using FULL data load finished in ${new ju.Date().getTime - calcStart.getTime} ms.")
           results.head
         }
@@ -120,7 +134,7 @@ class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends
 
       twoFeaturePearsonNumerator <- {
         val calcStart = new ju.Date
-        seqFutures(0 to 10) { _ => calcTwoFeaturePearsonNumerator(false) }.map { results =>
+        seqFutures(0 to 10) { _ => calcTwoFeaturePearsonNumerator(mPowerFeatureSetRepo, false) }.map { results =>
           println(s"Calculation of two feature pearson numerator using STREAMS finished in ${new ju.Date().getTime - calcStart.getTime} ms.")
           results.head
         }
@@ -128,7 +142,7 @@ class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends
 
       twoFeaturePearsonNumeratorOld <- {
         val calcStart = new ju.Date
-        seqFutures(0 to 10) { _ => calcTwoFeaturePearsonNumeratorOld(false) }.map { results =>
+        seqFutures(0 to 10) { _ => calcTwoFeaturePearsonNumeratorOld(mPowerFeatureSetRepo, false) }.map { results =>
           println(s"Calculation of two feature pearson numerator using FULL data load finished in ${new ju.Date().getTime - calcStart.getTime} ms.")
           results.head
         }
@@ -136,7 +150,7 @@ class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends
 
       creationDateSum2 <- {
         val calcStart = new ju.Date
-        seqFutures(0 to 10) { _ => calcCreationDateSum(true) }.map { results =>
+        seqFutures(0 to 10) { _ => calcCreationDateSum(biosampleTestDataSetRepo, true) }.map { results =>
           println(s"Creation date sum using STREAMS with PROJECTION finished in ${new ju.Date().getTime - calcStart.getTime} ms.")
           results.head
         }
@@ -144,7 +158,7 @@ class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends
 
       creationDateSumOld2 <- {
         val calcStart = new ju.Date
-        seqFutures(0 to 10) { _ => calcCreationDateSumOld(true) }.map { results =>
+        seqFutures(0 to 10) { _ => calcCreationDateSumOld(biosampleTestDataSetRepo, true) }.map { results =>
           println(s"Creation date sum using FULL data load with PROJECTION finished in ${new ju.Date().getTime - calcStart.getTime} ms.")
           results.head
         }
@@ -152,7 +166,7 @@ class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends
 
       twoFeaturePearsonNumerator2 <- {
         val calcStart = new ju.Date
-        seqFutures(0 to 10) { _ => calcTwoFeaturePearsonNumerator(true) }.map { results =>
+        seqFutures(0 to 10) { _ => calcTwoFeaturePearsonNumerator(mPowerFeatureSetRepo, true) }.map { results =>
           println(s"Calculation of two feature pearson numerator using STREAMS with PROJECTION finished in ${new ju.Date().getTime - calcStart.getTime} ms.")
           results.head
         }
@@ -160,7 +174,7 @@ class TestMongoJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends
 
       twoFeaturePearsonNumeratorOld2 <- {
         val calcStart = new ju.Date
-        seqFutures(0 to 10) { _ => calcTwoFeaturePearsonNumeratorOld(true) }.map { results =>
+        seqFutures(0 to 10) { _ => calcTwoFeaturePearsonNumeratorOld(mPowerFeatureSetRepo, true) }.map { results =>
           println(s"Calculation of two feature pearson numerator using FULL data load with PROJECTION finished in ${new ju.Date().getTime - calcStart.getTime} ms.")
           results.head
         }

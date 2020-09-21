@@ -48,11 +48,12 @@ class CreateWeightOutlierDiagnosisFilter @Inject()(
 
     for {
       _ <- seqFutures(dataSetIds) { dataSetId =>
-        val dsa = dsaf.applySync(dataSetId).get
-        Future.sequence(
-          conditionCriterionNames.map { case (name, condition, criterion) =>
-            createFilter(dsa, name, Seq(criterion), Seq(condition))
-          }
+        dsaf.getOrError(dataSetId).flatMap( dsa =>
+          Future.sequence(
+            conditionCriterionNames.map { case (name, condition, criterion) =>
+              createFilter(dsa, name, Seq(criterion), Seq(condition))
+            }
+          )
         )
       }
     } yield

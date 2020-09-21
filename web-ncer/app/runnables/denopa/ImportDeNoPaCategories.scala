@@ -32,9 +32,6 @@ protected abstract class ImportDeNoPaCategories(
   @Inject() protected var dsaf: DataSetAccessorFactory = _
 
   def runAsFuture = {
-    val dsa = dsaf.applySync(dataSetId).get
-    val categoryRepo = dsa.categoryRepo
-    val fieldRepo = dsa.fieldRepo
 
     val fieldCategoryMap = fieldNamePrefixReplacement.map { case (from, to) =>
       coreFieldCategoryMap.map { case (fieldName, category) =>
@@ -63,6 +60,11 @@ protected abstract class ImportDeNoPaCategories(
     )
 
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
+      categoryRepo = dsa.categoryRepo
+      fieldRepo = dsa.fieldRepo
+
       // delete all the categories
       _ <- categoryRepo.deleteAll
 

@@ -2,7 +2,7 @@ package runnables.ohdsi
 
 import javax.inject.Inject
 import org.ada.server.AdaException
-import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.ada.server.field.FieldUtil.FieldOps
 import org.ada.server.models.FieldTypeId
 import org.incal.core.dataaccess.{NotEqualsNullCriterion, NotInCriterion}
@@ -21,11 +21,12 @@ class InputOHDSIColumnConcepts @Inject() (dsaf: DataSetAccessorFactory) extends 
   implicit val ohdsiJsonFormat = Json.format[OHDSIConcept]
 
   override def runAsFuture(input: InputOHDSIColumnConceptsSpec) = {
-    val ohdsiConceptDsa = dsaSafe(input.ohdsiConceptDataSetId.trim)
-    val targetDsa = dsaSafe(input.targetDataSetId.trim)
     val targetFieldName = input.targetFieldName.trim
 
-    def nextValue(excludedValues: Seq[Int]) = {
+    def nextValue(
+      targetDsa: DataSetAccessor,
+      excludedValues: Seq[Int]
+    ) = {
       val exclusionCriterion = if (excludedValues.nonEmpty) Seq(targetFieldName #!-> excludedValues) else Nil
 
       for {
@@ -44,13 +45,16 @@ class InputOHDSIColumnConcepts @Inject() (dsaf: DataSetAccessorFactory) extends 
         }
     }
 
-    def collectDistinctValues(excludedValues: Seq[Int]): Future[Seq[Int]] =
+    def collectDistinctValues(
+      targetDsa: DataSetAccessor,
+      excludedValues: Seq[Int]
+    ): Future[Seq[Int]] =
       for {
-        newValue <- nextValue(excludedValues)
+        newValue <- nextValue(targetDsa, excludedValues)
         values <- newValue match {
           case Some(value) =>
             logger.debug(s"Found a value '${value}' for the target field ${targetFieldName}.")
-            collectDistinctValues(excludedValues ++ Seq(value))
+            collectDistinctValues(targetDsa, excludedValues ++ Seq(value))
           case None =>
             Future(excludedValues)
         }
@@ -58,6 +62,10 @@ class InputOHDSIColumnConcepts @Inject() (dsaf: DataSetAccessorFactory) extends 
         values
 
     for {
+      // data set accessors
+      ohdsiConceptDsa <- dsaf.getOrError(input.ohdsiConceptDataSetId.trim)
+      targetDsa <- dsaf.getOrError(input.targetDataSetId.trim)
+
       // get a required target field
       targetField <- targetDsa.fieldRepo.get(targetFieldName)
 
@@ -68,7 +76,7 @@ class InputOHDSIColumnConcepts @Inject() (dsaf: DataSetAccessorFactory) extends 
       )
 
       // collect all distinct values for the target field
-      distinctValues <- collectDistinctValues(Nil)
+      distinctValues <- collectDistinctValues(targetDsa, Nil)
 
       // retrieve OHDSI concepts for the values/codes
       ohdsiConceptJsons <- {
@@ -94,9 +102,6 @@ class InputOHDSIColumnConcepts @Inject() (dsaf: DataSetAccessorFactory) extends 
     } yield
       ()
   }
-
-  private def dsaSafe(dataSetId: String) =
-    dsaf.applySync(dataSetId).getOrElse(throw new AdaException(s"Data set ${dataSetId} not found"))
 }
 
 case class OHDSIConcept(

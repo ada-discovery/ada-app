@@ -27,12 +27,11 @@ class RemoveDuplicateRCResults @Inject()(
 
   private val idName = JsObjectIdentity.name
 
-  override def runAsFuture(input: RemoveDuplicateRCResultsSpec) = {
-    val resultsDsa = dsaf.applySync(input.dataSetId).getOrElse(
-      throw new AdaException(s"Data set ${input.dataSetId} not found.")
-    )
-
+  override def runAsFuture(input: RemoveDuplicateRCResultsSpec) =
     for {
+      // data set accessor
+      resultsDsa <- dsaf.getOrError(input.dataSetId)
+
       // get the data set ids
       jsons <- resultsDsa.dataSetRepo.find(projection = Seq(dataSetFieldName))
       dataSetIds = jsons.map { json => (json \ dataSetFieldName).as[String] }.toSeq.sorted
@@ -41,12 +40,12 @@ class RemoveDuplicateRCResults @Inject()(
       idDuplicates <- seqFutures(dataSetIds.grouped(groupSize)) { ids =>
         Future.sequence(ids.map { id =>
           logger.info(s"Finding duplicates in $id...")
-          val dsa = dsaf.applySync(id).getOrElse(
-            throw new AdaException(s"Data set ${id} not found.")
-          )
-          val repo = dsa.dataSetRepo
 
           for {
+            // data set accessor
+            dsa <- dsaf.getOrError(id)
+            repo = dsa.dataSetRepo
+
             // find duplicate records
             duplicateRecordIds <- findDuplicateRecordWithIds(repo)
 
@@ -66,7 +65,6 @@ class RemoveDuplicateRCResults @Inject()(
       }
     } yield
       ()
-  }
 
   private def findDuplicateRecordWithIds(
     repo: JsonCrudRepo

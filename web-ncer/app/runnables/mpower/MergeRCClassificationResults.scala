@@ -41,13 +41,12 @@ class MergeRCClassificationResults @Inject() (
   private val groupSize = 10
 
   override def runAsFuture(input: MergeRCClassificationResultsSpec) = {
-    val dsa = dsaf.applySync(input.dataSetId).getOrElse(
-      throw new AdaException(s"Data set ${input.dataSetId} not found.")
-    )
-
     val targetDataSetId = input.dataSetId + "_classification"
 
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(input.dataSetId)
+
       // get the data set ids
       jsons <- dsa.dataSetRepo.find(projection = Seq(dataSetFieldName))
       dataSetIds = jsons.map { json => (json \ dataSetFieldName).as[String] }.toSeq.sorted

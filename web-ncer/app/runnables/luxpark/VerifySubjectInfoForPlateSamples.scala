@@ -29,11 +29,12 @@ class VerifySubjectInfoForPlateSamples @Inject()(dsaf: DataSetAccessorFactory) e
 
   private val idName = JsObjectIdentity.name
 
-  override def runAsFuture = {
-    val plateSampleDsa = dsaf.applySync(plateSampleDataSetId).get
-    val clinicalDsa = dsaf.applySync(clinicalDataSetId).get
-
+  override def runAsFuture =
     for {
+      // data set accessors
+      plateSampleDsa <- dsaf.getOrError(plateSampleDataSetId)
+      clinicalDsa <- dsaf.getOrError(clinicalDataSetId)
+
       // get all the sample items
       sampleJsons <- plateSampleDsa.dataSetRepo.find()
       bloodKitNumSampleJsonMap = sampleJsons.map { sampleJson =>
@@ -73,5 +74,4 @@ class VerifySubjectInfoForPlateSamples @Inject()(dsaf: DataSetAccessorFactory) e
         }
       }
     }
-  }
 }

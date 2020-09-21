@@ -28,20 +28,24 @@ class CheckConsistencyOfAllInOneFeatureSet @Inject()(
   private val logger = Logger
 
   override def runAsFuture(spec: CheckConsistencyOfAllInOneFeatureSetSpec) = {
-    val scoreBoardDataSetRepo = dsaf.applySync(spec.scoreBoardDataSetId).get.dataSetRepo
-    val allInOneDataSetRepo = dsaf.applySync(spec.allInOneFeatureSetId).get.dataSetRepo
-
     def keyValue(json: JsObject): Any = {
       val keyJsValue = (json \ spec.keyFieldName)
       if (spec.isKeyInt) keyJsValue.as[Int] else keyJsValue.as[String]
     }
 
     for {
+      // data set accessors
+      scoreBoardDsa <- dsaf.getOrError(spec.scoreBoardDataSetId)
+      scoreBoardDataSetRepo = scoreBoardDsa.dataSetRepo
+
+      allInOneDsa <- dsaf.getOrError(spec.allInOneFeatureSetId)
+      allInOneDataSetRepo = allInOneDsa.dataSetRepo
+
       // retrieve all the submission ids
       submissionJsons <- scoreBoardDataSetRepo.find(projection = Seq(submissionIdFieldName))
 
       // create submission id data set repo pairs
-      submissionIdDataRepos = submissionJsons.map(submissionIdDataSetRepo(spec.submissionDataSetPrefix)).flatten
+      submissionIdDataRepos <- seqFutures(submissionJsons)(submissionIdDataSetRepo(spec.submissionDataSetPrefix))
 
       // randomly draw n all-in-one features
       randomAllInOneFeatures <- allInOneDataSetRepo.find(projection = Seq(spec.keyFieldName)).flatMap { jsonKeys =>
@@ -57,7 +61,7 @@ class CheckConsistencyOfAllInOneFeatureSet @Inject()(
 
         logger.info(s"Checking consistency of json $index with the key $key.")
 
-        seqFutures(submissionIdDataRepos) { case (submissionId, dataSetRepo) =>
+        seqFutures(submissionIdDataRepos.flatten) { case (submissionId, dataSetRepo) =>
           checkFeatures(json, submissionId, dataSetRepo, spec.keyFieldName, key)
         }
       }
@@ -68,7 +72,7 @@ class CheckConsistencyOfAllInOneFeatureSet @Inject()(
   private def submissionIdDataSetRepo(
     submissionDataSetPrefix: String)(
     submissionJson: JsObject
-  ): Option[(String, JsonCrudRepo)] = {
+  ): Future[Option[(String, JsonCrudRepo)]] = {
     val submissionId = (submissionJson \ submissionIdFieldName).toOption.flatMap(_ match {
       case JsNull => None
       case submissionIdJsValue: JsValue =>
@@ -76,11 +80,13 @@ class CheckConsistencyOfAllInOneFeatureSet @Inject()(
         Some(id)
     })
 
-    submissionId.flatMap { submissionId =>
-      dsaf.applySync(submissionDataSetPrefix + "." + submissionId).map(dsa =>
+    submissionId.map { submissionId =>
+      dsaf(submissionDataSetPrefix + "." + submissionId).map(_.map(dsa =>
         (submissionId, dsa.dataSetRepo)
-      )
-    }
+      ))
+    }.getOrElse(
+      Future(None)
+    )
   }
 
   private def checkFeatures(

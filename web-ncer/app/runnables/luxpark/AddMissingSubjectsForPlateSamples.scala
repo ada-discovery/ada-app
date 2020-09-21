@@ -40,11 +40,12 @@ class AddMissingSubjectsForPlateSamples @Inject()(dsaf: DataSetAccessorFactory) 
 
   private val fixedSampleIdsBloodKitMap = fixedBloodKitNumMap.map { case (blookKit, bloodKit2) => (blookKit + "-BLD-DNA-01", bloodKit2) }
 
-  override def runAsFuture = {
-    val plateSampleDsa = dsaf.applySync(plateSampleDataSetId).get
-    val clinicalDsa = dsaf.applySync(clinicalDataSetId).get
-
+  override def runAsFuture =
     for {
+      // data set accessor(s)
+      plateSampleDsa <- dsaf.getOrError(plateSampleDataSetId)
+      clinicalDsa <- dsaf.getOrError(clinicalDataSetId)
+
       // get the clinical items matching the given values
       clinicalJsons <- clinicalDsa.dataSetRepo.find(
         criteria = Seq(clinicalBloodKitField #-> fixedSampleIdsBloodKitMap.values.toSeq),
@@ -76,5 +77,4 @@ class AddMissingSubjectsForPlateSamples @Inject()(dsaf: DataSetAccessorFactory) 
       }
     } yield
       ()
-  }
 }

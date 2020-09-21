@@ -17,12 +17,16 @@ class InputAllOHDSIConceptColumns @Inject() (
 
   private val logger = Logger
 
-  override def runAsFuture(input: InputAllOHDSIConceptColumnsSpec) = {
-    val dsa = dsaSafe(input.targetDataSetId.trim)
-
+  override def runAsFuture(input: InputAllOHDSIConceptColumnsSpec) =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(input.targetDataSetId.trim)
+
+      // get all the fields for a given data set
       fields <- dsa.fieldRepo.find()
+
       conceptFields = fields.filter(_.name.contains("concept"))
+
       _ <- seqFutures(conceptFields) { field =>
         logger.info(s"OHDSI concept inputting for the data set '${input.targetDataSetId}' and the field '${field.name}' started.")
         inputColumn.runAsFuture(InputOHDSIColumnConceptsSpec(
@@ -37,10 +41,6 @@ class InputAllOHDSIConceptColumns @Inject() (
       }
     } yield
       ()
-  }
-
-  private def dsaSafe(dataSetId: String) =
-    dsaf.applySync(dataSetId).getOrElse(throw new AdaException(s"Data set ${dataSetId} not found"))
 }
 
 case class InputAllOHDSIConceptColumnsSpec(

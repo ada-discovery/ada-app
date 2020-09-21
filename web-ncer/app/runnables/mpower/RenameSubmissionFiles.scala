@@ -25,9 +25,10 @@ class RenameSubmissionFiles @Inject()(
   implicit def toPath(filename: String) = get(filename)
 
   override def runAsFuture(spec: RenameSubmissionFilesSpec) = {
-    val dsa = dsaf.applySync(spec.scoreBoardDataSetId).get
-
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(spec.scoreBoardDataSetId)
+
       jsons <- dsa.dataSetRepo.find(projection = fieldNames)
     } yield {
       val submissionFileNameIdMap = jsons.flatMap { json =>

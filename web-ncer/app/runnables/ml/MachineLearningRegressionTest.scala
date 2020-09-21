@@ -1,29 +1,32 @@
 package runnables.ml
 
 import javax.inject.Inject
-
-import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.incal.play.GuiceRunnableApp
 import org.incal.spark_ml.models.TreeCore
 import org.incal.spark_ml.models.regression._
 import org.ada.server.services.DataSetService
 import org.ada.server.services.ml.MachineLearningService
+import org.incal.core.runnables.FutureRunnable
 
 import scala.concurrent.Await.result
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 class MachineLearningRegressionTest @Inject()(
     machineLearningService: MachineLearningService,
     dsaf: DataSetAccessorFactory,
     dss: DataSetService
-  ) extends Runnable {
+  ) extends FutureRunnable {
 
   private val dataSetId = "ml.iris"
   private val featureFieldNames = Seq("petal-length", "petal-width", "sepal-length", "class")
   private val outputField = "sepal-width"
 
-  override def run = {
-    val dsa = dsaf.applySync(dataSetId).get
+  override def runAsFuture =
+    dsaf.getOrError(dataSetId).map(runAux)
+
+  private def runAux(dsa: DataSetAccessor) {
     val (jsons, fields) = result(dss.loadDataAndFields(dsa), 2 minutes)
     val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
 

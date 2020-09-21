@@ -32,10 +32,11 @@ class AddSessionIdToWISDM @Inject()(
 
   private val newSessionIdField = Field("sessionId", Some("Session Id"), FieldTypeId.Integer)
 
-  override def runAsFuture(input: AddSessionIdToWISDMSpec) = {
-    val dsa = dsaf.applySync(input.sourceDataSetId).get
-
+  override def runAsFuture(input: AddSessionIdToWISDMSpec) =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(input.sourceDataSetId)
+
       // user ids
       userIds <- dsa.dataSetRepo.find(projection = Seq(FieldName.userId)).map(_.map(json => (json \ FieldName.userId).as[Int]).toSet)
 
@@ -84,7 +85,6 @@ class AddSessionIdToWISDM @Inject()(
       _ <- dataSetService.saveDerivedDataSet(dsa, input.resultDataSetSpec, newSource, (fields ++ Seq(newSessionIdField)).toSeq, input.streamSpec, true)
     } yield
       ()
-  }
 }
 
 case class AddSessionIdToWISDMSpec(

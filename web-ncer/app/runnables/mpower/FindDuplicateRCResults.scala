@@ -21,12 +21,11 @@ class FindDuplicateRCResults @Inject()(
 
   private val groupSize = 4
 
-  override def runAsFuture(input: FindDuplicateRCResultsSpec) = {
-    val dsa = dsaf.applySync(input.dataSetId).getOrElse(
-      throw new AdaException(s"Data set ${input.dataSetId} not found.")
-    )
-
+  override def runAsFuture(input: FindDuplicateRCResultsSpec) =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(input.dataSetId)
+
       // get the data set ids
       jsons <- dsa.dataSetRepo.find(projection = Seq(dataSetFieldName))
       dataSetIds = jsons.map { json => (json \ dataSetFieldName).as[String] }.toSeq.sorted
@@ -45,16 +44,14 @@ class FindDuplicateRCResults @Inject()(
         logger.info(duplicates.mkString(", ") + "\n")
       }
     }
-  }
 
   private def findDuplicateRecordIds(dataSetId: String): Future[Traversable[String]] = {
     logger.info(s"Finding duplicates in $dataSetId...")
 
-    val dsa = dsaf.applySync(dataSetId).getOrElse(
-      throw new AdaException(s"Data set ${dataSetId} not found.")
-    )
-
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
+
       jsons <- dsa.dataSetRepo.find(projection = Seq("recordId"))
     } yield {
       val recordIds = jsons.map(json => (json \ "recordId").as[String])

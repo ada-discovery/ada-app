@@ -20,12 +20,11 @@ class RemoveRCClassificationResults @Inject()(
 
   private val dataSetFieldName = "inputOutputSpec-resultDataSetId"
 
-  override def runAsFuture(input: RemoveRCClassificationResultsSpec) = {
-    val resultsDsa = dsaf.applySync(input.dataSetId).getOrElse(
-      throw new AdaException(s"Data set ${input.dataSetId} not found.")
-    )
-
+  override def runAsFuture(input: RemoveRCClassificationResultsSpec) =
     for {
+      // data set accessor
+      resultsDsa <- dsaf.getOrError(input.dataSetId)
+
       // get the data set ids
       jsons <- resultsDsa.dataSetRepo.find(projection = Seq(dataSetFieldName))
       dataSetIds = jsons.map { json => (json \ dataSetFieldName).as[String] }.toSeq.sorted
@@ -39,7 +38,6 @@ class RemoveRCClassificationResults @Inject()(
       }
     } yield
       ()
-  }
 }
 
 case class RemoveRCClassificationResultsSpec(dataSetId: String, groupSize: Int)

@@ -1,8 +1,6 @@
 package runnables.mpower
 
-import java.{util => ju}
 import javax.inject.Inject
-
 import org.ada.server.dataaccess.JsonUtil
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.ada.server.models._
@@ -12,6 +10,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import org.ada.server.services.DataSetService
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
+import org.ada.server.dataaccess.RepoTypes.JsonCrudRepo
 import org.incal.core.runnables.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import org.incal.core.util.seqFutures
@@ -25,10 +24,6 @@ class CreateMPowerTestingDistanceDataSet @Inject()(
   ) extends FutureRunnable {
 
   private val dataSetId = "mpower_challenge.walking_activity_testing"
-  private val dsa = dsaf.applySync(dataSetId).get
-  private val dataSetRepo = dsa.dataSetRepo
-  private val fieldRepo = dsa.fieldRepo
-
   private val normDataSetId = "mpower_challenge.walking_activity_testing_norms"
   private val normDataSetName = "Walking Activity Testing Norms"
   private val motionFields = Seq("attitude", "rotationRate", "userAcceleration", "gravity")
@@ -57,7 +52,12 @@ class CreateMPowerTestingDistanceDataSet @Inject()(
 
   override def runAsFuture =
     for {
-    // register the norm data set (if not registered already)
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
+      dataSetRepo = dsa.dataSetRepo
+      fieldRepo = dsa.fieldRepo
+
+      // register the norm data set (if not registered already)
       newDsa <- dataSetService.register(dsa, normDataSetId, normDataSetName, StorageType.Mongo)
 
       // get all the fields
@@ -84,12 +84,13 @@ class CreateMPowerTestingDistanceDataSet @Inject()(
       ids <- dataSetRepo.allIds
 
       // process and save jsons
-      _ <- createNormsAndSaveDataSet(newDsa, ids.toSeq)
+      _ <- createNormsAndSaveDataSet(newDsa, dataSetRepo, ids.toSeq)
     } yield
       ()
 
   private def createNormsAndSaveDataSet(
     newDsa: DataSetAccessor,
+    dataSetRepo: JsonCrudRepo,
     ids: Seq[BSONObjectID]
   ) =
     seqFutures(ids.grouped(batchSize).zipWithIndex) {

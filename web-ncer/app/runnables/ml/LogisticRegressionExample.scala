@@ -1,7 +1,6 @@
 package runnables.ml
 
 import javax.inject.Inject
-
 import org.ada.server.field.{FieldType, FieldTypeHelper}
 import org.ada.server.models.FieldTypeId
 import org.apache.spark.ml._
@@ -14,18 +13,17 @@ import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactor
 import play.api.libs.json.JsObject
 import org.incal.play.GuiceRunnableApp
 import org.ada.server.services.SparkApp
+import org.incal.core.runnables.FutureRunnable
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-// import org.apache.ignite.spark.IgniteContext
 
 class LogisticRegressionExample @Inject() (
     sparkApp: SparkApp,
     dsaf: DataSetAccessorFactory
-  ) extends Runnable {
+  ) extends FutureRunnable {
 
-  private val dsa = dsaf.applySync("ppmi.ppmi_si").get
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   private val rootFolder = "/home/peter/Downloads/spark-master/"
@@ -42,7 +40,10 @@ class LogisticRegressionExample @Inject() (
   private val labelColumnName = "GROUP"
   private val nonFeatureColumns = Set("GROUP", "ID")
 
-  override def run() {
+  override def runAsFuture =
+    dsaf.getOrError("ppmi.ppmi_si").map(runAux)
+
+  private def runAux(dsa: DataSetAccessor) {
     // Load training data
     val df = Await.result(dataSetToDataFrame(dsa), 2 minutes)
     df.printSchema()

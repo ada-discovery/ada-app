@@ -160,9 +160,7 @@ class BatchOrderRequestSettingController @Inject()(
       dataSetId = existingSetting.get.dataSetId
 
       // create a data set accessor
-      dsa = dsaf.applySync(dataSetId).getOrElse(
-        throw new AdaException(s"No dsa found for the data set id '${dataSetId}'.")
-      )
+      dsa <- dsaf.getOrError(dataSetId)
 
       // data set setting
       dataSetSetting <- dsa.setting

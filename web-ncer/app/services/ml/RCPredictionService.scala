@@ -87,9 +87,19 @@ class RCPredictionServiceImpl @Inject()(
     ioSpec: RCPredictionInputOutputSpec,
     batchSize: Option[Int],
     preserveWeightFieldNames: Seq[String]
+  ): Future[Unit] =
+    dsaf.getOrError(ioSpec.sourceDataSetId).flatMap(
+      predictAndStoreResultsAux(setting, ioSpec, batchSize, preserveWeightFieldNames)
+    )
+
+  private def predictAndStoreResultsAux(
+    setting: ExtendedReservoirLearningSetting,
+    ioSpec: RCPredictionInputOutputSpec,
+    batchSize: Option[Int],
+    preserveWeightFieldNames: Seq[String])(
+    dsa: DataSetAccessor
   ): Future[Unit] = {
     val start = new ju.Date
-    val dsa = dsaf.applySync(ioSpec.sourceDataSetId).get
     val dataSetRepo = dsa.dataSetRepo
 
     val inputDim = ioSpec.inputSeriesFieldPaths.size

@@ -44,11 +44,12 @@ class WISDMSegmentsToDL4JData @Inject()(
   implicit val materializer = ActorMaterializer()
 
   override def runAsFuture(input: WISDMSegmentsToDL4JDataSpec) = {
-    val dsa = dsaf.applySync(input.sourceDataSetId).get
-
     val header = Seq(FieldName.xAcceleration, FieldName.yAcceleration, FieldName.zAcceleration).mkString(input.delimiter)
 
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(input.sourceDataSetId)
+
       // user ids
       userIds <- dsa.dataSetRepo.find(projection = Seq(FieldName.userId)).map(_.map(json => (json \ FieldName.userId).as[Int]).toSet)
 

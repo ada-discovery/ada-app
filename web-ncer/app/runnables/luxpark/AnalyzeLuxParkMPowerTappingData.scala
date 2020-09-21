@@ -1,22 +1,22 @@
 package runnables.luxpark
 
 import javax.inject.Inject
-
 import org.incal.core.dataaccess.Criterion
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import play.api.Configuration
 import org.incal.play.GuiceRunnableApp
 import Criterion.Infix
-import scala.concurrent.duration._
-import scala.concurrent.Await._
-import play.api.libs.json.{JsValue, JsArray, JsObject, Json}
+import org.ada.server.dataaccess.RepoTypes.JsonCrudRepo
+import org.incal.core.runnables.FutureRunnable
+
+import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.io.Source
 
 class AnalyzeLuxParkMPowerTappingData @Inject()(
     configuration: Configuration,
     dsaf: DataSetAccessorFactory
-  ) extends Runnable {
+  ) extends FutureRunnable {
 
   private val subjectMPowerId = "01368F95"
   private val leftTappingSamplesField = "tapping_leftu002ejsonu002eTappingSamples"
@@ -35,15 +35,22 @@ class AnalyzeLuxParkMPowerTappingData @Inject()(
     medsFields
   )
 
-  private val timeout = 120000 millis
   private val luxParkDataSetId = "lux_park.clinical"
 
-  private val luxParkDsa = dsaf.applySync(luxParkDataSetId).get
-  private val mPowerTappingDsa = dsaf.applySync("lux_park.mpower_tapping_activity").get
-  private val luxParkDataRepo = luxParkDsa.dataSetRepo
-  private val mPowerTappingDataRepo = mPowerTappingDsa.dataSetRepo
+  override def runAsFuture =
+    for {
+      // data set accessors
+      luxParkDsa <- dsaf.getOrError(luxParkDataSetId)
+      mPowerTappingDsa <- dsaf.getOrError("lux_park.mpower_tapping_activity")
 
-  override def run = {
+      _ <- runAux(luxParkDsa.dataSetRepo, mPowerTappingDsa.dataSetRepo)
+    } yield
+      ()
+
+  private def runAux(
+    luxParkDataRepo: JsonCrudRepo,
+    mPowerTappingDataRepo: JsonCrudRepo
+  ) = {
     val tappingsFuture = mPowerTappingDataRepo.find(
       criteria = Seq("externalId" #== subjectMPowerId),
       projection = fields
@@ -64,7 +71,7 @@ class AnalyzeLuxParkMPowerTappingData @Inject()(
       }
     }
 
-    val future = scoresFuture.map { scores =>
+    scoresFuture.map { scores =>
       scores.groupBy(_._1).map { case (meds, values) =>
         println(meds)
         val leftTappingScores = values.map(_._2)
@@ -75,7 +82,6 @@ class AnalyzeLuxParkMPowerTappingData @Inject()(
         println("Right Mean: " + (rightTappingScores.sum / rightTappingScores.size))
       }
     }
-    result(future, timeout)
   }
 
   private def readSubFieldJsonArray(tapping: JsObject, fieldName: String): Seq[JsValue] = {
@@ -86,4 +92,3 @@ class AnalyzeLuxParkMPowerTappingData @Inject()(
 }
 
 object AnalyzeLuxParkMPowerTappingData extends GuiceRunnableApp[AnalyzeLuxParkMPowerTappingData]
-

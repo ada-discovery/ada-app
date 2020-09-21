@@ -26,10 +26,11 @@ class SplitCorrelationsByCategory @Inject()(
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
-  override def runAsFuture(input: SplitCorrelationsByCategorySpec) = {
-    val metaInfoDsa = dsaf.applySync(input.featureMetaInfoDataSetId).get
-
+  override def runAsFuture(input: SplitCorrelationsByCategorySpec) =
     for {
+      // data set accessor
+      metaInfoDsa <- dsaf.getOrError(input.featureMetaInfoDataSetId)
+
       // category field type
       categoryFieldType <- metaInfoDsa.fieldRepo.get(categoryFieldName).map(field =>
         ftf(field.get.fieldTypeSpec)
@@ -54,7 +55,6 @@ class SplitCorrelationsByCategory @Inject()(
           featureNames.toSet
         )
       }
-  }
 
   def exportCorrelationsToFile(
     inputCorrelationFileName: String,

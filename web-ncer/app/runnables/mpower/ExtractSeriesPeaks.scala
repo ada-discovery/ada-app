@@ -23,8 +23,6 @@ class ExtractSeriesPeaks @Inject() (
   private val seriesFieldName = "deviceMotion_walking_outboundu002ejsonu002eitems.gravity.x"
   private val recordId = "602681c6-fb35-4513-be00-4992ad00c215"
 
-  private val dsa = dsaf.applySync(dataSetId).get
-
   // helper method to extract series
   def extractSeries(json: JsObject): Seq[Double] = {
     val jsValues = JsonUtil.traverse(json, seriesFieldName)
@@ -33,6 +31,9 @@ class ExtractSeriesPeaks @Inject() (
 
   override def runAsFuture(spec: ExtractSeriesPeaksSpec) = {
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
+
       // retrieve jsons for a given record id
       json <- dsa.dataSetRepo.find(
         criteria = Seq("recordId" #== recordId),

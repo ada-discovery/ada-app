@@ -12,10 +12,10 @@ class AddTanhReservoirFunction extends DsaInputFutureRunnable[AddTanhReservoirFu
   private val funFieldName = "setting-reservoirFunctionType"
   private val tanhJsValue = JsNumber(ActivationFunctionType.Tanh.ordinal())
 
-  override def runAsFuture(spec: AddTanhReservoirFunctionSpec) = {
-    val repo = createDataSetRepo(spec.dataSetId)
-
+  override def runAsFuture(spec: AddTanhReservoirFunctionSpec) =
     for {
+      repo <- createDataSetRepo(spec.dataSetId)
+
       // get all the entries
       all <- repo.find()
 
@@ -33,7 +33,6 @@ class AddTanhReservoirFunction extends DsaInputFutureRunnable[AddTanhReservoirFu
       }
     } yield
       ()
-  }
 }
 
 case class AddTanhReservoirFunctionSpec(dataSetId: String)

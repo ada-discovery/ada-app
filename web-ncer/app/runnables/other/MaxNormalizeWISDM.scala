@@ -30,10 +30,11 @@ class MaxNormalizeWISDM @Inject()(
 
   private val flatFlow = Flow[Option[JsObject]].collect{ case Some(a) => a }
 
-  override def runAsFuture(input: MaxNormalizeWISDMSpec) = {
-    val dsa = dsaf.applySync(input.sourceDataSetId).get
-
+  override def runAsFuture(input: MaxNormalizeWISDMSpec) =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(input.sourceDataSetId)
+
       // x, y, and z maxes
       xAccelMax <- dsa.dataSetRepo.max(FieldName.xAcceleration).map(_.get.as[Double])
       yAccelMax <- dsa.dataSetRepo.max(FieldName.yAcceleration).map(_.get.as[Double])
@@ -68,7 +69,6 @@ class MaxNormalizeWISDM @Inject()(
       _ <- dataSetService.saveDerivedDataSet(dsa, input.resultDataSetSpec, alteredStream.via(flatFlow), fields.toSeq, input.streamSpec, true)
     } yield
       ()
-  }
 
   private def asDouble(json: JsObject, fieldName: String) =
     (json \ fieldName).toOption.flatMap(jsValue =>

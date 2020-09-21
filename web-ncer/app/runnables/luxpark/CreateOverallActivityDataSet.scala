@@ -124,19 +124,17 @@ class CreateOverallActivityDataSet  @Inject()(
     appVersionField
   ).map(_.name)
 
+  private val appVersionFieldType = ftf(appVersionField.fieldTypeSpec)
+  private val externalIdFieldType = ftf(externalIdField.fieldTypeSpec)
+
   object ClinicalField extends Enumeration {
     val SubjectId = Value("cdisc_dm_usubjd")
     val MPowerId = Value("dm_mpowerid")
   }
 
-  private val luxParkDsa = dsaf.applySync(luxParkDataSetId).get
-
-  private val appVersionFieldType = ftf(appVersionField.fieldTypeSpec)
-  private val externalIdFieldType = ftf(externalIdField.fieldTypeSpec)
-
   override def runAsFuture =
     for {
-    // register a new data set and object dsa
+      // register a new data set and object dsa
       newDsa <- dsaf.register(mergedDataSetInfo, None, None)
 
       // collect all the items from mPower activity data sets and match them with clinical subject id
@@ -158,14 +156,17 @@ class CreateOverallActivityDataSet  @Inject()(
 
   def createJsons: Future[Traversable[JsObject]] =
     for {
+      // data set accessor
+      luxParkDsa <- dsaf.getOrError(luxParkDataSetId)
+
       // collect all the items from mPower activity data sets
       externalIdMPowerItemsItems <- Future.sequence(
         dataSetIds.map { dataSetId =>
-
-          val dsa = dsaf.applySync(dataSetId).get
-          val dataSetRepo = dsa.dataSetRepo
-
           for {
+            // data set accessor
+            dsa <- dsaf.getOrError(dataSetId)
+            dataSetRepo = dsa.dataSetRepo
+
             // _ <- checkFields(dsa.fieldRepo, dataSetId)
             fields <- dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
 
@@ -199,6 +200,9 @@ class CreateOverallActivityDataSet  @Inject()(
           }
         }
       )
+
+      // data set accessor
+      luxParkDsa <- dsaf.getOrError(luxParkDataSetId)
 
       externalIdMPowerItems = externalIdMPowerItemsItems.flatten
 

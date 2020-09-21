@@ -1,8 +1,8 @@
 package runnables.mpower
 
 import java.{util => ju}
-import javax.inject.Inject
 
+import javax.inject.Inject
 import org.ada.server.dataaccess.JsonUtil
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.ada.server.models._
@@ -12,6 +12,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import org.ada.server.services.DataSetService
 import org.ada.server.dataaccess.JsonReadonlyRepoExtra._
+import org.ada.server.dataaccess.RepoTypes.JsonCrudRepo
 import org.incal.core.runnables.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import org.incal.core.util.seqFutures
@@ -25,9 +26,6 @@ class CreateMPowerTrainingDistanceDataSet @Inject()(
   ) extends FutureRunnable {
 
   private val dataSetId = "mpower_challenge.walking_activity_training"
-  private val dsa = dsaf.applySync(dataSetId).get
-  private val dataSetRepo = dsa.dataSetRepo
-  private val fieldRepo = dsa.fieldRepo
 
   private val normDataSetId = "mpower_challenge.walking_activity_training_norms"
   private val normDataSetName = "Walking Activity Training Norms"
@@ -57,6 +55,11 @@ class CreateMPowerTrainingDistanceDataSet @Inject()(
 
   override def runAsFuture =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
+      dataSetRepo = dsa.dataSetRepo
+      fieldRepo = dsa.fieldRepo
+
       // register the norm data set (if not registered already)
       newDsa <- dataSetService.register(dsa, normDataSetId, normDataSetName, StorageType.Mongo)
 
@@ -84,12 +87,13 @@ class CreateMPowerTrainingDistanceDataSet @Inject()(
       ids <- dataSetRepo.allIds
 
       // process and save jsons
-      _ <- createNormsAndSaveDataSet(newDsa, ids.toSeq)
+      _ <- createNormsAndSaveDataSet(newDsa, dataSetRepo, ids.toSeq)
     } yield
       ()
 
   private def createNormsAndSaveDataSet(
     newDsa: DataSetAccessor,
+    dataSetRepo: JsonCrudRepo,
     ids: Seq[BSONObjectID]
   ) =
     seqFutures(ids.grouped(batchSize).zipWithIndex) {
