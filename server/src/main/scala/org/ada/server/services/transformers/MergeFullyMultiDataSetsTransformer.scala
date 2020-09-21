@@ -5,16 +5,18 @@ import org.ada.server.models.datatrans.{MergeFullyMultiDataSetsTransformation, M
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import org.incal.core.util.seqFutures
 
 private class MergeFullyMultiDataSetsTransformer @Inject()(multiTransformer: MergeMultiDataSetsTransformer) extends AbstractDataSetTransformer[MergeFullyMultiDataSetsTransformation] {
 
   override def runAsFuture(
     spec: MergeFullyMultiDataSetsTransformation
-  ) = {
-    val dsafs = spec.sourceDataSetIds.map(dsaSafe)
-    val fieldRepos = dsafs.map(_.fieldRepo)
-
+  ) =
     for {
+      dsas <- seqFutures(spec.sourceDataSetIds)(dsaf.getOrError)
+
+      fieldRepos = dsas.map(_.fieldRepo)
+
       // collect all the field names in parallel
       allFieldNameSets <- Future.sequence(
         fieldRepos.map(
@@ -45,7 +47,6 @@ private class MergeFullyMultiDataSetsTransformer @Inject()(multiTransformer: Mer
       )
     } yield
       ()
-  }
 
   protected def execInternal(
     spec: MergeFullyMultiDataSetsTransformation

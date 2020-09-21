@@ -468,17 +468,22 @@ class DataSetServiceImpl @Inject()(
       fieldNameAndTypes.flatten
   }
 
+  @Deprecated // TODO: remove and use an already existing merge transformation
   override def mergeDataSets(
     resultDataSetSpec: ResultDataSetSpec,
     dataSetIds: Seq[String],
     fieldNames: Seq[Seq[String]]
   ): Future[Unit] = {
-    val dsafs = dataSetIds.map(dsaf.applySync(_).get)
-    val dataSetRepos = dsafs.map(_.dataSetRepo)
-    val fieldRepos = dsafs.map(_.fieldRepo)
-    val newFieldNames = fieldNames.map(_.head)
-
     for {
+      // data set accessors
+      dsafs <- seqFutures(dataSetIds)(dsaf.getOrError)
+
+      dataSetRepos = dsafs.map(_.dataSetRepo)
+
+      fieldRepos = dsafs.map(_.fieldRepo)
+
+      newFieldNames = fieldNames.map(_.head)
+
       // register the result data set (if not registered already)
       newDsa <- registerDerivedDataSet(dsafs.head, resultDataSetSpec)
 
@@ -614,10 +619,10 @@ class DataSetServiceImpl @Inject()(
 
 
   override def selfLink(spec: SelfLinkSpec) = {
-    val dsa = dsaf.applySync(spec.dataSetId).get
 
     // helper function to merge jsons by ids into a single one, and save it
     def mergeAndSaveAux[T](
+      dsa: DataSetAccessor,
       newDsa: DataSetAccessor,
       valueFieldType: FieldType[T])(
       ids: Seq[BSONObjectID]
@@ -642,6 +647,9 @@ class DataSetServiceImpl @Inject()(
 
     // the main part
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(spec.dataSetId)
+
       // load jsons with key fields and id
       items <- dsa.dataSetRepo.find(projection = spec.keyFieldNames ++ Seq(JsObjectIdentity.name))
 
@@ -696,7 +704,7 @@ class DataSetServiceImpl @Inject()(
 
         seqFutures(idGroups.grouped(spec.processingBatchSize.getOrElse(10))) { idGroups =>
           Future.sequence(
-            idGroups.map(mergeAndSaveAux(newDsa, valueFieldType))
+            idGroups.map(mergeAndSaveAux(dsa, newDsa, valueFieldType))
           )
         }
       }
@@ -707,14 +715,14 @@ class DataSetServiceImpl @Inject()(
   override def processSeriesAndSaveDataSet(
     spec: DataSetSeriesProcessingSpec
   ): Future[Unit] = {
-    val dsa = dsaf.applySync(spec.sourceDataSetId).getOrElse(
-      throw new AdaException(s"Data set id ${spec.sourceDataSetId} not found."))
-
     val processingBatchSize = spec.processingBatchSize.getOrElse(20)
     val saveBatchSize = spec.saveBatchSize.getOrElse(5)
     val preserveFieldNameSet = spec.preserveFieldNames.toSet
 
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(spec.sourceDataSetId)
+
       // register the result data set (if not registered already)
       newDsa <- registerDerivedDataSet(dsa, spec.resultDataSetSpec)
 
@@ -761,15 +769,15 @@ class DataSetServiceImpl @Inject()(
   override def transformSeriesAndSaveDataSet(
     spec: DataSetSeriesTransformationSpec
   ) = {
-    val dsa = dsaf.applySync(spec.sourceDataSetId).getOrElse(
-      throw new AdaException(s"Data set id ${spec.sourceDataSetId} not found."))
-
     val processingBatchSize = spec.processingBatchSize.getOrElse(20)
     val saveBatchSize = spec.saveBatchSize.getOrElse(5)
     val preserveFieldNameSet = spec.preserveFieldNames.toSet
 
     for {
-    // register the result data set (if not registered already)
+      // data set accessor
+      dsa <- dsaf.getOrError(spec.sourceDataSetId)
+
+      // register the result data set (if not registered already)
       newDsa <- registerDerivedDataSet(dsa, spec.resultDataSetSpec)
 
       // get all the fields
@@ -1045,12 +1053,13 @@ class DataSetServiceImpl @Inject()(
   ): Future[Unit] = {
     logger.info(s"Dictionary update for data set '${dataSetId}' initiated.")
 
-    val dsa = dsaf.applySync(dataSetId).get
-    val fieldRepo = dsa.fieldRepo
+    for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
 
-    updateFieldSpecs(fieldRepo, fieldNameAndTypes, deleteAndSave, deleteNonReferenced).map(_ =>
+      _ <- updateFieldSpecs(dsa.fieldRepo, fieldNameAndTypes, deleteAndSave, deleteNonReferenced)
+    } yield
       messageLogger.info(s"Dictionary update for '${dataSetId}' successfully finished.")
-    )
   }
 
   private def updateFieldSpecs(
@@ -1073,12 +1082,13 @@ class DataSetServiceImpl @Inject()(
   ): Future[Unit] = {
     logger.info(s"Dictionary update for data set '${dataSetId}' initiated.")
 
-    val dsa = dsaf.applySync(dataSetId).get
-    val fieldRepo = dsa.fieldRepo
+    for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
 
-    updateFields(fieldRepo, newFields, deleteAndSave, deleteNonReferenced).map(_ =>
+      _ <- updateFields(dsa.fieldRepo, newFields, deleteAndSave, deleteNonReferenced)
+    } yield
       messageLogger.info(s"Dictionary update for '${dataSetId}' successfully finished.")
-    )
   }
 
   override def updateFields(
@@ -1201,11 +1211,14 @@ class DataSetServiceImpl @Inject()(
     removeNullRows: Boolean
   ) = {
     logger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' initiated.")
-    val originalDsa = dsaf.applySync(originalDataSetId).get
-    val originalDataRepo = originalDsa.dataSetRepo
-    val originalDictionaryRepo = originalDsa.fieldRepo
 
     for {
+      // data set accessor
+      originalDsa <- dsaf.getOrError(originalDataSetId)
+
+      originalDataRepo = originalDsa.dataSetRepo
+      originalDictionaryRepo = originalDsa.fieldRepo
+
       // original data set info
       originalDataSetInfo <- originalDsa.metaInfo
 
@@ -1330,9 +1343,12 @@ class DataSetServiceImpl @Inject()(
     saveDeltaOnly: Boolean,
     targetStorageType: StorageType.Value
   ): Future[Unit] = {
-    val dsa = dsaf.applySync(dataSetId: String).get
-    val originalDataSetRepo = dsa.dataSetRepo
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
+
+      originalDataSetRepo = dsa.dataSetRepo
+
       // setting
       setting <- dsa.setting
 
@@ -1548,10 +1564,13 @@ class DataSetServiceImpl @Inject()(
     saveBatchSize: Option[Int]
   ) = {
     logger.info(s"Translation of the data using a given dictionary for data set '${originalDataSetId}' initiated.")
-    val originalDsa = dsaf.applySync(originalDataSetId).get
-    val originalDataRepo = originalDsa.dataSetRepo
 
     for {
+      // data set accessor
+      originalDsa <- dsaf.getOrError(originalDataSetId)
+
+      originalDataRepo = originalDsa.dataSetRepo
+
       // original data set info
       originalDataSetInfo <- originalDsa.metaInfo
 

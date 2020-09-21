@@ -34,12 +34,9 @@ private[transformers] abstract class AbstractDataSetTransformer[T <: DataSetTran
   protected val ftf = FieldTypeHelper.fieldTypeFactory()
   protected val defaultCharset = "UTF-8"
 
-  protected def dsaSafe(dataSetId: String) =
-    dsaf.applySync(dataSetId).getOrElse(throw new AdaException(s"Data set '${dataSetId}' not found."))
-
   protected def dsaWithNoDataCheck(dataSetId: String): Future[DataSetAccessor] =
     for {
-      dsa <- Future(dsaSafe(dataSetId))
+      dsa <- dsaf.getOrError(dataSetId)
 
       count <- dsa.dataSetRepo.count()
     } yield {

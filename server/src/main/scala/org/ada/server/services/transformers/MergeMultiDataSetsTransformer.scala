@@ -23,13 +23,14 @@ private class MergeMultiDataSetsTransformer extends AbstractDataSetTransformer[M
     if (spec.sourceDataSetIds.size < 2)
       throw new AdaException(s"MergeMultiDataSetsTransformation expects at least two data sets but got ${spec.sourceDataSetIds.size}.")
 
-    val dsafs = spec.sourceDataSetIds.map(dsaSafe)
-    val dataSetRepos = dsafs.map(_.dataSetRepo)
-    val fieldRepos = dsafs.map(_.fieldRepo)
-
     logger.info(s"Merging the data sets '${spec.sourceDataSetIds.mkString("', '")}' using ${spec.fieldNameMappings.size} mappings.")
 
     for {
+      dsas <- seqFutures(spec.sourceDataSetIds)(dsaf.getOrError)
+
+      dataSetRepos = dsas.map(_.dataSetRepo)
+      fieldRepos = dsas.map(_.fieldRepo)
+
       // collect all the fields
       allFields <- Future.sequence(
         fieldRepos.zipWithIndex.map { case (fieldRepo, index) =>
@@ -93,6 +94,6 @@ private class MergeMultiDataSetsTransformer extends AbstractDataSetTransformer[M
       // concatenate all the streams
       mergedStream = streams.tail.foldLeft(streams.head)(_.concat(_))
     } yield
-      (dsafs.head, finalNewFields, mergedStream, saveViewsAndFilters)
+      (dsas.head, finalNewFields, mergedStream, saveViewsAndFilters)
   }
 }
