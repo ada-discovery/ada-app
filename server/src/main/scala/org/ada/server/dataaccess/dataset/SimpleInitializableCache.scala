@@ -27,11 +27,7 @@ abstract class SimpleInitializableCache[ID, T](eagerInit: Boolean) {
     map
   }
 
-  @Deprecated
-  def applySync(id: ID): Option[T] =
-    Await.result(applyAsync(id), 10 minutes)
-
-  def applyAsync(id: ID): Future[Option[T]] =
+  def apply(id: ID): Future[Option[T]] =
     getItemOrElse(id) {
 
       // get a lock... if doesn't exist, register one

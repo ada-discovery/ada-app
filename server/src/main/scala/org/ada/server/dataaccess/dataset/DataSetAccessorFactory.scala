@@ -1,7 +1,7 @@
 package org.ada.server.dataaccess.dataset
 
 import javax.inject.{Inject, Named, Singleton}
-
+import org.ada.server.AdaException
 import org.ada.server.dataaccess._
 import org.ada.server.models.DataSetFormattersAndIds.DataSetMetaInfoIdentity
 import org.ada.server.models._
@@ -14,7 +14,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.duration._
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.Await._
 
 trait DataSetAccessorFactory {
@@ -33,15 +33,17 @@ trait DataSetAccessorFactory {
     dataView: Option[DataView]
   ): Future[DataSetAccessor]
 
-  @Deprecated
-  def applySync(dataSetId: String): Option[DataSetAccessor]
+  def apply(dataSetId: String): Future[Option[DataSetAccessor]]
+
+  def getOrError(dataSetId: String) =
+    apply(dataSetId).map(
+      _.getOrElse(
+        throw new AdaException(s"Data set '${dataSetId}' not found.")
+      )
+    )
 
   @Deprecated
-  def dataSetRepoCreate(
-    dataSetId: String)(
-    fieldNamesAndTypes: Seq[(String, FieldTypeSpec)],
-    dataSetSetting: Option[DataSetSetting] = None
-  ): Future[JsonCrudRepo]
+  def applySync(dataSetId: String): Option[DataSetAccessor]
 }
 
 @Singleton
@@ -59,6 +61,10 @@ protected[dataaccess] class DataSetAccessorFactoryImpl @Inject()(
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     dataSetSettingRepo: DataSetSettingRepo
   ) extends SimpleInitializableCache[String, DataSetAccessor](false) with DataSetAccessorFactory {
+
+  @Deprecated
+  def applySync(id: String): Option[DataSetAccessor] =
+    Await.result(apply(id), 10 minutes)
 
   override protected def createInstance(
     dataSetId: String
