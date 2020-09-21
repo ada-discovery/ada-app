@@ -20,12 +20,32 @@ abstract class SimpleInitializableCache[ID, T](eagerInit: Boolean) {
 
   private val locks = new ConcurrentHashMap[ID, AnyRef]()
 
-  protected val cache = {
+  protected val cache: Future[MMap[ID, T]] = {
     val map = MMap[ID, T]()
-    if (eagerInit)
-      initialize(map)
-    map
+
+    for {
+      _ <- if (eagerInit) initialize(map) else Future(())
+    } yield
+      map
   }
+
+  private def initialize(map : MMap[ID, T]): Future[Unit] = {
+    map.clear()
+
+    for {
+      // collect all ids
+      ids <- getAllIds
+
+      // create all instances
+      idInstances <- createInstances(ids)
+    } yield
+      idInstances.map { case (id, instance) =>
+        map.put(id, instance)
+      }
+  }
+
+  protected def withCache[E](fun: MMap[ID, T]=> Future[E]) =
+    cache.flatMap(fun)
 
   def apply(id: ID): Future[Option[T]] =
     getItemOrElse(id) {
@@ -47,37 +67,22 @@ abstract class SimpleInitializableCache[ID, T](eagerInit: Boolean) {
   private def getItemOrElse(
     id: ID)(
     initialize: => Future[Option[T]]
-  ): Future[Option[T]] =
-    cache.get(id) match {
+  ): Future[Option[T]] = withCache {
+    _.get(id) match {
       case Some(item) => Future(Some(item))
       case None => initialize
     }
+  }
 
-  private def createAndCacheInstance(id: ID) =
+  private def createAndCacheInstance(id: ID) = withCache { cache =>
     createInstance(id).map { instance =>
       if (instance.isDefined)
         cache.put(id, instance.get)
       instance
     }
+  }
 
   protected def cacheMissGet(id: ID): Future[Option[T]] = Future(None)
-
-  private def initialize(map : MMap[ID, T]): Unit = this.synchronized {
-    map.clear()
-    val future =
-      for {
-        // collect all ids
-        ids <- getAllIds
-
-        // create all instances
-        idInstances <- createInstances(ids)
-      } yield
-        idInstances.map { case (id, instance) =>
-          map.put(id, instance)
-        }
-
-    Await.result(future, 10 minutes)
-  }
 
   protected def createInstances(
     ids: Traversable[ID]

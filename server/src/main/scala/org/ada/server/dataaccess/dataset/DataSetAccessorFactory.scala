@@ -190,7 +190,7 @@ protected[dataaccess] class DataSetAccessorFactoryImpl @Inject()(
     existingMetaInfo: Option[DataSetMetaInfo],
     existingSetting: Option[DataSetSetting],
     dataView: Option[DataView]
-  ) = {
+  ) = withCache { cache =>
     // register setting
     val settingFuture = setting.map( setting =>
       existingSetting.map( existingSetting =>
