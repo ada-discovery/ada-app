@@ -20,10 +20,10 @@ class ReplaceNumber extends DsaInputFutureRunnable[ReplaceNumberSpec] {
   private implicit val materializer = ActorMaterializer()
   private val flatFlow = Flow[Option[JsObject]].collect { case Some(x) => x }
 
-  override def runAsFuture(spec: ReplaceNumberSpec) = {
-    val dsa = createDsa(spec.dataSetId)
-
+  override def runAsFuture(spec: ReplaceNumberSpec) =
     for {
+      dsa <- createDsa(spec.dataSetId)
+
       // field
       fieldOption <- dsa.fieldRepo.get(spec.fieldName)
       field = fieldOption.getOrElse(throw new AdaException(s"Field ${spec.fieldName} not found."))
@@ -35,7 +35,6 @@ class ReplaceNumber extends DsaInputFutureRunnable[ReplaceNumberSpec] {
           throw new AdaException(s"Number replacement is possible only for double, integer, date, an enum types but got ${field.fieldTypeSpec}.")
     } yield
       ()
-  }
 
   private def replaceNumber(
     repo: JsonCrudRepo,

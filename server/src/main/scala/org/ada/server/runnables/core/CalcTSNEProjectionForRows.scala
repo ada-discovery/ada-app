@@ -23,11 +23,10 @@ class CalcTSNEProjectionForRows @Inject()(
   private val logger = Logger
   implicit val ftf = FieldTypeHelper.fieldTypeFactory()
 
-  def runAsFuture(input: CalcTSNEProjectionForRowsSpec) = {
-    val dsa = dsaf.applySync(input.dataSetId).get
-    val dataSetRepo = dsa.dataSetRepo
-
+  def runAsFuture(input: CalcTSNEProjectionForRowsSpec) =
     for {
+      dsa <- dsaf.getOrError(input.dataSetId)
+
       // get the fields first
       numericFields <- numericFields(dsa.fieldRepo)(input.featuresNum, input.allFeaturesExcept)
 
@@ -42,7 +41,7 @@ class CalcTSNEProjectionForRows @Inject()(
 
       // run t-SNE and obtain the results and the exec time (in sec)
       ((tsneProjections, idLabels), execTime) <- repeatWithTime(input.repetitions) {
-        dataSetRepo.find(projection = fieldNames ++ Seq(input.idLabelFieldName)).map { jsons =>
+        dsa.dataSetRepo.find(projection = fieldNames ++ Seq(input.idLabelFieldName)).map { jsons =>
           val jsonConverter = jsonToArrayDoublesDefined(sortedFields)
           val inputs = jsons.map(jsonConverter)
 
@@ -90,7 +89,6 @@ class CalcTSNEProjectionForRows @Inject()(
         ()
       )
     }
-  }
 }
 
 case class CalcTSNEProjectionForRowsSpec(

@@ -30,11 +30,10 @@ class CalcEuclideanDistances @Inject()(
 
   private val logger = Logger
 
-  def runAsFuture(input: CalcEuclideanDistancesSpec) = {
-    val dsa = dsaf.applySync(input.dataSetId).get
-    val dataSetRepo = dsa.dataSetRepo
-
+  def runAsFuture(input: CalcEuclideanDistancesSpec) =
     for {
+      dsa <- dsaf.getOrError(input.dataSetId)
+
       // get the fields first
       numericFields <- numericFields(dsa.fieldRepo)(input.featuresNum, input.allFeaturesExcept)
 
@@ -44,14 +43,14 @@ class CalcEuclideanDistances @Inject()(
 
       // calculate Euclidean distances standardly
       euclideanDistancesWithExecTime <- repeatWithTimeOptional(input.standardRepetitions) {
-        dataSetRepo.find(projection = fieldNames).map(
+        dsa.dataSetRepo.find(projection = fieldNames).map(
           euclideanDistanceExec.execJson((), sortedFields)
         )
       }
 
       // calculate Euclidean distances as a stream
       streamedEuclideanDistancesWithExecTime <- repeatWithTimeOptional(input.streamRepetitions) {
-        calcEuclideanDistanceStreamed(dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamWithProjection, input.streamAreValuesAllDefined)
+        calcEuclideanDistanceStreamed(dsa.dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamWithProjection, input.streamAreValuesAllDefined)
       }
     } yield {
       val (euclideanDistances, execTime) = euclideanDistancesWithExecTime.getOrElse((Nil, 0))
@@ -82,7 +81,6 @@ class CalcEuclideanDistances @Inject()(
         ()
       )
     }
-  }
 
   private def calcEuclideanDistanceStreamed(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],

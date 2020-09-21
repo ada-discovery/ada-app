@@ -30,11 +30,10 @@ class CalcCorrelations @Inject()(
 
   import statsService._
 
-  def runAsFuture(input: CalcCorrelationsSpec) = {
-    val dsa = dsaf.applySync(input.dataSetId).get
-    val dataSetRepo = dsa.dataSetRepo
-
+  def runAsFuture(input: CalcCorrelationsSpec) =
     for {
+      dsa <- dsaf.getOrError(input.dataSetId)
+
       // get the fields first
       numericFields <- numericFields(dsa.fieldRepo)(input.featuresNum, input.allFeaturesExcept)
 
@@ -44,14 +43,14 @@ class CalcCorrelations @Inject()(
 
       // calculate correlations standardly
       correlationsWithExecTime <- repeatWithTimeOptional(input.standardRepetitions) {
-        dataSetRepo.find(projection = fieldNames).map(
+        dsa.dataSetRepo.find(projection = fieldNames).map(
           pearsonCorrelationExec.execJson((), sortedFields)
         )
       }
 
       // calculate correlations as a stream
       streamedCorrelationsWithExecTime <- repeatWithTimeOptional(input.streamRepetitions) {
-        calcPearsonCorrelationsStreamed(dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamWithProjection, input.streamAreValuesAllDefined)
+        calcPearsonCorrelationsStreamed(dsa.dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamWithProjection, input.streamAreValuesAllDefined)
       }
     } yield {
       val (correlations, execTime) = correlationsWithExecTime.getOrElse((Nil, 0))
@@ -82,7 +81,6 @@ class CalcCorrelations @Inject()(
         ()
       )
     }
-  }
 
   private def calcPearsonCorrelationsStreamed(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],

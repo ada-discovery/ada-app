@@ -34,12 +34,13 @@ class RunRowTimeSeriesRCRegression @Inject() (
   override def runAsFuture(
     input: RunRowTimeSeriesRCRegressionSpec
   ): Future[Unit] = {
-    val dsa = dsaf.applySync(input.dataSetId).get
-
     val fieldNames = (input.inputFieldNames ++ Seq(input.outputFieldName, input.orderFieldName)).toSet.toSeq
 
     for {
-    // load a ML model
+      // data set accessor
+      dsa <- dsaf.getOrError(input.dataSetId)
+
+      // load a ML model
       mlModel <- regressionRepo.get(input.mlModelId)
 
       // get all the fields

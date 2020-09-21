@@ -28,11 +28,14 @@ class CompareAllValuesInTwoDataSets @Inject()(
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
 
-  override def runAsFuture(spec: CompareAllValuesInTwoDataSetsSpec) = {
-    val dsa1 = dsaf.applySync(spec.dataSetId1).get
-    val dsa2 = dsaf.applySync(spec.dataSetId2).get
-
+  override def runAsFuture(spec: CompareAllValuesInTwoDataSetsSpec) =
     for {
+      // data set accessor 1
+      dsa1 <- dsaf.getOrError(spec.dataSetId1)
+
+      // data set accessor 2
+      dsa2 <- dsaf.getOrError(spec.dataSetId2)
+
       // setting1
       setting1 <- dsa1.setting
 
@@ -85,7 +88,6 @@ class CompareAllValuesInTwoDataSets @Inject()(
     } yield
       if (errorCount > 0)
         logger.error(s"In total $errorCount errors were found during json data set comparison.")
-  }
 
   // returns the number of errors
   private def compare(keyFieldName: String)(jsObject1: JsObject, jsObject2: JsObject): Int = {

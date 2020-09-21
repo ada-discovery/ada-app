@@ -43,10 +43,12 @@ class ExportDataSetsForSpaceAsCsvs @Inject() (
   ) = {
     logger.info(s"Exporting the data set $dataSetId to the folder '$exportFolder'.")
 
-    val dsa = dsaf.applySync(dataSetId).get
-
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
+
       jsons <- dsa.dataSetRepo.find()
+
       fields <- dsa.fieldRepo.find()
     } yield {
       val fieldNames = fields.map(_.name).toSeq.sorted

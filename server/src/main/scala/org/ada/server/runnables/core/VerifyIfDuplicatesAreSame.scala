@@ -15,28 +15,22 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class VerifyIfDuplicatesAreSame extends DsaInputFutureRunnable[VerifyIfDuplicatesAreSameSpec] {
 
-  private val logger = Logger // (this.getClass())
+  private val logger = Logger
 
   private val idName = JsObjectIdentity.name
 
-  override def runAsFuture(input: VerifyIfDuplicatesAreSameSpec) = {
-    val dsa_ = createDsa(input.dataSetId)
-    val repo = dsa_.dataSetRepo
-    val fieldRepo = dsa_.fieldRepo
-
-    val jsonsFuture = repo.find(projection = input.keyFieldNames ++ Seq(idName))
-    val keyFieldsFuture  = fieldRepo.find(Seq(FieldIdentity.name #-> input.keyFieldNames))
-    val allFieldsFuture  = fieldRepo.find()
-
+  override def runAsFuture(input: VerifyIfDuplicatesAreSameSpec) =
     for {
+      dsa <- createDsa(input.dataSetId)
+
       // get the items
-      jsons <- jsonsFuture
+      jsons <- dsa.dataSetRepo.find(projection = input.keyFieldNames ++ Seq(idName))
 
       // get the key fields
-      keyFields <- keyFieldsFuture
+      keyFields <- dsa.fieldRepo.find(Seq(FieldIdentity.name #-> input.keyFieldNames))
 
       // get all the fields
-      allFields <- allFieldsFuture
+      allFields <- dsa.fieldRepo.find()
 
       // compare field names
       compareFieldNames = if (input.compareFieldNamesToExclude.nonEmpty) allFields.map(_.name).filterNot(input.compareFieldNamesToExclude.contains(_)) else Nil
@@ -54,7 +48,7 @@ class VerifyIfDuplicatesAreSame extends DsaInputFutureRunnable[VerifyIfDuplicate
         seqFutures(valuesWithIds.groupBy(_._1).filter(_._2.size > 1)) { case (values, items) =>
           val ids = items.map(_._2)
 
-          repo.find(
+          dsa.dataSetRepo.find(
             criteria = Seq(idName #-> ids.toSeq),
             projection = compareFieldNames
           ).map { jsons =>
@@ -74,7 +68,6 @@ class VerifyIfDuplicatesAreSame extends DsaInputFutureRunnable[VerifyIfDuplicate
       logger.info("------------------------------")
       logger.info(duplicates.map(x => x._1.mkString(",")).mkString("\n"))
     }
-  }
 }
 
 case class VerifyIfDuplicatesAreSameSpec(
