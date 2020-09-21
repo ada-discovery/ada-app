@@ -172,13 +172,16 @@ class DataSetSettingController @Inject() (
     item: DataSetSetting)(
     implicit request: AuthenticatedRequest[AnyContent]
   ): Future[BSONObjectID] =
-    repo.update(item).map { id =>
-      // update data set repo since we change the setting, which could affect how the data set is accessed
-      dsaf.applySync(item.dataSetId).foreach(_.updateDataSetRepo(item))
-      // return id
-      id
-    }
+    for {
+      id <- repo.update(item)
 
+      // data set accessor
+      dsa <- dsaf.getOrError(item.dataSetId)
+
+      // update the data set repo since we've changed the setting, which could affect how the data set is accessed
+      _ <- dsa.updateDataSetRepo(item)
+    } yield
+      id
 
   private def mergeMenus(navigationItems: Seq[NavigationItem]): Seq[NavigationItem] =
     navigationItems.foldLeft(ArrayBuffer[NavigationItem]()) { case (items, navItem) =>

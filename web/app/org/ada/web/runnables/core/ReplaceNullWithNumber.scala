@@ -26,10 +26,11 @@ class ReplaceNullWithNumber extends DsaInputFutureRunnable[ReplaceNullWithNumber
   private implicit val materializer = ActorMaterializer()
   private val flatFlow = Flow[Option[JsObject]].collect { case Some(x) => x }
 
-  override def runAsFuture(spec: ReplaceNullWithNumberSpec) = {
-    val dsa = createDsa(spec.dataSetId)
-
+  override def runAsFuture(spec: ReplaceNullWithNumberSpec) =
     for {
+      // data set accessor
+      dsa <- createDsa(spec.dataSetId)
+
       // field
       fieldOption <- dsa.fieldRepo.get(spec.fieldName)
       field = fieldOption.getOrElse(throw new AdaException(s"Field ${spec.fieldName} not found."))
@@ -41,7 +42,6 @@ class ReplaceNullWithNumber extends DsaInputFutureRunnable[ReplaceNullWithNumber
         throw new AdaException(s"Null-to-number replacement is possible only for double, integer, date, and enum types but got ${field.fieldTypeSpec}.")
     } yield
       ()
-  }
 
   private def replaceNumber(
     repo: JsonCrudRepo,

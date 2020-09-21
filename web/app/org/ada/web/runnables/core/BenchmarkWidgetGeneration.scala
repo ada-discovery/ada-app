@@ -57,11 +57,13 @@ trait BenchmarkWidgetGenerationHelper extends RunnableHtmlOutput {
     viewId: Option[BSONObjectID],
     repetitions: Int,
     warmUp: Boolean
-  ): Future[Unit] = {
-    val dsa = dsaf.applySync(dataSetId).get
-    val dataSetRepo = dsa.dataSetRepo
-
+  ): Future[Unit] =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
+
+      dataSetRepo = dsa.dataSetRepo
+
       name <- dsa.dataSetName
       setting <- dsa.setting
 
@@ -91,7 +93,6 @@ trait BenchmarkWidgetGenerationHelper extends RunnableHtmlOutput {
         }
         addOutput("<br>")
       }
-  }
 
   private def genWidgets(
     dataSetRepo: JsonReadonlyRepo,

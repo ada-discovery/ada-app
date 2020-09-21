@@ -41,11 +41,13 @@ class FixNonalphanumericFields @Inject() (
   override def runAsFuture(input: FixNonalphanumericFieldsSpec) = {
     logger.info(s"Fixing the non-alphanumeric fields of the data set ${input.dataSetId}.")
 
-    val dsa = dsaf.applySync(input.dataSetId).get
     val newDataSetId = input.dataSetId + "_temporary_" + Random.nextInt()
     val streamSpec = StreamSpec(input.batchSize)
 
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(input.dataSetId)
+
       // original count
       originalCount <- dsa.dataSetRepo.count()
 
@@ -68,7 +70,8 @@ class FixNonalphanumericFields @Inject() (
           input.dataSetId, oldToNewFieldNameMap.toSeq, ResultDataSetSpec(newDataSetId, "Temporary (To Delete)", input.tempStorageType), streamSpec
         ))
 
-      movedDsa = dsaf.applySync(newDataSetId).get
+      // moved data set accessor
+      movedDsa <- dsaf.getOrError(newDataSetId)
 
       // check the counts
 
