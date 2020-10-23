@@ -43,11 +43,11 @@ protected[controllers] class FilterControllerImpl @Inject() (
     dsaf: DataSetAccessorFactory,
     dataSpaceService: DataSpaceService,
     userRepo: UserRepo
-  ) extends AdaCrudControllerImpl[Filter, BSONObjectID](dsaf(dataSetId).get.filterRepo)
+  ) extends AdaCrudControllerImpl[Filter, BSONObjectID](dsaf.applySync(dataSetId).get.filterRepo)
     with FilterController
     with HasFormShowEqualEditView[Filter, BSONObjectID] {
 
-  protected val dsa: DataSetAccessor = dsaf(dataSetId).get
+  protected val dsa: DataSetAccessor = dsaf.applySync(dataSetId).get
 
   protected val filterRepo = dsa.filterRepo
 

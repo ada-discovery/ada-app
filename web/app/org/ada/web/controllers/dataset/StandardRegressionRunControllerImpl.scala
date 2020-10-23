@@ -43,7 +43,7 @@ protected[controllers] class StandardRegressionRunControllerImpl @Inject()(
 ) extends RegressionRunControllerImpl[StandardRegressionResult]
   with StandardRegressionRunController {
 
-  override protected def dsa = dsaf(dataSetId).get
+  override protected def dsa = dsaf.applySync(dataSetId).get
   override protected val repo = dsa.standardRegressionResultRepo
 
   override protected val router = new StandardRegressionRunRouter(dataSetId)

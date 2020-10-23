@@ -1,23 +1,19 @@
 package org.ada.server.runnables.core
 
-import play.api.Logger
 import runnables.DsaInputFutureRunnable
 import org.ada.server.models._
 
-import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Random
 
 class CreateDefaultMainView extends DsaInputFutureRunnable[CreateDefaultMainViewSpec] {
 
-  override def runAsFuture(input: CreateDefaultMainViewSpec) = {
-    val dsa_ = createDsa(input.dataSetId)
-    val fieldRepo = dsa_.fieldRepo
-    val viewRepo = dsa_.dataViewRepo
-
+  override def runAsFuture(input: CreateDefaultMainViewSpec) =
     for {
+      dsa <- createDsa(input.dataSetId)
+
       // get the fields
-      fields <- fieldRepo.find()
+      fields <- dsa.fieldRepo.find()
 
       // add rounding for the double fields (if needed) and introduce a default label
       _ <- {
@@ -27,14 +23,13 @@ class CreateDefaultMainView extends DsaInputFutureRunnable[CreateDefaultMainView
             case _ => field.copy(label = Some(field.name))
           }
         }
-        fieldRepo.update(newFields)
+        dsa.fieldRepo.update(newFields)
       }
 
       // create and save the main view
-      _ <- viewRepo.save(mainDataView(fields, input))
+      _ <- dsa.dataViewRepo.save(mainDataView(fields, input))
     } yield
       ()
-  }
 
   private def mainDataView(fields: Traversable[Field], spec: CreateDefaultMainViewSpec): DataView = {
     val doubleFieldNames = fields.filter(_.fieldType == FieldTypeId.Double).map(_.name).toSeq.sorted

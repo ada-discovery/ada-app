@@ -15,7 +15,6 @@ import runnables.DsaInputFutureRunnable
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.reflect.runtime.universe.typeOf
 
 class ReplaceZeroWithNull extends DsaInputFutureRunnable[ReplaceZeroWithNullSpec] {
 
@@ -24,18 +23,18 @@ class ReplaceZeroWithNull extends DsaInputFutureRunnable[ReplaceZeroWithNullSpec
   private val idName = JsObjectIdentity.name
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
-  override def runAsFuture(spec: ReplaceZeroWithNullSpec) = {
-    val dsa_ = createDsa(spec.dataSetId)
-    val repo = dsa_.dataSetRepo
-
+  override def runAsFuture(spec: ReplaceZeroWithNullSpec) =
     for {
+      // data set accessor
+      dsa <- createDsa(spec.dataSetId)
+
       // field
-      fieldOption <- dsa_.fieldRepo.get(spec.fieldName)
+      fieldOption <- dsa.fieldRepo.get(spec.fieldName)
       field = fieldOption.getOrElse(throw new AdaException(s"Field ${spec.fieldName} not found."))
       fieldType = ftf(field.fieldTypeSpec)
 
       // jsons
-      idJsons <- repo.find(projection = Seq(idName, spec.fieldName))
+      idJsons <- dsa.dataSetRepo.find(projection = Seq(idName, spec.fieldName))
 
       // get zero with null in the records
       idReplacedJsValues = idJsons.map { json =>
@@ -65,19 +64,18 @@ class ReplaceZeroWithNull extends DsaInputFutureRunnable[ReplaceZeroWithNullSpec
         for {
           newJsons <- Future.sequence(
             group.map { case (id, replacedJsValue) =>
-              repo.get(id).map { json =>
+              dsa.dataSetRepo.get(id).map { json =>
                 json.get ++ Json.obj(spec.fieldName -> replacedJsValue)
               }
             }
           )
 
-          _ <- repo.update(newJsons)
+          _ <- dsa.dataSetRepo.update(newJsons)
         } yield
           ()
       }
     } yield
       ()
-  }
 }
 
 case class ReplaceZeroWithNullSpec(dataSetId: String, fieldName: String, batchSize: Int)

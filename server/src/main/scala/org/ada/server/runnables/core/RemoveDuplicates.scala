@@ -17,18 +17,15 @@ class RemoveDuplicates extends DsaInputFutureRunnable[RemoveDuplicatesSpec] {
 
   private val idName = JsObjectIdentity.name
 
-  override def runAsFuture(input: RemoveDuplicatesSpec) = {
-    val dsa = createDsa(input.dataSetId)
-
-    val jsonsFuture = dsa.dataSetRepo.find(projection = input.fieldNames ++ Seq(idName))
-    val fieldsFuture  = dsa.fieldRepo.find(Seq(FieldIdentity.name #-> input.fieldNames))
-
+  override def runAsFuture(input: RemoveDuplicatesSpec) =
     for {
+      dsa <- createDsa(input.dataSetId)
+
       // get the items
-      jsons <- jsonsFuture
+      jsons <- dsa.dataSetRepo.find(projection = input.fieldNames ++ Seq(idName))
 
       // get the fields
-      fields <- fieldsFuture
+      fields <- dsa.fieldRepo.find(Seq(FieldIdentity.name #-> input.fieldNames))
 
       // remove the duplicates
       _ <- {
@@ -47,7 +44,6 @@ class RemoveDuplicates extends DsaInputFutureRunnable[RemoveDuplicatesSpec] {
       }
     } yield
       ()
-  }
 }
 
 case class RemoveDuplicatesSpec(dataSetId: String, fieldNames: Seq[String])

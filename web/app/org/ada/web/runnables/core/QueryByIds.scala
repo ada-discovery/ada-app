@@ -13,7 +13,10 @@ class QueryByIds extends DsaInputFutureRunnable[QueryByIdsSpec] with RunnableHtm
 
   override def runAsFuture(input: QueryByIdsSpec) =
     for {
-      jsons <- createDsa(input.dataSetId).dataSetRepo.find(Seq(criterion(input.ids, input.negate)))
+      // data set accessor
+      dsa <- createDsa(input.dataSetId)
+
+      jsons <- dsa.dataSetRepo.find(Seq(criterion(input.ids, input.negate)))
     } yield {
       addParagraph(s"Found <b>${jsons.size}</b> items:<br/>")
       jsons.foreach { json =>

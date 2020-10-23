@@ -23,10 +23,6 @@ class DeNoPaPlayground @Inject() (
     dsaf: DataSetAccessorFactory
   ) extends FutureRunnable {
 
-  private val baseLineDsa = dsaf("denopa.raw_clinical_baseline").get
-  private val firstVisitDsa = dsaf("denopa.raw_clinical_first_visit").get
-  private val secondVisitDsa = dsaf("denopa.raw_clinical_second_visit").get
-
   private val folder = "/home/peter.banda/Data/DeNoPa/translations/final/"
 
   private val filename_de = folder + "DeNoPa_dictionary_de"
@@ -38,13 +34,14 @@ class DeNoPaPlayground @Inject() (
   private val filename_second_visit_de = folder + "DeNoPa_secondvisit_dictionary_de"
   private val filename_second_visit_en = folder + "DeNoPa_secondvisit_dictionary_en"
 
-//  val filename_de = "/Users/peter.banda/Documents/DeNoPa/translations/DeNoPa_dictionary_de"
-//  val filename_en = "/Users/peter.banda/Documents/DeNoPa/translations/DeNoPa_dictionary_en2"
-
   private val truthValues = List("na", "ja", "nein", "falsch", "richtig", "fehlend")
 
   override def runAsFuture =
     for {
+      baseLineDsa <- dsaf.getOrError("denopa.raw_clinical_baseline")
+      firstVisitDsa <- dsaf.getOrError("denopa.raw_clinical_first_visit")
+      secondVisitDsa <- dsaf.getOrError("denopa.raw_clinical_second_visit")
+
       baselineEnumTexts <- collectEnumTexts(baseLineDsa)
       firstVisitEnumTexts <- collectEnumTexts(firstVisitDsa)
       secondVisitEnumTexts <- collectEnumTexts(secondVisitDsa)

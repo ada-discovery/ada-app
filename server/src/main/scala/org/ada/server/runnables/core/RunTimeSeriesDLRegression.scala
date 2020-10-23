@@ -23,10 +23,11 @@ class RunTimeSeriesDLRegression @Inject() (
 
   override def runAsFuture(
     input: RunTimeSeriesDLRegressionSpec
-  ): Future[Unit] = {
-    val dsa = dsaf(input.dataSetId).get
-
+  ): Future[Unit] =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(input.dataSetId)
+
       // load a ML model
       mlModel <- regressionRepo.get(input.mlModelId)
 
@@ -55,7 +56,6 @@ class RunTimeSeriesDLRegression @Inject() (
       )
     } yield
       resultsHolder.foreach(exportResults)
-  }
 }
 
 case class RunTimeSeriesDLRegressionSpec(

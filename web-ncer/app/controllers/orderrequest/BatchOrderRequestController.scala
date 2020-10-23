@@ -132,7 +132,7 @@ class BatchOrderRequestController @Inject()(
   def createNew(dataSet: String) =
     restrictAdminOrPermissionAny(orderRequestPermission(dataSet), noCaching = true) { implicit request =>
     {
-      dsaf(dataSet).map { dsa =>
+      dsaf(dataSet).flatMap(_.map { dsa =>
         for {
           // handy things for a view: data set name, data space tree, and data set setting
           (dataSetName, dataSpaceTree, dataSetSetting) <- getDataSetNameTreeAndSetting(dsa)
@@ -206,7 +206,7 @@ class BatchOrderRequestController @Inject()(
         }
       }.getOrElse(
         Future(NotFound(s"Data set '${dataSet}' doesn't exist."))
-      )
+      ))
     }.recover(handleExceptions("a create batch-order request"))
   }
 
@@ -313,7 +313,7 @@ class BatchOrderRequestController @Inject()(
       orderRequest = requireDefined(existingRequest, s"Batch order request with the id '${requestId.stringify}' not found.")
 
       // get a data set accessor
-      dsa = requireDefined(dsaf(orderRequest.dataSetId), s"Data set '${orderRequest.dataSetId}' not found.")
+      dsa <- dsaf.getOrError(orderRequest.dataSetId)
 
       // get the fields associated with this request's setting
       fields <- getRequestFields(dsa)
@@ -581,7 +581,7 @@ class BatchOrderRequestController @Inject()(
         }
 
         // get a data set accessor
-        dsa = requireDefined(dsaf(orderRequest.dataSetId), s"Data set '${orderRequest.dataSetId}' not found.")
+        dsa <- dsaf.getOrError(orderRequest.dataSetId)
 
         // get the fields associated with this request's setting
         fields <- getRequestFields(dsa)

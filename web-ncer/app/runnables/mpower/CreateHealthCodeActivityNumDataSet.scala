@@ -20,10 +20,12 @@ class CreateHealthCodeActivityNumDataSet @Inject()(
   private val recordNumField = Field(recordNumFieldName, Some("Record Num"), FieldTypeId.Integer)
 
   override def runAsFuture(spec: CreateHealthCodeActivityNumDataSetSpec) = {
-    val dsa = dsaf(spec.dataSetId).get
     val newDataSetId = spec.dataSetId + "_records_num"
 
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(spec.dataSetId)
+
       // get the name of the source data set
       dataSetName <- dsa.dataSetName
 

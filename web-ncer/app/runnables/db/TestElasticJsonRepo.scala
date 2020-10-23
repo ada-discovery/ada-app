@@ -14,12 +14,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class TestElasticJsonRepo @Inject() (dsaf: DataSetAccessorFactory) extends FutureRunnable {
 
-  private val dsa = dsaf("lux_park.ibbl_biosamples").get
-  private val dataSetRepo = dsa.dataSetRepo
   private val idName = JsObjectIdentity.name
 
   def runAsFuture =
     for {
+      dsa <- dsaf.getOrError("lux_park.ibbl_biosamples")
+      dataSetRepo = dsa.dataSetRepo
+
       idsAndSampleTypeIds <- dataSetRepo.find(projection = Seq("__id.$oid", "sampletypeid"))
 
       firstTwo <- dataSetRepo.find(limit = Some(2))

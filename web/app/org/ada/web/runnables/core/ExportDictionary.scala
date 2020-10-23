@@ -15,10 +15,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class ExportDictionary extends DsaInputFutureRunnable[ExportDictionarySpec] with RunnableFileOutput {
 
   override def runAsFuture(input: ExportDictionarySpec) = {
-    val fieldRepo = createDsa(input.dataSetId).fieldRepo
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(input.delimiter)
 
     for {
+      dsa <- createDsa(input.dataSetId)
+
+      fieldRepo = dsa.fieldRepo
+
       // get the fields
       fields <- fieldRepo.find(sort = Seq(AscSort("name")))
     } yield {

@@ -313,9 +313,9 @@ class DataSetDispatcher @Inject() (
   private def dataViewOwnerOrPublicFun(id: BSONObjectID) = {
     request: Request[AnyContent] =>
       val dataSetId = getControllerId(request)
-      val dsa = dsaf(dataSetId).getOrElse(throw new AdaException(s"Data set id $dataSetId not found."))
 
       for {
+        dsa <- dsaf.getOrError(dataSetId)
         dataView <- dsa.dataViewRepo.get(id)
       } yield dataView match {
         case Some(dataView) => (dataView.createdById, !dataView.isPrivate)

@@ -34,10 +34,11 @@ class TrendAddPDFlagToConversionVisits @Inject()(
   private val orderedVisits = Seq("basis", "bl", "fu1", "fu2", "fu3", "fu4")
   private val visitIndexMap = orderedVisits.zipWithIndex.toMap
 
-  override def runAsFuture(input: TrendAddPDFlagToConversionVisitsSpec) = {
-    val dsa = dsaf(dataSetId).get
-
+  override def runAsFuture(input: TrendAddPDFlagToConversionVisitsSpec) =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
+
       conversionField <- dsa.fieldRepo.get(conversionVisitFieldName).map(_.get)
 
       visitField <- dsa.fieldRepo.get(visitFieldName).map(_.get)
@@ -84,7 +85,6 @@ class TrendAddPDFlagToConversionVisits @Inject()(
       _ <- dss.saveDerivedDataSet(dsa, input.resultDataSetSpec, alteredStream, newFields.toSeq, input.streamSpec, true)
     } yield
       ()
-  }
 }
 
 case class TrendAddPDFlagToConversionVisitsSpec(

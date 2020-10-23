@@ -42,12 +42,17 @@ class RunIndependenceTestForMultipleTargets @Inject()(
     input: RunIndependenceTestForMultipleTargetsSpec
   ): Future[Traversable[String]] = {
     logger.info(s"Running independence tests for the data set ${input.dataSetId} using the target fields '${input.targetFieldNames.mkString(", ")}'.")
-    val dsa = dsaf(input.dataSetId).get
+
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(input.exportDelimiter)
 
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(input.dataSetId)
+
       jsons <- dsa.dataSetRepo.find(projection = input.inputFieldNames ++ input.targetFieldNames)
+
       inputFields <- dsa.fieldRepo.find(Seq(FieldIdentity.name #-> input.inputFieldNames))
+
       targetFields <- dsa.fieldRepo.find(Seq(FieldIdentity.name #-> input.targetFieldNames))
     } yield {
       val inputFieldsSeq = inputFields.toSeq.sortBy(_.name)

@@ -16,10 +16,11 @@ class FindNoNullZeroNumericFields @Inject() (dsaf: DataSetAccessorFactory) exten
 
   private val logger = Logger
 
-  override def runAsFuture(input: FindNoNullZeroNumericFieldsSpec) = {
-    val dsa = dsaf(input.dataSetId).get
-
+  override def runAsFuture(input: FindNoNullZeroNumericFieldsSpec) =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(input.dataSetId)
+
       numericFields <- dsa.fieldRepo.find(Seq("fieldType" #-> numericFieldTypeIds))
 
       jsons <- dsa.dataSetRepo.find(projection = numericFields.map(_.name))
@@ -42,7 +43,6 @@ class FindNoNullZeroNumericFields @Inject() (dsaf: DataSetAccessorFactory) exten
       logger.info(s"The number of fields with no null value and some zeroes is ${foundFieldsWithZeroCount.size}:")
       logger.info("\n" + output)
     }
-  }
 }
 
 case class FindNoNullZeroNumericFieldsSpec(

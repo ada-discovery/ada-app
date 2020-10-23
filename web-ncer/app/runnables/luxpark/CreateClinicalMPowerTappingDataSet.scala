@@ -1,15 +1,16 @@
 package runnables.luxpark
 
 import java.{util => ju}
-import javax.inject.Inject
 
+import javax.inject.Inject
 import org.incal.core.dataaccess.Criterion
 import org.ada.server.field.FieldTypeHelper
-import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
+import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.incal.play.GuiceRunnableApp
 import Criterion.Infix
 import org.ada.server.dataaccess.RepoTypes.{FieldRepo, JsonCrudRepo}
 import org.ada.server.models._
+import org.incal.core.runnables.FutureRunnable
 
 import scala.concurrent.duration._
 import scala.concurrent.Await._
@@ -19,7 +20,7 @@ import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
 
-class CreateClinicalMPowerTappingDataSet @Inject()(dsaf: DataSetAccessorFactory) extends Runnable {
+class CreateClinicalMPowerTappingDataSet @Inject()(dsaf: DataSetAccessorFactory) extends FutureRunnable {
 
   object MPowerTappingField extends Enumeration {
     val ExternalId = Value("externalId")
@@ -72,59 +73,55 @@ class CreateClinicalMPowerTappingDataSet @Inject()(dsaf: DataSetAccessorFactory)
 
   private val luxParkDataSetId = "lux_park.clinical"
 
-  private val luxParkDsa = dsaf(luxParkDataSetId).get
+  private val mergeDataSetSetting =
+    DataSetSetting(
+      None,
+      "lux_park.clinical_and_mpower_tapping_activity",
+      ClinicalField.SubjectId.toString,
+      None,
+      Some(NewMPowerTappingField.LeftTappingScore.toString),
+      Some(NewMPowerTappingField.RightTappingScore.toString),
+      Some(NewMPowerTappingField.LeftTappingScore.toString),
+      None,
+      None,
+      false,
+      None,
+      StorageType.ElasticSearch,
+      false
+    )
 
-  private val mPowerTappingDsa = dsaf("lux_park.mpower_tapping_activity").get
-  private val mPowerTapping2Dsa = dsaf("lux_park.mpower_tapping_activity2").get
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
 
-  private val mergedDsa =
-    result(
-      dsaf.register(
+  override def runAsFuture = {
+    for {
+      // data set accessors
+      luxParkDsa <- dsaf.getOrError(luxParkDataSetId)
+      mPowerTappingDsa <- dsaf.getOrError("lux_park.mpower_tapping_activity")
+      mPowerTapping2Dsa <- dsaf.getOrError("lux_park.mpower_tapping_activity2")
+
+      jsons <- createJsons(mPowerTappingDsa, mPowerTapping2Dsa, luxParkDsa)
+
+      fields <- createFields(mPowerTappingDsa, luxParkDsa)
+
+      mergedDsa <- dsaf.register(
         DataSetMetaInfo(
           id = "lux_park.clinical_and_mpower_tapping_activity",
           name = "Tapping Activity & Clinical",
           dataSpaceId = BSONObjectID.parse("5845702f5399e2561261c662").get
         ),
-        Some(DataSetSetting(
-          None,
-          "lux_park.clinical_and_mpower_tapping_activity",
-          ClinicalField.SubjectId.toString,
-          None,
-          Some(NewMPowerTappingField.LeftTappingScore.toString),
-          Some(NewMPowerTappingField.RightTappingScore.toString),
-          Some(NewMPowerTappingField.LeftTappingScore.toString),
-          None,
-          None,
-          false,
-          None,
-          StorageType.ElasticSearch,
-          false
-        )),
+        Some(mergeDataSetSetting),
         None
-      ),
-      2 minutes
-    )
+      )
 
-  private val luxParkDataRepo = luxParkDsa.dataSetRepo
-  private val mergedDataRepo = mergedDsa.dataSetRepo
+      mergedDataRepo = mergedDsa.dataSetRepo
+      mergedFieldRepo = mergedDsa.fieldRepo
 
-  private val luxParkFieldRepo = luxParkDsa.fieldRepo
-  private val mergedFieldRepo = mergedDsa.fieldRepo
-
-  private val ftf = FieldTypeHelper.fieldTypeFactory()
-
-  override def run = {
-    val future = for {
-      jsons <- createJsons
-      fields <- createFields
       _ <- mergedDataRepo.deleteAll
       _ <- mergedDataRepo.save(jsons)
       _ <- mergedFieldRepo.deleteAll
       _ <- mergedFieldRepo.save(fields)
     } yield
       ()
-
-    result(future, 2 minutes)
   }
 
   private def countLeftRightAlternations(jsArray: JsArray): Int = {
@@ -135,7 +132,11 @@ class CreateClinicalMPowerTappingDataSet @Inject()(dsaf: DataSetAccessorFactory)
     leftRightClicks.zip(leftRightClicks.tail).count{ case (prev, cur) => (prev != cur)}
   }
 
-  private def createJsons: Future[Traversable[JsObject]] =
+  private def createJsons(
+    mPowerTappingDsa: DataSetAccessor,
+    mPowerTapping2Dsa: DataSetAccessor,
+    luxParkDsa: DataSetAccessor
+  ) : Future[Traversable[JsObject]] =
     for {
       // query the first tapping activity data set
       tappingItems1 <-
@@ -148,14 +149,14 @@ class CreateClinicalMPowerTappingDataSet @Inject()(dsaf: DataSetAccessorFactory)
       // merge the tapping items
       tappingItems = tappingItems1 ++ tappingItems2
 
-      clinicalJsons <- luxParkDataRepo.find(
+      clinicalJsons <- luxParkDsa.dataSetRepo.find(
         criteria = Seq(ClinicalField.MPowerId.toString #-> tappingItems.map(_.externalId).toSeq),
         projection = ClinicalField.values.map(_.toString)
       )
 
-      Some(basicAssessmentStartDateField) <- luxParkFieldRepo.get(ClinicalField.BasicAssessmentStartDate.toString)
+      Some(basicAssessmentStartDateField) <- luxParkDsa.fieldRepo.get(ClinicalField.BasicAssessmentStartDate.toString)
 
-      Some(ageField) <- luxParkFieldRepo.get(ClinicalField.Age.toString)
+      Some(ageField) <- luxParkDsa.fieldRepo.get(ClinicalField.Age.toString)
     } yield {
       import NewMPowerTappingField._
 
@@ -237,13 +238,16 @@ class CreateClinicalMPowerTappingDataSet @Inject()(dsaf: DataSetAccessorFactory)
       }
     }
 
-  private def createFields: Future[Traversable[Field]] =
+  private def createFields(
+    mPowerTappingDsa: DataSetAccessor,
+    luxParkDsa: DataSetAccessor
+  ): Future[Traversable[Field]] =
     for {
       tappingFields <-
         mPowerTappingDsa.fieldRepo.find(Seq("name" #-> MPowerTappingField.values.map(_.toString).toSeq))
 
       clinicalFields <-
-        luxParkFieldRepo.find(Seq("name" #-> ClinicalField.values.map(_.toString).toSeq))
+        luxParkDsa.fieldRepo.find(Seq("name" #-> ClinicalField.values.map(_.toString).toSeq))
 
     } yield {
 

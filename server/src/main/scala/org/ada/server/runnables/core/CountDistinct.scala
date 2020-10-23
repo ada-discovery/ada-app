@@ -11,12 +11,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class CountDistinct extends DsaInputFutureRunnable[CountDistinctSpec] with RunnableHtmlOutput {
 
-  private val logger = Logger // (this.getClass())
+  private val logger = Logger
 
-  override def runAsFuture(input: CountDistinctSpec) = {
-    val dsa = createDsa(input.dataSetId)
-
+  override def runAsFuture(input: CountDistinctSpec) =
     for {
+      dsa <- createDsa(input.dataSetId)
+
       // get the items
       jsons <- dsa.dataSetRepo.find(projection = input.fieldNames)
 
@@ -37,7 +37,6 @@ class CountDistinct extends DsaInputFutureRunnable[CountDistinctSpec] with Runna
         addParagraph(line)
       }
     }
-  }
 }
 
 case class CountDistinctSpec(dataSetId: String, fieldNames: Seq[String])
