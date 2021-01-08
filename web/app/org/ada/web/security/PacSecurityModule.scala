@@ -28,12 +28,14 @@ class PacSecurityModule(environment: Environment, configuration: Configuration) 
     bind(classOf[CallbackController]).toInstance(callbackController)
 
     // logout
-    val logoutController = new LogoutController()
-    logoutController.setDefaultUrl("/")
-    logoutController.setLocalLogout(true)
-    logoutController.setCentralLogout(true)
 
-//    setLogoutUrlPattern("http://localhost:9000/.*")
+    val redirectUrl = getOidcConf("baseUrl").getOrElse("/")
+    val centralLogout = getOidcConfBool("enableCentralLogout").getOrElse(true) // true by default
+
+    val logoutController = new LogoutController()
+    logoutController.setDefaultUrl(redirectUrl)
+    logoutController.setLocalLogout(true)
+    logoutController.setCentralLogout(centralLogout)
 
     bind(classOf[LogoutController]).toInstance(logoutController)
   }
@@ -97,12 +99,14 @@ class PacSecurityModule(environment: Environment, configuration: Configuration) 
   }
 
   private def getOidcConf(key: String) = configuration.getString(s"oidc.$key")
+  private def getOidcConfBool(key: String) = configuration.getBoolean(s"oidc.$key")
 
   @Provides
   @Singleton
   def provideConfig: Config = {
     val config = getOidcConf("baseUrl").map { baseUrl =>
       val suffix = org.pac4j.play.routes.CallbackController.callback().url
+
       val callbackUrl = baseUrl.replaceAll("/$", "") + suffix
 
       Logger.info(s"Creating PAC config with an OIDC client for '${getOidcConf("clientId").getOrElse("")}'.")

@@ -78,6 +78,7 @@ class AuthController @Inject() (
       ).removingFromSession("rememberme"))
 
     if (configuration.getString(s"oidc.baseUrl").isDefined) {
+      // OIDC auth is present...first logout "standardly" and then by using PAC4J (can be local or global)
       logoutLocally.map( _ =>
         Redirect(org.pac4j.play.routes.LogoutController.logout())
       )
