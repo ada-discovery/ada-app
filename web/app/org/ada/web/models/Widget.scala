@@ -4,7 +4,7 @@ import org.ada.server.AdaException
 import org.ada.server.dataaccess.AdaConversionException
 import org.ada.server.field.FieldType
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
-import org.ada.server.models.{BasicDisplayOptions, ChartType, DisplayOptions, MultiChartDisplayOptions}
+import org.ada.server.models.{BasicDisplayOptions, ChartType, DisplayOptions, FieldTypeId, MultiChartDisplayOptions}
 import play.api.libs.json._
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.functional.syntax._
@@ -45,6 +45,7 @@ case class NumericalCountWidget[T](
   fieldLabel: String,
   useRelativeValues: Boolean,
   isCumulative: Boolean,
+  fieldType: FieldTypeId.Value,
   data: Seq[(String, Traversable[Count[T]])],
   displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
 ) extends Widget
@@ -55,6 +56,8 @@ case class ScatterWidget[T1, T2](
   yFieldName: String,
   xAxisCaption: String,
   yAxisCaption: String,
+  xFieldType: FieldTypeId.Value,
+  yFieldType: FieldTypeId.Value,
   data: Seq[(String, Traversable[(T1, T2)])],
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends Widget
@@ -66,6 +69,8 @@ case class ValueScatterWidget[T1, T2, T3](
   valueFieldName: String,
   xAxisCaption: String,
   yAxisCaption: String,
+  xFieldType: FieldTypeId.Value,
+  yFieldType: FieldTypeId.Value,
   data: Traversable[(T1, T2, T3)],
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends Widget
@@ -75,6 +80,8 @@ case class LineWidget[T1, T2](
   xFieldName: String,
   xAxisCaption: String,
   yAxisCaption: String,
+  xFieldType: FieldTypeId.Value,
+  yFieldType: FieldTypeId.Value,
   data: Seq[(String, Seq[(T1, T2)])],
   xMin: Option[T1] = None,
   xMax: Option[T1] = None,
@@ -87,6 +94,7 @@ case class BoxWidget[T <% Ordered[T]](
   title: String,
   xAxisCaption: Option[String],
   yAxisCaption: String,
+  fieldType: FieldTypeId.Value,
   data: Seq[(String, Quartiles[T])],
   min: Option[T] = None,
   max: Option[T] = None,
@@ -165,6 +173,7 @@ object Widget {
   implicit val tupleFormat = TupleFormat[String, Seq[Count[String]]]
   implicit val tuple2Format = TupleFormat[String, String, Seq[Seq[Double]]]
   implicit val optionFormat = new OptionFormat[Double]
+  implicit val fieldTypeFormat = EnumFormat(FieldTypeId)
 
   def quartilesFormat[T <% Ordered[T]](fieldType: FieldType[T]): Format[Quartiles[T]] = {
     implicit val valueFormat = FieldTypeFormat.apply[T](fieldType)
@@ -199,11 +208,12 @@ object Widget {
       (__ \ "title").format[String] and
       (__ \ "xAxisCaption").formatNullable[String] and
       (__ \ "yAxisCaption").format[String] and
+      (__ \ "fieldType").format[FieldTypeId.Value] and
       (__ \ "data").format[Seq[(String, Quartiles[T])]] and
       (__ \ "min").format[Option[T]] and
       (__ \ "max").format[Option[T]] and
       (__ \ "displayOptions").format[DisplayOptions]
-    )(BoxWidget[T](_, _, _, _, _, _, _), {x => (x.title, x.xAxisCaption, x.yAxisCaption, x.data, x.min, x.max, x.displayOptions)})
+    )(BoxWidget[T](_, _, _, _, _, _, _, _), {x => (x.title, x.xAxisCaption, x.yAxisCaption, x.fieldType, x.data, x.min, x.max, x.displayOptions)})
   }
 
   def boxWidgetWrites[T](fieldType: FieldType[T]): Writes[BoxWidget[T]] = {
@@ -215,11 +225,12 @@ object Widget {
       (__ \ "title").write[String] and
       (__ \ "xAxisCaption").writeNullable[String] and
       (__ \ "yAxisCaption").write[String] and
+      (__ \ "fieldType").write[FieldTypeId.Value] and
       (__ \ "data").write[Seq[(String, Quartiles[T])]] and
       (__ \ "min").write[Option[T]] and
       (__ \ "max").write[Option[T]] and
       (__ \ "displayOptions").write[DisplayOptions]
-    ){x => (x.title, x.xAxisCaption, x.yAxisCaption, x.data, x.min, x.max, x.displayOptions)}
+    ){x => (x.title, x.xAxisCaption, x.yAxisCaption, x.fieldType, x.data, x.min, x.max, x.displayOptions)}
   }
 
   def numericalCountWidgetFormat[T](fieldType: FieldType[T]): Format[NumericalCountWidget[T]] = {
@@ -233,9 +244,10 @@ object Widget {
       (__ \ "fieldLabel").format[String] and
       (__ \ "useRelativeValues").format[Boolean] and
       (__ \ "isCumulative").format[Boolean] and
+      (__ \ "fieldType").format[FieldTypeId.Value] and
       (__ \ "data").format[Seq[(String, Traversable[Count[T]])]] and
       (__ \ "displayOptions").format[MultiChartDisplayOptions]
-    )(NumericalCountWidget[T](_, _, _, _, _, _, _), {x => (x.title, x.fieldName, x.fieldLabel, x.useRelativeValues, x.isCumulative, x.data, x.displayOptions)})
+    )(NumericalCountWidget[T](_, _, _, _, _, _, _, _), {x => (x.title, x.fieldName, x.fieldLabel, x.useRelativeValues, x.isCumulative, x.fieldType, x.data, x.displayOptions)})
   }
 
   def lineWidgetFormat[T1, T2](
@@ -259,13 +271,15 @@ object Widget {
       (__ \ "xFieldName").format[String] and
       (__ \ "xAxisCaption").format[String] and
       (__ \ "yAxisCaption").format[String] and
+      (__ \ "xFieldType").format[FieldTypeId.Value] and
+      (__ \ "yFieldType").format[FieldTypeId.Value] and
       (__ \ "data").format[Seq[(String, Seq[(T1,T2)])]] and
       (__ \ "xMin").format[Option[T1]] and
       (__ \ "xMax").format[Option[T1]] and
       (__ \ "yMin").format[Option[T2]] and
       (__ \ "yMax").format[Option[T2]] and
       (__ \ "displayOptions").format[DisplayOptions]
-    )(LineWidget[T1,T2](_, _, _, _, _, _, _, _, _, _), {x => (x.title, x.xFieldName, x.xAxisCaption, x.yAxisCaption, x.data, x.xMin, x.xMax, x.yMin, x.yMax, x.displayOptions)})
+    )(LineWidget[T1,T2](_, _, _, _, _, _, _, _, _, _, _, _), {x => (x.title, x.xFieldName, x.xAxisCaption, x.yAxisCaption, x.xFieldType, x.yFieldType, x.data, x.xMin, x.xMax, x.yMin, x.yMax, x.displayOptions)})
   }
 
   implicit def scatterWidgetFormat[T1, T2](
@@ -284,9 +298,11 @@ object Widget {
       (__ \ "yFieldName").format[String] and
       (__ \ "xAxisCaption").format[String] and
       (__ \ "yAxisCaption").format[String] and
+      (__ \ "xFieldType").format[FieldTypeId.Value] and
+      (__ \ "yFieldType").format[FieldTypeId.Value] and
       (__ \ "data").format[Seq[(String, Traversable[(T1, T2)])]] and
       (__ \ "displayOptions").format[DisplayOptions]
-    )(ScatterWidget[T1, T2](_, _, _, _, _, _, _), {x => (x.title, x.xFieldName, x.yFieldName, x.xAxisCaption, x.yAxisCaption, x.data, x.displayOptions)})
+    )(ScatterWidget[T1, T2](_, _, _, _, _, _, _, _, _), {x => (x.title, x.xFieldName, x.yFieldName, x.xAxisCaption, x.yAxisCaption, x.xFieldType, x.yFieldType, x.data, x.displayOptions)})
   }
 
   implicit def valueScatterWidgetFormat[T1, T2, T3](
@@ -307,9 +323,11 @@ object Widget {
       (__ \ "valueFieldName").format[String] and
       (__ \ "xAxisCaption").format[String] and
       (__ \ "yAxisCaption").format[String] and
+      (__ \ "xFieldType").format[FieldTypeId.Value] and
+      (__ \ "yFieldType").format[FieldTypeId.Value] and
       (__ \ "data").format[Traversable[(T1, T2, T3)]] and
       (__ \ "displayOptions").format[DisplayOptions]
-    )(ValueScatterWidget[T1, T2, T3](_, _, _, _, _, _, _, _), {x => (x.title, x.xFieldName, x.yFieldName, x.valueFieldName, x.xAxisCaption, x.yAxisCaption, x.data, x.displayOptions)})
+    )(ValueScatterWidget[T1, T2, T3](_, _, _, _, _, _, _, _, _, _), {x => (x.title, x.xFieldName, x.yFieldName, x.valueFieldName, x.xAxisCaption, x.yAxisCaption, x.xFieldType, x.yFieldType, x.data, x.displayOptions)})
   }
 
   implicit val heatmapWidgetFormat: Format[HeatmapWidget] = {
@@ -340,7 +358,6 @@ object Widget {
   implicit val booleanStringCountTupleFormat = TupleFormat[Boolean, Count[String]]
 
   implicit val categoricalCheckboxWidgetFormat = Json.format[CategoricalCheckboxCountWidget]
-
 
   class WidgetWrites[T](
     fieldTypes: Seq[FieldType[T]],
@@ -396,38 +413,7 @@ object Widget {
           categoricalCheckboxWidgetFormat.writes(e)
       }
 
-      // field type(s) as json
-      val fieldTypeJson = o match {
-        case e: ScatterWidget[T, T] =>
-          val xFieldType = fieldTypes(fieldTypes.size - 2)
-          val yFieldType = fieldTypes.last
-
-          Json.obj(
-            "xFieldType" -> JsString(xFieldType.spec.fieldType.toString),
-            "yFieldType" -> JsString(yFieldType.spec.fieldType.toString)
-          )
-
-        case e: LineWidget[T, T] =>
-          val xFieldType = fieldTypes(0)
-          val yFieldType = fieldTypes(1)
-
-          Json.obj(
-            "xFieldType" -> JsString(xFieldType.spec.fieldType.toString),
-            "yFieldType" -> JsString(yFieldType.spec.fieldType.toString)
-          )
-
-        case _ =>
-          val json = fieldTypes match {
-            case Nil => JsNull
-            case _ => JsString(fieldTypes.last.spec.fieldType.toString)
-          }
-
-          Json.obj(
-            "fieldType" -> json
-          )
-      }
-
-      json.asInstanceOf[JsObject] ++ fieldTypeJson ++ Json.obj(
+      json.asInstanceOf[JsObject] ++ Json.obj(
         concreteClassFieldName -> JsString(concreteClassName),
         JsObjectIdentity.name -> o._id
       )

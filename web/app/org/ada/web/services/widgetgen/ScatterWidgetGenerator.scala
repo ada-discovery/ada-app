@@ -3,6 +3,7 @@ package org.ada.web.services.widgetgen
 import org.ada.web.models.ScatterWidget
 import org.ada.server.models._
 import org.ada.server.calc.impl.{GroupTupleCalcTypePack, TupleCalcTypePack}
+import org.ada.server.field.{FieldType, FieldTypeHelper}
 import org.ada.web.util.shorten
 
 import scala.reflect.runtime.universe._
@@ -42,6 +43,8 @@ private class ScatterWidgetGenerator[T1, T2](
           yField.name,
           xField.labelOrElseName,
           yField.labelOrElseName,
+          xField.fieldType,
+          yField.fieldType,
           finalData,
           spec.displayOptions
         )

@@ -164,7 +164,17 @@ trait CumulativeCountWidgetGeneratorHelper {
       val nonZeroCountSeries = countSeries.filter(_._2.exists(_.count > 0))
       if (nonZeroCountSeries.nonEmpty) {
         val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
-        val widget = NumericalCountWidget(title, field.name, field.labelOrElseName, spec.relativeValues, true, nonZeroCountSeries.toSeq, initializedDisplayOptions)
+        val widget = NumericalCountWidget(
+          title,
+          field.name,
+          field.labelOrElseName,
+          spec.relativeValues,
+          true,
+          field.fieldType,
+          nonZeroCountSeries.toSeq,
+          initializedDisplayOptions
+        )
+
         Some(widget)
       } else
         None

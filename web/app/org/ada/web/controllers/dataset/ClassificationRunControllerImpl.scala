@@ -43,7 +43,7 @@ abstract class ClassificationRunControllerImpl[R <: ClassificationResult: Format
         }
         val displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(height))
         val widget = LineWidget[Double, Double](
-          title, "", xCaption, yCaption, data, Some(0), Some(1), Some(0), Some(1), displayOptions)
+          title, "", xCaption, yCaption, FieldTypeId.Double, FieldTypeId.Double, data, Some(0), Some(1), Some(0), Some(1), displayOptions)
         Some(widget)
         //      ScatterWidget(title, xCaption, yCaption, data, BasicDisplayOptions(gridWidth = Some(6), height = Some(450)))
       } else

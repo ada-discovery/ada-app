@@ -2136,7 +2136,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             (idClassMap.get(id).get.toString, pca12)
           }.toGroupMap.toSeq.sortBy(_._1)
 
-          val pca12Scatter = ScatterWidget("PCA", "PC1", "PC2", "PC1", "PC2", pca12WidgetData, displayOptions)
+          val pca12Scatter = ScatterWidget("PCA", "PC1", "PC2", "PC1", "PC2", FieldTypeId.Double, FieldTypeId.Double, pca12WidgetData, displayOptions)
 
           val jsonsWithClasses = jsonsWithStringIds.flatMap { json =>
             val stringId = (json \ JsObjectIdentity.name).as[String]
