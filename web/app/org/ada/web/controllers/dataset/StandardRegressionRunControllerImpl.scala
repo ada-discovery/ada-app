@@ -7,7 +7,6 @@ import org.ada.server.models.{DistributionWidgetSpec, _}
 import org.ada.server.models.DataSetFormattersAndIds._
 import org.ada.server.dataaccess.dataset.FilterRepoExtra._
 import org.ada.server.models.ml.regression.RegressionResult.standardRegressionResultFormat
-import org.ada.web.models.Widget.WidgetWrites
 import org.ada.server.dataaccess.RepoTypes.{ClassifierRepo, RegressorRepo}
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
@@ -31,7 +30,7 @@ import views.html.{regressionrun => view}
 
 import scala.concurrent.{Future, TimeoutException}
 
-protected[controllers] class StandardRegressionRunControllerImpl @Inject()(
+protected[controllers] class                                                                                                                                                                                                                                                      StandardRegressionRunControllerImpl @Inject()(
   @Assisted dataSetId: String,
   dsaf: DataSetAccessorFactory,
   val mlMethodRepo: RegressorRepo,
