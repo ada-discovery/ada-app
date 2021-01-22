@@ -1,10 +1,7 @@
 package org.ada.web.models
 
-import org.ada.server.AdaException
-import org.ada.server.dataaccess.AdaConversionException
-import org.ada.server.field.FieldType
-import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
-import org.ada.server.models.{BasicDisplayOptions, ChartType, DisplayOptions, FieldTypeId, MultiChartDisplayOptions}
+import org.ada.server.field.{FieldType, FieldTypeHelper}
+import org.ada.server.models.{BasicDisplayOptions, ChartType, DisplayOptions, FieldTypeId, FieldTypeSpec, MultiChartDisplayOptions}
 import play.api.libs.json._
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.functional.syntax._
@@ -71,6 +68,7 @@ case class ValueScatterWidget[T1, T2, T3](
   yAxisCaption: String,
   xFieldType: FieldTypeId.Value,
   yFieldType: FieldTypeId.Value,
+  valueFieldType: FieldTypeId.Value,
   data: Traversable[(T1, T2, T3)],
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends Widget
@@ -252,16 +250,13 @@ object Widget {
 
   def lineWidgetFormat[T1, T2](
     xFieldType: FieldType[T1],
-    yFieldTypes: Seq[FieldType[T2]]
+    yFieldType: FieldType[T2]
   ): Format[LineWidget[T1, T2]] = {
-    if (yFieldTypes.isEmpty)
-      throw new AdaException("No y fields provided for a line widget.")
-
     implicit val value1Format = FieldTypeFormat.apply[T1](xFieldType)
-    implicit val value2Format = FieldTypesFormat.apply[T2](yFieldTypes)
+    implicit val value2Format = FieldTypeFormat.apply[T2](yFieldType)
 
     implicit val value1OptionalFormat = FieldTypeFormat.applyOptional[T1](xFieldType)
-    implicit val value2OptionalFormat = FieldTypeFormat.applyOptional[T2](yFieldTypes.head)
+    implicit val value2OptionalFormat = FieldTypeFormat.applyOptional[T2](yFieldType)
 
     implicit val tuple1Format = TupleFormat[T1, T2]
     implicit val tuple2Format = TupleFormat[String, Seq[(T1, T2)]]
@@ -325,9 +320,10 @@ object Widget {
       (__ \ "yAxisCaption").format[String] and
       (__ \ "xFieldType").format[FieldTypeId.Value] and
       (__ \ "yFieldType").format[FieldTypeId.Value] and
+      (__ \ "valueFieldType").format[FieldTypeId.Value] and
       (__ \ "data").format[Traversable[(T1, T2, T3)]] and
       (__ \ "displayOptions").format[DisplayOptions]
-    )(ValueScatterWidget[T1, T2, T3](_, _, _, _, _, _, _, _, _, _), {x => (x.title, x.xFieldName, x.yFieldName, x.valueFieldName, x.xAxisCaption, x.yAxisCaption, x.xFieldType, x.yFieldType, x.data, x.displayOptions)})
+    )(ValueScatterWidget[T1, T2, T3](_, _, _, _, _, _, _, _, _, _, _), {x => (x.title, x.xFieldName, x.yFieldName, x.valueFieldName, x.xAxisCaption, x.yAxisCaption, x.xFieldType, x.yFieldType, x.valueFieldType, x.data, x.displayOptions)})
   }
 
   implicit val heatmapWidgetFormat: Format[HeatmapWidget] = {
@@ -359,66 +355,7 @@ object Widget {
 
   implicit val categoricalCheckboxWidgetFormat = Json.format[CategoricalCheckboxCountWidget]
 
-  class WidgetWrites[T](
-    fieldTypes: Seq[FieldType[T]],
-    defaultDoubleFieldType: Option[FieldType[Double]] = None
-  ) extends Writes[Widget] {
-
-    private val concreteClassFieldName = "concreteClass"
-
-    override def writes(o: Widget): JsValue = {
-      val concreteClassName = o.getClass.getName
-
-      // widget as a json
-      val json = o match {
-        case e: CategoricalCountWidget =>
-          Json.format[CategoricalCountWidget].writes(e)
-
-        case e: NumericalCountWidget[T]  =>
-          try {
-            numericalCountWidgetFormat(fieldTypes.last).writes(e)
-          } catch {
-            case ex: AdaConversionException =>
-              // if the conversion fails let's try double (if the field type provided)
-              defaultDoubleFieldType.map(
-                numericalCountWidgetFormat(_).writes(e.asInstanceOf[NumericalCountWidget[Double]])
-              ).getOrElse(throw ex)
-          }
-
-        case e: LineWidget[T, T]  =>
-          lineWidgetFormat(fieldTypes.head, fieldTypes.tail).writes(e)
-
-        case e: ScatterWidget[T, T] =>
-          scatterWidgetFormat(fieldTypes(fieldTypes.size - 2), fieldTypes.last).writes(e)
-
-        case e: ValueScatterWidget[T, T, T] =>
-          valueScatterWidgetFormat(fieldTypes(0), fieldTypes(1), fieldTypes(2)).writes(e)
-
-        case e: BoxWidget[T] =>
-          boxWidgetWrites(fieldTypes.last).writes(e)
-
-        case e: HeatmapWidget =>
-          heatmapWidgetFormat.writes(e)
-
-        case e: BasicStatsWidget =>
-          basicStatsWidgetFormat.writes(e)
-
-        case e: IndependenceTestWidget =>
-          independenceTestWidgetFormat.writes(e)
-
-        case e: HtmlWidget =>
-          Json.format[HtmlWidget].writes(e)
-
-        case e: CategoricalCheckboxCountWidget =>
-          categoricalCheckboxWidgetFormat.writes(e)
-      }
-
-      json.asInstanceOf[JsObject] ++ Json.obj(
-        concreteClassFieldName -> JsString(concreteClassName),
-        JsObjectIdentity.name -> o._id
-      )
-    }
-  }
+  implicit val writes: Writes[Widget] = new WidgetWrites[Any]()
 }
 
 // TODO: move elsewhere

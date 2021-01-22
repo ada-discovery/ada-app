@@ -46,6 +46,7 @@ private class ValueScatterWidgetGenerator[T1, T2, T3](
           yField.labelOrElseName,
           xField.fieldType,
           yField.fieldType,
+          valueField.fieldType,
           data,
           spec.displayOptions
         )

@@ -20,7 +20,6 @@ import org.ada.web.controllers.{routes, _}
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import org.apache.commons.lang3.StringEscapeUtils
 import org.ada.server.models.Filter.FilterOrId
-import org.ada.web.models.Widget.WidgetWrites
 import org.ada.server.json._
 import org.ada.server.models.ml._
 import org.ada.web.controllers.dataset.IndependenceTestResult._
@@ -681,30 +680,19 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
+  // TODO: fieldNames and fieldMap not needed anymore
   private def widgetsToJsons(
     widgets: Seq[Widget],
     fieldNames: Seq[Seq[String]],
     fieldMap: Map[String, Field]
   ): JsArray = {
+    import Widget.writes
+
     val jsons = fieldNames.zip(widgets).map { case (fieldNames, widget) =>
-      widgetToJson(widget, fieldNames, fieldMap)
+      Json.toJson(widget)
     }
 
     JsArray(jsons)
-  }
-
-  private def widgetToJson(
-    widget: Widget,
-    fieldNames: Seq[String],
-    fieldMap: Map[String, Field]
-  ): JsValue = {
-    val fields = fieldNames.map(fieldMap.get).flatten
-    val fieldTypes = fields.map(field => ftf(field.fieldTypeSpec).asValueOf[Any])
-
-    // make a scalar type out of it
-    val scalarFieldTypesToUse = fieldTypes.map(fieldType => ftf(fieldType.spec.copy(isArray = false)).asInstanceOf[FieldType[Any]])
-    implicit val writes = new WidgetWrites[Any](scalarFieldTypesToUse, Some(doubleFieldType))
-    Json.toJson(widget)
   }
 
   private def canEditView(

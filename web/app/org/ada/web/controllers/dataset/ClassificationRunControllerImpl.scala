@@ -2,7 +2,6 @@ package org.ada.web.controllers.dataset
 
 import akka.stream.Materializer
 import org.ada.web.models.{LineWidget, Widget}
-import org.ada.web.models.Widget.WidgetWrites
 import org.ada.server.models._
 import org.ada.server.models.ml.classification.Classifier.ClassifierIdentity
 import org.ada.server.models.{BasicDisplayOptions, FieldTypeId, FieldTypeSpec}
@@ -21,8 +20,7 @@ abstract class ClassificationRunControllerImpl[R <: ClassificationResult: Format
 
   override protected val mlMethodName = (x: Classifier) => x.name.getOrElse("N/A")
 
-  private val doubleFieldType = ftf.apply(FieldTypeSpec(FieldTypeId.Double)).asValueOf[Any]
-  protected implicit val doubleScatterWidgetWrites = new WidgetWrites[Any](Seq(doubleFieldType, doubleFieldType))
+  protected implicit val doubleScatterWidgetWrites = Widget.writes
 
   override protected def showView = { implicit ctx =>
     (view.show(router)(_, _, _, _)).tupled
