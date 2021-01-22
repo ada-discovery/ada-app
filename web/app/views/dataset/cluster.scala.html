@@ -78,7 +78,6 @@
 
             $('#countDiv').html("");
             $('#scatterPanelDiv').html("");
-            $('#pcaScatterDiv').html("")
             $("#independenceTestPanelDiv").html("");
 
             if (!mlModelId) {
@@ -95,43 +94,34 @@
                 success: function(data) {
                     showMessage("'" + mlModelName + "'clusterization finished.")
 
-                    var scatters = data.scatters;
-                    var classSizes = data.classSizes;
+                    const scatters = data.scatters;
+                    const classSizes = data.classSizes;
 
-                    var rowData = classSizes.map(function(item, index){return [index + 1, item]});
-                    var total = classSizes.reduce(function (a, b) {
+                    const rowData = classSizes.map(function(item, index){return [index + 1, item]});
+                    const total = classSizes.reduce(function (a, b) {
                         return a + b;
                     });
-                    var rowDataWithTotal = rowData.concat([["Total", total]])
+                    const rowDataWithTotal = rowData.concat([["Total", total]])
 
-                    var table = createTable(["Class", "Count"], rowDataWithTotal);
+                    const table = createTable(["Class", "Count"], rowDataWithTotal);
                     $("#countDiv").html(table);
 
-                    var i;
-                    for(i = 1; i < scatters.length; i++) {
-                        var divClass = 'col-md-4 col-md-offset-1'
-                        var div = "<div class='" + divClass + "'><div id='scatterDiv" + i + "' class='chart-holder'></div></div>"
-                        $("#scatterPanelDiv").append(div);
-                    }
+                    $.each(scatters, function (j, scatter) {
+                        $("#scatterPanelDiv").append(widgetDiv(scatter))
+                    })
 
-                    drawScatter(scatters[0], 'pcaScatterDiv', 600);
+                    $.each(scatters, function (j, scatter) {
+                        genericWidget(scatter)
+                    });
 
-                    for(i = 1; i < scatters.length; i++) {
-                        drawScatter(scatters[i], 'scatterDiv' + i, 350);
-                    };
-
-                    var table = createIndependenceTestTable(data.testResults, true)
-                    $("#independenceTestPanelDiv").html(table);
+                    const testTable = createIndependenceTestTable(data.testResults, true)
+                    $("#independenceTestPanelDiv").html(testTable);
                 },
                 error: showErrorResponse
             });
 
             showMessage("Clusterization using the ML model '" + mlModelName + "' launched.")
             addSpinner($("#countDiv"))
-        }
-
-        function drawScatter(scatter, divId, height) {
-            scatterChart(scatter.title, divId, scatter.xAxisCaption, scatter.yAxisCaption, scatter.data, true, null, height, true, false);
         }
     </script>
 }
@@ -151,11 +141,6 @@
 
     <div class="row">
         <div id='countDiv' class='col-md-4 col-md-offset-4'>
-        </div>
-    </div>
-
-    <div class="row">
-        <div id='pcaScatterDiv' class='col-md-10 col-md-offset-1 chart-holder'>
         </div>
     </div>
 

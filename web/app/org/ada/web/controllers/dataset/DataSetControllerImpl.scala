@@ -2118,13 +2118,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           val idClassMap = idClasses.toMap
 
           // PCA 1-2 Scatter
-          val displayOptions = BasicDisplayOptions(height = Some(500))
+          val pcaDisplayOptions = BasicDisplayOptions(gridWidth = Some(10), gridOffset = Some(1), height = Some(600))
 
           val pca12WidgetData = idPCA12s.map { case (id, pca12) =>
             (idClassMap.get(id).get.toString, pca12)
           }.toGroupMap.toSeq.sortBy(_._1)
 
-          val pca12Scatter = ScatterWidget("PCA", "PC1", "PC2", "PC1", "PC2", FieldTypeId.Double, FieldTypeId.Double, pca12WidgetData, displayOptions)
+          val pca12Scatter = ScatterWidget("PCA", "PC1", "PC2", "PC1", "PC2", FieldTypeId.Double, FieldTypeId.Double, pca12WidgetData, pcaDisplayOptions)
 
           val jsonsWithClasses = jsonsWithStringIds.flatMap { json =>
             val stringId = (json \ JsObjectIdentity.name).as[String]
@@ -2138,6 +2138,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           ): Option[Widget] = {
             val clusterClassField = Field("cluster_class", Some("Cluster Class"), FieldTypeId.Integer, false)
 
+            val displayOptions = BasicDisplayOptions(gridWidth = Some(4), gridOffset = Some(1), height = Some(350))
             val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, Some(clusterClassField.name), None, displayOptions)
 
             // generate a scatter widget
@@ -2147,8 +2148,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           // Transform Scatters into JSONs
           val scatters = numericFields.combinations(2).take(64).flatMap { fields => createScatter(fields(0), fields(1)) }
 
+          implicit val jsonWrites = Widget.writes
           val scatterJsons = (Seq(pca12Scatter) ++ scatters).map(scatter =>
-            scatterToJson(scatter.asInstanceOf[ScatterWidget[_, _]])
+            Json.toJson(scatter)
           )
 
           val classSizeJsons = idClasses.groupBy(_._2).toSeq.sortBy(_._1).map { case (_, values) => JsNumber(values.size) }
@@ -2196,30 +2198,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
     } yield
       criteria
-
-  // TODO: this is ugly... fix by introducing a proper JSON formatter
-  private def scatterToJson(scatter: ScatterWidget[_, _]): JsValue = {
-    def toJson(point: Any) =
-      point match {
-        case x: Double => JsNumber(x)
-        case x: Long => JsNumber(x)
-        case x: ju.Date => JsNumber(x.getTime)
-        case _ => JsString(point.toString)
-      }
-
-    val seriesJsons = scatter.data.map { case (name, data) =>
-      Json.obj(
-        "name" -> shorten(name),
-        "data" -> JsArray(
-          data.toSeq.map { case (point1, point2) =>
-            JsArray(Seq(toJson(point1), toJson(point2)))
-          }
-        )
-      )
-    }
-
-    Json.obj("title" -> scatter.title, "xAxisCaption" -> scatter.xAxisCaption, "yAxisCaption" -> scatter.yAxisCaption, "data" -> JsArray(seriesJsons))
-  }
 
   @Deprecated
   override def getFields(
