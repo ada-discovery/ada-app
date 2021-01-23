@@ -28,6 +28,8 @@ function agg(series, widget) {
 }
 
 function categoricalCountWidget(elementId, widget, filterElement) {
+    const chartingEngine = new ChartingEngine()
+
     var categories = (widget.data.length > 0) ?
         widget.data[0][1].map(function(count) {
             return count.value
@@ -57,15 +59,16 @@ function categoricalCountWidget(elementId, widget, filterElement) {
 
     var seriesSize = datas.length
     var height = widget.displayOptions.height || 400
+
     var pointFormat = function () {
-        return (widget.useRelativeValues) ? categoricalPercentPointFormat(this) : categoricalCountPointFormat(totalCounts, this);
+        return (widget.useRelativeValues) ? chartingEngine.categoricalPercentPointFormat(this) : chartingEngine.categoricalCountPointFormat(totalCounts, this);
     }
     var yAxisCaption = (widget.useRelativeValues) ? '%' : 'Count'
 
     $('#' + elementId).on('chartTypeChanged', function(event, chartType) {
-        plotCategoricalChart(chartType, categories, datas, seriesSize, widget.title, yAxisCaption, elementId, widget.showLabels, widget.showLegend, height, pointFormat);
+        chartingEngine.plotCategoricalChart(chartType, categories, datas, seriesSize, widget.title, yAxisCaption, elementId, widget.showLabels, widget.showLegend, height, pointFormat);
     });
-    plotCategoricalChart(widget.displayOptions.chartType, categories, datas, seriesSize, widget.title, yAxisCaption, elementId, widget.showLabels, widget.showLegend, height, pointFormat)
+    chartingEngine.plotCategoricalChart(widget.displayOptions.chartType, categories, datas, seriesSize, widget.title, yAxisCaption, elementId, widget.showLabels, widget.showLegend, height, pointFormat)
 
     if (filterElement) {
         $('#' + elementId).on('pointSelected', function (event, data) {
@@ -77,6 +80,8 @@ function categoricalCountWidget(elementId, widget, filterElement) {
 }
 
 function numericalCountWidget(elementId, widget, filterElement) {
+    const chartingEngine = new ChartingEngine()
+
     var isDate = widget.fieldType == "Date"
     var isDouble = widget.fieldType == "Double"
     var dataType = (isDate) ? 'datetime' : null;
@@ -102,16 +107,17 @@ function numericalCountWidget(elementId, widget, filterElement) {
 
     var seriesSize = datas.length
     var height = widget.displayOptions.height || 400
+
     var pointFormat = function () {
-        return (widget.useRelativeValues) ? numericalPercentPointFormat(isDate, isDouble, this) : numericalCountPointFormat(isDate, isDouble, totalCounts, this);
+        return (widget.useRelativeValues) ? chartingEngine.numericalPercentPointFormat(isDate, isDouble, this) : chartingEngine.numericalCountPointFormat(isDate, isDouble, totalCounts, this);
     }
     var yAxisCaption = (widget.useRelativeValues) ? '%' : 'Count'
 
     $('#' + elementId).on('chartTypeChanged', function(event, chartType) {
-        plotNumericalChart(chartType, datas, seriesSize, widget.title, widget.fieldLabel, yAxisCaption, elementId, height, pointFormat, dataType)
+        chartingEngine.plotNumericalChart(chartType, datas, seriesSize, widget.title, widget.fieldLabel, yAxisCaption, elementId, height, pointFormat, dataType)
     });
 
-    plotNumericalChart(widget.displayOptions.chartType, datas, seriesSize, widget.title, widget.fieldLabel, yAxisCaption, elementId, height, pointFormat, dataType)
+    chartingEngine.plotNumericalChart(widget.displayOptions.chartType, datas, seriesSize, widget.title, widget.fieldLabel, yAxisCaption, elementId, height, pointFormat, dataType)
 
     if (filterElement) {
         addIntervalSelected($('#' + elementId), filterElement, widget.fieldName, isDouble, isDate)
@@ -119,9 +125,14 @@ function numericalCountWidget(elementId, widget, filterElement) {
 }
 
 function lineWidget(elementId, widget, filterElement) {
+    const chartingEngine = new ChartingEngine()
+
     var isDate = widget.xFieldType == "Date"
     var isDouble = widget.xFieldType == "Double"
-    var dataType = (isDate) ? 'datetime' : null;
+    var xDataType = (isDate) ? 'datetime' : null;
+
+    var isYDate = widget.yFieldType == "Date"
+    var yDataType = (isYDate) ? 'datetime' : null;
 
     var datas = widget.data.map(function(nameSeries){
         return {name: nameSeries[0], data: nameSeries[1]}
@@ -132,14 +143,14 @@ function lineWidget(elementId, widget, filterElement) {
 
     var height = widget.displayOptions.height || 400
     var pointFormat = function () {
-        return numericalPointFormat(isDate, isDouble, this, 3, 3);
+        return chartingEngine.numericalPointFormat(isDate, isDouble, this, 3, 3);
     }
 
     // $('#' + elementId).on('chartTypeChanged', function(event, chartType) {
     //     plotNumericalChart(chartType, datas, seriesSize, widget.title, widget.xAxisCaption, yAxisCaption, elementId, height, pointFormat, dataType)
     // });
 
-    lineChart(
+    chartingEngine.lineChart(
         widget.title,
         elementId,
         null,
@@ -150,7 +161,8 @@ function lineWidget(elementId, widget, filterElement) {
         true,
         pointFormat,
         height,
-        dataType,
+        xDataType,
+        yDataType,
         false,
         true,
         false,
@@ -186,6 +198,8 @@ function addIntervalSelected(chartElement, filterElement, xFieldName, isDouble, 
 }
 
 function boxWidget(elementId, widget) {
+    const chartingEngine = new ChartingEngine()
+
     var isDate = widget.fieldType == "Date"
     var dataType = (isDate) ? 'datetime' : null;
 
@@ -215,10 +229,12 @@ function boxWidget(elementId, widget) {
         '- Lower 1.5 IQR: {point.low}<br/>'
 
     var height = widget.displayOptions.height || 400
-    boxPlot(widget.title, elementId, categories, widget.xAxisCaption, widget.yAxisCaption, datas, min, max, pointFormat, height, dataType)
+    chartingEngine.boxPlot(widget.title, elementId, categories, widget.xAxisCaption, widget.yAxisCaption, datas, min, max, pointFormat, height, dataType)
 }
 
 function scatterWidget(elementId, widget, filterElement) {
+    const chartingEngine = new ChartingEngine()
+
     var datas = widget.data.map(function(series) {
         return {name : shorten(series[0]), data : series[1]}
     })
@@ -235,7 +251,7 @@ function scatterWidget(elementId, widget, filterElement) {
         addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate);
     }
 
-    scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, true, null, height, xDataType, yDataType, true, filterElement != null)
+    chartingEngine.scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, true, null, height, xDataType, yDataType, true, filterElement != null)
 }
 
 function addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate) {
@@ -257,6 +273,8 @@ function addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDa
 }
 
 function valueScatterWidget(elementId, widget, filterElement) {
+    const chartingEngine = new ChartingEngine()
+
     var zs = widget.data.map(function(point) {
         return point[2];
     })
@@ -291,10 +309,12 @@ function valueScatterWidget(elementId, widget, filterElement) {
         return xPoint + ", " + yPoint + " (" + zPoint + ")";
     }
 
-    scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, false, pointFormatter, height, xDataType, yDataType, true, filterElement != null)
+    chartingEngine.scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, false, pointFormatter, height, xDataType, yDataType, true, filterElement != null)
 }
 
 function heatmapWidget(elementId, widget) {
+    const chartingEngine = new ChartingEngine()
+
     var xCategories =  widget.xCategories
     var yCategories =  widget.yCategories
     var data = widget.data.map(function(seq, i) {
@@ -304,7 +324,7 @@ function heatmapWidget(elementId, widget) {
     })
 
     var height = widget.displayOptions.height || 400
-    heatmapChart(widget.title, elementId, xCategories, yCategories, widget.xAxisCaption, widget.yAxisCaption, [].concat.apply([], data), widget.min, widget.max, widget.twoColors, height)
+    chartingEngine.heatmapChart(widget.title, elementId, xCategories, yCategories, widget.xAxisCaption, widget.yAxisCaption, [].concat.apply([], data), widget.min, widget.max, widget.twoColors, height)
 };
 
 function htmlWidget(elementId, widget) {
@@ -312,7 +332,7 @@ function htmlWidget(elementId, widget) {
 }
 
 function genericWidget(widget, filterElement) {
-    var widgetId = elementId(widget)
+    const widgetId = elementId(widget)
     genericWidgetForElement(widgetId, widget, filterElement)
 }
 

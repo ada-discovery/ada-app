@@ -1,4 +1,9 @@
-    function pieChart(
+class ChartingEngine {
+
+    constructor() {
+    }
+
+    pieChart(
         title,
         chartElementId,
         series,
@@ -12,7 +17,7 @@
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
-            exporting = chartTypeMenu(chartElementId, chartTypes)
+            exporting = this.chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
         if (allowSelectionEvent)
@@ -78,7 +83,7 @@
         });
     }
 
-    function columnChart(
+    columnChart(
         title,
         chartElementId,
         categories,
@@ -98,7 +103,7 @@
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
-            exporting = chartTypeMenu(chartElementId, chartTypes)
+            exporting = this.chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
         if (allowPointSelectionEvent || allowIntervalSelectionEvent)
@@ -156,7 +161,7 @@
                 verticalAlign: 'middle',
                 borderWidth: 0,
                 itemStyle: {
-                    width:'100px',
+                    width: '100px',
                     textOverflow: 'ellipsis',
                     overflow: 'hidden'
                 },
@@ -173,7 +178,7 @@
                     groupPadding: 0.05,
                     dataLabels: {
                         enabled: showLabels,
-                        formatter: function() {
+                        formatter: function () {
                             var value = this.point.y
                             return (value === parseInt(value, 10)) ? value : Highcharts.numberFormat(value, 1)
                         }
@@ -204,7 +209,7 @@
         })
     }
 
-    function lineChart(
+    lineChart(
         title,
         chartElementId,
         categories,
@@ -216,6 +221,7 @@
         pointFormat,
         height,
         xDataType,
+        yDataType,
         allowPointSelectionEvent,
         allowIntervalSelectionEvent,
         allowChartTypeChange,
@@ -227,7 +233,7 @@
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
-            exporting = chartTypeMenu(chartElementId, chartTypes)
+            exporting = this.chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
         if (allowPointSelectionEvent || allowIntervalSelectionEvent)
@@ -272,6 +278,7 @@
                 categories: categories
             },
             yAxis: {
+                type: yDataType,
                 title: {
                     text: yAxisCaption
                 },
@@ -284,7 +291,7 @@
                 verticalAlign: 'middle',
                 borderWidth: 0,
                 itemStyle: {
-                    width:'80px',
+                    width: '80px',
                     textOverflow: 'ellipsis',
                     overflow: 'hidden'
                 },
@@ -332,7 +339,7 @@
         })
     }
 
-    function polarChart(
+    polarChart(
         title,
         chartElementId,
         categories,
@@ -347,7 +354,7 @@
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
-            exporting = chartTypeMenu(chartElementId, chartTypes)
+            exporting = this.chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
         if (allowSelectionEvent)
@@ -380,7 +387,7 @@
                 verticalAlign: 'middle',
                 borderWidth: 0,
                 itemStyle: {
-                    width:'80px',
+                    width: '80px',
                     textOverflow: 'ellipsis',
                     overflow: 'hidden'
                 },
@@ -432,7 +439,7 @@
         });
     }
 
-    function scatterChart(
+    scatterChart(
         title,
         chartElementId,
         xAxisCaption,
@@ -446,14 +453,15 @@
         zoomIfDragged,
         allowSelectionEvent
     ) {
-
         var pointFormatter = null
         if (!pointFormat) {
-            pointFormatter = defaultScatterPointFormatter(xDataType, yDataType)
+            pointFormatter = this.defaultScatterPointFormatter(xDataType, yDataType)
         } else if (typeof pointFormat === "function") {
             pointFormatter = pointFormat
             pointFormat = null
         }
+
+        const that = this
 
         /**
          * Custom selection handler that selects points and cancels the default zoom behaviour
@@ -470,7 +478,7 @@
                 });
             });
 
-            toast(this, '<b>' + this.getSelectedPoints().length + ' points selected.</b>' +
+            that.toast(this, '<b>' + this.getSelectedPoints().length + ' points selected.</b>' +
                 '<br>Click on empty space to deselect.');
 
             if (allowSelectionEvent) triggerSelectionEvent(this.series, e)
@@ -501,7 +509,7 @@
         }
 
         function triggerSelectionEvent(series, event) {
-            var cornerPoints = findCornerPoints(series, event)
+            var cornerPoints = that.findCornerPoints(series, event)
             if (cornerPoints)
                 $('#' + chartElementId).trigger("areaSelected", cornerPoints);
         }
@@ -529,7 +537,7 @@
                 height: height
             },
             title: {
-                text:  title
+                text: title
             },
             xAxis: {
                 title: {
@@ -553,7 +561,7 @@
                 verticalAlign: 'middle',
                 borderWidth: 0,
                 itemStyle: {
-                    width:'100px',
+                    width: '100px',
                     textOverflow: 'ellipsis',
                     overflow: 'hidden'
                 },
@@ -586,15 +594,15 @@
                     turboThreshold: 5000
                 }
             },
-            tooltip:{
+            tooltip: {
                 pointFormat: pointFormat,
                 formatter: pointFormatter
-           },
+            },
             series: series
         });
     }
 
-    function defaultScatterPointFormatter(xDataType, yDataType) {
+    defaultScatterPointFormatter(xDataType, yDataType) {
         Highcharts.setOptions({global: {useUTC: false}});
 
         var formatter = function () {
@@ -606,7 +614,7 @@
         return formatter;
     }
 
-    function heatmapChart(
+    heatmapChart(
         title,
         chartElementId,
         xCategories,
@@ -644,7 +652,7 @@
                     text: xAxisCaption
                 },
                 labels: {
-                    formatter: function() {
+                    formatter: function () {
                         return shorten(this.value, 10);
                     }
                 }
@@ -656,7 +664,7 @@
                     text: yAxisCaption
                 },
                 labels: {
-                    formatter: function() {
+                    formatter: function () {
                         return shorten(this.value, 10);
                     }
                 }
@@ -707,7 +715,7 @@
         });
     }
 
-    function boxPlot(
+    boxPlot(
         title,
         chartElementId,
         categories,
@@ -726,7 +734,7 @@
                 height: height
             },
             title: {
-                text:  title
+                text: title
             },
             xAxis: {
                 categories: categories,
@@ -763,13 +771,13 @@
                 data: data,
                 tooltip: {
                     headerFormat: '<b>{point.series.name}</b><br/>',
-                    pointFormat:  pointFormat
+                    pointFormat: pointFormat
                 }
             }]
         });
     }
 
-    function chartTypeMenu(chartElementId, chartTypes) {
+    chartTypeMenu(chartElementId, chartTypes) {
         Highcharts.setOptions({
             lang: {
                 chartTypeButtonTitle: "Chart Type"
@@ -783,7 +791,7 @@
                     x: '0%',
                     _titleKey: "chartTypeButtonTitle",
                     menuItems:
-                        chartTypes.map(function(name) {
+                        chartTypes.map(function (name) {
                             return {
                                 text: name,
                                 onclick: function () {
@@ -796,127 +804,127 @@
         };
     }
 
-    function plotCategoricalChart(chartType, categories, datas, seriesSize, title, yAxisCaption, elementId, showLabels, showLegend, height, pointFormat) {
+    plotCategoricalChart(chartType, categories, datas, seriesSize, title, yAxisCaption, elementId, showLabels, showLegend, height, pointFormat) {
         var showLegendImpl = seriesSize > 1
 
         switch (chartType) {
             case 'Pie':
-                var series = datas.map( function(data, index) {
-                    var size = (100 / seriesSize) * (index + 1)
+                var series = datas.map(function (data, index) {
+                    const size = (100 / seriesSize) * (index + 1)
                     var innerSize = 0
                     if (index > 0)
                         innerSize = (100 / seriesSize) * index + 1
                     return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
                 });
 
-                pieChart(title, elementId, series, showLabels, showLegend, pointFormat, height, true, true);
+                this.pieChart(title, elementId, series, showLabels, showLegend, pointFormat, height, true, true);
                 break;
             case 'Column':
                 var colorByPoint = (seriesSize == 1)
-                var series = datas.map( function(data, index) {
+                var series = datas.map(function (data, index) {
                     return {name: data.name, data: data.data, colorByPoint: colorByPoint};
                 });
 
-                columnChart(title, elementId, categories, series, false, '', yAxisCaption, true, showLegendImpl, pointFormat, height, null, true, false, true);
+                this.columnChart(title, elementId, categories, series, false, '', yAxisCaption, true, showLegendImpl, pointFormat, height, null, true, false, true);
                 break;
             case 'Bar':
                 var colorByPoint = (seriesSize == 1)
-                var series = datas.map( function(data, index) {
+                var series = datas.map(function (data, index) {
                     return {name: data.name, data: data.data, colorByPoint: colorByPoint};
                 });
 
-                columnChart(title, elementId, categories, series, true, '', yAxisCaption, true, showLegendImpl, pointFormat, height, null, true, false, true);
+                this.columnChart(title, elementId, categories, series, true, '', yAxisCaption, true, showLegendImpl, pointFormat, height, null, true, false, true);
                 break;
             case 'Line':
                 var series = datas
 
-                lineChart(title, elementId, categories, series, '', yAxisCaption, showLegendImpl, true, pointFormat, height, null, true, false, true);
+                this.lineChart(title, elementId, categories, series, '', yAxisCaption, showLegendImpl, true, pointFormat, height, null,  null,true, false, true);
                 break;
             case 'Spline':
-                var series = datas.map( function(data, index) {
+                var series = datas.map(function (data, index) {
                     return {name: data.name, data: data.data, type: 'spline'};
                 });
 
-                lineChart(title, elementId, categories, series, '', yAxisCaption, showLegendImpl, true, pointFormat, height, null, true, false,true);
+                this.lineChart(title, elementId, categories, series, '', yAxisCaption, showLegendImpl, true, pointFormat, height, null, null, true, false, true);
                 break;
             case 'Polar':
-                var series = datas.map( function(data, index) {
+                var series = datas.map(function (data, index) {
                     return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
                 });
 
-                polarChart(title, elementId, categories, series, showLegendImpl,  pointFormat, height, null, true, true);
+                this.polarChart(title, elementId, categories, series, showLegendImpl, pointFormat, height, null, true, true);
                 break;
         }
     }
 
-    function plotNumericalChart(chartType, datas, seriesSize, title, xAxisCaption, yAxisCaption, elementId, height, pointFormat, dataType) {
+    plotNumericalChart(chartType, datas, seriesSize, title, xAxisCaption, yAxisCaption, elementId, height, pointFormat, dataType) {
         var showLegend = seriesSize > 1
 
         switch (chartType) {
             case 'Pie':
-                var series = datas.map( function(data, index) {
-                    var size = (100 / seriesSize) * index
-                    var innerSize = Math.max(0, (100 / seriesSize) * (index - 1) + 1)
+                var series = datas.map(function (data, index) {
+                    const size = (100 / seriesSize) * index
+                    const innerSize = Math.max(0, (100 / seriesSize) * (index - 1) + 1)
                     return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
                 });
 
-                pieChart(title, elementId, series, false, showLegend, pointFormat, height, false, true);
+                this.pieChart(title, elementId, series, false, showLegend, pointFormat, height, false, true);
                 break;
             case 'Column':
-                var series = datas.map( function(data, index) {
+                var series = datas.map(function (data, index) {
                     return {name: data.name, data: data.data, colorByPoint: false};
                 });
 
-                columnChart(title, elementId, null, series, false, xAxisCaption, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true,true);
+                this.columnChart(title, elementId, null, series, false, xAxisCaption, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true, true);
                 break;
             case 'Bar':
-                var series = datas.map( function(data, index) {
+                var series = datas.map(function (data, index) {
                     return {name: data.name, data: data.data, colorByPoint: false};
                 });
 
-                columnChart(title, elementId, null, series, true, xAxisCaption, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true,true);
+                this.columnChart(title, elementId, null, series, true, xAxisCaption, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true, true);
                 break;
             case 'Line':
                 var series = datas
 
-                lineChart(title, elementId, null, series, xAxisCaption, yAxisCaption, showLegend, true, pointFormat, height, dataType, false, true,true);
+                this.lineChart(title, elementId, null, series, xAxisCaption, yAxisCaption, showLegend, true, pointFormat, height, dataType, null, false, true, true);
                 break;
             case 'Spline':
-                var series = datas.map( function(data, index) {
+                var series = datas.map(function (data, index) {
                     return {name: data.name, data: data.data, type: 'spline'};
                 });
 
-                lineChart(title, elementId, null, series, xAxisCaption, yAxisCaption, showLegend, true, pointFormat, height, dataType, false, true,true);
+                this.lineChart(title, elementId, null, series, xAxisCaption, yAxisCaption, showLegend, true, pointFormat, height, dataType, null,false, true, true);
                 break;
             case 'Polar':
-                var series = datas.map( function(data, index) {
+                var series = datas.map(function (data, index) {
                     return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
                 });
 
-                polarChart(title, elementId, null, series, showLegend, pointFormat, height, dataType, false, true);
+                this.polarChart(title, elementId, null, series, showLegend, pointFormat, height, dataType, false, true);
                 break;
         }
     }
 
-    function getPointFormatHeader(that) {
+    getPointFormatHeader(that) {
         var seriesCount = that.series.chart.series.length
         return (seriesCount > 1) ? '<span style="font-size:11px">' + that.series.name + '</span><br>' : ''
     }
 
-    function getPointFormatPercent(that, totalCounts) {
+    getPointFormatPercent(that, totalCounts) {
         return ' (<b>' + Highcharts.numberFormat(100 * that.y / totalCounts[that.series.index], 1) + '%</b>)'
     }
 
-    function getPointFormatPercent2(that) {
+    getPointFormatPercent2(that) {
         return ': <b>' + Highcharts.numberFormat(that.y, 1) + '%</b>'
     }
 
-    function getPointFormatY(that, yFloatingPoints) {
+    getPointFormatY(that, yFloatingPoints) {
         var yValue = (yFloatingPoints) ? Highcharts.numberFormat(that.y, yFloatingPoints) : that.y
         return ': <b>' + yValue + '</b>'
     }
 
-    function getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) {
+    getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) {
         var colorStartPart = '<span style="color:' + that.point.color + '">'
 
         Highcharts.setOptions({global: {useUTC: false}});
@@ -927,52 +935,52 @@
                 :
                 (isDouble) ?
                     ((xFloatingPoints) ? Highcharts.numberFormat(that.point.x, xFloatingPoints) : that.point.x)
-                 :
+                    :
                     that.point.x;
 
         return colorStartPart + valuePart + '</span>'
     }
 
-    function getPointFormatCategoricalValue(that) {
+    getPointFormatCategoricalValue(that) {
         return '<span style="color:' + that.point.color + '">' + that.point.name + '</span>'
     }
 
-    function numericalPointFormat(isDate, isDouble, that, xFloatingPoints, yFloatingPoints) {
-        return getPointFormatHeader(that) +
-            getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) +
-            getPointFormatY(that, yFloatingPoints)
+    numericalPointFormat(isDate, isDouble, that, xFloatingPoints, yFloatingPoints) {
+        return this.getPointFormatHeader(that) +
+            this.getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) +
+            this.getPointFormatY(that, yFloatingPoints)
     }
 
-    function numericalCountPointFormat(isDate, isDouble, totalCounts, that) {
-        return getPointFormatHeader(that) +
-            getPointFormatNumericalValue(isDate, isDouble, that, 2) +
-            getPointFormatY(that) +
-            getPointFormatPercent(that, totalCounts);
+    numericalCountPointFormat(isDate, isDouble, totalCounts, that) {
+        return this.getPointFormatHeader(that) +
+            this.getPointFormatNumericalValue(isDate, isDouble, that, 2) +
+            this.getPointFormatY(that) +
+            this.getPointFormatPercent(that, totalCounts);
     }
 
-    function categoricalCountPointFormat(totalCounts, that) {
-        return getPointFormatHeader(that) +
-            getPointFormatCategoricalValue(that) +
-            getPointFormatY(that) +
-            getPointFormatPercent(that, totalCounts)
+    categoricalCountPointFormat(totalCounts, that) {
+        return this.getPointFormatHeader(that) +
+            this.getPointFormatCategoricalValue(that) +
+            this.getPointFormatY(that) +
+            this.getPointFormatPercent(that, totalCounts)
     }
 
-    function numericalPercentPointFormat(isDate, isDouble, that) {
-        return getPointFormatHeader(that) +
-            getPointFormatNumericalValue(isDate, isDouble, that, 2) +
-            getPointFormatPercent2(that);
+    numericalPercentPointFormat(isDate, isDouble, that) {
+        return this.getPointFormatHeader(that) +
+            this.getPointFormatNumericalValue(isDate, isDouble, that, 2) +
+            this.getPointFormatPercent2(that);
     }
 
-    function categoricalPercentPointFormat(that) {
-        return getPointFormatHeader(that) +
-            getPointFormatCategoricalValue(that) +
-            getPointFormatPercent2(that)
+    categoricalPercentPointFormat(that) {
+        return this.getPointFormatHeader(that) +
+            this.getPointFormatCategoricalValue(that) +
+            this.getPointFormatPercent2(that)
     }
 
     /**
      * Display a temporary label on the chart
      */
-    function toast(chart, text) {
+    toast(chart, text) {
         if (chart.toast)
             chart.toast = chart.toast.destroy();
 
@@ -1000,13 +1008,13 @@
         }, 2500);
     }
 
-    function refreshHighcharts() {
+    refreshHighcharts() {
         Highcharts.charts.forEach(function (chart) {
             if (chart) chart.reflow();
         });
     }
 
-    function findCornerPoints(series, event) {
+    findCornerPoints(series, event) {
         var xMin, xMax, yMin, yMax;
         Highcharts.each(series, function (series) {
             Highcharts.each(series.points, function (point) {
@@ -1029,3 +1037,4 @@
         });
         return (xMin) ? {xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax} : null
     }
+}
