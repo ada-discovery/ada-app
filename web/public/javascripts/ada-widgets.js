@@ -61,7 +61,7 @@ function categoricalCountWidget(elementId, widget, filterElement) {
     var height = widget.displayOptions.height || 400
 
     var pointFormat = function () {
-        return (widget.useRelativeValues) ? chartingEngine.categoricalPercentPointFormat(this) : chartingEngine.categoricalCountPointFormat(totalCounts, this);
+        return (widget.useRelativeValues) ? categoricalPercentPointFormat(this) : categoricalCountPointFormat(totalCounts, this);
     }
     var yAxisCaption = (widget.useRelativeValues) ? '%' : 'Count'
 
@@ -109,7 +109,7 @@ function numericalCountWidget(elementId, widget, filterElement) {
     var height = widget.displayOptions.height || 400
 
     var pointFormat = function () {
-        return (widget.useRelativeValues) ? chartingEngine.numericalPercentPointFormat(isDate, isDouble, this) : chartingEngine.numericalCountPointFormat(isDate, isDouble, totalCounts, this);
+        return (widget.useRelativeValues) ? numericalPercentPointFormat(isDate, isDouble, this) : numericalCountPointFormat(isDate, isDouble, totalCounts, this);
     }
     var yAxisCaption = (widget.useRelativeValues) ? '%' : 'Count'
 
@@ -143,7 +143,7 @@ function lineWidget(elementId, widget, filterElement) {
 
     var height = widget.displayOptions.height || 400
     var pointFormat = function () {
-        return chartingEngine.numericalPointFormat(isDate, isDouble, this, 3, 3);
+        return numericalPointFormat(isDate, isDouble, this, 3, 3);
     }
 
     // $('#' + elementId).on('chartTypeChanged', function(event, chartType) {
@@ -617,4 +617,46 @@ function widgetDivAux(elementIdVal, gridWidth, gridOffset) {
     var div = $("<div class='" + gridWidthElement + " " + gridOffsetElement + "'>")
     div.append(innerDiv)
     return div
+}
+
+function numericalPointFormat(isDate, isDouble, that, xFloatingPoints, yFloatingPoints) {
+    const chartingEngine = new ChartingEngine()
+
+    return chartingEngine._getPointFormatHeader(that) +
+        chartingEngine._getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) +
+        chartingEngine._getPointFormatY(that, yFloatingPoints)
+}
+
+function numericalCountPointFormat(isDate, isDouble, totalCounts, that) {
+    const chartingEngine = new ChartingEngine()
+
+    return this._getPointFormatHeader(that) +
+        chartingEngine._getPointFormatNumericalValue(isDate, isDouble, that, 2) +
+        chartingEngine._getPointFormatY(that) +
+        chartingEngine._getPointFormatPercent(that, totalCounts);
+}
+
+function categoricalCountPointFormat(totalCounts, that) {
+    const chartingEngine = new ChartingEngine()
+
+    return chartingEngine._getPointFormatHeader(that) +
+        chartingEngine._getPointFormatCategoricalValue(that) +
+        chartingEngine._getPointFormatY(that) +
+        chartingEngine._getPointFormatPercent(that, totalCounts)
+}
+
+function numericalPercentPointFormat(isDate, isDouble, that) {
+    const chartingEngine = new ChartingEngine()
+
+    return chartingEngine._getPointFormatHeader(that) +
+        chartingEngine._getPointFormatNumericalValue(isDate, isDouble, that, 2) +
+        chartingEngine._getPointFormatPercent2(that);
+}
+
+function categoricalPercentPointFormat(that) {
+    const chartingEngine = new ChartingEngine()
+
+    return chartingEngine._getPointFormatHeader(that) +
+        chartingEngine._getPointFormatCategoricalValue(that) +
+        chartingEngine._getPointFormatPercent2(that)
 }

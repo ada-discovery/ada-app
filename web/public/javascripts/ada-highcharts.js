@@ -478,7 +478,7 @@ class ChartingEngine {
                 });
             });
 
-            that.toast(this, '<b>' + this.getSelectedPoints().length + ' points selected.</b>' +
+            that._toast(this, '<b>' + this.getSelectedPoints().length + ' points selected.</b>' +
                 '<br>Click on empty space to deselect.');
 
             if (allowSelectionEvent) triggerSelectionEvent(this.series, e)
@@ -509,7 +509,7 @@ class ChartingEngine {
         }
 
         function triggerSelectionEvent(series, event) {
-            var cornerPoints = that.findCornerPoints(series, event)
+            var cornerPoints = that._findCornerPoints(series, event)
             if (cornerPoints)
                 $('#' + chartElementId).trigger("areaSelected", cornerPoints);
         }
@@ -906,25 +906,33 @@ class ChartingEngine {
         }
     }
 
-    getPointFormatHeader(that) {
+    refreshHighcharts() {
+        Highcharts.charts.forEach(function (chart) {
+            if (chart) chart.reflow();
+        });
+    }
+
+    // inner "private" funs
+
+    _getPointFormatHeader(that) {
         var seriesCount = that.series.chart.series.length
         return (seriesCount > 1) ? '<span style="font-size:11px">' + that.series.name + '</span><br>' : ''
     }
 
-    getPointFormatPercent(that, totalCounts) {
+    _getPointFormatPercent(that, totalCounts) {
         return ' (<b>' + Highcharts.numberFormat(100 * that.y / totalCounts[that.series.index], 1) + '%</b>)'
     }
 
-    getPointFormatPercent2(that) {
+    _getPointFormatPercent2(that) {
         return ': <b>' + Highcharts.numberFormat(that.y, 1) + '%</b>'
     }
 
-    getPointFormatY(that, yFloatingPoints) {
+    _getPointFormatY(that, yFloatingPoints) {
         var yValue = (yFloatingPoints) ? Highcharts.numberFormat(that.y, yFloatingPoints) : that.y
         return ': <b>' + yValue + '</b>'
     }
 
-    getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) {
+    _getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) {
         var colorStartPart = '<span style="color:' + that.point.color + '">'
 
         Highcharts.setOptions({global: {useUTC: false}});
@@ -941,46 +949,14 @@ class ChartingEngine {
         return colorStartPart + valuePart + '</span>'
     }
 
-    getPointFormatCategoricalValue(that) {
+    _getPointFormatCategoricalValue(that) {
         return '<span style="color:' + that.point.color + '">' + that.point.name + '</span>'
-    }
-
-    numericalPointFormat(isDate, isDouble, that, xFloatingPoints, yFloatingPoints) {
-        return this.getPointFormatHeader(that) +
-            this.getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) +
-            this.getPointFormatY(that, yFloatingPoints)
-    }
-
-    numericalCountPointFormat(isDate, isDouble, totalCounts, that) {
-        return this.getPointFormatHeader(that) +
-            this.getPointFormatNumericalValue(isDate, isDouble, that, 2) +
-            this.getPointFormatY(that) +
-            this.getPointFormatPercent(that, totalCounts);
-    }
-
-    categoricalCountPointFormat(totalCounts, that) {
-        return this.getPointFormatHeader(that) +
-            this.getPointFormatCategoricalValue(that) +
-            this.getPointFormatY(that) +
-            this.getPointFormatPercent(that, totalCounts)
-    }
-
-    numericalPercentPointFormat(isDate, isDouble, that) {
-        return this.getPointFormatHeader(that) +
-            this.getPointFormatNumericalValue(isDate, isDouble, that, 2) +
-            this.getPointFormatPercent2(that);
-    }
-
-    categoricalPercentPointFormat(that) {
-        return this.getPointFormatHeader(that) +
-            this.getPointFormatCategoricalValue(that) +
-            this.getPointFormatPercent2(that)
     }
 
     /**
      * Display a temporary label on the chart
      */
-    toast(chart, text) {
+    _toast(chart, text) {
         if (chart.toast)
             chart.toast = chart.toast.destroy();
 
@@ -1008,13 +984,7 @@ class ChartingEngine {
         }, 2500);
     }
 
-    refreshHighcharts() {
-        Highcharts.charts.forEach(function (chart) {
-            if (chart) chart.reflow();
-        });
-    }
-
-    findCornerPoints(series, event) {
+    _findCornerPoints(series, event) {
         var xMin, xMax, yMin, yMax;
         Highcharts.each(series, function (series) {
             Highcharts.each(series.points, function (point) {
