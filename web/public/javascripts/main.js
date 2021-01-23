@@ -163,7 +163,7 @@ function showHideMessageBox() {
     $("#showHideMessageBoxSpan").html("&#8612;")
 
     if (Highcharts) {
-      refreshHighcharts();
+      refreshHighcharts(); // TODO
     }
   } else {
     $("#contentDiv").removeClass("col-md-10").addClass("col-md-8-25")
@@ -171,7 +171,7 @@ function showHideMessageBox() {
     $("#showHideMessageBoxSpan").html("&#8614;")
 
     if (Highcharts) {
-      refreshHighcharts();
+      refreshHighcharts(); // TODO
     }
   }
 }

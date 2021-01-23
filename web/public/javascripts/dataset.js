@@ -132,7 +132,7 @@ function addNewViewColumn(viewId, widgetGridElementWidth, enforceWidth, activate
             // widgets
             var widgetTd = $("<td style='vertical-align:top'>")
             $("#widgetsTr").append(widgetTd)
-            refreshHighcharts();
+            refreshHighcharts(); // TODO
 
             // table
             var tableTd = $("<td style='padding-left: 10px; padding-right: 10px; vertical-align:top'>")

@@ -131,7 +131,7 @@
             defaultWidgetWidth = 12;
             enforceWidth = true;
 
-            refreshHighcharts();
+            refreshHighcharts(); // TODO
         }
 
         function addNewColumn() {
@@ -160,7 +160,7 @@
                 var oldHeaderText = oldHeader.substr(oldHeader.indexOf(" "))
                 $(".page-header").html("<h3>" + totalCount + oldHeaderText + "</h3>");
 
-                refreshHighcharts();
+                refreshHighcharts(); // TODO
 
                 showMessage("The right-most column/filter successfully removed from the view.")
             } else {
