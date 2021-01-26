@@ -7,7 +7,7 @@ function shorten(string, length) {
     return (string.length > initLength) ? string.substring(0, initLength) + ".." : string
 }
 
-function agg(series, widget) {
+function _agg(series, widget) {
     var counts = series.map(function(item) {
         return item.count;
     });
@@ -40,7 +40,7 @@ function categoricalCountWidget(elementId, widget, filterElement) {
         var name = nameSeries[0]
         var series = nameSeries[1]
 
-        var sum = agg(series, widget)
+        var sum = _agg(series, widget)
         var data = series.map(function(item) {
             var label = shorten(item.value)
             var count = item.count
@@ -54,14 +54,14 @@ function categoricalCountWidget(elementId, widget, filterElement) {
     })
 
     var totalCounts = widget.data.map(function(nameSeries) {
-        return agg(nameSeries[1], widget);
+        return _agg(nameSeries[1], widget);
     })
 
     var seriesSize = datas.length
     var height = widget.displayOptions.height || 400
 
     var pointFormat = function () {
-        return (widget.useRelativeValues) ? categoricalPercentPointFormat(this) : categoricalCountPointFormat(totalCounts, this);
+        return (widget.useRelativeValues) ? _categoricalPercentPointFormat(this) : _categoricalCountPointFormat(totalCounts, this);
     }
     var yAxisCaption = (widget.useRelativeValues) ? '%' : 'Count'
 
@@ -108,7 +108,7 @@ function numericalCountWidget(elementId, widget, filterElement) {
         var name = nameSeries[0]
         var series = nameSeries[1]
 
-        var sum = agg(series, widget)
+        var sum = _agg(series, widget)
         var data = series.map(function(item) {
             var count = item.count
 
@@ -120,14 +120,14 @@ function numericalCountWidget(elementId, widget, filterElement) {
     })
 
     var totalCounts = widget.data.map(function(nameSeries) {
-        return agg(nameSeries[1], widget);
+        return _agg(nameSeries[1], widget);
     })
 
     var seriesSize = datas.length
     var height = widget.displayOptions.height || 400
 
     var pointFormat = function () {
-        return (widget.useRelativeValues) ? numericalPercentPointFormat(isDate, isDouble, this) : numericalCountPointFormat(isDate, isDouble, totalCounts, this);
+        return (widget.useRelativeValues) ? _numericalPercentPointFormat(isDate, isDouble, this) : _numericalCountPointFormat(isDate, isDouble, totalCounts, this);
     }
     var yAxisCaption = (widget.useRelativeValues) ? '%' : 'Count'
 
@@ -153,7 +153,7 @@ function numericalCountWidget(elementId, widget, filterElement) {
     plot(widget.displayOptions.chartType)
 
     if (filterElement) {
-        addIntervalSelected($('#' + elementId), filterElement, widget.fieldName, isDouble, isDate)
+        _addIntervalSelected($('#' + elementId), filterElement, widget.fieldName, isDouble, isDate)
     }
 }
 
@@ -176,7 +176,7 @@ function lineWidget(elementId, widget, filterElement) {
 
     var height = widget.displayOptions.height || 400
     var pointFormat = function () {
-        return numericalPointFormat(isDate, isDouble, this, 3, 3);
+        return _numericalPointFormat(isDate, isDouble, this, 3, 3);
     }
 
     // $('#' + elementId).on('chartTypeChanged', function(event, chartType) {
@@ -206,11 +206,11 @@ function lineWidget(elementId, widget, filterElement) {
     });
 
     if (filterElement) {
-        addIntervalSelected($('#' + elementId), filterElement, widget.xFieldName, isDouble, isDate)
+        _addIntervalSelected($('#' + elementId), filterElement, widget.xFieldName, isDouble, isDate)
     }
 }
 
-function addIntervalSelected(chartElement, filterElement, xFieldName, isDouble, isDate) {
+function _addIntervalSelected(chartElement, filterElement, xFieldName, isDouble, isDate) {
     function toTypedStringValue(value, ceiling) {
         var intValue = (ceiling) ? Math.ceil(value) : Math.floor(value)
 
@@ -293,7 +293,7 @@ function scatterWidget(elementId, widget, filterElement) {
     var yDataType = (isYDate) ? 'datetime' : null;
 
     if (filterElement) {
-        addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate);
+        _addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate);
     }
 
     chartingEngine.scatterChart({
@@ -312,7 +312,7 @@ function scatterWidget(elementId, widget, filterElement) {
     })
 }
 
-function addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate) {
+function _addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate) {
     $('#' + elementId).on('areaSelected', function (event, data) {
         var xMin = (isXDate) ? msToStandardDateString(data.xMin) : data.xMin.toString();
         var xMax = (isXDate) ? msToStandardDateString(data.xMax) : data.xMax.toString();
@@ -356,7 +356,7 @@ function valueScatterWidget(elementId, widget, filterElement) {
     var yDataType = (isYDate) ? 'datetime' : null;
 
     if (filterElement) {
-        addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate);
+        _addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate);
     }
 
     var pointFormatter = function () {
@@ -683,16 +683,16 @@ function widgetDiv(widget, defaultGridWidth, enforceWidth) {
     var elementIdVal = elementId(widget)
 
     if (enforceWidth)
-        return widgetDivAux(elementIdVal, defaultGridWidth);
+        return _widgetDivAux(elementIdVal, defaultGridWidth);
     else {
         var gridWidth = widget.displayOptions.gridWidth || defaultGridWidth;
         var gridOffset = widget.displayOptions.gridOffset;
 
-        return widgetDivAux(elementIdVal, gridWidth, gridOffset);
+        return _widgetDivAux(elementIdVal, gridWidth, gridOffset);
     }
 }
 
-function widgetDivAux(elementIdVal, gridWidth, gridOffset) {
+function _widgetDivAux(elementIdVal, gridWidth, gridOffset) {
     var gridWidthElement = "col-md-" + gridWidth
     var gridOffsetElement = gridOffset ? "col-md-offset-" + gridOffset : ""
 
@@ -702,44 +702,73 @@ function widgetDivAux(elementIdVal, gridWidth, gridOffset) {
     return div
 }
 
-function numericalPointFormat(isDate, isDouble, that, xFloatingPoints, yFloatingPoints) {
-    const chartingEngine = new ChartingEngine()
-
-    return chartingEngine._getPointFormatHeader(that) +
-        chartingEngine._getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) +
-        chartingEngine._getPointFormatY(that, yFloatingPoints)
+function _numericalPointFormat(isDate, isDouble, that, xFloatingPoints, yFloatingPoints) {
+    return _getPointFormatHeader(that) +
+        _getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) +
+        _getPointFormatY(that, yFloatingPoints)
 }
 
-function numericalCountPointFormat(isDate, isDouble, totalCounts, that) {
-    const chartingEngine = new ChartingEngine()
-
-    return this._getPointFormatHeader(that) +
-        chartingEngine._getPointFormatNumericalValue(isDate, isDouble, that, 2) +
-        chartingEngine._getPointFormatY(that) +
-        chartingEngine._getPointFormatPercent(that, totalCounts);
+function _numericalCountPointFormat(isDate, isDouble, totalCounts, that) {
+    return _getPointFormatHeader(that) +
+        _getPointFormatNumericalValue(isDate, isDouble, that, 2) +
+        _getPointFormatY(that) +
+        _getPointFormatPercent(that, totalCounts);
 }
 
-function categoricalCountPointFormat(totalCounts, that) {
-    const chartingEngine = new ChartingEngine()
-
-    return chartingEngine._getPointFormatHeader(that) +
-        chartingEngine._getPointFormatCategoricalValue(that) +
-        chartingEngine._getPointFormatY(that) +
-        chartingEngine._getPointFormatPercent(that, totalCounts)
+function _categoricalCountPointFormat(totalCounts, that) {
+    return _getPointFormatHeader(that) +
+        _getPointFormatCategoricalValue(that) +
+        _getPointFormatY(that) +
+        _getPointFormatPercent(that, totalCounts)
 }
 
-function numericalPercentPointFormat(isDate, isDouble, that) {
-    const chartingEngine = new ChartingEngine()
-
-    return chartingEngine._getPointFormatHeader(that) +
-        chartingEngine._getPointFormatNumericalValue(isDate, isDouble, that, 2) +
-        chartingEngine._getPointFormatPercent2(that);
+function _numericalPercentPointFormat(isDate, isDouble, that) {
+    return _getPointFormatHeader(that) +
+        _getPointFormatNumericalValue(isDate, isDouble, that, 2) +
+        _getPointFormatPercent2(that);
 }
 
-function categoricalPercentPointFormat(that) {
-    const chartingEngine = new ChartingEngine()
+function _categoricalPercentPointFormat(that) {
+    return _getPointFormatHeader(that) +
+        _getPointFormatCategoricalValue(that) +
+        _getPointFormatPercent2(that)
+}
 
-    return chartingEngine._getPointFormatHeader(that) +
-        chartingEngine._getPointFormatCategoricalValue(that) +
-        chartingEngine._getPointFormatPercent2(that)
+function _getPointFormatHeader(that) {
+    var seriesCount = that.series.chart.series.length
+    return (seriesCount > 1) ? '<span style="font-size:11px">' + that.series.name + '</span><br>' : ''
+}
+
+function _getPointFormatPercent(that, totalCounts) {
+    return ' (<b>' + Highcharts.numberFormat(100 * that.y / totalCounts[that.series.index], 1) + '%</b>)'
+}
+
+function _getPointFormatPercent2(that) {
+    return ': <b>' + Highcharts.numberFormat(that.y, 1) + '%</b>'
+}
+
+function _getPointFormatY(that, yFloatingPoints) {
+    var yValue = (yFloatingPoints) ? Highcharts.numberFormat(that.y, yFloatingPoints) : that.y
+    return ': <b>' + yValue + '</b>'
+}
+
+function _getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) {
+    var colorStartPart = '<span style="color:' + that.point.color + '">'
+
+    Highcharts.setOptions({global: {useUTC: false}});
+
+    var valuePart =
+        (isDate) ?
+            Highcharts.dateFormat('%Y-%m-%d', that.point.x)
+            :
+            (isDouble) ?
+                ((xFloatingPoints) ? Highcharts.numberFormat(that.point.x, xFloatingPoints) : that.point.x)
+                :
+                that.point.x;
+
+    return colorStartPart + valuePart + '</span>'
+}
+
+function _getPointFormatCategoricalValue(that) {
+    return '<span style="color:' + that.point.color + '">' + that.point.name + '</span>'
 }

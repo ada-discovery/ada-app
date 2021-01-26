@@ -1107,45 +1107,6 @@ class ChartingEngine {
 
     // inner "private" funs
 
-    _getPointFormatHeader(that) {
-        var seriesCount = that.series.chart.series.length
-        return (seriesCount > 1) ? '<span style="font-size:11px">' + that.series.name + '</span><br>' : ''
-    }
-
-    _getPointFormatPercent(that, totalCounts) {
-        return ' (<b>' + Highcharts.numberFormat(100 * that.y / totalCounts[that.series.index], 1) + '%</b>)'
-    }
-
-    _getPointFormatPercent2(that) {
-        return ': <b>' + Highcharts.numberFormat(that.y, 1) + '%</b>'
-    }
-
-    _getPointFormatY(that, yFloatingPoints) {
-        var yValue = (yFloatingPoints) ? Highcharts.numberFormat(that.y, yFloatingPoints) : that.y
-        return ': <b>' + yValue + '</b>'
-    }
-
-    _getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) {
-        var colorStartPart = '<span style="color:' + that.point.color + '">'
-
-        Highcharts.setOptions({global: {useUTC: false}});
-
-        var valuePart =
-            (isDate) ?
-                Highcharts.dateFormat('%Y-%m-%d', that.point.x)
-                :
-                (isDouble) ?
-                    ((xFloatingPoints) ? Highcharts.numberFormat(that.point.x, xFloatingPoints) : that.point.x)
-                    :
-                    that.point.x;
-
-        return colorStartPart + valuePart + '</span>'
-    }
-
-    _getPointFormatCategoricalValue(that) {
-        return '<span style="color:' + that.point.color + '">' + that.point.name + '</span>'
-    }
-
     /**
      * Display a temporary label on the chart
      */
