@@ -69,7 +69,13 @@ object PearsonCorrelationCalc extends Calculator[PearsonCorrelationCalcTypePack]
       )
       if (denominator == 0)
         None
-      else
+      else if (denominator.isNaN || denominator.isInfinity) {
+        logger.error(s"Got not-a-number denominator during a correlation calculation.")
+        None
+      } else if (numerator.isNaN || numerator.isInfinity) {
+        logger.error(s"Got not-a-number numerator during a correlation calculation.")
+        None
+      } else
         Some(numerator / denominator)
     } else
       None
