@@ -65,10 +65,28 @@ function categoricalCountWidget(elementId, widget, filterElement) {
     }
     var yAxisCaption = (widget.useRelativeValues) ? '%' : 'Count'
 
+    function plot(chartType) {
+        chartingEngine.plotCategoricalChart({
+            chartType,
+            categories,
+            datas,
+            seriesSize,
+            title: widget.title,
+            yAxisCaption,
+            chartElementId: elementId,
+            showLabels: widget.showLabels,
+            showLegend: widget.showLegend,
+            height,
+            pointFormat
+        });
+    }
+
+
     $('#' + elementId).on('chartTypeChanged', function(event, chartType) {
-        chartingEngine.plotCategoricalChart(chartType, categories, datas, seriesSize, widget.title, yAxisCaption, elementId, widget.showLabels, widget.showLegend, height, pointFormat);
-    });
-    chartingEngine.plotCategoricalChart(widget.displayOptions.chartType, categories, datas, seriesSize, widget.title, yAxisCaption, elementId, widget.showLabels, widget.showLegend, height, pointFormat)
+        plot(chartType);
+    })
+
+    plot(widget.displayOptions.chartType)
 
     if (filterElement) {
         $('#' + elementId).on('pointSelected', function (event, data) {
@@ -113,11 +131,26 @@ function numericalCountWidget(elementId, widget, filterElement) {
     }
     var yAxisCaption = (widget.useRelativeValues) ? '%' : 'Count'
 
+    function plot(chartType) {
+        chartingEngine.plotNumericalChart({
+            chartType,
+            datas,
+            seriesSize,
+            title: widget.title,
+            xAxisCaption: widget.fieldLabel,
+            yAxisCaption,
+            chartElementId: elementId,
+            height,
+            pointFormat,
+            dataType
+        })
+    }
+
     $('#' + elementId).on('chartTypeChanged', function(event, chartType) {
-        chartingEngine.plotNumericalChart(chartType, datas, seriesSize, widget.title, widget.fieldLabel, yAxisCaption, elementId, height, pointFormat, dataType)
+        plot(chartType)
     });
 
-    chartingEngine.plotNumericalChart(widget.displayOptions.chartType, datas, seriesSize, widget.title, widget.fieldLabel, yAxisCaption, elementId, height, pointFormat, dataType)
+    plot(widget.displayOptions.chartType)
 
     if (filterElement) {
         addIntervalSelected($('#' + elementId), filterElement, widget.fieldName, isDouble, isDate)
@@ -150,27 +183,27 @@ function lineWidget(elementId, widget, filterElement) {
     //     plotNumericalChart(chartType, datas, seriesSize, widget.title, widget.xAxisCaption, yAxisCaption, elementId, height, pointFormat, dataType)
     // });
 
-    chartingEngine.lineChart(
-        widget.title,
-        elementId,
-        null,
-        datas,
-        widget.xAxisCaption,
-        widget.yAxisCaption,
+    chartingEngine.lineChart({
+        title: widget.title,
+        chartElementId: elementId,
+        categories: null,
+        series: datas,
+        xAxisCaption: widget.xAxisCaption,
+        yAxisCaption: widget.yAxisCaption,
         showLegend,
-        true,
+        enableDataLabels: true,
         pointFormat,
         height,
         xDataType,
         yDataType,
-        false,
-        true,
-        false,
-        widget.xMin,
-        widget.xMax,
-        widget.yMin,
-        widget.yMax
-    );
+        allowPointSelectionEvent: false,
+        allowIntervalSelectionEvent: true,
+        allowChartTypeChange: false,
+        xMin: widget.xMin,
+        xMax: widget.xMax,
+        yMin: widget.yMin,
+        yMax: widget.yMax
+    });
 
     if (filterElement) {
         addIntervalSelected($('#' + elementId), filterElement, widget.xFieldName, isDouble, isDate)
@@ -229,7 +262,19 @@ function boxWidget(elementId, widget) {
         '- Lower 1.5 IQR: {point.low}<br/>'
 
     var height = widget.displayOptions.height || 400
-    chartingEngine.boxPlot(widget.title, elementId, categories, widget.xAxisCaption, widget.yAxisCaption, datas, min, max, pointFormat, height, dataType)
+    chartingEngine.boxPlot({
+        title: widget.title,
+        chartElementId: elementId,
+        categories,
+        xAxisCaption: widget.xAxisCaption,
+        yAxisCaption: widget.yAxisCaption,
+        data: datas,
+        min,
+        max,
+        pointFormat,
+        height,
+        dataType
+    })
 }
 
 function scatterWidget(elementId, widget, filterElement) {
@@ -251,7 +296,20 @@ function scatterWidget(elementId, widget, filterElement) {
         addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate);
     }
 
-    chartingEngine.scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, true, null, height, xDataType, yDataType, true, filterElement != null)
+    chartingEngine.scatterChart({
+        title: widget.title,
+        chartElementId: elementId,
+        xAxisCaption: widget.xAxisCaption,
+        yAxisCaption: widget.yAxisCaption,
+        series: datas,
+        showLegend: true,
+        pointFormat: null,
+        height,
+        xDataType,
+        yDataType,
+        zoomIfDragged: true,
+        allowSelectionEvent: filterElement != null
+    })
 }
 
 function addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate) {
@@ -309,22 +367,47 @@ function valueScatterWidget(elementId, widget, filterElement) {
         return xPoint + ", " + yPoint + " (" + zPoint + ")";
     }
 
-    chartingEngine.scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, false, pointFormatter, height, xDataType, yDataType, true, filterElement != null)
+    chartingEngine.scatterChart({
+        title: widget.title,
+        chartElementId: elementId,
+        xAxisCaption: widget.xAxisCaption,
+        yAxisCaption: widget.yAxisCaption,
+        series: datas,
+        showLegend: false,
+        pointFormat: pointFormatter,
+        height,
+        xDataType,
+        yDataType,
+        zoomIfDragged: true,
+        allowSelectionEvent: filterElement != null
+    })
 }
 
 function heatmapWidget(elementId, widget) {
     const chartingEngine = new ChartingEngine()
 
-    var xCategories =  widget.xCategories
-    var yCategories =  widget.yCategories
-    var data = widget.data.map(function(seq, i) {
+    const xCategories =  widget.xCategories
+    const yCategories =  widget.yCategories
+    const data = widget.data.map(function(seq, i) {
         return seq.map(function(value, j) {
             return [i, j, value]
         })
     })
 
-    var height = widget.displayOptions.height || 400
-    chartingEngine.heatmapChart(widget.title, elementId, xCategories, yCategories, widget.xAxisCaption, widget.yAxisCaption, [].concat.apply([], data), widget.min, widget.max, widget.twoColors, height)
+    const height = widget.displayOptions.height || 400
+    chartingEngine.heatmapChart({
+        title: widget.title,
+        chartElementId: elementId,
+        xCategories,
+        yCategories,
+        xAxisCaption: widget.xAxisCaption,
+        yAxisCaption: widget.yAxisCaption,
+        data: [].concat.apply([], data),
+        min: widget.min,
+        max: widget.max,
+        twoColors: widget.twoColors,
+        height
+    })
 };
 
 function htmlWidget(elementId, widget) {

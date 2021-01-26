@@ -3,7 +3,7 @@ class ChartingEngine {
     constructor() {
     }
 
-    pieChart(
+    _pieChart({
         title,
         chartElementId,
         series,
@@ -13,11 +13,11 @@ class ChartingEngine {
         height,
         allowSelectionEvent,
         allowChartTypeChange
-    ) {
+    }) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
-            exporting = this.chartTypeMenu(chartElementId, chartTypes)
+            exporting = this._chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
         if (allowSelectionEvent)
@@ -83,7 +83,7 @@ class ChartingEngine {
         });
     }
 
-    columnChart(
+    _columnChart({
         title,
         chartElementId,
         categories,
@@ -99,11 +99,11 @@ class ChartingEngine {
         allowPointSelectionEvent,
         allowIntervalSelectionEvent,
         allowChartTypeChange
-    ) {
+    }) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
-            exporting = this.chartTypeMenu(chartElementId, chartTypes)
+            exporting = this._chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
         if (allowPointSelectionEvent || allowIntervalSelectionEvent)
@@ -209,7 +209,7 @@ class ChartingEngine {
         })
     }
 
-    lineChart(
+    lineChart({
         title,
         chartElementId,
         categories,
@@ -229,11 +229,11 @@ class ChartingEngine {
         xMax,
         yMin,
         yMax
-    ) {
+    }) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
-            exporting = this.chartTypeMenu(chartElementId, chartTypes)
+            exporting = this._chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
         if (allowPointSelectionEvent || allowIntervalSelectionEvent)
@@ -339,7 +339,7 @@ class ChartingEngine {
         })
     }
 
-    polarChart(
+    _polarChart({
         title,
         chartElementId,
         categories,
@@ -350,11 +350,11 @@ class ChartingEngine {
         dataType,
         allowSelectionEvent,
         allowChartTypeChange
-    ) {
+    }) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
-            exporting = this.chartTypeMenu(chartElementId, chartTypes)
+            exporting = this._chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
         if (allowSelectionEvent)
@@ -439,7 +439,7 @@ class ChartingEngine {
         });
     }
 
-    scatterChart(
+    scatterChart({
         title,
         chartElementId,
         xAxisCaption,
@@ -452,10 +452,10 @@ class ChartingEngine {
         yDataType,
         zoomIfDragged,
         allowSelectionEvent
-    ) {
+    }) {
         var pointFormatter = null
         if (!pointFormat) {
-            pointFormatter = this.defaultScatterPointFormatter(xDataType, yDataType)
+            pointFormatter = this._defaultScatterPointFormatter(xDataType, yDataType)
         } else if (typeof pointFormat === "function") {
             pointFormatter = pointFormat
             pointFormat = null
@@ -602,7 +602,7 @@ class ChartingEngine {
         });
     }
 
-    defaultScatterPointFormatter(xDataType, yDataType) {
+    _defaultScatterPointFormatter(xDataType, yDataType) {
         Highcharts.setOptions({global: {useUTC: false}});
 
         var formatter = function () {
@@ -614,7 +614,7 @@ class ChartingEngine {
         return formatter;
     }
 
-    heatmapChart(
+    heatmapChart({
         title,
         chartElementId,
         xCategories,
@@ -626,7 +626,7 @@ class ChartingEngine {
         max,
         twoColors,
         height
-    ) {
+    }) {
         var colors = (twoColors) ?
             [
                 [0, Highcharts.getOptions().colors[5]],
@@ -715,7 +715,7 @@ class ChartingEngine {
         });
     }
 
-    boxPlot(
+    boxPlot({
         title,
         chartElementId,
         categories,
@@ -727,7 +727,7 @@ class ChartingEngine {
         pointFormat,
         height,
         dataType
-    ) {
+    }) {
         $('#' + chartElementId).highcharts({
             chart: {
                 type: 'boxplot',
@@ -777,7 +777,7 @@ class ChartingEngine {
         });
     }
 
-    chartTypeMenu(chartElementId, chartTypes) {
+    _chartTypeMenu(chartElementId, chartTypes) {
         Highcharts.setOptions({
             lang: {
                 chartTypeButtonTitle: "Chart Type"
@@ -804,8 +804,20 @@ class ChartingEngine {
         };
     }
 
-    plotCategoricalChart(chartType, categories, datas, seriesSize, title, yAxisCaption, elementId, showLabels, showLegend, height, pointFormat) {
-        var showLegendImpl = seriesSize > 1
+    plotCategoricalChart({
+        chartType,
+        categories,
+        datas,
+        seriesSize,
+        title,
+        yAxisCaption,
+        chartElementId,
+        showLabels,
+        showLegend,
+        height,
+        pointFormat
+    }) {
+        var showLegendExp = seriesSize > 1
 
         switch (chartType) {
             case 'Pie':
@@ -817,7 +829,17 @@ class ChartingEngine {
                     return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
                 });
 
-                this.pieChart(title, elementId, series, showLabels, showLegend, pointFormat, height, true, true);
+                this._pieChart({
+                    title,
+                    chartElementId,
+                    series,
+                    showLabels,
+                    showLegend,
+                    pointFormat,
+                    height,
+                    allowSelectionEvent: true,
+                    allowChartTypeChange: true
+                });
                 break;
             case 'Column':
                 var colorByPoint = (seriesSize == 1)
@@ -825,7 +847,23 @@ class ChartingEngine {
                     return {name: data.name, data: data.data, colorByPoint: colorByPoint};
                 });
 
-                this.columnChart(title, elementId, categories, series, false, '', yAxisCaption, true, showLegendImpl, pointFormat, height, null, true, false, true);
+                this._columnChart({
+                    title,
+                    chartElementId,
+                    categories,
+                    series,
+                    inverted: false,
+                    xAxisCaption: '',
+                    yAxisCaption,
+                    showLabels: true,
+                    showLegend: showLegendExp,
+                    pointFormat,
+                    height,
+                    dataType: null,
+                    allowPointSelectionEvent: true,
+                    allowIntervalSelectionEvent: false,
+                    allowChartTypeChange: true
+                });
                 break;
             case 'Bar':
                 var colorByPoint = (seriesSize == 1)
@@ -833,31 +871,101 @@ class ChartingEngine {
                     return {name: data.name, data: data.data, colorByPoint: colorByPoint};
                 });
 
-                this.columnChart(title, elementId, categories, series, true, '', yAxisCaption, true, showLegendImpl, pointFormat, height, null, true, false, true);
+                this._columnChart({
+                    title,
+                    chartElementId,
+                    categories,
+                    series,
+                    inverted: true,
+                    xAxisCaption: '',
+                    yAxisCaption,
+                    showLabels: true,
+                    showLegend: showLegendExp,
+                    pointFormat,
+                    height,
+                    dataType: null,
+                    allowPointSelectionEvent: true,
+                    allowIntervalSelectionEvent: false,
+                    allowChartTypeChange: true
+                });
                 break;
             case 'Line':
                 var series = datas
 
-                this.lineChart(title, elementId, categories, series, '', yAxisCaption, showLegendImpl, true, pointFormat, height, null,  null,true, false, true);
+                this.lineChart({
+                    title,
+                    chartElementId,
+                    categories,
+                    series,
+                    xAxisCaption: '',
+                    yAxisCaption,
+                    showLegend: showLegendExp,
+                    enableDataLabels: true,
+                    pointFormat,
+                    height,
+                    xDataType: null,
+                    yDataType: null,
+                    allowPointSelectionEvent: true,
+                    allowIntervalSelectionEvent: false,
+                    allowChartTypeChange: true
+                });
                 break;
             case 'Spline':
                 var series = datas.map(function (data, index) {
                     return {name: data.name, data: data.data, type: 'spline'};
                 });
 
-                this.lineChart(title, elementId, categories, series, '', yAxisCaption, showLegendImpl, true, pointFormat, height, null, null, true, false, true);
+                this.lineChart({
+                    title,
+                    chartElementId,
+                    categories,
+                    series,
+                    xAxisCaption: '',
+                    yAxisCaption,
+                    showLegend: showLegendExp,
+                    enableDataLabels: true,
+                    pointFormat,
+                    height,
+                    xDataType: null,
+                    yDataType: null,
+                    allowPointSelectionEvent: true,
+                    allowIntervalSelectionEvent: false,
+                    allowChartTypeChange: true
+                });
                 break;
             case 'Polar':
                 var series = datas.map(function (data, index) {
                     return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
                 });
 
-                this.polarChart(title, elementId, categories, series, showLegendImpl, pointFormat, height, null, true, true);
+                this._polarChart({
+                    title,
+                    chartElementId,
+                    categories,
+                    series,
+                    showLegend: showLegendExp,
+                    pointFormat,
+                    height,
+                    dataType: null,
+                    allowSelectionEvent: true,
+                    allowChartTypeChange: true
+                });
                 break;
         }
     }
 
-    plotNumericalChart(chartType, datas, seriesSize, title, xAxisCaption, yAxisCaption, elementId, height, pointFormat, dataType) {
+    plotNumericalChart({
+        chartType,
+        datas,
+        seriesSize,
+        title,
+        xAxisCaption,
+        yAxisCaption,
+        chartElementId,
+        height,
+        pointFormat,
+        dataType
+    }) {
         var showLegend = seriesSize > 1
 
         switch (chartType) {
@@ -868,40 +976,125 @@ class ChartingEngine {
                     return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
                 });
 
-                this.pieChart(title, elementId, series, false, showLegend, pointFormat, height, false, true);
+                this._pieChart({
+                    title,
+                    chartElementId,
+                    series,
+                    showLabels: false,
+                    showLegend,
+                    pointFormat,
+                    height,
+                    allowSelectionEvent: false,
+                    allowChartTypeChange: true
+                });
                 break;
             case 'Column':
                 var series = datas.map(function (data, index) {
                     return {name: data.name, data: data.data, colorByPoint: false};
                 });
 
-                this.columnChart(title, elementId, null, series, false, xAxisCaption, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true, true);
+                this._columnChart({
+                    title,
+                    chartElementId,
+                    categories: null,
+                    series,
+                    inverted: false,
+                    xAxisCaption,
+                    yAxisCaption,
+                    showLabels: false,
+                    showLegend,
+                    pointFormat,
+                    height,
+                    dataType,
+                    allowPointSelectionEvent: false,
+                    allowIntervalSelectionEvent: true,
+                    allowChartTypeChange: true
+                });
                 break;
             case 'Bar':
                 var series = datas.map(function (data, index) {
                     return {name: data.name, data: data.data, colorByPoint: false};
                 });
 
-                this.columnChart(title, elementId, null, series, true, xAxisCaption, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true, true);
+                this._columnChart({
+                    title,
+                    chartElementId,
+                    categories: null,
+                    series,
+                    inverted: true,
+                    xAxisCaption,
+                    yAxisCaption,
+                    showLabels: false,
+                    showLegend,
+                    pointFormat,
+                    height,
+                    dataType,
+                    allowPointSelectionEvent: false,
+                    allowIntervalSelectionEvent: true,
+                    allowChartTypeChange: true
+                });
                 break;
             case 'Line':
                 var series = datas
 
-                this.lineChart(title, elementId, null, series, xAxisCaption, yAxisCaption, showLegend, true, pointFormat, height, dataType, null, false, true, true);
+                this.lineChart({
+                    title,
+                    chartElementId,
+                    categories: null,
+                    series,
+                    xAxisCaption,
+                    yAxisCaption,
+                    showLegend,
+                    enableDataLabels: true,
+                    pointFormat,
+                    height,
+                    xDataType: dataType,
+                    yDataType: null,
+                    allowPointSelectionEvent: false,
+                    allowIntervalSelectionEvent: true,
+                    allowChartTypeChange: true
+                });
                 break;
             case 'Spline':
                 var series = datas.map(function (data, index) {
                     return {name: data.name, data: data.data, type: 'spline'};
                 });
 
-                this.lineChart(title, elementId, null, series, xAxisCaption, yAxisCaption, showLegend, true, pointFormat, height, dataType, null,false, true, true);
+                this.lineChart({
+                    title,
+                    chartElementId,
+                    categories: null,
+                    series,
+                    xAxisCaption,
+                    yAxisCaption,
+                    showLegend,
+                    enableDataLabels: true,
+                    pointFormat,
+                    height,
+                    xDataType: dataType,
+                    yDataType: null,
+                    allowPointSelectionEvent: false,
+                    allowIntervalSelectionEvent: true,
+                    allowChartTypeChange: true
+                });
                 break;
             case 'Polar':
                 var series = datas.map(function (data, index) {
                     return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
                 });
 
-                this.polarChart(title, elementId, null, series, showLegend, pointFormat, height, dataType, false, true);
+                this._polarChart({
+                    title,
+                    chartElementId,
+                    categories: null,
+                    series,
+                    showLegend,
+                    pointFormat,
+                    height,
+                    dataType,
+                    allowSelectionEvent: false,
+                    allowChartTypeChange: true
+                });
                 break;
         }
     }
