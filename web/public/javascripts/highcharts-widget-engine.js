@@ -1,89 +1,4 @@
-class HighchartsWidgetEngine {
-
-    // Main function of this class
-    plot(widget, filterElement) {
-        const widgetId = this._elementId(widget)
-        this._plotWidgetForElement(widgetId, widget, filterElement)
-    }
-
-    _plotWidgetForElement(widgetId, widget, filterElement) {
-        if (widget.displayOptions.isTextualForm)
-            switch (widget.concreteClass) {
-                case "org.ada.web.models.CategoricalCountWidget":
-                    this._categoricalTableWidget(widgetId, widget);
-                    break;
-                case "org.ada.web.models.NumericalCountWidget":
-                    this._numericalTableWidget(widgetId, widget);
-                    break;
-                case "org.ada.web.models.BasicStatsWidget":
-                    this._basicStatsWidget(widgetId, widget);
-                    break;
-                default:
-                    console.log(widget.concreteClass + " does not have a textual representation.")
-            }
-        else
-            switch (widget.concreteClass) {
-                case "org.ada.web.models.CategoricalCountWidget":
-                    this._categoricalCountWidget(widgetId, widget, filterElement);
-                    break;
-                case "org.ada.web.models.NumericalCountWidget":
-                    this._numericalCountWidget(widgetId, widget, filterElement);
-                    break;
-                case "org.ada.web.models.CategoricalCheckboxCountWidget":
-                    this._categoricalChecboxCountWidget(widgetId, widget, filterElement);
-                    break;
-                case "org.ada.web.models.BoxWidget":
-                    this._boxWidget(widgetId, widget);
-                    break;
-                case "org.ada.web.models.ScatterWidget":
-                    this._scatterWidget(widgetId, widget, filterElement);
-                    break;
-                case "org.ada.web.models.ValueScatterWidget":
-                    this._valueScatterWidget(widgetId, widget, filterElement);
-                    break;
-                case "org.ada.web.models.HeatmapWidget":
-                    this._heatmapWidget(widgetId, widget);
-                    break;
-                case "org.ada.web.models.HtmlWidget":
-                    this._htmlWidget(widgetId, widget);
-                    break;
-                case 'org.ada.web.models.LineWidget':
-                    this._lineWidget(widgetId, widget, filterElement);
-                    break;
-                case "org.ada.web.models.BasicStatsWidget":
-                    this._basicStatsWidget(widgetId, widget);
-                    break;
-                case "org.ada.web.models.IndependenceTestWidget":
-                    this._independenceTestWidget(widgetId, widget);
-                    break;
-                default:
-                    console.log("Widget type" + widget.concreteClass + " unrecognized.")
-            }
-    }
-
-    // creates a div for a widget
-    widgetDiv(widget, defaultGridWidth, enforceWidth) {
-        var elementIdVal = this._elementId(widget)
-
-        if (enforceWidth)
-            return this._widgetDivAux(elementIdVal, defaultGridWidth);
-        else {
-            var gridWidth = widget.displayOptions.gridWidth || defaultGridWidth;
-            var gridOffset = widget.displayOptions.gridOffset;
-
-            return this._widgetDivAux(elementIdVal, gridWidth, gridOffset);
-        }
-    }
-
-    _widgetDivAux(elementIdVal, gridWidth, gridOffset) {
-        var gridWidthElement = "col-md-" + gridWidth
-        var gridOffsetElement = gridOffset ? "col-md-offset-" + gridOffset : ""
-
-        var innerDiv = '<div id="' + elementIdVal + '" class="chart-holder"></div>'
-        var div = $("<div class='" + gridWidthElement + " " + gridOffsetElement + "'>")
-        div.append(innerDiv)
-        return div
-    }
+class HighchartsWidgetEngine extends WidgetEngine {
 
     refresh() {
         Highcharts.charts.forEach(function (chart) {
@@ -91,6 +6,7 @@ class HighchartsWidgetEngine {
         });
     }
 
+    // impl
     _categoricalCountWidget(elementId, widget, filterElement) {
         var categories = (widget.data.length > 0) ?
             widget.data[0][1].map(function (count) {
@@ -311,6 +227,7 @@ class HighchartsWidgetEngine {
         }
     }
 
+    // impl
     _numericalCountWidget(elementId, widget, filterElement) {
         var isDate = widget.fieldType == "Date"
         var isDouble = widget.fieldType == "Double"
@@ -516,10 +433,6 @@ class HighchartsWidgetEngine {
         }
     }
 
-    _elementId(widget) {
-        return widget._id.$oid + "Widget"
-    }
-
     _agg(series, widget) {
         var counts = series.map(function (item) {
             return item.count;
@@ -540,6 +453,7 @@ class HighchartsWidgetEngine {
         }
     }
 
+    // impl
     _lineWidget(elementId, widget, filterElement) {
         var isDate = widget.xFieldType == "Date"
         var isDouble = widget.xFieldType == "Double"
@@ -613,6 +527,7 @@ class HighchartsWidgetEngine {
         });
     }
 
+    // impl
     _boxWidget(elementId, widget) {
         var isDate = widget.fieldType == "Date"
         var dataType = (isDate) ? 'datetime' : null;
@@ -659,6 +574,7 @@ class HighchartsWidgetEngine {
         })
     }
 
+    // impl
     _scatterWidget(elementId, widget, filterElement) {
         var datas = widget.data.map(function (series) {
             return {name: shorten(series[0]), data: series[1]}
@@ -710,6 +626,7 @@ class HighchartsWidgetEngine {
         });
     }
 
+    // impl
     _valueScatterWidget(elementId, widget, filterElement) {
         var zs = widget.data.map(function (point) {
             return point[2];
@@ -761,6 +678,7 @@ class HighchartsWidgetEngine {
         })
     }
 
+    // impl
     _heatmapWidget(elementId, widget) {
         const xCategories = widget.xCategories
         const yCategories = widget.yCategories
@@ -787,10 +705,12 @@ class HighchartsWidgetEngine {
         })
     };
 
+    // impl
     _htmlWidget(elementId, widget) {
         $('#' + elementId).html(widget.content)
     }
 
+    // impl
     _categoricalTableWidget(elementId, widget) {
         var allCategories = widget.data.map(function (series) {
             return series[1].map(function (count) {
@@ -864,6 +784,7 @@ class HighchartsWidgetEngine {
         $('#' + elementId).html(div)
     }
 
+    // impl
     _numericalTableWidget(elementId, widget) {
         var isDate = widget.fieldType == "Date"
 
@@ -911,6 +832,7 @@ class HighchartsWidgetEngine {
         $('#' + elementId).html(div)
     }
 
+    // impl
     _categoricalChecboxCountWidget(elementId, widget, filterElement) {
         var widgetElement = $('#' + elementId)
 
@@ -976,6 +898,7 @@ class HighchartsWidgetEngine {
         });
     }
 
+    // impl
     _basicStatsWidget(elementId, widget) {
         var caption = "<h4 align='center'>" + widget.title + "</h4>"
         var columnNames = ["Stats", "Value"]
@@ -1014,6 +937,7 @@ class HighchartsWidgetEngine {
         $('#' + elementId).html(div)
     }
 
+    // impl
     _independenceTestWidget(elementId, widget) {
         var caption = "<h4 align='center'>" + widget.title + "</h4>"
 
