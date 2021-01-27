@@ -163,19 +163,21 @@
         }
 
         function addBinCurves(name, binCurves, columnWidth) {
+            const widgetEngine = new HighchartsWidgetEngine()
+
             var header ="<h4 align='center'><b>" + name + "</b></h4><hr/>"
 
             var div = $("<div class='col-md-" + columnWidth + "'>")
             var row = $("<div class='row'>")
             $.each(binCurves, function (i, widget) {
-                row.append(widgetDiv(widget))
+                row.append(widgetEngine.widgetDiv(widget))
             })
             div.append(header)
             div.append(row)
             $("#binCurvesPanelDiv").append(div)
 
             $.each(binCurves, function (i, widget) {
-                genericWidget(widget)
+                widgetEngine.genericWidget(widget)
             })
         }
 

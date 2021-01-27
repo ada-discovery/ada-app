@@ -749,3 +749,8 @@ function enableFieldTableDragover(fieldTableElement, execFun, acceptedTypes) {
     $(this).removeClass("dragged-over")
   })
 }
+
+function shorten(string, length) {
+  var initLength = length || 25
+  return (string.length > initLength) ? string.substring(0, initLength) + ".." : string
+}

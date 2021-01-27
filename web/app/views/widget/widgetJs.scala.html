@@ -8,6 +8,7 @@
     $(function () {
         const w = JSON.parse('@{toJsonHtml(widget)}')
         console.log("Widget " + w.concreteClass + " marshalled.")
-        genericWidget(w)
+        const widgetEngine = new HighchartsWidgetEngine()
+        widgetEngine.genericWidget(w)
     });
 </script>

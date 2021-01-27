@@ -94,6 +94,8 @@
                 success: function(data) {
                     showMessage("'" + mlModelName + "'clusterization finished.")
 
+                    const widgetEngine = new HighchartsWidgetEngine()
+
                     const scatters = data.scatters;
                     const classSizes = data.classSizes;
 
@@ -107,11 +109,11 @@
                     $("#countDiv").html(table);
 
                     $.each(scatters, function (j, scatter) {
-                        $("#scatterPanelDiv").append(widgetDiv(scatter))
+                        $("#scatterPanelDiv").append(widgetEngine.widgetDiv(scatter))
                     })
 
                     $.each(scatters, function (j, scatter) {
-                        genericWidget(scatter)
+                        widgetEngine.genericWidget(scatter)
                     });
 
                     const testTable = createIndependenceTestTable(data.testResults, true)

@@ -183,6 +183,8 @@ function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, defaul
             "callbackId": callbackId
         },
         success: function(data) {
+            const widgetEngine = new HighchartsWidgetEngine()
+
             if (successMessage) showMessage(successMessage)
 
             var widgets = data[0]
@@ -191,11 +193,11 @@ function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, defaul
 
             var row = $("<div class='row'>")
             $.each(widgets, function (j, widget) {
-                row.append(widgetDiv(widget, defaultElementWidth, enforceWidth))
+                row.append(widgetEngine.widgetDiv(widget, defaultElementWidth, enforceWidth))
             })
             widgetsDiv.html(row)
             $.each(widgets, function (j, widget) {
-                genericWidget(widget, filterElement)
+                widgetEngine.genericWidget(widget, filterElement)
             })
 //                    $.each(widgetHolders, function(i, widgetHolder){
 //                        genericWidgetForElement(widgetHolder.id, widgets[i], filterElement)
@@ -215,12 +217,14 @@ function updateAllWidgetsFromCallback(callbackId, defaultElementWidth) {
             "callbackId": callbackId
         },
         success: function(data) {
+            const widgetEngine = new HighchartsWidgetEngine()
+
             $("#widgetsTr").html("")
             $.each(data, function (i, widgets) {
                 var td = $("<td style='vertical-align:top'>")
                 var row = $("<div class='row'>")
                 $.each(widgets, function (j, widget) {
-                    row.append(widgetDiv(widget, defaultElementWidth))
+                    row.append(widgetEngine.widgetDiv(widget, defaultElementWidth))
                 })
                 td.append(row)
                 $("#widgetsTr").append(td)
@@ -229,7 +233,7 @@ function updateAllWidgetsFromCallback(callbackId, defaultElementWidth) {
             $.each(data, function (i, widgets) {
                 var filterElement = filterElements[i];
                 $.each(widgets, function (j, widget) {
-                    genericWidget(widget, filterElement)
+                    widgetEngine.genericWidget(widget, filterElement)
                 })
             })
         },
