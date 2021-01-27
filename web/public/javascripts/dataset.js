@@ -197,7 +197,7 @@ function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, defaul
             })
             widgetsDiv.html(row)
             $.each(widgets, function (j, widget) {
-                widgetEngine.genericWidget(widget, filterElement)
+                widgetEngine.plot(widget, filterElement)
             })
 //                    $.each(widgetHolders, function(i, widgetHolder){
 //                        genericWidgetForElement(widgetHolder.id, widgets[i], filterElement)
@@ -233,7 +233,7 @@ function updateAllWidgetsFromCallback(callbackId, defaultElementWidth) {
             $.each(data, function (i, widgets) {
                 var filterElement = filterElements[i];
                 $.each(widgets, function (j, widget) {
-                    widgetEngine.genericWidget(widget, filterElement)
+                    widgetEngine.plot(widget, filterElement)
                 })
             })
         },

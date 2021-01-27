@@ -9,6 +9,6 @@
         const w = JSON.parse('@{toJsonHtml(widget)}')
         console.log("Widget " + w.concreteClass + " marshalled.")
         const widgetEngine = new HighchartsWidgetEngine()
-        widgetEngine.genericWidget(w)
+        widgetEngine.plot(w)
     });
 </script>
