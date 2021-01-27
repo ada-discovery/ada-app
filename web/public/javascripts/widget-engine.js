@@ -31,7 +31,7 @@ class WidgetEngine {
                     this._numericalCountWidget(widgetId, widget, filterElement);
                     break;
                 case "org.ada.web.models.CategoricalCheckboxCountWidget":
-                    this._categoricalChecboxCountWidget(widgetId, widget, filterElement);
+                    this._categoricalCheckboxCountWidget(widgetId, widget, filterElement);
                     break;
                 case "org.ada.web.models.BoxWidget":
                     this._boxWidget(widgetId, widget);
@@ -92,17 +92,275 @@ class WidgetEngine {
         return div
     }
 
-    // impls hooks
+    ////////////////////////////////////////////////////
+    // Impls of "textual" widgets, mostly table based //
+    ////////////////////////////////////////////////////
+
+    _categoricalTableWidget(elementId, widget) {
+        console.log("WidgetEngine._categoricalTableWidget")
+
+        var allCategories = widget.data.map(function (series) {
+            return series[1].map(function (count) {
+                return count.value
+            })
+        });
+        var categories = removeDuplicates([].concat.apply([], allCategories))
+
+        var groups = widget.data.map(function (series) {
+            return shorten(series[0], 15)
+        });
+        var fieldLabel = shorten(widget.fieldLabel, 15)
+
+        var dataMap = widget.data.map(function (series) {
+            var map = {}
+            $.each(series[1], function (index, count) {
+                map[count.value] = count.count
+            })
+            return map
+        });
+
+        var rowData = categories.map(function (categoryName) {
+            var sum = 0;
+            var data = dataMap.map(function (map) {
+                var count = map[categoryName] || 0
+                sum += count
+                return count
+            })
+            var result = [categoryName].concat(data)
+            if (groups.length > 1) {
+                result.push(sum)
+            }
+            return result
+        })
+
+        if (categories.length > 1) {
+            var counts = widget.data.map(function (series) {
+                var sum = 0
+                $.each(series[1], function (index, count) {
+                    sum += count.count
+                })
+                return sum
+            });
+
+            var totalCount = counts.reduce(function (a, b) {
+                return a + b
+            })
+
+            var countRow = ["<b>Total</b>"].concat(counts)
+            if (groups.length > 1) {
+                countRow.push(totalCount)
+            }
+            rowData = rowData.concat([countRow])
+        }
+
+        var columnNames = [fieldLabel].concat(groups)
+        if (groups.length > 1) {
+            columnNames.push("Total")
+        }
+
+        var caption = "<h4 align='center'>" + widget.title + "</h4>"
+
+        var height = widget.displayOptions.height || 400
+        var div = $("<div style='position: relative; overflow: auto; height:" + height + "px; text-align: left; line-height: normal; z-index: 0;'>")
+
+        var table = createTable(columnNames, rowData)
+
+        div.append(caption)
+        div.append(table)
+
+        $('#' + elementId).html(div)
+    }
+
+    _numericalTableWidget(elementId, widget) {
+        console.log("WidgetEngine._numericalTableWidget")
+
+        var isDate = widget.fieldType == "Date"
+
+        var groups = widget.data.map(function (series) {
+            return shorten(series[0], 15)
+        });
+        var fieldLabel = shorten(widget.fieldLabel, 15)
+        var valueLength = widget.data[0][1].length
+
+        var rowData = Array.from(Array(valueLength).keys()).map(function (index) {
+            var row = widget.data.map(function (series) {
+                var item = series[1]
+                var value = item[index].value
+                if (isDate) {
+                    value = new Date(value).toISOString()
+                }
+                return [value, item[index].count]
+            })
+            return [].concat.apply([], row)
+        })
+
+        var columnNames = groups.map(function (group) {
+            return [fieldLabel, group]
+        })
+        var columnNames = [].concat.apply([], columnNames)
+
+        var caption = "<h4 align='center'>" + widget.title + "</h4>"
+
+        var height = widget.displayOptions.height || 400
+        var div = $("<div style='position: relative; overflow: auto; height:" + height + "px; text-align: left; line-height: normal; z-index: 0;'>")
+
+        var table = createTable(columnNames, rowData)
+
+        div.append(caption)
+
+        var centerWrapper = $("<table align='center'>")
+        var tr = $("<tr class='vertical-divider' valign='top'>")
+        var td = $("<td>")
+
+        td.append(table)
+        tr.append(td)
+        centerWrapper.append(tr)
+        div.append(centerWrapper)
+
+        $('#' + elementId).html(div)
+    }
+
+    _categoricalCheckboxCountWidget(elementId, widget, filterElement) {
+        console.log("WidgetEngine._categoricalCheckboxCountWidget")
+        var widgetElement = $('#' + elementId)
+
+        var caption = "<h4 align='center'>" + widget.title + "</h4>"
+
+        var height = widget.displayOptions.height || 400
+        var div = $("<div style='position: relative; overflow: auto; height:" + height + "px; text-align: left; line-height: normal; z-index: 0;'>")
+
+        var jumbotron = $("<div class='alert alert-very-light' role='alert'>")
+
+        var rowData = widget.data.map(function (checkCount) {
+            var checked = checkCount[0]
+            var count = checkCount[1]
+
+            var checkedAttr = checked ? " checked" : ""
+
+            var key = count.key
+
+            var checkbox = '<input type="checkbox" data-key="' + key + '"' + checkedAttr + '/>';
+
+            if (!key) {
+                checkbox = ""
+            }
+
+            var value = count.value;
+            if (checked) {
+                value = '<b>' + value + '</b>';
+            }
+            var count = (checked || !key) ? '(' + count.count + ')' : '---'
+            return [checkbox, value, count]
+        })
+
+        var checkboxTable = createTable(null, rowData, true)
+
+        jumbotron.append(checkboxTable)
+
+        div.append(caption)
+        div.append(jumbotron)
+
+        widgetElement.html(div)
+
+        // add a filter support
+
+        function findCheckedKeys() {
+            var keys = []
+            $.each(widgetElement.find('input:checkbox'), function () {
+                if ($(this).is(":checked")) {
+                    keys.push($(this).attr("data-key"))
+                }
+            });
+            return keys;
+        }
+
+        widgetElement.find('input:checkbox').on('change', function () {
+            var selectedKeys = findCheckedKeys();
+
+            if (selectedKeys.length > 0) {
+                var condition = {fieldName: widget.fieldName, conditionType: "in", value: selectedKeys}
+
+                $(filterElement).multiFilter('replaceWithConditionAndSubmit', condition);
+            } else
+                showError("At least one checkbox must be selected in the widget '" + widget.title + "'.")
+        });
+    }
+
+    _basicStatsWidget(elementId, widget) {
+        console.log("WidgetEngine._basicStatsWidget")
+        var caption = "<h4 align='center'>" + widget.title + "</h4>"
+        var columnNames = ["Stats", "Value"]
+
+        function roundOrInt(value) {
+            return Number.isInteger(value) ? value : value.toFixed(3)
+        }
+
+        var data = [
+            ["Min", roundOrInt(widget.data.min)],
+            ["Max", roundOrInt(widget.data.max)],
+            ["Sum", roundOrInt(widget.data.sum)],
+            ["Mean", roundOrInt(widget.data.mean)],
+            ["Variance", roundOrInt(widget.data.variance)],
+            ["STD", roundOrInt(widget.data.standardDeviation)],
+            ["# Defined", widget.data.definedCount],
+            ["# Undefined", widget.data.undefinedCount]
+        ]
+
+        var height = widget.displayOptions.height || 400
+        var div = $("<div style='position: relative; overflow: hidden; height:" + height + "px; text-align: left; line-height: normal; z-index: 0;'>")
+
+        var table = createTable(columnNames, data)
+
+        div.append(caption)
+
+        var centerWrapper = $("<table align='center'>")
+        var tr = $("<tr class='vertical-divider' valign='top'>")
+        var td = $("<td>")
+
+        td.append(table)
+        tr.append(td)
+        centerWrapper.append(tr)
+        div.append(centerWrapper)
+
+        $('#' + elementId).html(div)
+    }
+
+    _independenceTestWidget(elementId, widget) {
+        console.log("WidgetEngine._independenceTestWidget")
+        var caption = "<h4 align='center'>" + widget.title + "</h4>"
+
+        var height = widget.displayOptions.height || 400
+        var div = $("<div style='position: relative; overflow: hidden; height:" + height + "px; text-align: left; line-height: normal; z-index: 0;'>")
+
+        var table = createIndependenceTestTable(widget.data)
+
+        div.append(caption)
+
+        var centerWrapper = $("<table align='center'>")
+        var tr = $("<tr class='vertical-divider' valign='top'>")
+        var td = $("<td>")
+
+        td.append(table)
+        tr.append(td)
+        centerWrapper.append(tr)
+        div.append(centerWrapper)
+
+        $('#' + elementId).html(div)
+    }
+
+    _htmlWidget(elementId, widget) {
+        $('#' + elementId).html(widget.content)
+    }
+
+    ///////////////////////////////////////////////////////////////////
+    // Impl hooks of visual widgets (to be overridden in subclasses) //
+    ///////////////////////////////////////////////////////////////////
 
     _categoricalCountWidget(widgetId, widget, filterElement) {
         throw "no fun impl. provided"
     }
 
     _numericalCountWidget(widgetId, widget, filterElement) {
-        throw "no fun impl. provided"
-    }
-
-    _categoricalChecboxCountWidget(widgetId, widget, filterElement) {
         throw "no fun impl. provided"
     }
 
@@ -122,27 +380,7 @@ class WidgetEngine {
         throw "no fun impl. provided"
     }
 
-    _htmlWidget(widgetId, widget) {
-        throw "no fun impl. provided"
-    }
-
     _lineWidget(widgetId, widget, filterElement) {
-        throw "no fun impl. provided"
-    }
-
-    _independenceTestWidget(widgetId, widget) {
-        throw "no fun impl. provided"
-    }
-
-    _categoricalTableWidget(widgetId, widget) {
-        throw "no fun impl. provided"
-    }
-
-    _numericalTableWidget(widgetId, widget) {
-        throw "no fun impl. provided"
-    }
-
-    _basicStatsWidget(widgetId, widget) {
         throw "no fun impl. provided"
     }
 }
