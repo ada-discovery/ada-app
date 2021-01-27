@@ -1,7 +1,6 @@
 class HighchartsWidgetEngine {
 
     // Main function of this class
-    // TODO: rename to plot
     plot(widget, filterElement) {
         const widgetId = this._elementId(widget)
         this._plotWidgetForElement(widgetId, widget, filterElement)
@@ -86,8 +85,7 @@ class HighchartsWidgetEngine {
         return div
     }
 
-    // TODO: rename to refresh
-    refreshHighcharts() {
+    refresh() {
         Highcharts.charts.forEach(function (chart) {
             if (chart) chart.reflow();
         });

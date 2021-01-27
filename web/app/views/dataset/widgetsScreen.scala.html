@@ -60,7 +60,8 @@
                 $("#widgetsDiv").addClass("col-md-12");
                 $("#inputDiv").parent().removeClass("vertical-divider")
 
-                refreshHighcharts(); // TODO
+                const widgetEngine = new HighchartsWidgetEngine()
+                widgetEngine.refresh();
 
                 // TODO: this is a hack, generalize
                 const heatmapDiv = $("#heatmapDiv")
@@ -74,7 +75,8 @@
                 $("#widgetsDiv").addClass("col-md-8");
                 $("#inputDiv").parent().addClass("vertical-divider")
 
-                refreshHighcharts(); // TODO
+                const widgetEngine = new HighchartsWidgetEngine()
+                widgetEngine.refresh();
 
                 // TODO: this is a hack, generalize
                 const heatmapDiv = $("#heatmapDiv")
