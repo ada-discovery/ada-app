@@ -1,4 +1,4 @@
-class HighchartsWidgetEngine extends WidgetEngine {
+class HighchartsWidgetEnginex extends WidgetEngine {
 
     refresh() {
         Highcharts.charts.forEach(function (chart) {
