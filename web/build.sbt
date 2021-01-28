@@ -39,7 +39,7 @@ libraryDependencies ++= Seq(
   "org.webjars" % "respond" % "1.4.2",
   "org.webjars" % "highcharts" % "6.2.0",                // highcharts for plotting
   "org.webjars.npm" % "bootstrap-select" % "1.13.2",     // bootstrap select element
-  "org.webjars.bower" % "plotly.js" % "1.5.1",           // Plotly
+  "org.webjars.bower" % "plotly.js" % "1.54.1",          // Plotly
   "org.webjars.bower" % "d3" % "3.5.16",
   "org.webjars.bower" % "Autolinker.js" % "0.25.0",      // to convert links to a-href elements
   "org.webjars" % "jquery-ui" % "1.11.1",
