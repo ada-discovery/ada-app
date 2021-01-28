@@ -511,7 +511,7 @@ class HighchartsWidgetEngine extends WidgetEngine {
         function toTypedStringValue(value, ceiling) {
             var intValue = (ceiling) ? Math.ceil(value) : Math.floor(value)
 
-            return (isDate) ? msToStandardDateString(intValue) : (isDouble) ? value.toString() : intValue.toString()
+            return (isDate) ? msOrDateToStandardDateString(intValue) : (isDouble) ? value.toString() : intValue.toString()
         }
 
         chartElement.on('intervalSelected', function (event, data) {
@@ -610,10 +610,10 @@ class HighchartsWidgetEngine extends WidgetEngine {
 
     _addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate) {
         $('#' + elementId).on('areaSelected', function (event, data) {
-            var xMin = (isXDate) ? msToStandardDateString(data.xMin) : data.xMin.toString();
-            var xMax = (isXDate) ? msToStandardDateString(data.xMax) : data.xMax.toString();
-            var yMin = (isYDate) ? msToStandardDateString(data.yMin) : data.yMin.toString();
-            var yMax = (isYDate) ? msToStandardDateString(data.yMax) : data.yMax.toString();
+            var xMin = (isXDate) ? msOrDateToStandardDateString(data.xMin) : data.xMin.toString();
+            var xMax = (isXDate) ? msOrDateToStandardDateString(data.xMax) : data.xMax.toString();
+            var yMin = (isYDate) ? msOrDateToStandardDateString(data.yMin) : data.yMin.toString();
+            var yMax = (isYDate) ? msOrDateToStandardDateString(data.yMax) : data.yMax.toString();
 
             var conditions = [
                 {fieldName: widget.xFieldName, conditionType: ">=", value: xMin},

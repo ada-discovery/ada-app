@@ -639,7 +639,7 @@ function createIndependenceTestTable(results, withTestType) {
   return createTable(header, rowData);
 }
 
-function msToStandardDateString(ms) {
+function msOrDateToStandardDateString(ms) {
   var date = new Date(ms)
   return date.getFullYear() + '-' +('0' + (date.getMonth()+1)).slice(-2)+ '-' + date.getDate() + ' ' + date.getHours() + ':'+('0' + (date.getMinutes())).slice(-2)+ ':' + date.getSeconds();
 }
