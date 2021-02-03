@@ -138,4 +138,78 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             }
         });
     }
+
+    // impl
+    _boxWidget(elementId, widget) {
+        const isDate = widget.fieldType == "Date"
+        const dataType = (isDate) ? 'date' : null;
+
+        const datas = widget.data.map(function (namedQuartiles) {
+            const quartiles = namedQuartiles[1]
+            return {
+                y: [quartiles.lowerWhisker, quartiles.lowerQuantile, quartiles.lowerQuantile, quartiles.median, quartiles.upperQuantile, quartiles.upperQuantile, quartiles.upperWhisker],
+                type: "box",
+                name: namedQuartiles[0]
+            }
+        })
+
+        const height = widget.displayOptions.height || 400
+
+        this._boxPlot({
+            title: widget.title,
+            chartElementId: elementId,
+            xAxisCaption: widget.xAxisCaption,
+            yAxisCaption: widget.yAxisCaption,
+            data: datas,
+            min: widget.min,
+            max: widget.max,
+            showLegend: false,
+            height,
+            dataType
+        })
+    }
+
+    _boxPlot({
+        title,
+        chartElementId,
+        xAxisCaption,
+        yAxisCaption,
+        data,
+        min,
+        max,
+        showLegend,
+        height,
+        dataType
+    }) {
+        console.log("Min: " + min)
+        console.log("Max: " + max)
+        console.log("Y Type: " + dataType)
+
+        const yRange = (min && max) ? [min, max] : null
+
+        const layout = {
+            height: height,
+            xaxis: {
+                title: xAxisCaption
+            },
+            yaxis: {
+                title: yAxisCaption,
+                type: dataType,
+                range: yRange
+            },
+            legend: {
+                y: 0.5,
+                yref: 'paper',
+                font: {
+                    family: 'Lucida Grande',
+                    size: 12,
+                    color: 'dimGrey',
+                }
+            },
+            title: title,
+            showlegend: showLegend
+        };
+
+        Plotly.newPlot(chartElementId, data, layout);
+    }
 }
