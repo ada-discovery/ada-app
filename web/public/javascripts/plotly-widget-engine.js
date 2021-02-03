@@ -52,7 +52,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         xDataType,
         yDataType
     }) {
-        var layout = {
+        const layout = {
             height: height,
             hovermode:'closest',
             xaxis: {
@@ -70,9 +70,9 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     family: 'Lucida Grande',
                     size: 12,
                     color: 'dimGrey',
-                },
-                showlegend: showLegend
+                }
             },
+            showlegend: showLegend,
             title: title
         };
 
