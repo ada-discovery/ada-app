@@ -1,15 +1,15 @@
 class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
-    _font_family = 'Helvetica'
+    _fontFamily = 'Helvetica'
 
     _font = {
-        family: this._font_family,
+        family: this._fontFamily,
         size: 12,
         color: '#666666'
     }
 
     _tickFont = {
-        family: this._font_family,
+        family: this._fontFamily,
         size: 11,
         color: '#666666'
     }
@@ -44,8 +44,8 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     symbol: that._lineSymbols[index % that._lineSymbolsCount]
                 },
                 textfont: {
-                    family:  'Lucida Grande'
-                },
+                    family: that._fontFamily
+                }
             }
         })
 
@@ -99,11 +99,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             legend: {
                 y: 0.5,
                 yref: 'paper',
-                font: {
-                    family: 'Lucida Grande',
-                    size: 12,
-                    color: 'dimGrey',
-                }
+                font: this._font
             },
             showlegend: showLegend,
             title: title
@@ -233,11 +229,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             legend: {
                 y: 0.5,
                 yref: 'paper',
-                font: {
-                    family: 'Lucida Grande',
-                    size: 12,
-                    color: 'dimGrey',
-                }
+                font: this._font
             },
             title: title,
             showlegend: showLegend
