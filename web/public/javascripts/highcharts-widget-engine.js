@@ -455,24 +455,24 @@ class HighchartsWidgetEnginex extends WidgetEngine {
 
     // impl
     _lineWidget(elementId, widget, filterElement) {
-        var isDate = widget.xFieldType == "Date"
-        var isDouble = widget.xFieldType == "Double"
-        var xDataType = (isDate) ? 'datetime' : null;
+        const isDate = widget.xFieldType == "Date"
+        const isDouble = widget.xFieldType == "Double"
+        const xDataType = (isDate) ? 'datetime' : null;
 
-        var isYDate = widget.yFieldType == "Date"
-        var yDataType = (isYDate) ? 'datetime' : null;
+        const isYDate = widget.yFieldType == "Date"
+        const yDataType = (isYDate) ? 'datetime' : null;
 
-        var datas = widget.data.map(function (nameSeries) {
+        const datas = widget.data.map(function (nameSeries) {
             return {name: nameSeries[0], data: nameSeries[1]}
         })
 
-        var seriesSize = datas.length
-        var showLegend = seriesSize > 1
+        const seriesSize = datas.length
+        const showLegend = seriesSize > 1
 
-        var height = widget.displayOptions.height || 400
+        const height = widget.displayOptions.height || 400
 
         const that = this
-        var pointFormat = function () {
+        const pointFormat = function () {
             return that._numericalPointFormat(isDate, isDouble, this, 3, 3);
         }
 
@@ -576,17 +576,17 @@ class HighchartsWidgetEnginex extends WidgetEngine {
 
     // impl
     _scatterWidget(elementId, widget, filterElement) {
-        var datas = widget.data.map(function (series) {
+        const datas = widget.data.map(function (series) {
             return {name: shorten(series[0]), data: series[1]}
         })
 
-        var height = widget.displayOptions.height || 400;
+        const height = widget.displayOptions.height || 400;
 
-        var isXDate = widget.xFieldType == "Date"
-        var xDataType = (isXDate) ? 'datetime' : null;
+        const isXDate = widget.xFieldType == "Date"
+        const xDataType = (isXDate) ? 'datetime' : null;
 
-        var isYDate = widget.yFieldType == "Date"
-        var yDataType = (isYDate) ? 'datetime' : null;
+        const isYDate = widget.yFieldType == "Date"
+        const yDataType = (isYDate) ? 'datetime' : null;
 
         if (filterElement) {
             this._addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate);
@@ -610,12 +610,12 @@ class HighchartsWidgetEnginex extends WidgetEngine {
 
     _addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate) {
         $('#' + elementId).on('areaSelected', function (event, data) {
-            var xMin = (isXDate) ? msOrDateToStandardDateString(data.xMin) : data.xMin.toString();
-            var xMax = (isXDate) ? msOrDateToStandardDateString(data.xMax) : data.xMax.toString();
-            var yMin = (isYDate) ? msOrDateToStandardDateString(data.yMin) : data.yMin.toString();
-            var yMax = (isYDate) ? msOrDateToStandardDateString(data.yMax) : data.yMax.toString();
+            const xMin = (isXDate) ? msOrDateToStandardDateString(data.xMin) : data.xMin.toString();
+            const xMax = (isXDate) ? msOrDateToStandardDateString(data.xMax) : data.xMax.toString();
+            const yMin = (isYDate) ? msOrDateToStandardDateString(data.yMin) : data.yMin.toString();
+            const yMax = (isYDate) ? msOrDateToStandardDateString(data.yMax) : data.yMax.toString();
 
-            var conditions = [
+            const conditions = [
                 {fieldName: widget.xFieldName, conditionType: ">=", value: xMin},
                 {fieldName: widget.xFieldName, conditionType: "<=", value: xMax},
                 {fieldName: widget.yFieldName, conditionType: ">=", value: yMin},
