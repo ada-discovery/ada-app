@@ -1,5 +1,19 @@
 class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
+    _font_family = 'Helvetica'
+
+    _font = {
+        family: this._font_family,
+        size: 12,
+        color: '#666666'
+    }
+
+    _tickFont = {
+        family: this._font_family,
+        size: 11,
+        color: '#666666'
+    }
+
     // impl
     _scatterWidget(elementId, widget, filterElement) {
         const series = widget.data.map(function (series) {
