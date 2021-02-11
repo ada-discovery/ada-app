@@ -14,16 +14,35 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         color: '#666666'
     }
 
+    _lineCoreSymbols =
+        ["circle", "diamond", "star", "triangle-up", "square-x", "cross", "hexagram", "bowtie", "star-square", "hourglass"]
+
+    _lineOpenSymbols =
+        this._lineCoreSymbols.map(function(symbol) {return symbol + "-open"})
+
+    _lineDotSymbols =
+        this._lineCoreSymbols.map(function(symbol) {return symbol + "-dot"})
+
+    _lineSymbols =
+        this._lineCoreSymbols.concat(this._lineOpenSymbols).concat(this._lineDotSymbols)
+
+    _lineSymbolsCount = this._lineSymbols.length
+
     // impl
     _scatterWidget(elementId, widget, filterElement) {
-        const series = widget.data.map(function (series) {
+        const that = this
+
+        const series = widget.data.map(function (series, index) {
             return {
                 x: series[1].map(function (pairs) { return pairs[0] }),
                 y: series[1].map(function (pairs) { return pairs[1] }),
                 mode: 'markers',
                 type: 'scatter',
                 name: shorten(series[0]),
-                marker: { size: 6 },
+                marker: {
+                    size: 6,
+                    symbol: that._lineSymbols[index % that._lineSymbolsCount]
+                },
                 textfont: {
                     family:  'Lucida Grande'
                 },
