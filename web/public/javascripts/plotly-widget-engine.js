@@ -243,8 +243,9 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
     }
 
     // impl
-    _lineWidget(elementId, widget) {
+    _lineWidget(elementId, widget, filterElement) {
         const isXDate = widget.xFieldType == "Date"
+        const isXDouble = widget.xFieldType == "Double"
         const xDataType = (isXDate) ? 'date' : null;
 
         const isYDate = widget.yFieldType == "Date"
@@ -288,6 +289,10 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             xDataType,
             yDataType
         })
+
+        if (filterElement) {
+            this._addXAxisZoomed(elementId, filterElement, widget.xFieldName, isXDouble, isXDate)
+        }
     }
 
     _linePlot({
@@ -342,6 +347,25 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         Plotly.newPlot(chartElementId, data, layout)
 
         this._addAreaSelected(chartElementId)
+    }
+
+    _addXAxisZoomed(elementId, filterElement, fieldName, isDouble, isDate) {
+        $("#" + elementId).get(0).on('plotly_relayout', function(eventData) {
+            const xMin = eventData["xaxis.range[0]"]
+            const xMax = eventData["xaxis.range[1]"]
+
+            if (xMin) {
+                const xMinOut = asTypedStringValue(xMin, isDouble, isDate, true)
+                const xMaxOut = asTypedStringValue(xMax, isDouble, isDate, false)
+
+                const conditions = [
+                    {fieldName: fieldName, conditionType: ">=", value: xMinOut},
+                    {fieldName: fieldName, conditionType: "<=", value: xMaxOut}
+                ]
+
+                $(filterElement).multiFilter('addConditionsAndSubmit', conditions);
+            }
+        });
     }
 
     _axis({
