@@ -343,31 +343,46 @@ function showArrayFieldChart(id, fieldName, fieldLabel) {
             $("#lineChartDiv").html("")
 
             var series = []
-            var pointFormat = '<span style="color:{point.color}">{point.x:.2f}</span>: <b>{point.y:.2f}</b><br/>'
+            // TODO: do we want to use a special point format?
+            const pointFormat = '<span style="color:{point.color}">{point.x:.2f}</span>: <b>{point.y:.2f}</b><br/>'
 
             if (data && data.length > 0) {
-                var flattenData = $.map(data, function (item, i) {
+                const flattenData = $.map(data, function (item, i) {
                     return flatten(item)
                 });
 
-                var firstItem = flattenData[0]
+                const firstItem = flattenData[0]
 
-                var numericKeys = Object.keys(firstItem).filter(function(key) {
+                const numericKeys = Object.keys(firstItem).filter(function(key) {
                     return !isNaN(firstItem[key])
                 });
 
                 series = $.map(numericKeys, function (key, j) {
-                    var seriesData = $.map(flattenData, function (item, i) {
-                        return item[key];
+                    const seriesData = $.map(flattenData, function (item, i) {
+                        return [[i, item[key]]]
                     });
-                    return [{name: key, data: seriesData}]
+                    return [[key, seriesData]]
                 });
             }
 
             $('#lineChartArrayModal').modal("show");
 
+            const widgetEngine = new HighchartsWidgetEngine()
+
             $('#lineChartArrayModal').on('shown.bs.modal', function (e) {
-                lineChart(fieldLabel, "lineChartDiv", null, series, 'Point', 'Value', true, false, pointFormat, null, null, false, false,  false);
+                const widget = {
+                    concreteClass: "org.ada.web.models.LineWidget",
+                    title: fieldLabel,
+                    xAxisCaption: "Point",
+                    yAxisCaption: "Value",
+                    data: series,
+                    displayOptions: {
+                        gridWidth: 12,
+                        height: 450
+                    }
+                }
+
+                widgetEngine.plotForElement("lineChartDiv", widget)
             })
         },
         error: showErrorResponse
