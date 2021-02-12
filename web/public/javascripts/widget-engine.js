@@ -4,20 +4,20 @@ class WidgetEngine {
     plot(widget, filterElement) {
         console.log("WidgetEngine.plot called")
         const widgetId = this._elementId(widget)
-        this._plotWidgetForElement(widgetId, widget, filterElement)
+        this.plotForElement(widgetId, widget, filterElement)
     }
 
-    _plotWidgetForElement(widgetId, widget, filterElement) {
+    plotForElement(widgetElementId, widget, filterElement) {
         if (widget.displayOptions.isTextualForm)
             switch (widget.concreteClass) {
                 case "org.ada.web.models.CategoricalCountWidget":
-                    this._categoricalTableWidget(widgetId, widget);
+                    this._categoricalTableWidget(widgetElementId, widget);
                     break;
                 case "org.ada.web.models.NumericalCountWidget":
-                    this._numericalTableWidget(widgetId, widget);
+                    this._numericalTableWidget(widgetElementId, widget);
                     break;
                 case "org.ada.web.models.BasicStatsWidget":
-                    this._basicStatsWidget(widgetId, widget);
+                    this._basicStatsWidget(widgetElementId, widget);
                     break;
                 default:
                     console.log(widget.concreteClass + " does not have a textual representation.")
@@ -25,40 +25,40 @@ class WidgetEngine {
         else
             switch (widget.concreteClass) {
                 case "org.ada.web.models.CategoricalCountWidget":
-                    this._categoricalCountWidget(widgetId, widget, filterElement);
+                    this._categoricalCountWidget(widgetElementId, widget, filterElement);
                     break;
                 case "org.ada.web.models.NumericalCountWidget":
-                    this._numericalCountWidget(widgetId, widget, filterElement);
+                    this._numericalCountWidget(widgetElementId, widget, filterElement);
                     break;
                 case "org.ada.web.models.CategoricalCheckboxCountWidget":
-                    this._categoricalCheckboxCountWidget(widgetId, widget, filterElement);
+                    this._categoricalCheckboxCountWidget(widgetElementId, widget, filterElement);
                     break;
                 case "org.ada.web.models.BoxWidget":
-                    this._boxWidget(widgetId, widget);
+                    this._boxWidget(widgetElementId, widget);
                     break;
                 case "org.ada.web.models.ScatterWidget":
-                    this._scatterWidget(widgetId, widget, filterElement);
+                    this._scatterWidget(widgetElementId, widget, filterElement);
                     break;
                 case "org.ada.web.models.ValueScatterWidget":
-                    this._valueScatterWidget(widgetId, widget, filterElement);
+                    this._valueScatterWidget(widgetElementId, widget, filterElement);
                     break;
                 case "org.ada.web.models.HeatmapWidget":
-                    this._heatmapWidget(widgetId, widget);
+                    this._heatmapWidget(widgetElementId, widget);
                     break;
                 case "org.ada.web.models.HtmlWidget":
-                    this._htmlWidget(widgetId, widget);
+                    this._htmlWidget(widgetElementId, widget);
                     break;
                 case 'org.ada.web.models.LineWidget':
-                    this._lineWidget(widgetId, widget, filterElement);
+                    this._lineWidget(widgetElementId, widget, filterElement);
                     break;
                 case "org.ada.web.models.BasicStatsWidget":
-                    this._basicStatsWidget(widgetId, widget);
+                    this._basicStatsWidget(widgetElementId, widget);
                     break;
                 case "org.ada.web.models.IndependenceTestWidget":
-                    this._independenceTestWidget(widgetId, widget);
+                    this._independenceTestWidget(widgetElementId, widget);
                     break;
                 default:
-                    console.log("Widget type" + widget.concreteClass + " unrecognized.")
+                    console.log("Widget type " + widget.concreteClass + " unrecognized.")
             }
     }
 
