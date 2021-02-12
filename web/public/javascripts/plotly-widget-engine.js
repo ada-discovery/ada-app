@@ -90,14 +90,17 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         const layout = {
             height: height,
             hovermode:'closest',
-            xaxis: {
+            xaxis: this._axis({
                 title: xAxisCaption,
-                type: xDataType
-            },
-            yaxis: {
+                dataType: xDataType,
+                showLine: true,
+                showTicks: true
+            }),
+            yaxis: this._axis({
                 title: yAxisCaption,
-                type: yDataType
-            },
+                dataType: yDataType,
+                showGrid: true
+            }),
             legend: {
                 y: 0.5,
                 yref: 'paper',
@@ -216,14 +219,17 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
         const layout = {
             height: height,
-            xaxis: {
-                title: xAxisCaption
-            },
-            yaxis: {
+            xaxis: this._axis({
+                title: xAxisCaption,
+                showLine: true,
+                showTicks: true
+            }),
+            yaxis: this._axis({
                 title: yAxisCaption,
-                type: dataType,
-                range: yRange
-            },
+                dataType: dataType,
+                range: yRange,
+                showGrid: true
+            }),
             legend: {
                 y: 0.5,
                 yref: 'paper',
@@ -234,5 +240,32 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         };
 
         Plotly.newPlot(chartElementId, data, layout);
+    }
+
+    _axis({
+        title,
+        dataType,
+        range,
+        showGrid = false,
+        showLine = false,
+        showTicks = false
+    }) {
+        return {
+            title: {
+                text: title,
+                font: this._font,
+                standoff: 10
+            },
+            tickfont: this._tickFont,
+            ticklen: (showTicks) ? 8 : null,
+            tickcolor: (showTicks )? '#D8D8D8' : null,
+            linecolor: '#D8D8D8',
+            linewidth: 1,
+            type: dataType,
+            range: range,
+            showgrid: showGrid,
+            zeroline: false,
+            showline: showLine
+        }
     }
 }
