@@ -108,9 +108,9 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             },
             showlegend: showLegend,
             title: title
-        };
+        }
 
-        Plotly.newPlot(chartElementId, series, layout);
+        Plotly.newPlot(chartElementId, series, layout)
 
         this._addAreaSelected(chartElementId)
     }
@@ -170,7 +170,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
                 Plotly.relayout(elementId, 'annotations[0]', newAnnotation);
             }
-        });
+        })
     }
 
     // impl
@@ -237,9 +237,9 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             },
             title: title,
             showlegend: showLegend
-        };
+        }
 
-        Plotly.newPlot(chartElementId, data, layout);
+        Plotly.newPlot(chartElementId, data, layout)
     }
 
     // impl
@@ -337,7 +337,9 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             showlegend: showLegend
         }
 
-        Plotly.newPlot(chartElementId, data, layout);
+        Plotly.newPlot(chartElementId, data, layout)
+
+        this._addAreaSelected(chartElementId)
     }
 
     _axis({
