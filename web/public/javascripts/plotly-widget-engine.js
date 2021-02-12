@@ -109,12 +109,10 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
         Plotly.newPlot(chartElementId, series, layout);
 
-        this._addScatterAreaSelected(chartElementId)
+        this._addAreaSelected(chartElementId)
     }
 
     _addScatterAreaZoomed(elementId, filterElement, widget, isXDouble, isXDate, isYDouble, isYDate) {
-        const that = this
-
         $("#" + elementId).get(0).on('plotly_relayout', function(eventData) {
             const xMin = eventData["xaxis.range[0]"]
             const xMax = eventData["xaxis.range[1]"]
@@ -139,7 +137,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         });
     }
 
-    _addScatterAreaSelected(elementId) {
+    _addAreaSelected(elementId) {
         const element = $("#" + elementId).get(0)
 
         element.on('plotly_selected', function(eventData) {
@@ -214,10 +212,6 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         height,
         dataType
     }) {
-        console.log("Min: " + min)
-        console.log("Max: " + max)
-        console.log("Y Type: " + dataType)
-
         const yRange = (min && max) ? [min, max] : null
 
         const layout = {
