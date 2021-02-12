@@ -644,6 +644,14 @@ function msOrDateToStandardDateString(ms) {
   return date.getFullYear() + '-' +('0' + (date.getMonth()+1)).slice(-2)+ '-' + date.getDate() + ' ' + date.getHours() + ':'+('0' + (date.getMinutes())).slice(-2)+ ':' + date.getSeconds();
 }
 
+function asTypedStringValue(value, isDouble, isDate, ceiling) {
+  function intValue() { return (ceiling) ? Math.ceil(value) : Math.floor(value) }
+
+  return (isDate) ? msOrDateToStandardDateString(value) :
+      (isDouble) ? value.toString() :
+          intValue().toString()
+}
+
 function addFilterModelBeforeModalSubmit(modalId, filterElement, filterParamName) {
   $('#' + modalId + ' form').submit(function(event) {
     event.preventDefault();
