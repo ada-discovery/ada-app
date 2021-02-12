@@ -242,6 +242,104 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         Plotly.newPlot(chartElementId, data, layout);
     }
 
+    // impl
+    _lineWidget(elementId, widget) {
+        const isXDate = widget.xFieldType == "Date"
+        const xDataType = (isXDate) ? 'date' : null;
+
+        const isYDate = widget.yFieldType == "Date"
+        const yDataType = (isYDate) ? 'date' : null;
+
+        const that = this
+
+        const datas = widget.data.map(function (nameSeries, index) {
+            return {
+                name: nameSeries[0],
+                x: nameSeries[1].map(function (pairs) { return pairs[0] }),
+                y: nameSeries[1].map(function (pairs) { return pairs[1] }),
+                mode: 'lines+markers',
+                type: 'scatter',
+                marker: {
+                    size: 6,
+                    symbol: that._lineSymbols[index % 20]
+                },
+                textfont: {
+                    family:  that._fontFamily
+                }
+            }
+        })
+
+        const height = widget.displayOptions.height || 400
+
+        this._linePlot({
+            title: widget.title,
+            chartElementId: elementId,
+            xAxisCaption: widget.xAxisCaption,
+            yAxisCaption: widget.yAxisCaption,
+            data: datas,
+            xMin: widget.xMin,
+            xMax: widget.xMax,
+            yMin: widget.yMin,
+            yMax: widget.yMax,
+            showLegend: true,
+            height,
+            xDataType,
+            yDataType
+        })
+    }
+
+    _linePlot({
+        title,
+        chartElementId,
+        xAxisCaption,
+        yAxisCaption,
+        data,
+        xMin,
+        xMax,
+        yMin,
+        yMax,
+        showLegend,
+        height,
+        xDataType,
+        yDataType
+    }) {
+        const xRange = (xMin && xMax) ? [xMin, xMax] : null
+        const yRange = (yMin && yMax) ? [yMin, yMax] : null
+
+        const layout = {
+            margin: {
+                l: 40,
+                r: 40,
+                t: 40,
+                b: 40
+            },
+            height: height,
+            hovermode:'closest',
+            xaxis: this._axis({
+                title: xAxisCaption,
+                dataType: xDataType,
+                range: xRange,
+                showLine: true,
+                showTicks: true
+            }),
+            yaxis: this._axis({
+                title: yAxisCaption,
+                dataType: yDataType,
+                range: yRange,
+                showGrid: true
+            }),
+            legend: {
+                y: 0.5,
+                yref: 'paper',
+                font: this._font
+            },
+            title: title,
+            showlegend: showLegend
+        }
+
+        Plotly.newPlot(chartElementId, data, layout);
+    }
+
     _axis({
         title,
         dataType,
