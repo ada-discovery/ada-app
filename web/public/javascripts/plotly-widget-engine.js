@@ -52,9 +52,11 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         const height = widget.displayOptions.height || 400;
 
         const isXDate = widget.xFieldType == "Date"
+        const isXDouble = widget.xFieldType == "Double"
         const xDataType = (isXDate) ? 'date' : null;
 
         const isYDate = widget.yFieldType == "Date"
+        const isYDouble = widget.yFieldType == "Double"
         const yDataType = (isYDate) ? 'date' : null;
 
         this._scatterChart({
@@ -70,7 +72,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         })
 
         if (filterElement) {
-            this._addScatterAreaZoomed(elementId, filterElement, widget, isXDate, isYDate);
+            this._addScatterAreaZoomed(elementId, filterElement, widget, isXDouble, isXDate, isYDouble, isYDate);
         }
     }
 
@@ -110,7 +112,9 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         this._addScatterAreaSelected(chartElementId)
     }
 
-    _addScatterAreaZoomed(elementId, filterElement, widget, isXDate, isYDate) {
+    _addScatterAreaZoomed(elementId, filterElement, widget, isXDouble, isXDate, isYDouble, isYDate) {
+        const that = this
+
         $("#" + elementId).get(0).on('plotly_relayout', function(eventData) {
             const xMin = eventData["xaxis.range[0]"]
             const xMax = eventData["xaxis.range[1]"]
@@ -118,12 +122,12 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             const yMax = eventData["yaxis.range[1]"]
 
             if (xMin) {
-                const xMinOut = (isXDate) ? msOrDateToStandardDateString(xMin) : xMin.toString();
-                const xMaxOut = (isXDate) ? msOrDateToStandardDateString(xMax) : xMax.toString();
-                const yMinOut = (isYDate) ? msOrDateToStandardDateString(yMin) : yMin.toString();
-                const yMaxOut = (isYDate) ? msOrDateToStandardDateString(yMax) : yMax.toString();
+                const xMinOut = asTypedStringValue(xMin, isXDouble, isXDate, true)
+                const xMaxOut = asTypedStringValue(xMax, isXDouble, isXDate, false)
+                const yMinOut = asTypedStringValue(yMin, isYDouble, isYDate, true)
+                const yMaxOut = asTypedStringValue(yMax, isYDouble, isYDate, false)
 
-                var conditions = [
+                const conditions = [
                     {fieldName: widget.xFieldName, conditionType: ">=", value: xMinOut},
                     {fieldName: widget.xFieldName, conditionType: "<=", value: xMaxOut},
                     {fieldName: widget.yFieldName, conditionType: ">=", value: yMinOut},
