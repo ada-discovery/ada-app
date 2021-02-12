@@ -466,8 +466,7 @@ class HighchartsWidgetEnginex extends WidgetEngine {
             return {name: nameSeries[0], data: nameSeries[1]}
         })
 
-        const seriesSize = datas.length
-        const showLegend = seriesSize > 1
+        const showLegend = datas.length > 1
 
         const height = widget.displayOptions.height || 400
 

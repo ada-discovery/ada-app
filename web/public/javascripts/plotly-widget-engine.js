@@ -271,6 +271,8 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
         const height = widget.displayOptions.height || 400
 
+        const showLegend = datas.length > 1
+
         this._linePlot({
             title: widget.title,
             chartElementId: elementId,
@@ -281,7 +283,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             xMax: widget.xMax,
             yMin: widget.yMin,
             yMax: widget.yMax,
-            showLegend: true,
+            showLegend: showLegend,
             height,
             xDataType,
             yDataType
