@@ -94,28 +94,18 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         xDataType,
         yDataType
     }) {
-        const layout = {
-            height: height,
-            hovermode:'closest',
-            xaxis: this._axis({
-                title: xAxisCaption,
-                dataType: xDataType,
-                showLine: true,
-                showTicks: true
-            }),
-            yaxis: this._axis({
-                title: yAxisCaption,
-                dataType: yDataType,
-                showGrid: true
-            }),
-            legend: {
-                y: 0.5,
-                yref: 'paper',
-                font: this._font
-            },
-            showlegend: showLegend,
-            title: title
-        }
+        const layout = this._layout({
+            title,
+            xAxisCaption,
+            xDataType,
+            xShowLine: true,
+            xShowTicks: true,
+            yAxisCaption,
+            yDataType,
+            yShowGrid: true,
+            showLegend,
+            height
+        })
 
         Plotly.newPlot(chartElementId, series, layout)
 
@@ -224,27 +214,18 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
     }) {
         const yRange = (min && max) ? [min, max] : null
 
-        const layout = {
-            height: height,
-            xaxis: this._axis({
-                title: xAxisCaption,
-                showLine: true,
-                showTicks: true
-            }),
-            yaxis: this._axis({
-                title: yAxisCaption,
-                dataType: dataType,
-                range: yRange,
-                showGrid: true
-            }),
-            legend: {
-                y: 0.5,
-                yref: 'paper',
-                font: this._font
-            },
-            title: title,
-            showlegend: showLegend
-        }
+        const layout = this._layout({
+            title,
+            xAxisCaption,
+            xShowLine: true,
+            xShowTicks: true,
+            yAxisCaption,
+            yDataType: dataType,
+            yRange,
+            yShowGrid: true,
+            showLegend,
+            height
+        })
 
         Plotly.newPlot(chartElementId, data, layout)
     }
@@ -320,36 +301,20 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         const xRange = (xMin && xMax) ? [xMin, xMax] : null
         const yRange = (yMin && yMax) ? [yMin, yMax] : null
 
-        const layout = {
-            margin: {
-                l: 40,
-                r: 40,
-                t: 40,
-                b: 40
-            },
-            height: height,
-            hovermode:'closest',
-            xaxis: this._axis({
-                title: xAxisCaption,
-                dataType: xDataType,
-                range: xRange,
-                showLine: true,
-                showTicks: true
-            }),
-            yaxis: this._axis({
-                title: yAxisCaption,
-                dataType: yDataType,
-                range: yRange,
-                showGrid: true
-            }),
-            legend: {
-                y: 0.5,
-                yref: 'paper',
-                font: this._font
-            },
-            title: title,
-            showlegend: showLegend
-        }
+        const layout = this._layout({
+            title,
+            xAxisCaption,
+            xDataType,
+            xRange,
+            xShowLine: true,
+            xShowTicks: true,
+            yAxisCaption,
+            yDataType,
+            yRange,
+            yShowGrid: true,
+            showLegend,
+            height
+        })
 
         Plotly.newPlot(chartElementId, data, layout)
 
