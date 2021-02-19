@@ -14,6 +14,13 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         color: '#666666'
     }
 
+    _margin ={
+        l: 40,
+        r: 40,
+        t: 40,
+        b: 40
+    }
+
     _lineCoreSymbols =
         ["circle", "diamond", "star", "triangle-up", "square-x", "cross", "hexagram", "bowtie", "star-square", "hourglass"]
 
@@ -366,6 +373,53 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 $(filterElement).multiFilter('addConditionsAndSubmit', conditions);
             }
         });
+    }
+
+    _layout({
+        title,
+        xAxisCaption,
+        xDataType,
+        xRange,
+        xShowGrid,
+        xShowLine,
+        xShowTicks,
+        yAxisCaption,
+        yDataType,
+        yRange,
+        yShowGrid,
+        yShowLine,
+        yShowTicks,
+        showLegend,
+        height
+    }) {
+        return {
+            margin: this._margin,
+            height: height,
+            hovermode:'closest',
+            xaxis: this._axis({
+                title: xAxisCaption,
+                dataType: xDataType,
+                range: xRange,
+                showGrid: xShowGrid,
+                showLine: xShowLine,
+                showTicks: xShowTicks
+            }),
+            yaxis: this._axis({
+                title: yAxisCaption,
+                dataType: yDataType,
+                range: yRange,
+                showGrid: yShowGrid,
+                showLine: yShowLine,
+                showTicks: yShowTicks
+            }),
+            legend: {
+                y: 0.5,
+                yref: 'paper',
+                font: this._font
+            },
+            title: title,
+            showlegend: showLegend
+        }
     }
 
     _axis({
