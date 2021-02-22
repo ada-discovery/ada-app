@@ -335,6 +335,57 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         this._addAreaSelected(chartElementId)
     }
 
+    _categoricalCountWidget(elementId, widget, filterElement) {
+        const that = this
+
+        const datas = widget.data.map(function (nameSeries) {
+            const name = nameSeries[0]
+            const series = nameSeries[1]
+
+            const sum = that._agg(series, widget)
+            const data = series.map(function (item) {
+                const label = shorten(item.value)
+                const count = item.count
+                const key = item.key
+
+                const percent = 100 * count / sum
+                const value = (widget.useRelativeValues) ? percent : count
+                const displayPercent = percent.toFixed(1) + "%"
+                const text = (widget.useRelativeValues) ? displayPercent : count + " (" + displayPercent + ")"
+                return {x: label, y: value, text: text, key: key}
+            })
+
+            return [name, data]
+        })
+
+        const seriesSize = datas.length
+        const height = widget.displayOptions.height || 400
+
+        const yAxisCaption = (widget.useRelativeValues) ? '%' : 'Count'
+
+        function plot(chartType) {
+            that._categoricalWidgetAux({
+                chartType,
+                datas,
+                seriesSize,
+                title: widget.title,
+                yAxisCaption,
+                chartElementId: elementId,
+                showLabels: widget.showLabels,
+                showLegend: widget.showLegend,
+                height,
+                useRelativeValues: widget.useRelativeValues
+            })
+        }
+
+
+        $('#' + elementId).on('chartTypeChanged', function (event, chartType) {
+            plot(chartType);
+        })
+
+        plot(widget.displayOptions.chartType)
+    }
+
     _addXAxisZoomed(elementId, filterElement, fieldName, isDouble, isDate) {
         $("#" + elementId).get(0).on('plotly_relayout', function(eventData) {
             const xMin = eventData["xaxis.range[0]"]
@@ -396,6 +447,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 yref: 'paper',
                 font: this._font
             },
+            bargroupgap: 0.1, // only for bar chart
             title: title,
             showlegend: showLegend
         }
