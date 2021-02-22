@@ -663,7 +663,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             title: {
                 text: title,
                 font: this._font,
-                standoff: 10
+                standoff: 12
             },
             tickfont: this._tickFont,
             ticklen: (showTicks) ? 8 : null,
@@ -674,7 +674,8 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             range: range,
             showgrid: showGrid,
             zeroline: false,
-            showline: showLine
+            showline: showLine,
+            automargin: true
         }
     }
 
