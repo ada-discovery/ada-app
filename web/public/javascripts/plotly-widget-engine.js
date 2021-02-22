@@ -276,7 +276,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
         const showLegend = datas.length > 1
 
-        this._linePlot({
+        this._lineChart({
             title: widget.title,
             chartElementId: elementId,
             xAxisCaption: widget.xAxisCaption,
@@ -297,7 +297,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         }
     }
 
-    _linePlot({
+    _lineChart({
         title,
         chartElementId,
         xAxisCaption,
