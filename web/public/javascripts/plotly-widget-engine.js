@@ -253,35 +253,16 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         const isYDate = widget.yFieldType == "Date"
         const yDataType = (isYDate) ? 'date' : null;
 
-        const that = this
-
-        const datas = widget.data.map(function (nameSeries, index) {
-            return {
-                name: nameSeries[0],
-                x: nameSeries[1].map(function (pairs) { return pairs[0] }),
-                y: nameSeries[1].map(function (pairs) { return pairs[1] }),
-                mode: 'lines+markers',
-                type: 'scatter',
-                marker: {
-                    size: 6,
-                    symbol: that._lineSymbols[index % that._lineSymbolsCount]
-                },
-                textfont: {
-                    family:  that._fontFamily
-                }
-            }
-        })
-
         const height = widget.displayOptions.height || 400
 
-        const showLegend = datas.length > 1
+        const showLegend = widget.data.length > 1
 
         this._lineChart({
             title: widget.title,
             chartElementId: elementId,
             xAxisCaption: widget.xAxisCaption,
             yAxisCaption: widget.yAxisCaption,
-            data: datas,
+            datas: widget.data,
             xMin: widget.xMin,
             xMax: widget.xMax,
             yMin: widget.yMin,
@@ -302,7 +283,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         chartElementId,
         xAxisCaption,
         yAxisCaption,
-        data,
+        datas,
         xMin,
         xMax,
         yMin,
@@ -310,10 +291,31 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         showLegend,
         height,
         xDataType,
-        yDataType
+        yDataType,
+        useSpline
     }) {
+        const that = this
+
         const xRange = (xMin && xMax) ? [xMin, xMax] : null
         const yRange = (yMin && yMax) ? [yMin, yMax] : null
+
+        const data = datas.map(function (nameSeries, index) {
+            return {
+                name: nameSeries[0],
+                x: nameSeries[1].map(function (pairs) { return pairs[0] }),
+                y: nameSeries[1].map(function (pairs) { return pairs[1] }),
+                mode: 'lines+markers',
+                type: 'scatter',
+                line: (useSpline) ? {shape: 'spline'} : {},
+                marker: {
+                    size: 6,
+                    symbol: that._lineSymbols[index % that._lineSymbolsCount]
+                },
+                textfont: {
+                    family:  that._fontFamily
+                }
+            }
+        })
 
         const layout = this._layout({
             title,
