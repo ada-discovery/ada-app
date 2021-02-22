@@ -35,6 +35,20 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
     _lineSymbolsCount = this._lineSymbols.length
 
+    _catPalette = ["rgb(124,181,236)",
+        "rgb(67,67,72)",
+        "rgb(144,237,125)",
+        "rgb(247,163,92)",
+        "rgb(128,133,233)",
+        "rgb(241,92,128)",
+        "rgb(228,211,84)",
+        "rgb(43,144,143)",
+        "#f45b5b",
+        "rgb(145,232,225)"
+    ]
+
+    _catPaletteSize = this._catPalette.length
+
     // impl
     _scatterWidget(elementId, widget, filterElement) {
         const that = this
