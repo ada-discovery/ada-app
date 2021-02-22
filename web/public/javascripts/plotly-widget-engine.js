@@ -424,35 +424,11 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 });
                 break;
             case 'Column':
-                var colorByPoint = (seriesSize == 1)
+                var series = that._columnData(datas).map(function (seriesEntry, index) {
+                    seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{y:.1f}</b>" : "<b>%{y}</b>"
+                    seriesEntry.hovertemplate = that._categoricalXAndTextPointFormat(seriesSize)
 
-                var textTemplate = (useRelativeValues) ? "<b>%{y:.1f}</b>" : "<b>%{y}</b>"
-                var hoverTemplate = that._categoricalXAndTextPointFormat(seriesSize)
-
-                var series = datas.map(function (nameSeries, index) {
-                    const size = nameSeries[1].length
-                    const palette = Array(Math.ceil(size / that._catPaletteSize)).fill(that._catPalette).flat()
-
-                    return {
-                        name: nameSeries[0],
-                        x: nameSeries[1].map(function (entry) { return entry.x }),
-                        y: nameSeries[1].map(function (entry) { return entry.y }),
-                        customdata: nameSeries[1].map(function (entry) { return entry.key }),
-                        text: nameSeries[1].map(function (entry) { return entry.text }),
-                        meta: [nameSeries[0]], // name
-                        texttemplate: textTemplate,
-                        hovertemplate: hoverTemplate,
-                        type: 'bar',
-                        textposition: 'outside',
-                        cliponaxis: false,
-                        marker: {
-                            color: (colorByPoint) ? palette : that._catPalette[index % that._catPaletteSize],
-                        },
-                        textfont: {
-                            size: 11,
-                            family:  that._fontFamily
-                        }
-                    }
+                    return seriesEntry
                 })
 
                 var layout = this._layout({
@@ -478,36 +454,17 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
                 break;
             case 'Bar':
-                var colorByPoint = (seriesSize == 1)
+                var series = that._columnData(datas).map(function (seriesEntry, index) {
+                    seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{x:.1f}</b>" : "<b>%{x}</b>"
+                    seriesEntry.hovertemplate = that._categoricalYAndTextPointFormat(seriesSize)
+                    seriesEntry.orientation = 'h'
 
-                var textTemplate = (useRelativeValues) ? "<b>%{x:.1f}</b>" : "<b>%{x}</b>"
-                var hoverTemplate = that._categoricalYAndTextPointFormat(seriesSize)
+                    // swap x and y coordinates
+                    const xx = seriesEntry.x
+                    seriesEntry.x = seriesEntry.y
+                    seriesEntry.y = xx
 
-                var series = datas.map(function (nameSeries, index) {
-                    const size = nameSeries[1].length
-                    const palette = Array(Math.ceil(size / that._catPaletteSize)).fill(that._catPalette).flat()
-
-                    return {
-                        name: nameSeries[0],
-                        x: nameSeries[1].map(function (entry) { return entry.y }),
-                        y: nameSeries[1].map(function (entry) { return entry.x }),
-                        customdata: nameSeries[1].map(function (entry) { return entry.key }),
-                        text: nameSeries[1].map(function (entry) { return entry.text }),
-                        meta: [nameSeries[0]], // name
-                        texttemplate: textTemplate,
-                        hovertemplate: hoverTemplate,
-                        type: 'bar',
-                        orientation: 'h',
-                        textposition: 'outside',
-                        cliponaxis: false,
-                        marker: {
-                            color: (colorByPoint) ? palette : that._catPalette[index % that._catPaletteSize],
-                        },
-                        textfont: {
-                            size: 11,
-                            family:  that._fontFamily
-                        }
-                    }
+                    return seriesEntry
                 })
 
                 var layout = this._layout({
@@ -587,6 +544,36 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 });
                 break;
         }
+    }
+
+    _columnData(datas) {
+        const that = this
+        const seriesSize = datas.length
+        const colorByPoint = (seriesSize == 1)
+
+        return datas.map(function (nameSeries, index) {
+            const size = nameSeries[1].length
+            const palette = Array(Math.ceil(size / that._catPaletteSize)).fill(that._catPalette).flat()
+
+            return {
+                name: nameSeries[0],
+                x: nameSeries[1].map(function (entry) { return entry.x }),
+                y: nameSeries[1].map(function (entry) { return entry.y }),
+                customdata: nameSeries[1].map(function (entry) { return entry.key }),
+                text: nameSeries[1].map(function (entry) { return entry.text }),
+                meta: [nameSeries[0]], // name
+                type: 'bar',
+                textposition: 'outside',
+                cliponaxis: false,
+                marker: {
+                    color: (colorByPoint) ? palette : that._catPalette[index % that._catPaletteSize],
+                },
+                textfont: {
+                    size: 11,
+                    family:  that._fontFamily
+                }
+            }
+        })
     }
 
     _chart({
