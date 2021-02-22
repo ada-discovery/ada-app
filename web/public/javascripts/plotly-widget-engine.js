@@ -384,6 +384,10 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         })
 
         plot(widget.displayOptions.chartType)
+
+        if (filterElement) {
+            this._addPointClicked(elementId, filterElement, widget.fieldName)
+        }
     }
 
     _categoricalWidgetAux({
@@ -582,6 +586,18 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         layout
     }) {
         Plotly.newPlot(chartElementId, data, layout)
+    }
+
+    _addPointClicked(elementId, filterElement, fieldName) {
+        $("#" + elementId).get(0).on('plotly_click', function(eventData) {
+            if (eventData.points.length > 0) {
+                const key = eventData.points[0].customdata
+
+                const condition = {fieldName: fieldName, conditionType: "=", value: key}
+
+                $(filterElement).multiFilter('replaceWithConditionAndSubmit', condition)
+            }
+        });
     }
 
     _addXAxisZoomed(elementId, filterElement, fieldName, isDouble, isDate) {
