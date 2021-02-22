@@ -16,7 +16,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
     _margin ={
         l: 40,
-        r: 40,
+        r: 20,
         t: 40,
         b: 40
     }
