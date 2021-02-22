@@ -427,4 +427,55 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             showline: showLine
         }
     }
+
+    // Formatters
+
+    _categoricalXAndTextPointFormat(seriesCount) {
+        return this._getPointFormatHeader(seriesCount) + '%{x}: <b>%{text}</b>'
+    }
+
+    _categoricalYAndTextPointFormat(seriesCount) {
+        return this._getPointFormatHeader(seriesCount) + '%{y}: <b>%{text}</b>'
+    }
+
+    _numericalPercentPointFormat(isDate, isDouble, that) {
+        return this._getPointFormatHeader(that) +
+            this._getPointFormatNumericalValue(isDate, isDouble, that, 2) +
+            ': <b>%{text}%</b>'
+    }
+
+    _numericalPointFormat(isDate, isDouble, that, xFloatingPoints, yFloatingPoints) {
+        return this._getPointFormatHeader(that) +
+            this._getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) +
+            this._getPointFormatY(that, yFloatingPoints)
+    }
+
+    _numericalCountPointFormat(isDate, isDouble, totalCounts, that) {
+        return this._getPointFormatHeader(that) +
+            this._getPointFormatNumericalValue(isDate, isDouble, that, 2) +
+            this._getPointFormatY(that) +
+            ' (<b>%{text}%</b>)'
+    }
+
+    _getPointFormatHeader(seriesCount) {
+        return (seriesCount > 1) ? '<span style="font-size:11px">%{meta[0]}</span><br>' : ''
+    }
+
+    _getPointFormatY(yFloatingPoints) {
+        const yValue = (yFloatingPoints) ? "%{y:." + yFloatingPoints + "f}" : "%{y}"
+        return ': <b>' + yValue + '</b>'
+    }
+
+    _getPointFormatNumericalValue(isDate, isDouble, xFloatingPoints) {
+        const valuePart =
+            (isDate) ?
+                "%{x}" // TODO: date
+                :
+                (isDouble) ?
+                    ((xFloatingPoints) ? "%{x:." + xFloatingPoints + "f}" : "%{x}")
+                    :
+                    "%{x}"
+
+        return '<span>' + valuePart + '</span>'
+    }
 }
