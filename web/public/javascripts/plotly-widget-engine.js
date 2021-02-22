@@ -477,6 +477,60 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 })
 
                 break;
+            case 'Bar':
+                var colorByPoint = (seriesSize == 1)
+
+                var textTemplate = (useRelativeValues) ? "<b>%{x:.1f}</b>" : "<b>%{x}</b>"
+                var hoverTemplate = that._categoricalYAndTextPointFormat(seriesSize)
+
+                var series = datas.map(function (nameSeries, index) {
+                    const size = nameSeries[1].length
+                    const palette = Array(Math.ceil(size / that._catPaletteSize)).fill(that._catPalette).flat()
+
+                    return {
+                        name: nameSeries[0],
+                        x: nameSeries[1].map(function (entry) { return entry.y }),
+                        y: nameSeries[1].map(function (entry) { return entry.x }),
+                        customdata: nameSeries[1].map(function (entry) { return entry.key }),
+                        text: nameSeries[1].map(function (entry) { return entry.text }),
+                        meta: [nameSeries[0]], // name
+                        texttemplate: textTemplate,
+                        hovertemplate: hoverTemplate,
+                        type: 'bar',
+                        orientation: 'h',
+                        textposition: 'outside',
+                        cliponaxis: false,
+                        marker: {
+                            color: (colorByPoint) ? palette : that._catPalette[index % that._catPaletteSize],
+                        },
+                        textfont: {
+                            size: 11,
+                            family:  that._fontFamily
+                        }
+                    }
+                })
+
+                var layout = this._layout({
+                    title,
+                    xAxisCaption: yAxisCaption,
+                    yAxisCaption: '',
+                    yShowLine: true,
+                    yShowTicks: true,
+                    xShowGrid: true,
+                    height,
+                    showLegend: showLegendExp,
+                    showLabels: true,
+                    allowPointSelectionEvent: true,
+                    allowIntervalSelectionEvent: false,
+                    allowChartTypeChange: true
+                })
+
+                this._chart({
+                    chartElementId,
+                    data: series,
+                    layout
+                })
+                break;
             case 'Line':
                 this._lineChart({
                     title,
