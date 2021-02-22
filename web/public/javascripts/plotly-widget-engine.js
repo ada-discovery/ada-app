@@ -264,7 +264,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 type: 'scatter',
                 marker: {
                     size: 6,
-                    symbol: that._lineSymbols[index % 20]
+                    symbol: that._lineSymbols[index % that._lineSymbolsCount]
                 },
                 textfont: {
                     family:  that._fontFamily
