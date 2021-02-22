@@ -431,11 +431,11 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
     // Formatters
 
     _categoricalXAndTextPointFormat(seriesCount) {
-        return this._getPointFormatHeader(seriesCount) + '%{x}: <b>%{text}</b>'
+        return this._getPointFormatHeader(seriesCount) + '%{x}: <b>%{text}</b><extra></extra>'
     }
 
     _categoricalYAndTextPointFormat(seriesCount) {
-        return this._getPointFormatHeader(seriesCount) + '%{y}: <b>%{text}</b>'
+        return this._getPointFormatHeader(seriesCount) + '%{y}: <b>%{text}</b><extra></extra>'
     }
 
     _numericalPercentPointFormat(isDate, isDouble, that) {
