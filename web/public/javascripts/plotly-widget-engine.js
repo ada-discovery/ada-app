@@ -386,6 +386,163 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         plot(widget.displayOptions.chartType)
     }
 
+    _categoricalWidgetAux({
+        chartType,
+        datas,
+        seriesSize,
+        title,
+        yAxisCaption,
+        chartElementId,
+        showLabels,
+        showLegend,
+        height,
+        useRelativeValues
+    }) {
+        var showLegendExp = seriesSize > 1
+        const that = this
+
+        switch (chartType) {
+            case 'Pie':
+                var series = datas.map(function (data, index) {
+                    const size = (100 / seriesSize) * (index + 1)
+                    var innerSize = 0
+                    if (index > 0)
+                        innerSize = (100 / seriesSize) * index + 1
+                    return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
+                });
+
+                this._pieChart({
+                    title,
+                    chartElementId,
+                    series,
+                    showLabels,
+                    showLegend,
+                    pointFormat,
+                    height,
+                    allowSelectionEvent: true,
+                    allowChartTypeChange: true
+                });
+                break;
+            case 'Column':
+                var colorByPoint = (seriesSize == 1)
+
+                var textTemplate = (useRelativeValues) ? "<b>%{y:.1f}</b>" : "<b>%{y}</b>"
+                var hoverTemplate = that._categoricalXAndTextPointFormat(seriesSize)
+
+                var series = datas.map(function (nameSeries, index) {
+                    const size = nameSeries[1].length
+                    const palette = Array(Math.ceil(size / that._catPaletteSize)).fill(that._catPalette).flat()
+
+                    return {
+                        name: nameSeries[0],
+                        x: nameSeries[1].map(function (entry) { return entry.x }),
+                        y: nameSeries[1].map(function (entry) { return entry.y }),
+                        customdata: nameSeries[1].map(function (entry) { return entry.key }),
+                        text: nameSeries[1].map(function (entry) { return entry.text }),
+                        meta: [nameSeries[0]], // name
+                        texttemplate: textTemplate,
+                        hovertemplate: hoverTemplate,
+                        type: 'bar',
+                        textposition: 'outside',
+                        cliponaxis: false,
+                        marker: {
+                            color: (colorByPoint) ? palette : that._catPalette[index % that._catPaletteSize],
+                        },
+                        textfont: {
+                            size: 11,
+                            family:  that._fontFamily
+                        }
+                    }
+                })
+
+                var layout = this._layout({
+                    title,
+                    xAxisCaption: '',
+                    yAxisCaption,
+                    xShowLine: true,
+                    xShowTicks: true,
+                    yShowGrid: true,
+                    height,
+                    showLegend: showLegendExp,
+                    showLabels: true,
+                    allowPointSelectionEvent: true,
+                    allowIntervalSelectionEvent: false,
+                    allowChartTypeChange: true
+                })
+
+                this._chart({
+                    chartElementId,
+                    data: series,
+                    layout
+                })
+
+                break;
+            case 'Line':
+                this._lineChart({
+                    title,
+                    chartElementId,
+                    data: datas,
+                    xAxisCaption: '',
+                    yAxisCaption,
+                    showLegend: showLegendExp,
+                    enableDataLabels: true,
+                    pointFormat,
+                    height,
+                    allowPointSelectionEvent: true,
+                    allowIntervalSelectionEvent: false,
+                    allowChartTypeChange: true
+                });
+                break;
+            case 'Spline':
+                var series = datas.map(function (data, index) {
+                    return {name: data.name, data: data.data, type: 'spline'};
+                });
+
+                this._lineChart({
+                    title,
+                    chartElementId,
+                    series,
+                    xAxisCaption: '',
+                    yAxisCaption,
+                    showLegend: showLegendExp,
+                    enableDataLabels: true,
+                    pointFormat,
+                    height,
+                    xDataType: null,
+                    yDataType: null,
+                    allowPointSelectionEvent: true,
+                    allowIntervalSelectionEvent: false,
+                    allowChartTypeChange: true
+                });
+                break;
+            case 'Polar':
+                var series = datas.map(function (data, index) {
+                    return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
+                });
+
+                this._polarChart({
+                    title,
+                    chartElementId,
+                    series,
+                    showLegend: showLegendExp,
+                    pointFormat,
+                    height,
+                    dataType: null,
+                    allowSelectionEvent: true,
+                    allowChartTypeChange: true
+                });
+                break;
+        }
+    }
+
+    _chart({
+        chartElementId,
+        data,
+        layout
+    }) {
+        Plotly.newPlot(chartElementId, data, layout)
+    }
+
     _addXAxisZoomed(elementId, filterElement, fieldName, isDouble, isDate) {
         $("#" + elementId).get(0).on('plotly_relayout', function(eventData) {
             const xMin = eventData["xaxis.range[0]"]
