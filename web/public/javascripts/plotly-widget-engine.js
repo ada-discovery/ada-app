@@ -690,6 +690,29 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         })
     }
 
+    _polarData(datas, showText) {
+        const that = this
+
+        return datas.map(function (nameSeries, index) {
+            return {
+                name: nameSeries[0],
+                theta: nameSeries[1].map(function (entry) { return entry.x }),
+                r: nameSeries[1].map(function (entry) { return entry.y }),
+                customdata: nameSeries[1].map(function (entry) { return entry.key }),
+                text: nameSeries[1].map(function (entry) { return entry.text }),
+                meta: [nameSeries[0]], // name
+                type: 'scatterpolar',
+                fill: "toself",
+                mode: (showText) ? 'lines+markers+text' : 'lines+markers',
+                cliponaxis: false,
+                marker: {
+                    color: that._catPalette[index % that._catPaletteSize],
+                    symbol: that._lineSymbols[index % that._lineSymbolsCount]
+                }
+            }
+        })
+    }
+
     _chart({
         chartElementId,
         data,
