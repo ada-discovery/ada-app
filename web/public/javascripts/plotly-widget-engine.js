@@ -795,6 +795,10 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         return this._getPointFormatHeader(seriesCount) + '%{y}: <b>%{text}</b><extra></extra>'
     }
 
+    _categoricalLabelAndTextPointFormat(seriesCount) {
+        return this._getPointFormatHeader(seriesCount) + '%{label}: <b>%{text}</b><extra></extra>'
+    }
+
     _numericalPercentPointFormat(isDate, isDouble, that) {
         return this._getPointFormatHeader(that) +
             this._getPointFormatNumericalValue(isDate, isDouble, that, 2) +
