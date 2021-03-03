@@ -399,24 +399,26 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         title,
         yAxisCaption,
         chartElementId,
-        showLabels,
-        showLegend,
+        showLabels, // TODO: ignored?
+        showLegend, // TODO: ignored?
         height,
         useRelativeValues
     }) {
-        var showLegendExp = seriesSize > 1
+        const showLegendExp = seriesSize > 1
         const that = this
+
+        var series, layout
 
         switch (chartType) {
             case 'Pie':
-                var series = that._pieData(datas, true).map(function (seriesEntry, index) {
+                series = that._pieData(datas, true).map(function (seriesEntry, index) {
                     seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{value:.1f}</b>" : "<b>%{value}</b>"
                     seriesEntry.hovertemplate = that._categoricalLabelAndTextPointFormat(seriesSize)
 
                     return seriesEntry
                 })
 
-                var layout = this._layout({
+                layout = this._layout({
                     title,
                     height,
                     showLegend: true
@@ -441,22 +443,16 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     })
                 }
 
-                this._chart({
-                    chartElementId,
-                    data: series,
-                    layout
-                })
-
                 break;
             case 'Column':
-                var series = that._columnData(datas).map(function (seriesEntry, index) {
+                series = that._columnData(datas).map(function (seriesEntry, index) {
                     seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{y:.1f}</b>" : "<b>%{y}</b>"
                     seriesEntry.hovertemplate = that._categoricalXAndTextPointFormat(seriesSize)
 
                     return seriesEntry
                 })
 
-                var layout = this._layout({
+                layout = this._layout({
                     title,
                     xAxisCaption: '',
                     yAxisCaption,
@@ -471,15 +467,9 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     allowChartTypeChange: true
                 })
 
-                this._chart({
-                    chartElementId,
-                    data: series,
-                    layout
-                })
-
                 break;
             case 'Bar':
-                var series = that._columnData(datas).map(function (seriesEntry, index) {
+                series = that._columnData(datas).map(function (seriesEntry, index) {
                     seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{x:.1f}</b>" : "<b>%{x}</b>"
                     seriesEntry.hovertemplate = that._categoricalYAndTextPointFormat(seriesSize)
                     seriesEntry.orientation = 'h'
@@ -492,7 +482,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     return seriesEntry
                 })
 
-                var layout = this._layout({
+                layout = this._layout({
                     title,
                     xAxisCaption: yAxisCaption,
                     yAxisCaption: '',
@@ -507,21 +497,16 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     allowChartTypeChange: true
                 })
 
-                this._chart({
-                    chartElementId,
-                    data: series,
-                    layout
-                })
                 break;
             case 'Line':
-                var series = that._lineData(datas, false).map(function (seriesEntry, index) {
+                series = that._lineData(datas, false).map(function (seriesEntry, index) {
                     seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{y:.1f}</b>" : "<b>%{y}</b>"
                     seriesEntry.hovertemplate = that._categoricalXAndTextPointFormat(seriesSize)
 
                     return seriesEntry
                 })
 
-                var layout = this._layout({
+                layout = this._layout({
                     title,
                     xAxisCaption: '',
                     yAxisCaption,
@@ -536,15 +521,9 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     allowChartTypeChange: true
                 })
 
-                this._chart({
-                    chartElementId,
-                    data: series,
-                    layout
-                })
-
                 break;
             case 'Spline':
-                var series = that._lineData(datas, false).map(function (seriesEntry, index) {
+                series = that._lineData(datas, false).map(function (seriesEntry, index) {
                     seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{y:.1f}</b>" : "<b>%{y}</b>"
                     seriesEntry.hovertemplate = that._categoricalXAndTextPointFormat(seriesSize)
                     seriesEntry.line = {shape: 'spline'}
@@ -552,7 +531,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     return seriesEntry
                 })
 
-                var layout = this._layout({
+                layout = this._layout({
                     title,
                     xAxisCaption: '',
                     yAxisCaption,
@@ -567,21 +546,16 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     allowChartTypeChange: true
                 })
 
-                this._chart({
-                    chartElementId,
-                    data: series,
-                    layout
-                })
                 break;
             case 'Polar':
-                var series = that._polarData(datas, false).map(function (seriesEntry, index) {
+                series = that._polarData(datas, false).map(function (seriesEntry, index) {
                     seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{r:.1f}</b>" : "<b>%{r}</b>"
                     seriesEntry.hovertemplate = that._categoricalPolarLabelAndTextPointFormat(seriesSize)
 
                     return seriesEntry
                 })
 
-                var layout = this._layout({
+                layout = this._layout({
                     title,
                     height,
                     showLegend: showLegendExp
@@ -603,14 +577,14 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     }
                 }
 
-                this._chart({
-                    chartElementId,
-                    data: series,
-                    layout
-                })
-
                 break;
         }
+
+        this._chart({
+            chartElementId,
+            data: series,
+            layout
+        })
     }
 
     _columnData(datas) {
