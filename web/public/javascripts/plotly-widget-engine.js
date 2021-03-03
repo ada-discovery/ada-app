@@ -582,6 +582,33 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         })
     }
 
+    _lineData(datas) {
+        const that = this
+
+        return datas.map(function (nameSeries, index) {
+            return {
+                name: nameSeries[0],
+                x: nameSeries[1].map(function (entry) { return entry.x }),
+                y: nameSeries[1].map(function (entry) { return entry.y }),
+                customdata: nameSeries[1].map(function (entry) { return entry.key }),
+                text: nameSeries[1].map(function (entry) { return entry.text }),
+                meta: [nameSeries[0]], // name
+                type: 'scatter',
+                mode: 'lines+markers',
+                textposition: 'outside',
+                cliponaxis: false,
+                marker: {
+                    size: 6,
+                    symbol: that._lineSymbols[index % that._lineSymbolsCount]
+                },
+                textfont: {
+                    size: 11,
+                    family:  that._fontFamily
+                }
+            }
+        })
+    }
+
     _chart({
         chartElementId,
         data,
