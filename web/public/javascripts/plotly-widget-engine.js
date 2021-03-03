@@ -574,21 +574,41 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 })
                 break;
             case 'Polar':
-                var series = datas.map(function (data, index) {
-                    return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
-                });
+                var series = that._polarData(datas, false).map(function (seriesEntry, index) {
+                    seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{r:.1f}</b>" : "<b>%{r}</b>"
+                    seriesEntry.hovertemplate = that._categoricalPolarLabelAndTextPointFormat(seriesSize)
 
-                this._polarChart({
+                    return seriesEntry
+                })
+
+                var layout = this._layout({
                     title,
-                    chartElementId,
-                    series,
-                    showLegend: showLegendExp,
-                    pointFormat,
                     height,
-                    dataType: null,
-                    allowSelectionEvent: true,
-                    allowChartTypeChange: true
-                });
+                    showLegend: showLegendExp
+                })
+
+                layout.polar = {
+                    radialaxis: {
+                        showline: false,
+                        tickfont: {
+                            size: 9,
+                            family:  that._fontFamily
+                        },
+                        angle: 90
+                    },
+                    angularaxis: {
+                        showline: false,
+                        direction: "clockwise",
+                        tickfont: that._tickFont
+                    }
+                }
+
+                this._chart({
+                    chartElementId,
+                    data: series,
+                    layout
+                })
+
                 break;
         }
     }
@@ -840,6 +860,10 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
     _categoricalLabelAndTextPointFormat(seriesCount) {
         return this._getPointFormatHeader(seriesCount) + '%{label}: <b>%{text}</b><extra></extra>'
+    }
+
+    _categoricalPolarLabelAndTextPointFormat(seriesCount) {
+        return this._getPointFormatHeader(seriesCount) + '%{theta}: <b>%{text}</b><extra></extra>'
     }
 
     _numericalPercentPointFormat(isDate, isDouble, that) {
