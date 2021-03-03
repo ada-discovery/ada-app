@@ -631,6 +631,45 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         })
     }
 
+    _pieData(datas, showText) {
+        const that = this
+        const seriesSize = datas.length
+        const xStep = 1 / seriesSize
+
+        return datas.map(function (nameSeries, index) {
+            const size = nameSeries[1].length
+            const palette = Array(Math.ceil(size / that._catPaletteSize)).fill(that._catPalette).flat()
+
+            return {
+                name: nameSeries[0],
+                labels: nameSeries[1].map(function (entry) { return entry.x }),
+                values: nameSeries[1].map(function (entry) { return entry.y }),
+                customdata: nameSeries[1].map(function (entry) { return entry.key }),
+                text: nameSeries[1].map(function (entry) { return entry.text }),
+                meta: [nameSeries[0]], // name
+                type: 'pie',
+                textposition: (showText) ? "inside" : "none",
+                domain:{
+                    x: [xStep * index, xStep * (index + 1)],
+                    y: [0, 1],
+                },
+                hole: (seriesSize > 1) ? 0.3 : null,
+                cliponaxis: false,
+                marker: {
+                    colors: palette,
+                    line : {
+                        color: "white",
+                        width: 2
+                    }
+                },
+                textfont: {
+                    size: 11,
+                    family:  that._fontFamily
+                }
+            }
+        })
+    }
+
     _chart({
         chartElementId,
         data,
