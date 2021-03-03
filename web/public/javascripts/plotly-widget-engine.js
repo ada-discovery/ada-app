@@ -495,7 +495,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 })
                 break;
             case 'Line':
-                var series = that._lineData(datas).map(function (seriesEntry, index) {
+                var series = that._lineData(datas, false).map(function (seriesEntry, index) {
                     seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{y:.1f}</b>" : "<b>%{y}</b>"
                     seriesEntry.hovertemplate = that._categoricalXAndTextPointFormat(seriesSize)
 
@@ -525,7 +525,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
                 break;
             case 'Spline':
-                var series = that._lineData(datas).map(function (seriesEntry, index) {
+                var series = that._lineData(datas, false).map(function (seriesEntry, index) {
                     seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{y:.1f}</b>" : "<b>%{y}</b>"
                     seriesEntry.hovertemplate = that._categoricalXAndTextPointFormat(seriesSize)
                     seriesEntry.line = {shape: 'spline'}
@@ -604,7 +604,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         })
     }
 
-    _lineData(datas) {
+    _lineData(datas, showText) {
         const that = this
 
         return datas.map(function (nameSeries, index) {
@@ -616,8 +616,8 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 text: nameSeries[1].map(function (entry) { return entry.text }),
                 meta: [nameSeries[0]], // name
                 type: 'scatter',
-                mode: 'lines+markers',
-                textposition: 'outside',
+                mode: (showText) ? 'lines+markers+text' : 'lines+markers',
+                textposition: 'top',
                 cliponaxis: false,
                 marker: {
                     size: 6,
