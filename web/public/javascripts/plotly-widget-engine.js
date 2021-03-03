@@ -495,42 +495,64 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 })
                 break;
             case 'Line':
-                this._lineChart({
+                var series = that._lineData(datas).map(function (seriesEntry, index) {
+                    seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{y:.1f}</b>" : "<b>%{y}</b>"
+                    seriesEntry.hovertemplate = that._categoricalXAndTextPointFormat(seriesSize)
+
+                    return seriesEntry
+                })
+
+                var layout = this._layout({
                     title,
-                    chartElementId,
                     xAxisCaption: '',
                     yAxisCaption,
-                    datas,
-                    showLegend: showLegendExp,
-                    enableDataLabels: true,
+                    xShowLine: true,
+                    xShowTicks: true,
+                    yShowGrid: true,
                     height,
+                    showLegend: showLegendExp,
+                    showLabels: true,
                     allowPointSelectionEvent: true,
                     allowIntervalSelectionEvent: false,
                     allowChartTypeChange: true
-                });
+                })
+
+                this._chart({
+                    chartElementId,
+                    data: series,
+                    layout
+                })
+
                 break;
             case 'Spline':
-                var series = datas.map(function (data, index) {
-                    return {name: data.name, data: data.data, type: 'spline'};
-                });
+                var series = that._lineData(datas).map(function (seriesEntry, index) {
+                    seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{y:.1f}</b>" : "<b>%{y}</b>"
+                    seriesEntry.hovertemplate = that._categoricalXAndTextPointFormat(seriesSize)
+                    seriesEntry.line = {shape: 'spline'}
 
-                this._lineChart({
+                    return seriesEntry
+                })
+
+                var layout = this._layout({
                     title,
-                    chartElementId,
-                    datas,
                     xAxisCaption: '',
                     yAxisCaption,
-                    showLegend: showLegendExp,
-                    enableDataLabels: true,
-                    pointFormat,
+                    xShowLine: true,
+                    xShowTicks: true,
+                    yShowGrid: true,
                     height,
-                    useSpline: true,
-                    xDataType: null,
-                    yDataType: null,
+                    showLegend: showLegendExp,
+                    showLabels: true,
                     allowPointSelectionEvent: true,
                     allowIntervalSelectionEvent: false,
                     allowChartTypeChange: true
-                });
+                })
+
+                this._chart({
+                    chartElementId,
+                    data: series,
+                    layout
+                })
                 break;
             case 'Polar':
                 var series = datas.map(function (data, index) {
