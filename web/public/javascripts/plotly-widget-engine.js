@@ -409,25 +409,44 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
         switch (chartType) {
             case 'Pie':
-                var series = datas.map(function (data, index) {
-                    const size = (100 / seriesSize) * (index + 1)
-                    var innerSize = 0
-                    if (index > 0)
-                        innerSize = (100 / seriesSize) * index + 1
-                    return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
-                });
+                var series = that._pieData(datas, true).map(function (seriesEntry, index) {
+                    seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{value:.1f}</b>" : "<b>%{value}</b>"
+                    seriesEntry.hovertemplate = that._categoricalLabelAndTextPointFormat(seriesSize)
 
-                this._pieChart({
+                    return seriesEntry
+                })
+
+                var layout = this._layout({
                     title,
-                    chartElementId,
-                    series,
-                    showLabels,
-                    showLegend,
-                    pointFormat,
                     height,
-                    allowSelectionEvent: true,
-                    allowChartTypeChange: true
-                });
+                    showLegend: true
+                })
+
+                if (seriesSize > 1) {
+                    const xStep = 1 / seriesSize
+
+                    layout.annotations = series.map(function (seriesEntry, index) {
+                        return {
+                            font: {
+                                size: 13,
+                                family: that._fontFamily
+                            },
+                            xanchor: 'center',
+                            yanchor: 'center',
+                            showarrow: false,
+                            text: shorten(seriesEntry.name, 20),
+                            x: (xStep / 2) + xStep * index,
+                            y: 0.5
+                        }
+                    })
+                }
+
+                this._chart({
+                    chartElementId,
+                    data: series,
+                    layout
+                })
+
                 break;
             case 'Column':
                 var series = that._columnData(datas).map(function (seriesEntry, index) {
