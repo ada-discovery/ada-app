@@ -378,8 +378,11 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 height,
                 useRelativeValues: widget.useRelativeValues
             })
-        }
 
+            if (filterElement) {
+                that._addPointClicked(elementId, filterElement, widget.fieldName)
+            }
+        }
 
         $('#' + elementId).on('chartTypeChanged', function (event, chartType) {
             plot(chartType);
@@ -387,9 +390,22 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
         plot(widget.displayOptions.chartType)
 
-        if (filterElement) {
-            this._addPointClicked(elementId, filterElement, widget.fieldName)
-        }
+        const exportButton =
+            '<div class="chart-type-menu dropdown" style="position: absolute; left: 15px; top: 0px; z-index: 10">\
+                <button class="btn btn-sm dropdown-toggle" style="background-color:transparent" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">\
+                    <span class="dot" aria-hidden="true"></span>\
+                </button>\
+                <ul class="dropdown-menu">\
+                    <li><a class="chart-type-menu-item" data-chart-type="Pie" href="#">Pie</a></li>\
+                    <li><a class="chart-type-menu-item" data-chart-type="Column" href="#">Column</a></li>\
+                    <li><a class="chart-type-menu-item" data-chart-type="Bar" href="#">Bar</a></li>\
+                    <li><a class="chart-type-menu-item" data-chart-type="Line" href="#">Line</a></li>\
+                    <li><a class="chart-type-menu-item" data-chart-type="Spline" href="#">Spline</a></li>\
+                    <li><a class="chart-type-menu-item" data-chart-type="Polar" href="#">Polar</a></li>\
+            </ul>\
+            </div>';
+
+        $("#" + elementId).prepend(exportButton)
     }
 
     _categoricalWidgetAux({
