@@ -390,7 +390,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
         plot(widget.displayOptions.chartType)
 
-        const exportButton =
+        const chartTypeMenu =
             '<div class="chart-type-menu dropdown" style="position: absolute; left: 15px; top: 0px; z-index: 10">\
                 <button class="btn btn-sm dropdown-toggle" style="background-color:transparent" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">\
                     <span class="dot" aria-hidden="true"></span>\
@@ -405,7 +405,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             </ul>\
             </div>';
 
-        $("#" + elementId).prepend(exportButton)
+        $("#" + elementId).prepend(chartTypeMenu)
         $("#" + elementId).find(".chart-type-menu-item").on("click", function(event) {
             const chartType = $(event.target).attr("data-chart-type")
             $('#' + elementId).trigger("chartTypeChanged", chartType)
