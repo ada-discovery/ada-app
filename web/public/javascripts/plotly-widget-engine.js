@@ -406,6 +406,10 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             </div>';
 
         $("#" + elementId).prepend(exportButton)
+        $("#" + elementId).find(".chart-type-menu-item").on("click", function(event) {
+            const chartType = $(event.target).attr("data-chart-type")
+            $('#' + elementId).trigger("chartTypeChanged", chartType)
+        })
     }
 
     _categoricalWidgetAux({
