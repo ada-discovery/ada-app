@@ -646,7 +646,8 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 showLabels: widget.showLabels,
                 showLegend: widget.showLegend,
                 height,
-                useRelativeValues: widget.useRelativeValues
+                useRelativeValues: widget.useRelativeValues,
+                xFieldType: widget.fieldType
             })
         }
 
@@ -673,6 +674,10 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
     }) {
         const that = this
         const showLegendExp = seriesSize > 1
+
+        const isDate = xFieldType == "Date"
+        const isDouble = xFieldType == "Double"
+        const dataType = (isDate) ? 'date' : null;
 
         var series, layout
 
