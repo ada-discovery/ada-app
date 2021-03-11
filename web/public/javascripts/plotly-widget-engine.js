@@ -844,6 +844,8 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
     // Formatters
 
+    // categorical
+
     _categoricalXAndTextPointFormat(seriesCount) {
         return this._getPointFormatHeader(seriesCount) + '%{x}: <b>%{text}</b><extra></extra>'
     }
@@ -860,21 +862,23 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         return this._getPointFormatHeader(seriesCount) + '%{theta}: <b>%{text}</b><extra></extra>'
     }
 
-    _numericalPercentPointFormat(isDate, isDouble, that) {
-        return this._getPointFormatHeader(that) +
-            this._getPointFormatNumericalValue(isDate, isDouble, that, 2) +
-            ': <b>%{text}%</b>'
+    // numerical
+
+    _numericalXAndTextPointFormat(seriesCount, isDate, isDouble) {
+        return this._getPointFormatHeader(seriesCount) +
+            this._getPointFormatXNumericalValue(isDate, isDouble, 2) +
+            ': <b>%{text}</b><extra></extra>'
     }
 
-    _numericalPointFormat(isDate, isDouble, that, xFloatingPoints, yFloatingPoints) {
-        return this._getPointFormatHeader(that) +
-            this._getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) +
-            this._getPointFormatY(that, yFloatingPoints)
+    _numericalYAndTextPointFormat(seriesCount, isDate, isDouble) {
+        return this._getPointFormatHeader(seriesCount) +
+            this._getPointFormatYNumericalValue(isDate, isDouble, 2) +
+            ': <b>%{text}</b><extra></extra>'
     }
 
     _numericalCountPointFormat(isDate, isDouble, totalCounts, that) {
         return this._getPointFormatHeader(that) +
-            this._getPointFormatNumericalValue(isDate, isDouble, that, 2) +
+            this._getPointFormatXNumericalValue(isDate, isDouble, that, 2) +
             this._getPointFormatY(that) +
             ' (<b>%{text}%</b>)'
     }
