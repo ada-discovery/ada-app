@@ -649,6 +649,13 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 useRelativeValues: widget.useRelativeValues,
                 xFieldType: widget.fieldType
             })
+
+            if (filterElement) {
+                const isDate = widget.fieldType == "Date"
+                const isDouble = widget.fieldType == "Double"
+                // TODO: bar chart uses yAxisZoom not the x-one
+                that._addXAxisZoomed(elementId, filterElement, widget.fieldName, isDouble, isDate)
+            }
         }
 
         $('#' + elementId).on('chartTypeChanged', function (event, chartType) {
