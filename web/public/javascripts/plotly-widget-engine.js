@@ -607,10 +607,10 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         })
     }
 
-    _columnData(datas) {
+    _columnData(datas, showText, colorByPoint) {
         const that = this
         const seriesSize = datas.length
-        const colorByPoint = (seriesSize == 1)
+        const colorByPointFinal = colorByPoint && (seriesSize == 1)
 
         return datas.map(function (nameSeries, index) {
             const size = nameSeries[1].length
@@ -624,10 +624,10 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 text: nameSeries[1].map(function (entry) { return entry.text }),
                 meta: [nameSeries[0]], // name
                 type: 'bar',
-                textposition: 'outside',
+                textposition: (showText) ? "outside" : "none",
                 cliponaxis: false,
                 marker: {
-                    color: (colorByPoint) ? palette : that._catPalette[index % that._catPaletteSize],
+                    color: (colorByPointFinal) ? palette : that._catPalette[index % that._catPaletteSize],
                 },
                 textfont: {
                     size: 11,
