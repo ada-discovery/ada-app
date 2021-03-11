@@ -900,4 +900,17 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
         return '<span>' + valuePart + '</span>'
     }
+
+    _getPointFormatYNumericalValue(isDate, isDouble, floatingPoints) {
+        const valuePart =
+            (isDate) ?
+                "%{y|%Y/%m/%d %H:%M:%S }"
+                :
+                (isDouble) ?
+                    ((floatingPoints) ? "%{y:." + floatingPoints + "f}" : "%{y}")
+                    :
+                    "%{y}"
+
+        return '<span>' + valuePart + '</span>'
+    }
 }
