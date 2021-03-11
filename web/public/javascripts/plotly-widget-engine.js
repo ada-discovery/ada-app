@@ -465,7 +465,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
                 break;
             case 'Column':
-                series = that._columnData(datas).map(function (seriesEntry, index) {
+                series = that._columnData(datas, true, true).map(function (seriesEntry, index) {
                     seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{y:.1f}</b>" : "<b>%{y}</b>"
                     seriesEntry.hovertemplate = that._categoricalXAndTextPointFormat(seriesSize)
 
@@ -489,7 +489,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
                 break;
             case 'Bar':
-                series = that._columnData(datas).map(function (seriesEntry, index) {
+                series = that._columnData(datas, true, true).map(function (seriesEntry, index) {
                     seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{x:.1f}</b>" : "<b>%{x}</b>"
                     seriesEntry.hovertemplate = that._categoricalYAndTextPointFormat(seriesSize)
                     seriesEntry.orientation = 'h'
