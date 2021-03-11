@@ -888,13 +888,13 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         return ': <b>' + yValue + '</b>'
     }
 
-    _getPointFormatNumericalValue(isDate, isDouble, xFloatingPoints) {
+    _getPointFormatXNumericalValue(isDate, isDouble, floatingPoints) {
         const valuePart =
             (isDate) ?
-                "%{x}" // TODO: date
+                "%{x|%Y/%m/%d %H:%M:%S }"
                 :
                 (isDouble) ?
-                    ((xFloatingPoints) ? "%{x:." + xFloatingPoints + "f}" : "%{x}")
+                    ((floatingPoints) ? "%{x:." + floatingPoints + "f}" : "%{x}")
                     :
                     "%{x}"
 
