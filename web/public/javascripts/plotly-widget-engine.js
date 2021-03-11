@@ -607,6 +607,213 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         })
     }
 
+    // impl
+    _numericalCountWidget(elementId, widget, filterElement) {
+        const that = this
+
+        const datas = widget.data.map(function (nameSeries) {
+            const name = nameSeries[0]
+            const series = nameSeries[1]
+
+            const sum = that._agg(series, widget)
+            const data = series.map(function (item) {
+                const count = item.count
+
+                const percent = 100 * count / sum
+                const value = (widget.useRelativeValues) ? percent : count
+                const displayPercent = percent.toFixed(1) + "%"
+                const text = (widget.useRelativeValues) ? displayPercent : count + " (" + displayPercent + ")"
+                return {x: item.value, y: value, text: text}
+            })
+
+            return [name, data]
+        })
+
+        const seriesSize = datas.length
+        const height = widget.displayOptions.height || 400
+
+        const yAxisCaption = (widget.useRelativeValues) ? '%' : 'Count'
+
+        function plot(chartType) {
+            that._numericalWidgetAux({
+                chartType,
+                datas,
+                seriesSize,
+                title: widget.title,
+                xAxisCaption: widget.fieldLabel,
+                yAxisCaption,
+                chartElementId: elementId,
+                showLabels: widget.showLabels,
+                showLegend: widget.showLegend,
+                height,
+                useRelativeValues: widget.useRelativeValues
+            })
+        }
+
+        $('#' + elementId).on('chartTypeChanged', function (event, chartType) {
+            plot(chartType);
+        })
+
+        plot(widget.displayOptions.chartType)
+    }
+
+    _numericalWidgetAux({
+        chartType,
+        datas,
+        seriesSize,
+        title,
+        xAxisCaption,
+        yAxisCaption,
+        chartElementId,
+        showLabels, // TODO: ignored?
+        showLegend, // TODO: ignored?
+        height,
+        useRelativeValues,
+        xFieldType
+    }) {
+        const that = this
+        const showLegendExp = seriesSize > 1
+
+        var series, layout
+
+        switch (chartType) {
+            case 'Pie':
+                series = datas.map(function (data, index) {
+                    const size = (100 / seriesSize) * index
+                    const innerSize = Math.max(0, (100 / seriesSize) * (index - 1) + 1)
+                    return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
+                });
+
+                this._pieChart({
+                    title,
+                    chartElementId,
+                    series,
+                    showLabels: false,
+                    showLegend,
+                    pointFormat,
+                    height,
+                    allowSelectionEvent: false,
+                    allowChartTypeChange: true
+                });
+                break;
+            case 'Column':
+                series = that._columnData(datas, false, false).map(function (seriesEntry, index) {
+                    seriesEntry.hovertemplate = that._numericalXAndTextPointFormat(seriesSize, isDate, isDouble)
+
+                    return seriesEntry
+                })
+
+                layout = this._layout({
+                    title,
+                    xAxisCaption,
+                    yAxisCaption,
+                    xShowLine: true,
+                    xShowTicks: true,
+                    yShowGrid: true,
+                    xDataType: dataType,
+                    height,
+                    showLegend: showLegendExp
+                })
+
+                break;
+            case 'Bar':
+                series = that._columnData(datas, false, false).map(function (seriesEntry, index) {
+                    seriesEntry.hovertemplate = that._numericalYAndTextPointFormat(seriesSize, isDate, isDouble)
+                    seriesEntry.orientation = 'h'
+
+                    // swap x and y coordinates
+                    const xx = seriesEntry.x
+                    seriesEntry.x = seriesEntry.y
+                    seriesEntry.y = xx
+
+                    return seriesEntry
+                })
+
+                layout = this._layout({
+                    title,
+                    xAxisCaption: yAxisCaption,
+                    yAxisCaption: xAxisCaption,
+                    yShowLine: true,
+                    yShowTicks: true,
+                    xShowGrid: true,
+                    yDataType: dataType,
+                    height,
+                    showLegend: showLegendExp
+                })
+
+                break;
+                break;
+            case 'Line':
+                series = datas
+
+                this._lineChart({
+                    title,
+                    chartElementId,
+                    categories: null,
+                    series,
+                    xAxisCaption,
+                    yAxisCaption,
+                    showLegend,
+                    enableDataLabels: true,
+                    pointFormat,
+                    height,
+                    xDataType: dataType,
+                    yDataType: null,
+                    allowPointSelectionEvent: false,
+                    allowIntervalSelectionEvent: true,
+                    allowChartTypeChange: true
+                });
+                break;
+            case 'Spline':
+                series = datas.map(function (data, index) {
+                    return {name: data.name, data: data.data, type: 'spline'};
+                });
+
+                this._lineChart({
+                    title,
+                    chartElementId,
+                    categories: null,
+                    series,
+                    xAxisCaption,
+                    yAxisCaption,
+                    showLegend,
+                    enableDataLabels: true,
+                    pointFormat,
+                    height,
+                    xDataType: dataType,
+                    yDataType: null,
+                    allowPointSelectionEvent: false,
+                    allowIntervalSelectionEvent: true,
+                    allowChartTypeChange: true
+                });
+                break;
+            case 'Polar':
+                series = datas.map(function (data, index) {
+                    return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
+                });
+
+                this._polarChart({
+                    title,
+                    chartElementId,
+                    categories: null,
+                    series,
+                    showLegend,
+                    pointFormat,
+                    height,
+                    dataType,
+                    allowSelectionEvent: false,
+                    allowChartTypeChange: true
+                });
+                break;
+        }
+
+        this._chart({
+            chartElementId,
+            data: series,
+            layout
+        })
+    }
+
     _columnData(datas, showText, colorByPoint) {
         const that = this
         const seriesSize = datas.length
