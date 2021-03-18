@@ -674,7 +674,22 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
         switch (chartType) {
             case 'Pie':
-                series = that._pieData(data, false, false).map(function (seriesEntry, index) {
+                // hacky solution to format x (once it's transformed to "label" is too late)
+                const formattedData = datas.map(function (nameSeries, index) {
+                    const name = nameSeries[0]
+                    const series = nameSeries[1]
+
+                    const data = series.map(function (item) {
+                        item.x = (isDate) ? msOrDateToStandardDateString(item.x) :
+                            (isDouble) ? item.x.toFixed(2) : item.x
+
+                        return item
+                    })
+
+                    return [name, data]
+                })
+
+                series = that._pieData(formattedData, false, false).map(function (seriesEntry, index) {
                     seriesEntry.hovertemplate = that._categoricalLabelAndTextPointFormat(seriesSize)
 
                     return seriesEntry
