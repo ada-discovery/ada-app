@@ -864,14 +864,16 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         })
     }
 
-    _pieData(datas, showText) {
+    _pieData(datas, showText, colorByPoint) {
         const that = this
         const seriesSize = datas.length
         const xStep = 1 / seriesSize
 
         return datas.map(function (nameSeries, index) {
             const size = nameSeries[1].length
-            const palette = Array(Math.ceil(size / that._catPaletteSize)).fill(that._catPalette).flat()
+            const palette =
+                (colorByPoint) ? Array(Math.ceil(size / that._catPaletteSize)).fill(that._catPalette).flat()
+                    : Array(size).fill(that._catPalette[index % that._catPaletteSize])
 
             return {
                 name: nameSeries[0],
