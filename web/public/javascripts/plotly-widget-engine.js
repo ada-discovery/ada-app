@@ -722,7 +722,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     xShowLine: true,
                     xShowTicks: true,
                     yShowGrid: true,
-                    xDataType: dataType,
+                    xDataType: dataType,  // extra arg
                     height,
                     showLegend: showLegendExp
                 })
@@ -748,33 +748,32 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     yShowLine: true,
                     yShowTicks: true,
                     xShowGrid: true,
-                    yDataType: dataType,
+                    yDataType: dataType,  // extra arg
                     height,
                     showLegend: showLegendExp
                 })
 
                 break;
-                break;
             case 'Line':
-                series = datas
+                series = that._lineData(datas, false).map(function (seriesEntry, index) {
+                    seriesEntry.hovertemplate = that._numericalXAndTextPointFormat(seriesSize, isDate, isDouble)
 
-                this._lineChart({
+                    return seriesEntry
+                })
+
+                layout = this._layout({
                     title,
-                    chartElementId,
-                    categories: null,
-                    series,
                     xAxisCaption,
                     yAxisCaption,
-                    showLegend,
-                    enableDataLabels: true,
-                    pointFormat,
+                    xShowLine: true,
+                    xShowTicks: true,
+                    yShowGrid: true,
+                    xDataType: dataType, // extra arg
                     height,
-                    xDataType: dataType,
-                    yDataType: null,
-                    allowPointSelectionEvent: false,
-                    allowIntervalSelectionEvent: true,
-                    allowChartTypeChange: true
-                });
+                    showLegend: showLegendExp,
+                    showLabels: true
+                })
+
                 break;
             case 'Spline':
                 series = datas.map(function (data, index) {
