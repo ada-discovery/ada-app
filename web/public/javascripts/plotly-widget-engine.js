@@ -770,8 +770,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     yShowGrid: true,
                     xDataType: dataType, // extra arg
                     height,
-                    showLegend: showLegendExp,
-                    showLabels: true
+                    showLegend: showLegendExp
                 })
 
                 break;
@@ -792,8 +791,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     yShowGrid: true,
                     xDataType: dataType, // extra arg
                     height,
-                    showLegend: showLegendExp,
-                    showLabels: true
+                    showLegend: showLegendExp
                 })
 
                 break;
