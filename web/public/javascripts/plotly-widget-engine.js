@@ -776,27 +776,26 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
                 break;
             case 'Spline':
-                series = datas.map(function (data, index) {
-                    return {name: data.name, data: data.data, type: 'spline'};
-                });
+                series = that._lineData(datas, false).map(function (seriesEntry, index) {
+                    seriesEntry.hovertemplate = that._numericalXAndTextPointFormat(seriesSize, isDate, isDouble)
+                    seriesEntry.line = {shape: 'spline'}
 
-                this._lineChart({
+                    return seriesEntry
+                })
+
+                layout = this._layout({
                     title,
-                    chartElementId,
-                    categories: null,
-                    series,
                     xAxisCaption,
                     yAxisCaption,
-                    showLegend,
-                    enableDataLabels: true,
-                    pointFormat,
+                    xShowLine: true,
+                    xShowTicks: true,
+                    yShowGrid: true,
+                    xDataType: dataType, // extra arg
                     height,
-                    xDataType: dataType,
-                    yDataType: null,
-                    allowPointSelectionEvent: false,
-                    allowIntervalSelectionEvent: true,
-                    allowChartTypeChange: true
-                });
+                    showLegend: showLegendExp,
+                    showLabels: true
+                })
+
                 break;
             case 'Polar':
                 series = datas.map(function (data, index) {
