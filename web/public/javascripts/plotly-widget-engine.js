@@ -480,11 +480,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     xShowTicks: true,
                     yShowGrid: true,
                     height,
-                    showLegend: showLegendExp,
-                    showLabels: true,
-                    allowPointSelectionEvent: true,
-                    allowIntervalSelectionEvent: false,
-                    allowChartTypeChange: true
+                    showLegend: showLegendExp
                 })
 
                 break;
@@ -510,11 +506,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     yShowTicks: true,
                     xShowGrid: true,
                     height,
-                    showLegend: showLegendExp,
-                    showLabels: true,
-                    allowPointSelectionEvent: true,
-                    allowIntervalSelectionEvent: false,
-                    allowChartTypeChange: true
+                    showLegend: showLegendExp
                 })
 
                 break;
@@ -534,11 +526,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     xShowTicks: true,
                     yShowGrid: true,
                     height,
-                    showLegend: showLegendExp,
-                    showLabels: true,
-                    allowPointSelectionEvent: true,
-                    allowIntervalSelectionEvent: false,
-                    allowChartTypeChange: true
+                    showLegend: showLegendExp
                 })
 
                 break;
@@ -559,11 +547,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     xShowTicks: true,
                     yShowGrid: true,
                     height,
-                    showLegend: showLegendExp,
-                    showLabels: true,
-                    allowPointSelectionEvent: true,
-                    allowIntervalSelectionEvent: false,
-                    allowChartTypeChange: true
+                    showLegend: showLegendExp
                 })
 
                 break;
