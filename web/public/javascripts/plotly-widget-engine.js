@@ -431,7 +431,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
         switch (chartType) {
             case 'Pie':
-                series = that._pieData(datas, true).map(function (seriesEntry, index) {
+                series = that._pieData(datas, true, true).map(function (seriesEntry, index) {
                     seriesEntry.texttemplate = (useRelativeValues) ? "<b>%{value:.1f}</b>" : "<b>%{value}</b>"
                     seriesEntry.hovertemplate = that._categoricalLabelAndTextPointFormat(seriesSize)
 
@@ -674,23 +674,37 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
         switch (chartType) {
             case 'Pie':
-                series = datas.map(function (data, index) {
-                    const size = (100 / seriesSize) * index
-                    const innerSize = Math.max(0, (100 / seriesSize) * (index - 1) + 1)
-                    return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
-                });
+                series = that._pieData(data, false, false).map(function (seriesEntry, index) {
+                    seriesEntry.hovertemplate = that._categoricalLabelAndTextPointFormat(seriesSize)
 
-                this._pieChart({
+                    return seriesEntry
+                })
+
+                layout = this._layout({
                     title,
-                    chartElementId,
-                    series,
-                    showLabels: false,
-                    showLegend,
-                    pointFormat,
                     height,
-                    allowSelectionEvent: false,
-                    allowChartTypeChange: true
-                });
+                    showLegend: false
+                })
+
+                if (seriesSize > 1) {
+                    const xStep = 1 / seriesSize
+
+                    layout.annotations = series.map(function (seriesEntry, index) {
+                        return {
+                            font: {
+                                size: 13,
+                                family: that._fontFamily
+                            },
+                            xanchor: 'center',
+                            yanchor: 'center',
+                            showarrow: false,
+                            text: shorten(seriesEntry.name, 20),
+                            x: (xStep / 2) + xStep * index,
+                            y: 0.5
+                        }
+                    })
+                }
+
                 break;
             case 'Column':
                 series = that._columnData(datas, false, false).map(function (seriesEntry, index) {
