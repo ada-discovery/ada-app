@@ -1075,13 +1075,6 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             ': <b>%{text}</b><extra></extra>'
     }
 
-    _numericalCountPointFormat(isDate, isDouble, totalCounts, that) {
-        return this._getPointFormatHeader(that) +
-            this._getPointFormatXNumericalValue(isDate, isDouble, that, 2) +
-            this._getPointFormatY(that) +
-            ' (<b>%{text}%</b>)'
-    }
-
     _getPointFormatHeader(seriesCount) {
         return (seriesCount > 1) ? '<span style="font-size:11px">%{meta[0]}</span><br>' : ''
     }
