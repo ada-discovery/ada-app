@@ -651,6 +651,8 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         })
 
         plot(widget.displayOptions.chartType)
+
+        this._addChartTypeMenu(elementId)
     }
 
     _numericalWidgetAux({
@@ -841,9 +843,6 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                         itemNew.x = scaledX
 
                         itemNew.text = xString + ": <b>" + itemNew.text + "</b>"
-
-                        console.log(item)
-                        console.log(itemNew)
 
                         return itemNew
                     })
