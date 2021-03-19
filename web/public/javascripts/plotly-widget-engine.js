@@ -809,22 +809,65 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
                 break;
             case 'Polar':
-                series = datas.map(function (data, index) {
-                    return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
-                });
+                var minX = null, maxX = null
 
-                this._polarChart({
+                $.each(datas, function (index, nameSeries) {
+                    $.each(nameSeries[1], function (index2, item) {
+                        if (!minX || minX > item.x)
+                            minX = item.x
+
+                        if (!maxX || maxX < item.x)
+                            maxX = item.x
+                    })
+                })
+
+                const formattedData2 = datas.map(function (nameSeries, index) {
+                    const name = nameSeries[0]
+                    const series = nameSeries[1]
+
+                    const data = series.map(function (item) {
+                        const xString = (isDate) ? msOrDateToStandardDateString(item.x) :
+                            (isDouble) ? item.x.toFixed(2) : item.x
+
+                        const scaledX = 360 * (item.x - minX) / (maxX - minX)
+                        item.x = scaledX
+
+                        item.text = xString + ": <b>" + item.text + "</b>"
+
+                        return item
+                    })
+
+                    return [name, data]
+                })
+
+                series = that._polarData(formattedData2, false).map(function (seriesEntry, index) {
+                    seriesEntry.hovertemplate = that._textPointFormat(seriesSize)
+
+                    return seriesEntry
+                })
+
+                layout = this._layout({
                     title,
-                    chartElementId,
-                    categories: null,
-                    series,
-                    showLegend,
-                    pointFormat,
                     height,
-                    dataType,
-                    allowSelectionEvent: false,
-                    allowChartTypeChange: true
-                });
+                    showLegend: showLegendExp
+                })
+
+                layout.polar = {
+                    radialaxis: {
+                        showline: false,
+                        tickfont: {
+                            size: 9,
+                            family:  that._fontFamily
+                        },
+                        angle: 90
+                    },
+                    angularaxis: {
+                        showline: false,
+                        direction: "clockwise",
+                        tickfont: that._tickFont
+                    }
+                }
+
                 break;
         }
 
