@@ -390,6 +390,10 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
         plot(widget.displayOptions.chartType)
 
+        this._addChartTypeMenu(elementId)
+    }
+
+    _addChartTypeMenu(elementId) {
         const chartTypeMenu =
             '<div class="chart-type-menu dropdown" style="position: absolute; left: 15px; top: 0px; z-index: 10">\
                 <button class="btn btn-sm dropdown-toggle" style="background-color:transparent" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">\
