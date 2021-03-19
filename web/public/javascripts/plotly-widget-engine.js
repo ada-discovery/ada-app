@@ -1092,6 +1092,10 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         return this._getPointFormatHeader(seriesCount) + '%{theta}: <b>%{text}</b><extra></extra>'
     }
 
+    _textPointFormat(seriesCount) {
+        return this._getPointFormatHeader(seriesCount) + '%{text}<extra></extra>'
+    }
+
     // numerical
 
     _numericalXAndTextPointFormat(seriesCount, isDate, isDouble) {
