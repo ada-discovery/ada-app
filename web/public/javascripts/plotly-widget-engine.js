@@ -684,10 +684,12 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     const series = nameSeries[1]
 
                     const data = series.map(function (item) {
-                        item.x = (isDate) ? msOrDateToStandardDateString(item.x) :
-                            (isDouble) ? item.x.toFixed(2) : item.x
+                        const itemNew = Object.assign({}, item);
 
-                        return item
+                        itemNew.x = (isDate) ? msOrDateToStandardDateString(itemNew.x) :
+                            (isDouble) ? itemNew.x.toFixed(2) : itemNew.x
+
+                        return itemNew
                     })
 
                     return [name, data]
@@ -830,15 +832,20 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     const series = nameSeries[1]
 
                     const data = series.map(function (item) {
-                        const xString = (isDate) ? msOrDateToStandardDateString(item.x) :
-                            (isDouble) ? item.x.toFixed(2) : item.x
+                        const itemNew = Object.assign({}, item);
 
-                        const scaledX = 360 * (item.x - minX) / (maxX - minX)
-                        item.x = scaledX
+                        const xString = (isDate) ? msOrDateToStandardDateString(itemNew.x) :
+                            (isDouble) ? itemNew.x.toFixed(2) : itemNew.x
 
-                        item.text = xString + ": <b>" + item.text + "</b>"
+                        const scaledX = 360 * (itemNew.x - minX) / (maxX - minX)
+                        itemNew.x = scaledX
 
-                        return item
+                        itemNew.text = xString + ": <b>" + itemNew.text + "</b>"
+
+                        console.log(item)
+                        console.log(itemNew)
+
+                        return itemNew
                     })
 
                     return [name, data]
