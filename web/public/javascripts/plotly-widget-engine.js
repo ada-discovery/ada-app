@@ -982,7 +982,9 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 textfont: {
                     size: 11,
                     family:  that._fontFamily
-                }
+                },
+                sort: false,
+                direction: "clockwise"
             }
         })
     }
