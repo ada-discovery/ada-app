@@ -1122,6 +1122,13 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             ': <b>%{text}</b><extra></extra>'
     }
 
+    _numericalXYAndTextPointFormat(seriesCount, isXDate, isXDouble, isYDate, isYDouble) {
+        return this._getPointFormatHeader(seriesCount) + "(" +
+            this._getPointFormatXNumericalValue(isXDate, isXDouble, 2) + ", " +
+            this._getPointFormatYNumericalValue(isYDate, isYDouble, 2) + ")" +
+            ': <b>%{text}</b><extra></extra>'
+    }
+
     _getPointFormatHeader(seriesCount) {
         return (seriesCount > 1) ? '<span style="font-size:11px">%{meta[0]}</span><br>' : ''
     }
