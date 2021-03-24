@@ -156,6 +156,10 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             xDataType,
             yDataType
         })
+
+        if (filterElement) {
+            this._addScatterAreaZoomed(elementId, filterElement, widget, isXDouble, isXDate, isYDouble, isYDate);
+        }
     }
 
     _scatterChart({
