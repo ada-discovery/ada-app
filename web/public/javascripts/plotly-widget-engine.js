@@ -310,11 +310,14 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 mode: 'lines+markers',
                 type: 'scatter',
                 line: (useSpline) ? {shape: 'spline'} : {},
+                cliponaxis: false,
                 marker: {
                     size: 6,
+                    color: that._catPalette[index % that._catPaletteSize],
                     symbol: that._lineSymbols[index % that._lineSymbolsCount]
                 },
                 textfont: {
+                    size: 11,
                     family:  that._fontFamily
                 }
             }
