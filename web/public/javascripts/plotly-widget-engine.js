@@ -100,6 +100,64 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         }
     }
 
+    // impl
+    _valueScatterWidget(elementId, widget, filterElement) {
+        const that = this
+
+        const zs = widget.data.map(function (point) {
+            return point[2];
+        })
+
+        const zMin = Math.min.apply(null, zs);
+        const zMax = Math.max.apply(null, zs);
+
+        const colors = widget.data.map(function (point) {
+            const zColor = (1 - Math.abs((point[2] - zMin) / (zMax - zMin))) * 210
+            return 'rgba(255, ' + zColor + ',' + zColor + ', 0.8)'
+        })
+
+        const isXDate = widget.xFieldType == "Date"
+        const isXDouble = widget.xFieldType == "Double"
+        const xDataType = (isXDate) ? 'date' : null;
+
+        const isYDate = widget.yFieldType == "Date"
+        const isYDouble = widget.yFieldType == "Double"
+        const yDataType = (isYDate) ? 'date' : null;
+
+        const series =  [{
+            x: widget.data.map(function (pairs) { return pairs[0] }),
+            y: widget.data.map(function (pairs) { return pairs[1] }),
+            text: zs,
+            hovertemplate: that._numericalXYAndTextPointFormat(1, isXDate, isXDouble, isYDate, isYDouble),
+            mode: 'markers',
+            type: 'scatter',
+            cliponaxis: false,
+            marker: {
+                size: 6,
+                color: colors,
+                symbol: that._lineSymbols[0]
+            },
+            textfont: {
+                size: 11,
+                family: that._fontFamily
+            }
+        }]
+
+        const height = widget.displayOptions.height || 400;
+
+        this._scatterChart({
+            title: widget.title,
+            chartElementId: elementId,
+            xAxisCaption: widget.xAxisCaption,
+            yAxisCaption: widget.yAxisCaption,
+            series,
+            showLegend: false,
+            height,
+            xDataType,
+            yDataType
+        })
+    }
+
     _scatterChart({
         title,
         chartElementId,
