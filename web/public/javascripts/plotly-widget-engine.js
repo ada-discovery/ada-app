@@ -729,9 +729,11 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         title,
         xAxisCaption,
         yAxisCaption,
-        height
+        dataType,
+        height,
+        showLegend
     }) {
-        const showLegendExp = seriesSize > 1
+        const showLegendExp = (showLegend == null) ? seriesSize > 1 : showLegend
         const that = this
 
         switch (chartType) {
@@ -739,9 +741,8 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                 const layout = this._layout({
                     title,
                     height,
-                    showLegend: true
+                    showLegend: showLegendExp
                 })
-
 
                 if (seriesSize > 1) {
                     const xStep = 1 / seriesSize
@@ -771,6 +772,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     xShowLine: true,
                     xShowTicks: true,
                     yShowGrid: true,
+                    xDataType: dataType,
                     height,
                     showLegend: showLegendExp
                 })
@@ -782,6 +784,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     yShowLine: true,
                     yShowTicks: true,
                     xShowGrid: true,
+                    yDataType: dataType,
                     height,
                     showLegend: showLegendExp
                 })
@@ -793,6 +796,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     xShowLine: true,
                     xShowTicks: true,
                     yShowGrid: true,
+                    xDataType: dataType,
                     height,
                     showLegend: showLegendExp
                 })
@@ -804,6 +808,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     xShowLine: true,
                     xShowTicks: true,
                     yShowGrid: true,
+                    xDataType: dataType,
                     height,
                     showLegend: showLegendExp
                 })
