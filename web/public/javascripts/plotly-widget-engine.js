@@ -888,6 +888,118 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         })
     }
 
+    _layoutByChartType({
+        chartType,
+        series,
+        seriesSize,
+        title,
+        xAxisCaption,
+        yAxisCaption,
+        height
+    }) {
+        const showLegendExp = seriesSize > 1
+        const that = this
+
+        switch (chartType) {
+            case 'Pie':
+                const layout = this._layout({
+                    title,
+                    height,
+                    showLegend: true
+                })
+
+
+                if (seriesSize > 1) {
+                    const xStep = 1 / seriesSize
+
+                    layout.annotations = series.map(function (seriesEntry, index) {
+                        return {
+                            font: {
+                                size: 13,
+                                family: that._fontFamily
+                            },
+                            xanchor: 'center',
+                            yanchor: 'center',
+                            showarrow: false,
+                            text: shorten(seriesEntry.name, 20),
+                            x: (xStep / 2) + xStep * index,
+                            y: 0.5
+                        }
+                    })
+                }
+
+                return layout
+            case 'Column':
+                return this._layout({
+                    title,
+                    xAxisCaption,
+                    yAxisCaption,
+                    xShowLine: true,
+                    xShowTicks: true,
+                    yShowGrid: true,
+                    height,
+                    showLegend: showLegendExp
+                })
+            case 'Bar':
+                return this._layout({
+                    title,
+                    xAxisCaption: yAxisCaption,
+                    yAxisCaption: xAxisCaption,
+                    yShowLine: true,
+                    yShowTicks: true,
+                    xShowGrid: true,
+                    height,
+                    showLegend: showLegendExp
+                })
+            case 'Line':
+                return this._layout({
+                    title,
+                    xAxisCaption,
+                    yAxisCaption,
+                    xShowLine: true,
+                    xShowTicks: true,
+                    yShowGrid: true,
+                    height,
+                    showLegend: showLegendExp
+                })
+            case 'Spline':
+                return this._layout({
+                    title,
+                    xAxisCaption,
+                    yAxisCaption,
+                    xShowLine: true,
+                    xShowTicks: true,
+                    yShowGrid: true,
+                    height,
+                    showLegend: showLegendExp
+                })
+            case 'Polar':
+                const layout2 = this._layout({
+                    title,
+                    height,
+                    showLegend: showLegendExp
+                })
+
+                layout2.polar = {
+                    radialaxis: {
+                        showline: false,
+                        tickfont: {
+                            size: 9,
+                            family:  that._fontFamily
+                        },
+                        angle: 90
+                    },
+                    angularaxis: {
+                        showline: false,
+                        direction: "clockwise",
+                        tickfont: that._tickFont
+                    }
+                }
+
+                return layout2
+        }
+    }
+
     _columnData(datas, showText, colorByPoint) {
         const that = this
         const seriesSize = datas.length
