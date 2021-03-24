@@ -430,7 +430,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
     }) {
         const that = this
 
-        var series
+        var series, showLegendExp = null
 
         switch (chartType) {
             case 'Pie':
@@ -440,6 +440,9 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
                     return seriesEntry
                 })
+
+                showLegendExp = true
+
                 break;
             case 'Column':
                 series = that._columnData(datas, true, true).map(function (seriesEntry, index) {
@@ -497,7 +500,8 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             title,
             xAxisCaption: '',
             yAxisCaption,
-            height
+            height,
+            showLegend: showLegendExp
         })
 
         this._chart({
@@ -582,13 +586,12 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         xFieldType
     }) {
         const that = this
-        const showLegendExp = seriesSize > 1
 
         const isDate = xFieldType == "Date"
         const isDouble = xFieldType == "Double"
         const dataType = (isDate) ? 'date' : null;
 
-        var series, layout
+        var series, showLegendExp = null
 
         switch (chartType) {
             case 'Pie':
@@ -615,30 +618,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     return seriesEntry
                 })
 
-                layout = this._layout({
-                    title,
-                    height,
-                    showLegend: false
-                })
-
-                if (seriesSize > 1) {
-                    const xStep = 1 / seriesSize
-
-                    layout.annotations = series.map(function (seriesEntry, index) {
-                        return {
-                            font: {
-                                size: 13,
-                                family: that._fontFamily
-                            },
-                            xanchor: 'center',
-                            yanchor: 'center',
-                            showarrow: false,
-                            text: shorten(seriesEntry.name, 20),
-                            x: (xStep / 2) + xStep * index,
-                            y: 0.5
-                        }
-                    })
-                }
+                showLegendExp = false
 
                 break;
             case 'Column':
@@ -646,18 +626,6 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     seriesEntry.hovertemplate = that._numericalXAndTextPointFormat(seriesSize, isDate, isDouble)
 
                     return seriesEntry
-                })
-
-                layout = this._layout({
-                    title,
-                    xAxisCaption,
-                    yAxisCaption,
-                    xShowLine: true,
-                    xShowTicks: true,
-                    yShowGrid: true,
-                    xDataType: dataType,  // extra arg
-                    height,
-                    showLegend: showLegendExp
                 })
 
                 break;
@@ -674,36 +642,12 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     return seriesEntry
                 })
 
-                layout = this._layout({
-                    title,
-                    xAxisCaption: yAxisCaption,
-                    yAxisCaption: xAxisCaption,
-                    yShowLine: true,
-                    yShowTicks: true,
-                    xShowGrid: true,
-                    yDataType: dataType,  // extra arg
-                    height,
-                    showLegend: showLegendExp
-                })
-
                 break;
             case 'Line':
                 series = that._lineData(datas, false).map(function (seriesEntry, index) {
                     seriesEntry.hovertemplate = that._numericalXAndTextPointFormat(seriesSize, isDate, isDouble)
 
                     return seriesEntry
-                })
-
-                layout = this._layout({
-                    title,
-                    xAxisCaption,
-                    yAxisCaption,
-                    xShowLine: true,
-                    xShowTicks: true,
-                    yShowGrid: true,
-                    xDataType: dataType, // extra arg
-                    height,
-                    showLegend: showLegendExp
                 })
 
                 break;
@@ -713,18 +657,6 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     seriesEntry.line = {shape: 'spline'}
 
                     return seriesEntry
-                })
-
-                layout = this._layout({
-                    title,
-                    xAxisCaption,
-                    yAxisCaption,
-                    xShowLine: true,
-                    xShowTicks: true,
-                    yShowGrid: true,
-                    xDataType: dataType, // extra arg
-                    height,
-                    showLegend: showLegendExp
                 })
 
                 break;
@@ -768,30 +700,20 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
                     return seriesEntry
                 })
 
-                layout = this._layout({
-                    title,
-                    height,
-                    showLegend: showLegendExp
-                })
-
-                layout.polar = {
-                    radialaxis: {
-                        showline: false,
-                        tickfont: {
-                            size: 9,
-                            family:  that._fontFamily
-                        },
-                        angle: 90
-                    },
-                    angularaxis: {
-                        showline: false,
-                        direction: "clockwise",
-                        tickfont: that._tickFont
-                    }
-                }
-
                 break;
         }
+
+        const layout = this._layoutByChartType({
+            chartType,
+            seriesSize,
+            series,
+            title,
+            xAxisCaption,
+            yAxisCaption,
+            dataType,
+            height,
+            showLegend: showLegendExp
+        })
 
         this._chart({
             chartElementId,
