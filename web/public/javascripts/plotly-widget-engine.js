@@ -407,6 +407,16 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
     // impl
     _heatmapWidget(elementId, widget) {
+        const colors = (widget.twoColors) ?
+            [
+                [0, this._catPalette[5]],
+                [0.5, '#FFFFFF'],
+                [1, this._catPalette[0]]
+            ] : [
+                [0, '#FFFFFF'],
+                [1, this._catPalette[0]]
+            ]
+
         const data = [{
             x: widget.xCategories,
             y: widget.yCategories,
@@ -415,6 +425,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             zmin: widget.min,
             zmax: widget.max,
             transpose: true,
+            colorscale: colors,
             showscale: true
         }];
 
