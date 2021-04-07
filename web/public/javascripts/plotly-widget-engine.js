@@ -407,6 +407,13 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
     // impl
     _heatmapWidget(elementId, widget) {
+        const isXDate = widget.xFieldType == "Date"
+        const isXDouble = widget.xFieldType == "Double"
+        const xDataType = (isXDate) ? 'date' : null;
+
+        const isYDate = widget.yFieldType == "Date"
+        const yDataType = (isYDate) ? 'date' : null;
+
         const colors = (widget.twoColors) ?
             [
                 [0, this._catPalette[5]],
@@ -435,6 +442,8 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
             title: widget.title,
             xAxisCaption: widget.xAxisCaption,
             yAxisCaption: widget.yAxisCaption,
+            xDataType,
+            yDataType,
             xShowLine: true,
             xShowTicks: true,
             yShowLine: true,
