@@ -678,7 +678,7 @@ class HighchartsWidgetEnginex extends WidgetEngine {
     }
 
     // impl
-    _heatmapWidget(elementId, widget) {
+    _heatmapWidget(elementId, widget, filterElement) { // TODO: filter not used but could be
         const xCategories = widget.xCategories
         const yCategories = widget.yCategories
         const data = widget.data.map(function (seq, i) {

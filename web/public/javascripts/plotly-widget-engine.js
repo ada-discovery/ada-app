@@ -406,12 +406,13 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
     }
 
     // impl
-    _heatmapWidget(elementId, widget) {
+    _heatmapWidget(elementId, widget, filterElement) {
         const isXDate = widget.xFieldType == "Date"
         const isXDouble = widget.xFieldType == "Double"
         const xDataType = (isXDate) ? 'date' : null;
 
         const isYDate = widget.yFieldType == "Date"
+        const isYDouble = widget.yFieldType == "Double"
         const yDataType = (isYDate) ? 'date' : null;
 
         const colors = (widget.twoColors) ?
@@ -452,6 +453,10 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         })
 
         Plotly.newPlot(elementId, data, layout)
+
+        if (filterElement && widget.xFieldType && widget.yFieldType) {
+            this._addScatterAreaZoomed(elementId, filterElement, widget, isXDouble, isXDate, isYDouble, isYDate);
+        }
     };
 
     _categoricalCountWidget(elementId, widget, filterElement) {

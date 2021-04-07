@@ -43,7 +43,7 @@ class WidgetEngine {
                     this._valueScatterWidget(widgetElementId, widget, filterElement);
                     break;
                 case "org.ada.web.models.HeatmapWidget":
-                    this._heatmapWidget(widgetElementId, widget);
+                    this._heatmapWidget(widgetElementId, widget, filterElement);
                     break;
                 case "org.ada.web.models.HtmlWidget":
                     this._htmlWidget(widgetElementId, widget);
@@ -376,7 +376,7 @@ class WidgetEngine {
         throw "no fun impl. provided"
     }
 
-    _heatmapWidget(widgetId, widget) {
+    _heatmapWidget(widgetId, widget, filterElement) {
         throw "no fun impl. provided"
     }
 
