@@ -35,7 +35,8 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
 
     _lineSymbolsCount = this._lineSymbols.length
 
-    _catPalette = ["rgb(124,181,236)",
+    _catPalette = [
+        "rgb(124,181,236)",
         "rgb(67,67,72)",
         "rgb(144,237,125)",
         "rgb(247,163,92)",
@@ -254,12 +255,18 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         const isDate = widget.fieldType == "Date"
         const dataType = (isDate) ? 'date' : null;
 
+        const that = this;
+
         const datas = widget.data.map(function (namedQuartiles) {
             const quartiles = namedQuartiles[1]
             return {
                 y: [quartiles.lowerWhisker, quartiles.lowerQuantile, quartiles.lowerQuantile, quartiles.median, quartiles.upperQuantile, quartiles.upperQuantile, quartiles.upperWhisker],
                 type: "box",
-                name: namedQuartiles[0]
+                name: namedQuartiles[0],
+                fillcolor: "#eeeeee",
+                marker: {
+                    color: that._catPalette[0]
+                }
             }
         })
 
