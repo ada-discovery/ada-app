@@ -26,18 +26,14 @@ private class PearsonCorrelationWidgetGenerator(flowParallelism: Option[Int]) ex
         val fieldLabels = fields.map(_.labelOrElseName)
 
         val widget = HeatmapWidget(
-          title(spec).getOrElse("Pearson Correlations"),
-          fieldLabels,
-          fieldLabels,
-          None,
-          None,
-          None,
-          None,
-          correlations,
-          Some(-1),
-          Some(1),
-          true,
-          spec.displayOptions
+          title = title(spec).getOrElse("Pearson Correlations"),
+          xCategories = fieldLabels,
+          yCategories = fieldLabels,
+          data = correlations,
+          min = Some(-1),
+          max = Some(1),
+          twoColors = true,
+          displayOptions = spec.displayOptions
         )
         Some(widget)
       } else

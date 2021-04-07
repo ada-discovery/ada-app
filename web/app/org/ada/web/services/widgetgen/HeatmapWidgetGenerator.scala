@@ -64,6 +64,8 @@ private trait HeatmapWidgetGenerator[S <: WidgetSpec, ACCUM, AGG] extends Calcul
           yValues,
           Some(label(fieldNames(0))),
           Some(label(fieldNames(1))),
+          Some(fieldNames(0)),
+          Some(fieldNames(1)),
           xFieldType,
           yFieldType,
           aggs,
