@@ -105,8 +105,10 @@ case class HeatmapWidget(
   title: String,
   xCategories: Seq[String],
   yCategories: Seq[String],
-  xAxisCaption: Option[String],
-  yAxisCaption: Option[String],
+  xAxisCaption: Option[String] = None,
+  yAxisCaption: Option[String] = None,
+  xFieldName: Option[String] = None,
+  yFieldName: Option[String] = None,
   xFieldType: Option[FieldTypeId.Value] = None,
   yFieldType: Option[FieldTypeId.Value] = None,
   data: Seq[Seq[Option[Double]]],
@@ -173,6 +175,7 @@ object Widget {
   implicit val tupleFormat = TupleFormat[String, Seq[Count[String]]]
   implicit val tuple2Format = TupleFormat[String, String, Seq[Seq[Double]]]
   implicit val optionFormat = new OptionFormat[Double]
+  implicit val optionStringFormat = new OptionFormat[String]
   implicit val fieldTypeFormat = EnumFormat(FieldTypeId)
   implicit val optionFieldTypeFormat = new OptionFormat[FieldTypeId.Value]
 
@@ -336,6 +339,8 @@ object Widget {
       (__ \ "yCategories").format[Seq[String]] and
       (__ \ "xAxisCaption").formatNullable[String] and
       (__ \ "yAxisCaption").formatNullable[String] and
+      (__ \ "xFieldName").format[Option[String]] and
+      (__ \ "yFieldName").format[Option[String]] and
       (__ \ "xFieldType").format[Option[FieldTypeId.Value]] and
       (__ \ "yFieldType").format[Option[FieldTypeId.Value]] and
       (__ \ "data").format[Seq[Seq[Option[Double]]]] and
@@ -343,7 +348,7 @@ object Widget {
       (__ \ "max").format[Option[Double]] and
       (__ \ "twoColors").format[Boolean] and
       (__ \ "displayOptions").format[DisplayOptions]
-    )(HeatmapWidget(_, _, _, _, _, _, _, _, _, _, _, _), {x => (x.title, x.xCategories, x.yCategories, x.xAxisCaption, x.yAxisCaption, x.xFieldType, x.yFieldType, x.data, x.min, x.max, x.twoColors, x.displayOptions)})
+    )(HeatmapWidget(_, _, _, _, _, _, _, _, _, _, _, _, _, _), {x => (x.title, x.xCategories, x.yCategories, x.xAxisCaption, x.yAxisCaption, x.xFieldName, x.yFieldName, x.xFieldType, x.yFieldType, x.data, x.min, x.max, x.twoColors, x.displayOptions)})
   }
 
   implicit val basicStatsResulFormat = Json.format[BasicStatsResult]
