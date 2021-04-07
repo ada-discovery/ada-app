@@ -405,6 +405,35 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         this._addAreaSelected(chartElementId)
     }
 
+    // impl
+    _heatmapWidget(elementId, widget) {
+        const data = [{
+            x: widget.xCategories,
+            y: widget.yCategories,
+            z: widget.data,
+            type: 'heatmap',
+            zmin: widget.min,
+            zmax: widget.max,
+            transpose: true,
+            showscale: true
+        }];
+
+        const height = widget.displayOptions.height || 400
+
+        const layout = this._layout({
+            title: widget.title,
+            xAxisCaption: widget.xAxisCaption,
+            yAxisCaption: widget.yAxisCaption,
+            xShowLine: true,
+            xShowTicks: true,
+            yShowLine: true,
+            yShowTicks: true,
+            height
+        })
+
+        Plotly.newPlot(elementId, data, layout)
+    };
+
     _categoricalCountWidget(elementId, widget, filterElement) {
         const that = this
 
