@@ -123,7 +123,7 @@
         }
 
         function setFullWidth() {
-            var widgets = $("#widgetsTr .chart-holder")
+            const widgets = $("#widgetsTr .chart-holder")
             $.each(widgets, function (index, widget) {
                 $(widget).parent().attr("class", "col-md-12");
             })

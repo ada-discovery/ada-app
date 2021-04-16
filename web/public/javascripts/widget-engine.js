@@ -352,6 +352,26 @@ class WidgetEngine {
         $('#' + elementId).html(widget.content)
     }
 
+    _agg(series, widget) {
+        var counts = series.map(function (item) {
+            return item.count;
+        });
+
+        if (widget.isCumulative) {
+            var max = counts.reduce(function (a, b) {
+                return Math.max(a, b);
+            });
+
+            return max
+        } else {
+            var sum = counts.reduce(function (a, b) {
+                return a + b;
+            });
+
+            return sum
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////
     // Impl hooks of visual widgets (to be overridden in subclasses) //
     ///////////////////////////////////////////////////////////////////
