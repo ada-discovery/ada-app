@@ -1,4 +1,4 @@
-class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
+class HighchartsWidgetEngine extends WidgetEngine {
 
     _fontFamily = 'Helvetica'
 
@@ -1207,9 +1207,19 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         }
     }
 
-    // Formatters
+    refresh() {
+        $.each($(".js-plotly-plot"), function (index, chart) {
+            const elementId = $(chart).attr('id')
+//            Plotly.Plots.resize(elementId)
+            Plotly.relayout(elementId, { "autosize": true});
+        })
+    }
 
-    // categorical
+    ////////////////
+    // Formatters //
+    ////////////////
+
+    // Categorical
 
     _categoricalXAndTextPointFormat(seriesCount) {
         return this._getPointFormatHeader(seriesCount) + '%{x}: <b>%{text}</b><extra></extra>'
@@ -1231,7 +1241,7 @@ class HighchartsWidgetEngine extends HighchartsWidgetEnginex {
         return this._getPointFormatHeader(seriesCount) + '%{text}<extra></extra>'
     }
 
-    // numerical
+    // Numerical
 
     _numericalXAndTextPointFormat(seriesCount, isDate, isDouble) {
         return this._getPointFormatHeader(seriesCount) +
