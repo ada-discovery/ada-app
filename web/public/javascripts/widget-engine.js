@@ -403,4 +403,8 @@ class WidgetEngine {
     _lineWidget(widgetId, widget, filterElement) {
         throw "no fun impl. provided"
     }
+
+    refresh() {
+        throw "no fun impl. provided"
+    }
 }

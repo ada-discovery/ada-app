@@ -1,11 +1,5 @@
 class HighchartsWidgetEnginex extends WidgetEngine {
 
-    refresh() {
-        Highcharts.charts.forEach(function (chart) {
-            if (chart) chart.reflow();
-        });
-    }
-
     // impl
     _categoricalCountWidget(elementId, widget, filterElement) {
         var categories = (widget.data.length > 0) ?
@@ -1540,7 +1534,15 @@ class HighchartsWidgetEnginex extends WidgetEngine {
         return (xMin) ? {xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax} : null
     }
 
-    // Formatters
+    refresh() {
+        Highcharts.charts.forEach(function (chart) {
+            if (chart) chart.reflow();
+        });
+    }
+
+    ////////////////
+    // Formatters //
+    ////////////////
 
     _numericalPointFormat(isDate, isDouble, that, xFloatingPoints, yFloatingPoints) {
         return this._getPointFormatHeader(that) +
