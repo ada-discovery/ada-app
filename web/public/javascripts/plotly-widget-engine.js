@@ -1097,6 +1097,10 @@ class HighchartsWidgetEngine extends WidgetEngine {
         data,
         layout
     }) {
+        layout.modebar = {
+            bgcolor: "rgba(255,255,255,0.99)",
+        }
+
         const config = {
             displaylogo: false
         }
