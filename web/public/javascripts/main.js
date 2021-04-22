@@ -768,3 +768,43 @@ function shorten(string, length) {
   var initLength = length || 25
   return (string.length > initLength) ? string.substring(0, initLength) + ".." : string
 }
+
+// TODO: relocate to widget-engine.js
+function combineSVGs(charts, exportFun, callback) {
+  var top = 0;
+  var width = 0;
+  var svgArr = [];
+
+  function adjustSVG(svgres) {
+    // Grab width/height from exported chart
+    const svgWidth = +svgres.match(
+        /^<svg[^>]*width\s*=\s*\"?(\d+)\"?[^>]*>/
+        )[1],
+        svgHeight = +svgres.match(
+            /^<svg[^>]*height\s*=\s*\"?(\d+)\"?[^>]*>/
+        )[1]
+
+    // Offset the position of this chart in the final SVG
+    var svg = svgres.replace('<svg', '<g transform="translate(0,' + top + ')" ');
+    svg = svg.replace('</svg>', '</g>');
+
+    top += svgHeight;
+    width = Math.max(width, svgWidth);
+    return svg;
+  }
+
+  function exportChart(i) {
+    if (i == charts.length) {
+      const finalResult = '<svg height="' + top + '" width="' + width + '" version="1.1" xmlns="http://www.w3.org/2000/svg">' + svgArr.join('') + '</svg>'
+      return callback(finalResult);
+    }
+
+    exportFun(charts[i], function (svg) {
+      if (svg) svgArr.push(adjustSVG(svg));
+
+      return exportChart(i + 1); // continue
+    })
+  }
+
+  exportChart(0);
+}
