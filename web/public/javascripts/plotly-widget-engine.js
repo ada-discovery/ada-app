@@ -187,7 +187,7 @@ class HighchartsWidgetEngine extends WidgetEngine {
             height
         })
 
-        Plotly.newPlot(chartElementId, series, layout)
+        this._chart({chartElementId, data: series, layout})
 
         this._addAreaSelected(chartElementId)
     }
@@ -313,7 +313,7 @@ class HighchartsWidgetEngine extends WidgetEngine {
             height
         })
 
-        Plotly.newPlot(chartElementId, data, layout)
+        this._chart({chartElementId, data, layout})
     }
 
     // impl
@@ -407,7 +407,7 @@ class HighchartsWidgetEngine extends WidgetEngine {
             height
         })
 
-        Plotly.newPlot(chartElementId, data, layout)
+        this._chart({chartElementId, data, layout})
 
         this._addAreaSelected(chartElementId)
     }
@@ -459,7 +459,7 @@ class HighchartsWidgetEngine extends WidgetEngine {
             height
         })
 
-        Plotly.newPlot(elementId, data, layout)
+        this._chart({chartElementId: elementId, data, layout})
 
         if (filterElement && widget.xFieldType && widget.yFieldType) {
             this._addScatterAreaZoomed(elementId, filterElement, widget, isXDouble, isXDate, isYDouble, isYDate);
@@ -1097,7 +1097,11 @@ class HighchartsWidgetEngine extends WidgetEngine {
         data,
         layout
     }) {
-        Plotly.newPlot(chartElementId, data, layout)
+        const config = {
+            displaylogo: false
+        }
+
+        Plotly.newPlot(chartElementId, data, layout, config)
     }
 
     _addPointClicked(elementId, filterElement, fieldName) {
