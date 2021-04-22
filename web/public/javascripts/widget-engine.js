@@ -446,4 +446,8 @@ class WidgetEngine {
     refresh() {
         throw "no fun impl. provided"
     }
+
+    export(chartIds, type, filename) {
+        throw "no fun impl. provided"
+    }
 }
