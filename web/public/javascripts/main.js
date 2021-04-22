@@ -640,7 +640,11 @@ function createIndependenceTestTable(results, withTestType) {
 }
 
 function msOrDateToStandardDateString(ms) {
-  var date = new Date(ms)
+  const date = new Date(ms)
+  return dateToStandardString(date);
+}
+
+function dateToStandardString(date) {
   return date.getFullYear() + '-' +('0' + (date.getMonth()+1)).slice(-2)+ '-' + date.getDate() + ' ' + date.getHours() + ':'+('0' + (date.getMinutes())).slice(-2)+ ':' + date.getSeconds();
 }
 
