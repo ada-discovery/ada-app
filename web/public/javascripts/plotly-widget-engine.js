@@ -1098,11 +1098,33 @@ class HighchartsWidgetEngine extends WidgetEngine {
         layout
     }) {
         layout.modebar = {
-            bgcolor: "rgba(255,255,255,0.99)",
+            bgcolor: "rgba(255,255,255,0.99)"
+        }
+
+        function exportButton(extension) {
+            return                 {
+                name: 'Download as ' + extension.toUpperCase(),
+                icon: Plotly.Icons.camera,
+                click: function (gd) {
+                    const nowString = dateToStandardString(new Date()).replace(/(\s|:)/g, "_")
+                    Plotly.downloadImage(gd, {
+                        filename: 'chart_' + nowString,
+                        format: extension,
+                        width: gd._fullLayout.width,
+                        height: gd._fullLayout.height
+                    })
+                }
+            }
         }
 
         const config = {
-            displaylogo: false
+            displaylogo: false,
+            modeBarButtonsToRemove: ['toImage'],
+            modeBarButtonsToAdd: [
+                exportButton("png"),
+                exportButton("svg"),
+                exportButton("jpeg")
+            ]
         }
 
         Plotly.newPlot(chartElementId, data, layout, config)
