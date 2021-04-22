@@ -35,11 +35,4 @@ $(function () {
             );
         });
     };
-
-    // Set global default options for all charts
-    Highcharts.setOptions({
-        exporting: {
-            fallbackToExportServer: false // Ensure the export happens on the client side or not at all
-        }
-    });
 });
