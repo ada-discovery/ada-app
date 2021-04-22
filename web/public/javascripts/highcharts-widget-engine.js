@@ -1551,6 +1551,42 @@ class HighchartsWidgetEngine extends WidgetEngine {
         });
     }
 
+    export(charts, type, filename) {
+        var options = {
+            type: type,
+            filename: filename
+        }
+
+        options = Highcharts.merge(Highcharts.getOptions().exporting, options);
+
+        function exportFun(chartId, svgCallback) {
+            const chart = $("#" + chartId).highcharts()
+            if (chart) {
+                chart.getSVGForLocalExport(options, {}, function () {
+                    console.log("Failed to get SVG");
+                    svgCallback(null);
+                }, function (svg) {
+                    svgCallback(svg);
+                });
+            } else {
+                svgCallback(null)
+            }
+        }
+
+        // Get SVGs asynchronously and then download the resulting SVG
+        this._combineSVGs(charts, exportFun, function (svg) {
+            Highcharts.downloadSVGLocal(
+                svg, options,
+                    // (options.filename || 'chart')  + '.' + (imageType === 'image/svg+xml' ? 'svg' : imageType.split('/')[1]),
+                    // imageType,
+                    // options.scale || 2,
+                function () {
+                    console.log("Failed to export on client side");
+                }
+            );
+        });
+    }
+
     ////////////////
     // Formatters //
     ////////////////
