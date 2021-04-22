@@ -808,3 +808,11 @@ function combineSVGs(charts, exportFun, callback) {
 
   exportChart(0);
 }
+
+function svgToDataUrl(svg) {
+  try {
+    return URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=UTF-8,' }));
+  } catch (e) {
+    return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+  }
+}
