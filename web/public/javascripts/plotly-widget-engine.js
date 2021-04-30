@@ -1,4 +1,4 @@
-class HighchartsWidgetEngine extends WidgetEngine {
+class HighchartsWidgetEnginex extends WidgetEngine {
 
     _fontFamily = 'Helvetica'
 
@@ -1102,7 +1102,7 @@ class HighchartsWidgetEngine extends WidgetEngine {
         }
 
         function exportButton(extension) {
-            return                 {
+            return {
                 name: 'Download as ' + extension.toUpperCase(),
                 icon: Plotly.Icons.camera,
                 click: function (gd) {
@@ -1242,6 +1242,68 @@ class HighchartsWidgetEngine extends WidgetEngine {
             const elementId = $(chart).attr('id')
 //            Plotly.Plots.resize(elementId)
             Plotly.relayout(elementId, { "autosize": true});
+        })
+    }
+
+    export(charts, format, filename) {
+        function exportFun(chartId, svgCallback) {
+            const chart = document.getElementById(chartId)
+            if (chart._fullLayout) {
+                Plotly.toImage(chart, {
+                    format: 'svg',
+                    width: chart._fullLayout.width,
+                    height: chart._fullLayout.height
+                }).then(function (svgurl) {
+                    const svg = decodeURIComponent(svgurl).replace("data:image/svg+xml,", "")
+                    svgCallback(svg)
+                })
+            } else {
+                svgCallback(null)
+            }
+        }
+
+        function downloadAsCanvas(srcURL, width, height, type) {
+            const img = new Image();
+            img.src = srcURL;
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                canvas.width  = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0);
+
+                const canvasUrl = canvas.toDataURL(type)
+                downloadFile(canvasUrl, filename)
+            }
+        }
+
+        // Get SVGs asynchronously and then download the resulting SVG
+        this._combineSVGs(charts, exportFun, function (svg) {
+            const svgWidth = getSVGWidth(svg)
+            const svgHeight = getSVGHeight(svg)
+
+            const svgDataURL = svgToDataUrl(svg);
+
+            console.log(format)
+            console.log(svgWidth)
+            console.log(svgHeight)
+
+            switch (format) {
+                case 'image/svg+xml':
+                    downloadFile(svgDataURL, filename)
+                    break;
+                case 'image/jpeg':
+                    downloadAsCanvas(svgDataURL, svgWidth, svgHeight, "image/jpeg");
+                    break;
+                case 'image/png':
+                    downloadAsCanvas(svgDataURL, svgWidth, svgHeight, "image/png");
+                    break;
+                case 'application/pdf':
+                    //TODO
+                    break;
+                default:
+                    throw "Export for the format " + format + " is not implemented."
+            }
         })
     }
 
