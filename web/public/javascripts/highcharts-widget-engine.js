@@ -21,34 +21,34 @@ class HighchartsWidgetEngine extends WidgetEngine {
 
         const that = this
 
-        var datas = widget.data.map(function (nameSeries) {
-            var name = nameSeries[0]
-            var series = nameSeries[1]
+        const datas = widget.data.map(function (nameSeries) {
+            const name = nameSeries[0]
+            const series = nameSeries[1]
 
-            var sum = that._agg(series, widget)
-            var data = series.map(function (item) {
-                var label = shorten(item.value)
-                var count = item.count
-                var key = item.key
+            const sum = that._agg(series, widget)
+            const data = series.map(function (item) {
+                const label = shorten(item.value)
+                const count = item.count
+                const key = item.key
 
-                var value = (widget.useRelativeValues) ? 100 * count / sum : count
+                const value = (widget.useRelativeValues) ? 100 * count / sum : count
                 return {name: label, y: value, key: key}
             })
 
             return {name: name, data: data}
         })
 
-        var totalCounts = widget.data.map(function (nameSeries) {
+        const totalCounts = widget.data.map(function (nameSeries) {
             return that._agg(nameSeries[1], widget);
         })
 
-        var seriesSize = datas.length
-        var height = widget.displayOptions.height || 400
+        const seriesSize = datas.length
+        const height = widget.displayOptions.height || 400
 
-        var pointFormat = function () {
+        const pointFormat = function () {
             return (widget.useRelativeValues) ? that._categoricalPercentPointFormat(this) : that._categoricalCountPointFormat(totalCounts, this);
         }
-        var yAxisCaption = (widget.useRelativeValues) ? '%' : 'Count'
+        const yAxisCaption = (widget.useRelativeValues) ? '%' : 'Count'
 
         function plot(chartType) {
             that._categoricalWidgetAux({
@@ -1551,9 +1551,9 @@ class HighchartsWidgetEngine extends WidgetEngine {
         });
     }
 
-    export(charts, type, filename) {
+    export(charts, format, filename) {
         var options = {
-            type: type,
+            type: format,
             filename: filename
         }
 
