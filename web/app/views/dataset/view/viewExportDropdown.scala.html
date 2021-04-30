@@ -40,13 +40,14 @@
 )
 
 <script type="text/javascript">
-    var chartsExportFileName = '@{dataSetName.replaceAllLiterally(".","_").replaceAllLiterally(" ", "_").toLowerCase + "-charts"}'
+    const chartsExportFileName = '@{dataSetName.replaceAllLiterally(".","_").replaceAllLiterally(" ", "_").toLowerCase + "-charts"}'
 
     function exportCharts(type) {
-        var chartIds = $.map($(".chart-holder"), function (chart, i) {
+        const chartIds = $.map($(".chart-holder"), function (chart, i) {
             return chart.id;
         })
 
-        Highcharts.exportCharts(chartIds, {type: type, filename: chartsExportFileName});
+        const widgetEngine = new HighchartsWidgetEngine()
+        widgetEngine.export(chartIds, type, chartsExportFileName)
     }
 </script>
