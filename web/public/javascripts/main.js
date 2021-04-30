@@ -784,3 +784,12 @@ function getSVGWidth(svgres) {
 function getSVGHeight(svgres) {
   return +svgres.match(/^<svg[^>]*height\s*=\s*\"?(\d+)\"?[^>]*>/)[1]
 }
+
+function downloadFile(dataURL, filename) {
+  const a = document.createElement('a');
+  a.href = dataURL;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
