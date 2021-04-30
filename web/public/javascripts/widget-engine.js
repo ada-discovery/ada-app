@@ -379,12 +379,7 @@ class WidgetEngine {
 
         function adjustSVG(svgres) {
             // Grab width/height from exported chart
-            const svgWidth = +svgres.match(
-                /^<svg[^>]*width\s*=\s*\"?(\d+)\"?[^>]*>/
-                )[1],
-                svgHeight = +svgres.match(
-                    /^<svg[^>]*height\s*=\s*\"?(\d+)\"?[^>]*>/
-                )[1]
+            const svgWidth = getSVGWidth(svgres), svgHeight = getSVGHeight(svgres)
 
             // Offset the position of this chart in the final SVG
             var svg = svgres.replace('<svg', '<g transform="translate(0,' + top + ')" ');
@@ -447,7 +442,7 @@ class WidgetEngine {
         throw "no fun impl. provided"
     }
 
-    export(chartIds, type, filename) {
+    export(chartIds, format, filename) {
         throw "no fun impl. provided"
     }
 }
