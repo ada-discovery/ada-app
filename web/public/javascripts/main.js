@@ -776,3 +776,11 @@ function svgToDataUrl(svg) {
     return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
   }
 }
+
+function getSVGWidth(svgres) {
+  return +svgres.match(/^<svg[^>]*width\s*=\s*\"?(\d+)\"?[^>]*>/)[1]
+}
+
+function getSVGHeight(svgres) {
+  return +svgres.match(/^<svg[^>]*height\s*=\s*\"?(\d+)\"?[^>]*>/)[1]
+}
