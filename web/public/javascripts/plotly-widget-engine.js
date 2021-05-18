@@ -1289,6 +1289,22 @@ class HighchartsWidgetEnginex extends WidgetEngine {
                 }
             });
 
+            // collects all the clips and gradient defs and put them into a single space (svg2pdf needs this)
+            const $newDefs = $("<defs>", {"id": "defs-global"});
+            const defs = svgContainer.getElementsByTagName('defs');
+            $.each(Array.from(defs), function (i, el) {
+                const clips = Array.from(el.getElementsByClassName("clips"))
+                const gradient = Array.from(el.getElementsByClassName("gradient"))
+                if (clips.length > 0) {
+                    $newDefs.append(clips[0].innerHTML)
+                }
+                if (gradient.length > 0) {
+                    $newDefs.append(gradient[0].innerHTML)
+                }
+                el.parentNode.removeChild(el);
+            });
+            $(svgContainer.firstChild).prepend($newDefs)
+
             const svgElement = svgContainer.firstChild;
             const margin = 0;
 
