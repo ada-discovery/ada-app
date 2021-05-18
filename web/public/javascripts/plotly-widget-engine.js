@@ -1281,6 +1281,14 @@ class HighchartsWidgetEnginex extends WidgetEngine {
             const svgContainer = document.createElement('div');
             svgContainer.innerHTML = svg;
 
+            // remove paths without 'd' attribute (svg2pdf cannot handle those)
+            const paths = svgContainer.getElementsByTagName('path');
+            $.each(Array.from(paths), function (i, el) {
+                if (!el.getAttribute("d")) {
+                    el.parentNode.removeChild(el);
+                }
+            });
+
             const svgElement = svgContainer.firstChild;
             const margin = 0;
 
