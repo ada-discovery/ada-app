@@ -1305,6 +1305,12 @@ class HighchartsWidgetEnginex extends WidgetEngine {
             });
             $(svgContainer.firstChild).prepend($newDefs)
 
+            // TODO: nested image with data:image/png;base64 cannot be handled so we remove them... should be preserved and addressed properly
+            const images = svgContainer.getElementsByTagName('image');
+            $.each(Array.from(images), function (i, el) {
+                el.parentNode.removeChild(el);
+            });
+
             const svgElement = svgContainer.firstChild;
             const margin = 0;
 
