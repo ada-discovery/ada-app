@@ -1284,10 +1284,6 @@ class HighchartsWidgetEnginex extends WidgetEngine {
 
             const svgDataURL = svgToDataUrl(svg);
 
-            console.log(format)
-            console.log(svgWidth)
-            console.log(svgHeight)
-
             switch (format) {
                 case 'image/svg+xml':
                     downloadFile(svgDataURL, filename)
