@@ -1277,6 +1277,23 @@ class HighchartsWidgetEnginex extends WidgetEngine {
             }
         }
 
+        function downloadAsPdf(svg) {
+            const svgContainer = document.createElement('div');
+            svgContainer.innerHTML = svg;
+
+            const svgElement = svgContainer.firstChild;
+            const margin = 0;
+
+            const widthx = svgElement.width.baseVal.value + 2 * margin,
+                heightx = svgElement.height.baseVal.value + 2 * margin;
+
+            const pdf = new jsPDF('l', 'pt', [widthx + 2 * margin, heightx + 2 * margin]);
+            svg2pdf(svgElement, pdf, { removeInvalid: true });
+
+            const pdfUri = pdf.output('datauristring');
+            downloadFile(pdfUri, filename)
+        }
+
         // Get SVGs asynchronously and then download the resulting SVG
         this._combineSVGs(charts, exportFun, function (svg) {
             const svgWidth = getSVGWidth(svg)
@@ -1295,7 +1312,7 @@ class HighchartsWidgetEnginex extends WidgetEngine {
                     downloadAsCanvas(svgDataURL, svgWidth, svgHeight, "image/png");
                     break;
                 case 'application/pdf':
-                    //TODO
+                    downloadAsPdf(svg);
                     break;
                 default:
                     throw "Export for the format " + format + " is not implemented."
