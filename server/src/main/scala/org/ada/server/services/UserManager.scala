@@ -1,6 +1,7 @@
 package org.ada.server.services
 
 import com.google.inject.ImplementedBy
+
 import javax.inject.{Inject, Singleton}
 import org.ada.server.services.ldap.{LdapService, LdapSettings}
 import org.ada.server.models.LdapUser
@@ -8,8 +9,9 @@ import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.models.User
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.util.toHumanReadableCamel
-import play.api.Logger
+import play.api.{Configuration, Logger}
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
 import scala.concurrent.Future.sequence
@@ -32,10 +34,16 @@ trait UserManager {
 
   def findByEmail(email: String): Future[Option[User]]
 
+  def findByOidcId(oidcOpt: Option[UUID]): Future[Option[User]]
+
   def debugUsers: Traversable[User]
 
+  /**
+    * Regarding OIDC create an admin and basic user in your OpenId provider
+    */
   val adminUser = User(userId = "admin.user", name = "Dummy Admin User", email = "admin@mail", roles = Seq("admin"))
   val basicUser = User(userId = "basic.user", name = "Dummy Basic User", email = "basic@mail", roles = Seq("basic"))
+
 }
 
 /**
@@ -163,4 +171,12 @@ private class UserManagerImpl @Inject()(
     */
   override def findById(id: String): Future[Option[User]] =
     userRepo.find(Seq("userId" #== id)).map(_.headOption)
+
+  /**
+    * Given an oidcId, find the corresponding account.
+    * @param oidcId to be matched
+    * @return Option containing Account with matching oidcId; None otherwise
+    */
+  override def findByOidcId(oidcOpt: Option[UUID]): Future[Option[User]] =
+    userRepo.find(Seq("oidcId" #== oidcOpt)).map(_.headOption)
 }

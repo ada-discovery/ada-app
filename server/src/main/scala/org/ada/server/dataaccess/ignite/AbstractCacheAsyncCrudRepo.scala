@@ -1,7 +1,6 @@
 package org.ada.server.dataaccess.ignite
 
-import java.util.Date
-
+import java.util.{Date, UUID}
 import org.ada.server.dataaccess._
 import org.apache.ignite.cache.query.{QueryCursor, ScanQuery, SqlFieldsQuery}
 import org.apache.ignite.{Ignite, IgniteCache}

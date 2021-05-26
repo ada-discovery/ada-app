@@ -6,6 +6,8 @@ import play.api.libs.json.{Json, _}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 
+import java.util.UUID
+
 /**
   *  User object - holds info about a user such as userId, email, roles, and  permissions.
   *
@@ -18,14 +20,14 @@ import reactivemongo.play.json.BSONFormats._
   * @param permissions Permissions for Deadbolt.
   */
 case class User(
-  _id: Option[BSONObjectID] = None,
-  userId: String,
-  oidcId: Option[String] = None,
-  name: String,
-  email: String,
-  roles: Seq[String] = Nil,
-  permissions: Seq[String] = Nil,
-  locked: Boolean = false
+                 _id: Option[BSONObjectID] = None,
+                 userId: String,
+                 oidcId: Option[UUID] = None,
+                 name: String,
+                 email: String,
+                 roles: Seq[String] = Nil,
+                 permissions: Seq[String] = Nil,
+                 locked: Boolean = false
 )
 
 object User {

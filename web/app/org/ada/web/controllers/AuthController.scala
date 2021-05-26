@@ -2,7 +2,7 @@ package org.ada.web.controllers
 
 import javax.inject.Inject
 import play.api.{Configuration, Logger}
-import play.api.Play.current
+import play.api.Play.{current, routes}
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.json._
 import play.api.mvc._
@@ -17,11 +17,14 @@ import org.ada.web.controllers.core.AdaBaseController
 import org.incal.play.security.AuthAction
 import org.ada.web.security.AdaAuthConfig
 import play.api.libs.mailer.MailerClient
+import play.api.libs.ws.WSClient
 
 class AuthController @Inject() (
     val userManager: UserManager,
     configuration: Configuration,
-    mailerClient: MailerClient
+    mailerClient: MailerClient,
+    ws: WSClient
+
   ) extends AdaBaseController with LoginLogout with AdaAuthConfig {
 
   private val logger = Logger
@@ -53,7 +56,7 @@ class AuthController @Inject() (
     * Login switch - if OIDC available use it, otherwise redirect to a standard form login (LDAP)
     */
   def login = Action { implicit request =>
-    if (configuration.getString(s"oidc.baseUrl").isDefined)
+    if (configuration.getString(s"oidc.discoveryURI").isDefined)
       Redirect(org.ada.web.controllers.routes.OidcAuthController.oidcLogin())
     else
       Redirect(org.ada.web.controllers.routes.AuthController.loginWithForm())
@@ -77,15 +80,21 @@ class AuthController @Inject() (
         "success" -> "Logged out"
       ).removingFromSession("rememberme"))
 
-    if (configuration.getString(s"oidc.baseUrl").isDefined) {
+    if (configuration.getString(s"oidc.discoveryURI").isDefined) {
       // OIDC auth is present...first logout "standardly" and then by using PAC4J (can be local or global)
-      logoutLocally.map( _ =>
-        Redirect(org.pac4j.play.routes.LogoutController.logout())
-      )
+      logoutLocally
+        .map(_ => Redirect(org.ada.web.controllers.routes.AuthController.logoutKeycloak()))
     } else
       logoutLocally
   }
 
+
+
+  def logoutKeycloak = Action.async {
+    ws.url("http://localhost:8180/auth/realms/podium-realm/protocol/openid-connect/logout").get()
+      .map(_ => Redirect(org.pac4j.play.routes.ApplicationLogoutController.logout())
+        )
+  }
   /**
     * Logout for restful api.
     */
@@ -159,7 +168,7 @@ class AuthController @Inject() (
   // immediately login as basic user
   def loginBasic = Action.async { implicit request =>
     if(userManager.debugUsers.nonEmpty)
-      gotoLoginSucceeded(userManager.basicUser.userId)
+      gotoLoginSucceeded(userManager.basicUser.oidcId.get.toString)
     else
       Future(unauthorizedRedirect)
   }
@@ -167,7 +176,7 @@ class AuthController @Inject() (
   // immediately login as admin user
   def loginAdmin = Action.async { implicit request =>
     if (userManager.debugUsers.nonEmpty)
-      gotoLoginSucceeded(userManager.adminUser.userId)
+      gotoLoginSucceeded(userManager.adminUser.oidcId.get.toString)
     else
       Future(unauthorizedRedirect)
   }

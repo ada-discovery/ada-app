@@ -1,12 +1,13 @@
 package org.ada.web.controllers
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
+
 import javax.inject.Inject
 import org.ada.web.controllers.core.AdaCrudControllerImpl
 import org.ada.web.controllers.dataset._
 import org.ada.server.dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
 import play.api.data.Form
-import play.api.data.Forms.{email, optional, ignored, mapping, boolean, nonEmptyText, seq, text}
+import play.api.data.Forms.{boolean, email, ignored, mapping, nonEmptyText, optional, seq, text, uuid}
 import org.ada.server.models.{DataSpaceMetaInfo, User}
 import org.incal.core.dataaccess.AscSort
 import reactivemongo.bson.BSONObjectID
@@ -19,6 +20,7 @@ import org.incal.play.controllers.{AdminRestrictedCrudController, CrudController
 import play.api.libs.json.{JsArray, Json}
 import play.api.libs.mailer.{Email, MailerClient}
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -35,7 +37,7 @@ class UserController @Inject() (
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "userId" -> nonEmptyText,
-      "oidcId" -> optional(nonEmptyText),
+      "oidcId" -> optional(uuid),
       "name" -> nonEmptyText,
       "email" -> email,
       "roles" -> seq(text),

@@ -1,123 +1,46 @@
 package org.ada.web.security
 
-import com.google.inject.{AbstractModule, Provides, Singleton}
+import com.google.inject.AbstractModule
 import com.nimbusds.jose.JWSAlgorithm
-import org.ada.server.AdaException
+import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod
 import org.pac4j.core.client.Clients
 import org.pac4j.core.config.Config
 import org.pac4j.oidc.client.OidcClient
 import org.pac4j.oidc.config.OidcConfiguration
 import org.pac4j.oidc.profile.OidcProfile
-import org.pac4j.play.http.DefaultHttpActionAdapter
-import org.pac4j.play.store.{PlayCacheSessionStore, PlaySessionStore}
-import org.pac4j.play.{CallbackController, LogoutController}
-import play.api.{Configuration, Environment, Logger}
+import org.pac4j.play.store.{PlayCacheStore, PlaySessionStore}
+import org.pac4j.play.{ApplicationLogoutController, CallbackController}
+import play.api.{Configuration, Environment}
 
-/**
- * Security module powered by PAC4J library providing an authentication client for OIDC.
- */
-class PacSecurityModule(environment: Environment, configuration: Configuration) extends AbstractModule {
+class PacSecurityModule (environment: Environment, configuration: Configuration) extends AbstractModule {
 
   override def configure(): Unit = {
+    var oidcConfiguration = new OidcConfiguration();
 
-    bind(classOf[PlaySessionStore]).to(classOf[PlayCacheSessionStore])
+    oidcConfiguration.setClientId(configuration.getString("oidc.clientId").orNull)
+    oidcConfiguration.setSecret(configuration.getString("oidc.secret").orNull)
+    oidcConfiguration.setClientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
+    oidcConfiguration.setPreferredJwsAlgorithm(JWSAlgorithm.RS256)
+    oidcConfiguration.setDiscoveryURI(configuration.getString("oidc.discoveryURI").orNull)
+    var oidcClient = new OidcClient[OidcProfile](oidcConfiguration);
 
-    // callback
+    val adaBaseUrl = configuration.getString("oidc.adaBaseUrl").orNull
+    val clients = new Clients(s"$adaBaseUrl/oidc/callback", oidcClient)
+    val config = new Config(clients)
+    config.setHttpActionAdapter(new CustomHttpActionAdapter)
+    bind(classOf[Config]).toInstance(config)
+
+    bind(classOf[PlaySessionStore]).to(classOf[PlayCacheStore])
+
     val callbackController = new CallbackController()
+    callbackController.setDefaultUrl("/?defaulturlafterlogout")
     callbackController.setMultiProfile(true)
     bind(classOf[CallbackController]).toInstance(callbackController)
 
     // logout
+    val logoutController = new ApplicationLogoutController()
+    logoutController.setDefaultUrl(adaBaseUrl)
+    bind(classOf[ApplicationLogoutController]).toInstance(logoutController)
 
-    val redirectUrl = getOidcConf("baseUrl").getOrElse("/")
-    val centralLogout = getOidcConfBool("enableCentralLogout").getOrElse(true) // true by default
-
-    val logoutController = new LogoutController()
-    logoutController.setDefaultUrl(redirectUrl)
-    logoutController.setLocalLogout(true)
-    logoutController.setCentralLogout(centralLogout)
-
-    bind(classOf[LogoutController]).toInstance(logoutController)
-  }
-
-  private def oidcClient: OidcClient[OidcProfile] = {
-    val config = new OidcConfiguration()
-
-    def setConf(
-      setConf: OidcConfiguration => String => Unit,
-      key: String,
-      mandatory: Boolean = true
-    ) = {
-      val isKeySet = getOidcConf(key).map(setConf(config)(_))
-
-      if (mandatory && isKeySet.isEmpty)
-        throw new AdaException(s"OIDC config key '${key}' not available.")
-    }
-
-    ///////////////////////
-    // set config values //
-    ///////////////////////
-
-    // mandatory settings - clientId, secret, discoveryURI, and logoutURL
-    setConf(_.setClientId, "clientId")
-    setConf(_.setSecret, "secret")
-    setConf(_.setDiscoveryURI, "discoveryURI")
-    setConf(_.setLogoutUrl, "logoutURL")
-
-    setConf(
-      _.setResponseType,
-      "responseType",
-      mandatory = false
-    )
-
-    setConf(
-      _.setScope,
-      "scope",
-      mandatory = false
-    )
-
-    setConf(
-      _.setClientAuthenticationMethodAsString,
-      "clientAuthenticationMethod",
-      mandatory = false
-    )
-
-    setConf(
-      (conf: OidcConfiguration) => (s: String) => conf.setPreferredJwsAlgorithm(JWSAlgorithm.parse(s)),
-      "preferredJwsAlgorithm",
-      mandatory = false
-    )
-
-    setConf(
-      (conf: OidcConfiguration) => (s: String) => conf.setUseNonce(s == "true"),
-      "useNonce",
-      mandatory = false
-    )
-
-    val oidcClient = new OidcClient[OidcProfile](config)
-    oidcClient
-  }
-
-  private def getOidcConf(key: String) = configuration.getString(s"oidc.$key")
-  private def getOidcConfBool(key: String) = configuration.getBoolean(s"oidc.$key")
-
-  @Provides
-  @Singleton
-  def provideConfig: Config = {
-    val config = getOidcConf("baseUrl").map { baseUrl =>
-      val suffix = org.pac4j.play.routes.CallbackController.callback().url
-
-      val callbackUrl = baseUrl.replaceAll("/$", "") + suffix
-
-      Logger.info(s"Creating PAC config with an OIDC client for '${getOidcConf("clientId").getOrElse("")}'.")
-      val clients = new Clients(callbackUrl, oidcClient)
-      new Config(clients)
-    }.getOrElse {
-      Logger.info(s"Creating PAC config with no clients.")
-      new Config()
-    }
-
-    config.setHttpActionAdapter(new DefaultHttpActionAdapter())
-    config
   }
 }
