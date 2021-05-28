@@ -60,9 +60,6 @@ class OidcAuthController @Inject() (
             result <- user.map { user =>
               // user exists locally... update (if needed)
               if (!user.name.equalsIgnoreCase(oidcUser.name) || !user.email.equalsIgnoreCase(oidcUser.email)) {
-                logger.warn("===========> Update")
-                logger.warn("===========> OidcUser name" + oidcUser.name + " email " + oidcUser.email + "Case class " + oidcUser)
-                logger.warn("===========> User " + user)
                 userRepo.update(
                   user.copy(
                     name = oidcUser.name,
@@ -77,7 +74,6 @@ class OidcAuthController @Inject() (
 
             }.getOrElse{
               // user doesn't exist locally
-              logger.warn("==============> Insert")
                 userRepo.save(oidcUser).flatMap(_ =>
                   successfulResult(" new user imported.")
                 )

@@ -3,8 +3,6 @@ package org.ada.server.dataaccess.ignite;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 
-import java.util.Optional;
-
 public class CustomSqlFunctions {
 
     @QuerySqlFunction
@@ -61,5 +59,4 @@ public class CustomSqlFunctions {
     private static boolean safeEquals(Object obj1, Object obj2) {
         return (obj1 == null && obj2 == null) || (obj1 != null && obj2 != null && obj1.equals(obj2));
     }
-
 }

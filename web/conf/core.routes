@@ -22,8 +22,7 @@ GET         /oidc/callback                                                      
 
 GET         /logout                                                                 org.ada.web.controllers.AuthController.logout
 GET         /loggedout                                                              org.ada.web.controllers.AuthController.loggedOut
-GET         /logoutKeycloak                                                         org.ada.web.controllers.AuthController.logoutKeycloak
-GET         /logoutOIDC                                                             @org.pac4j.play.ApplicationLogoutController.logout()
+GET         /logoutOIDC                                                             @org.pac4j.play.LogoutController.logout()
 
 # for no-authentication access
 GET         /loginBasic                                                             org.ada.web.controllers.AuthController.loginBasic
