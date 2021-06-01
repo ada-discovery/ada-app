@@ -12,6 +12,7 @@ import org.pac4j.play.store.{PlayCacheSessionStore, PlaySessionStore}
 import org.pac4j.play.{CallbackController, LogoutController}
 import play.api.{Configuration, Environment}
 
+
 class PacSecurityModule (environment: Environment, configuration: Configuration) extends AbstractModule {
 
   val adaBaseUrl: String = configuration.getString("oidc.adaBaseUrl").get
