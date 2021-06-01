@@ -6,7 +6,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 
 object GuicePlayTestApp {
 
-  def apply(moduleNames: Seq[String] = Nil): Application = {
+  def apply(moduleNames: Seq[String] = Nil, addPlayCache: Boolean = true): Application = {
     val env = play.api.Environment.simple()
     val config = play.api.Configuration.load(env)
 
@@ -18,9 +18,11 @@ object GuicePlayTestApp {
         config.getStringList("play.modules.enabled").fold(
           List.empty[String])(l => iterableAsScalaIterable(l).filterNot(_ == "org.ada.web.security.PacSecurityModule").toList)
       }
-    new GuiceApplicationBuilder()
-      .overrides(inject.bind(classOf[PlaySessionStore]).to(classOf[PlayCacheSessionStore]))
-      .configure("play.modules.enabled" -> modules)
+    var guice = new GuiceApplicationBuilder()
+      if (addPlayCache)
+        guice = guice.overrides(inject.bind(classOf[PlaySessionStore]).to(classOf[PlayCacheSessionStore]))
+
+    guice.configure("play.modules.enabled" -> modules)
       .configure(("mongodb.uri", "mongodb://localhost:27017/ada")).build
   }
 }
