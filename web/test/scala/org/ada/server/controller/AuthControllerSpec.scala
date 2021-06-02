@@ -9,7 +9,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{GET, defaultAwaitTimeout, redirectLocation, route, status, writeableOf_AnyContentAsEmpty}
 
 
-class AuthControllerTest extends PlaySpec {
+class AuthControllerSpec extends PlaySpec {
 
   implicit val app: Application = GuicePlayTestApp()
 
