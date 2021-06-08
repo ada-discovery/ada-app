@@ -20,14 +20,14 @@ import java.util.UUID
   * @param permissions Permissions for Deadbolt.
   */
 case class User(
-                 _id: Option[BSONObjectID] = None,
-                 userId: String,
-                 oidcId: Option[UUID] = None,
-                 name: String,
-                 email: String,
-                 roles: Seq[String] = Nil,
-                 permissions: Seq[String] = Nil,
-                 locked: Boolean = false
+  _id: Option[BSONObjectID] = None,
+  userId: String,
+  oidcId: Option[UUID] = None,
+  name: String,
+  email: String,
+  roles: Seq[String] = Nil,
+  permissions: Seq[String] = Nil,
+  locked: Boolean = false
 )
 
 object User {

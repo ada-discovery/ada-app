@@ -1,17 +1,24 @@
 package org.ada.server.dataaccess.ignite
 
-import org.ada.server.dataaccess.ignite.BinaryJsonUtil.escapeIgniteFieldName
-import org.apache.ignite.cache.query.SqlFieldsQuery
-import org.apache.ignite.configuration.CacheConfiguration
+import java.util.Date
+
+import org.ada.server.dataaccess._
+import org.apache.ignite.cache.query.{QueryCursor, ScanQuery, SqlFieldsQuery}
 import org.apache.ignite.{Ignite, IgniteCache}
-import org.h2.value.{DataType, Value}
+import org.apache.ignite.configuration.CacheConfiguration
+import org.h2.value.DataType
+import org.ada.server.dataaccess.ignite.BinaryJsonUtil.escapeIgniteFieldName
+import org.apache.ignite.transactions.{TransactionConcurrency, TransactionIsolation}
+import org.h2.value.Value
 import org.incal.core.Identity
-import org.incal.core.dataaccess._
 import play.api.Logger
+import play.api.libs.json.{JsNull, Json}
+import org.incal.core.dataaccess._
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
     cache: IgniteCache[CACHE_ID, CACHE_E],

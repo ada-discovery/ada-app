@@ -8,12 +8,15 @@ import org.pac4j.core.config.Config
 import org.pac4j.oidc.client.OidcClient
 import org.pac4j.oidc.config.OidcConfiguration
 import org.pac4j.oidc.profile.OidcProfile
+import org.pac4j.play.http.DefaultHttpActionAdapter
 import org.pac4j.play.store.{PlayCacheSessionStore, PlaySessionStore}
 import org.pac4j.play.{CallbackController, LogoutController}
 import play.api.{Configuration, Environment}
 
-
-class PacSecurityModule (environment: Environment, configuration: Configuration) extends AbstractModule {
+/**
+ * Security module powered by PAC4J library providing an authentication client for OIDC.
+ */
+class PacSecurityModule(environment: Environment, configuration: Configuration) extends AbstractModule {
 
   val adaBaseUrl: String = configuration.getString("oidc.adaBaseUrl").get
 
@@ -51,7 +54,7 @@ class PacSecurityModule (environment: Environment, configuration: Configuration)
   def provideConfig(oidcClient: OidcClient[OidcProfile]) : Config = {
     val clients = new Clients(s"$adaBaseUrl/oidc/callback", oidcClient)
     val config = new Config(clients)
-    config.setHttpActionAdapter(new CustomHttpActionAdapter)
+    config.setHttpActionAdapter(new DefaultHttpActionAdapter())
     config
   }
 

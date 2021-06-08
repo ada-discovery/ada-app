@@ -8,11 +8,10 @@ import org.ada.web.security.AdaAuthConfig
 import org.pac4j.core.config.Config
 import org.pac4j.core.profile._
 import org.pac4j.play.scala._
-import org.pac4j.play.store.{PlayCacheSessionStore, PlaySessionStore}
+import org.pac4j.play.store.PlaySessionStore
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc._
 import play.api.{Configuration, Logger}
-import play.core.j.PlayMagicForJava.requestHeader
 import play.libs.concurrent.HttpExecutionContext
 
 import java.util.UUID
@@ -29,25 +28,12 @@ class OidcAuthController @Inject() (
 ) extends Controller
     with Security[CommonProfile]            // PAC4J
     with Login                              // Play2 Auth
-    with AdaAuthConfig { // Play2 Auth
+    with AdaAuthConfig {                    // Play2 Auth
 
   private val subAttribute = configuration.getString("oidc.returnAttributeIdName")
 
   def oidcLogin = Secure("OidcClient") { profiles =>
     Action.async { implicit request =>
-      val profile = profiles.head
-      val userId = profile.getUsername
-
-      // get a user info from the OIDC return data (profile)
-      val oidcIdOpt = subAttribute.flatMap(oidcIdName =>
-        Option(UUID.fromString(profile.getAttribute(oidcIdName).asInstanceOf[String])))
-
-      val oidcUser = User(
-        userId = userId,
-        name = profile.getDisplayName,
-        email = profile.getEmail,
-        oidcId = oidcIdOpt
-      )
 
       def successfulResult(user: User, extraMessage: String = "") = {
         Logger.info(s"Successful authentication for the user '${user.userId}', id '${user.oidcId}' using the associated OIDC provider.$extraMessage")
@@ -107,6 +93,20 @@ class OidcAuthController @Inject() (
           successfulResult(oidcUser)
         )
       }
+
+      val profile = profiles.head
+      val userId = profile.getUsername
+
+      // get a user info from the OIDC return data (profile)
+      val oidcIdOpt = subAttribute.flatMap(oidcIdName =>
+        Option(UUID.fromString(profile.getAttribute(oidcIdName).asInstanceOf[String])))
+
+      val oidcUser = User(
+        userId = userId,
+        name = profile.getDisplayName,
+        email = profile.getEmail,
+        oidcId = oidcIdOpt
+      )
 
       for {
         user <- userManager.findById(userId)

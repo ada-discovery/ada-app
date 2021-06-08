@@ -1,7 +1,6 @@
 package org.ada.server.services
 
 import com.google.inject.ImplementedBy
-
 import javax.inject.{Inject, Singleton}
 import org.ada.server.services.ldap.{LdapService, LdapSettings}
 import org.ada.server.models.LdapUser
@@ -9,7 +8,7 @@ import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.models.User
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.core.util.toHumanReadableCamel
-import play.api.{Configuration, Logger}
+import play.api.Logger
 
 import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits._

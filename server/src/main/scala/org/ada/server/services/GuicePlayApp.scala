@@ -23,6 +23,6 @@ object GuicePlayTestApp {
         guice = guice.overrides(inject.bind(classOf[PlaySessionStore]).to(classOf[PlayCacheSessionStore]))
 
     guice.configure("play.modules.enabled" -> modules)
-      .configure(("mongodb.uri", "mongodb://localhost:27017/ada")).build
+      .configure(("mongodb.uri", sys.env("ADA_MONGO_DB_URI"))).build
   }
 }
