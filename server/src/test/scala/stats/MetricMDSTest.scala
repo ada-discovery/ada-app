@@ -31,7 +31,7 @@ class MetricMDSTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
   private val randomInputSize = 1000
   private val precision = 0.001
 
-  private val injector = GuicePlayTestApp().injector
+  private val injector = GuicePlayTestApp(addPlayCache = false).injector
   private val statsService = injector.instanceOf[StatsService]
 
   "Metric MDS" should "match the static example" in {

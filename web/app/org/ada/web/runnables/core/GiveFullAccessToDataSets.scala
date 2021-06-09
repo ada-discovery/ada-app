@@ -28,7 +28,7 @@ class GiveFullAccessToDataSets @Inject() (
       dataSpace <- dataSpaceMetaInfoRepo.get(input.dataSpaceId)
 
       // check if a data space exists
-      _ = require(dataSpace.isDefined, s"Data spapce '${input.dataSpaceId}' not found.")
+      _ = require(dataSpace.isDefined, s"Data space '${input.dataSpaceId}' not found.")
 
       // collect all the data set ids under a given data space
       dataSetIds = dataSpace.get.dataSetMetaInfos.map(_.id)
@@ -37,15 +37,15 @@ class GiveFullAccessToDataSets @Inject() (
       newPermissions = dataSetIds.map("DS:" + _)
 
       // retrieve the user with a given user-name
-      user <- userRepo.find(Seq("ldapDn" #== input.userName)).map(_.headOption)
+      user <- userRepo.find(Seq("userId" #== input.userId)).map(_.headOption)
 
       // check if a user found
-      _ = require(user.isDefined, s"User '${input.userName}' not found.")
+      _ = require(user.isDefined, s"User '${input.userId}' not found.")
 
       // update the user
       _ <- userRepo.update(user.get.copy(permissions = user.get.permissions ++ newPermissions))
     } yield {
-      addParagraph(s"User '${input.userName}' was given permissions to access ${bold(dataSetIds.size.toString)} data sets:")
+      addParagraph(s"User '${input.userId}' was given permissions to access ${bold(dataSetIds.size.toString)} data sets:")
       addOutput("<ul>")
       dataSetIds.foreach(dataSetId => addOutput(s"<li>${dataSetId}</li>"))
       addOutput("</ul>")
@@ -54,5 +54,5 @@ class GiveFullAccessToDataSets @Inject() (
 
 case class GiveFullAccessToDataSetsSpec(
   dataSpaceId: BSONObjectID,
-  userName: String
+  userId: String
 )

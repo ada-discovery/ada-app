@@ -1,11 +1,12 @@
 package org.ada.server.services
 
-import play.api.Application
+import org.pac4j.play.store.{PlayCacheSessionStore, PlaySessionStore}
+import play.api.{Application, inject}
 import play.api.inject.guice.GuiceApplicationBuilder
 
 object GuicePlayTestApp {
 
-  def apply(moduleNames: Seq[String] = Nil): Application = {
+  def apply(moduleNames: Seq[String] = Nil, addPlayCache: Boolean = true): Application = {
     val env = play.api.Environment.simple()
     val config = play.api.Configuration.load(env)
 
@@ -15,8 +16,13 @@ object GuicePlayTestApp {
       } else {
         import scala.collection.JavaConversions.iterableAsScalaIterable
         config.getStringList("play.modules.enabled").fold(
-          List.empty[String])(l => iterableAsScalaIterable(l).toList)
+          List.empty[String])(l => iterableAsScalaIterable(l).filterNot(_ == "org.ada.web.security.PacSecurityModule").toList)
       }
-    new GuiceApplicationBuilder().configure("play.modules.enabled" -> modules).build
+    var guice = new GuiceApplicationBuilder()
+      if (addPlayCache)
+        guice = guice.overrides(inject.bind(classOf[PlaySessionStore]).to(classOf[PlayCacheSessionStore]))
+
+    guice.configure("play.modules.enabled" -> modules)
+      .configure(("mongodb.uri", sys.env("ADA_MONGO_DB_URI"))).build
   }
 }

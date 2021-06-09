@@ -219,7 +219,7 @@ object GenericJsonFormatTest extends App {
 
   // user testing
   val genericUserFormat = GenericJson.format[User]
-  val user = User(None, "peter", "lala@world.net", Seq("admin", "runner"))
+  val user = User(userId = "peter123", name = "Peter", email = "lala@world.net", roles = Seq("admin", "runner"))
   testFromToJson(user)(genericUserFormat, User.userFormat)
 
   // runnbale spec testing

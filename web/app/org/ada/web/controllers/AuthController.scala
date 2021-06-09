@@ -53,7 +53,7 @@ class AuthController @Inject() (
     * Login switch - if OIDC available use it, otherwise redirect to a standard form login (LDAP)
     */
   def login = Action { implicit request =>
-    if (configuration.getString(s"oidc.baseUrl").isDefined)
+    if (configuration.getString(s"oidc.discoveryURI").isDefined)
       Redirect(org.ada.web.controllers.routes.OidcAuthController.oidcLogin())
     else
       Redirect(org.ada.web.controllers.routes.AuthController.loginWithForm())
@@ -72,12 +72,18 @@ class AuthController @Inject() (
     * Remember log out state and redirect to main page.
     */
   def logout = Action.async { implicit request =>
-    if (configuration.getString(s"oidc.baseUrl").isDefined)
-      Future(Redirect(org.pac4j.play.routes.LogoutController.logout()))
-    else
+    def logoutLocally =
       gotoLogoutSucceeded.map(_.flashing(
         "success" -> "Logged out"
       ).removingFromSession("rememberme"))
+
+    if (configuration.getString(s"oidc.discoveryURI").isDefined) {
+      // OIDC auth is present...first logout "standardly" and then by using PAC4J (can be local or global)
+      logoutLocally.map( _ =>
+        Redirect(org.pac4j.play.routes.LogoutController.logout())
+      )
+    } else
+      logoutLocally
   }
 
   /**
@@ -142,7 +148,7 @@ class AuthController @Inject() (
               Future(authenticationUnsuccessfulResult)
             } else
               userOption match {
-                case Some(user) => if (user.locked) Future(userNotFoundOrLockedResult) else loginSuccessfulResult(user.ldapDn)
+                case Some(user) => if (user.locked) Future(userNotFoundOrLockedResult) else loginSuccessfulResult(user.userId)
                 case None => Future(userNotFoundOrLockedResult)
               }
         } yield
@@ -153,7 +159,7 @@ class AuthController @Inject() (
   // immediately login as basic user
   def loginBasic = Action.async { implicit request =>
     if(userManager.debugUsers.nonEmpty)
-      gotoLoginSucceeded(userManager.basicUser.ldapDn)
+      gotoLoginSucceeded(userManager.basicUser.oidcId.get.toString)
     else
       Future(unauthorizedRedirect)
   }
@@ -161,7 +167,7 @@ class AuthController @Inject() (
   // immediately login as admin user
   def loginAdmin = Action.async { implicit request =>
     if (userManager.debugUsers.nonEmpty)
-      gotoLoginSucceeded(userManager.adminUser.ldapDn)
+      gotoLoginSucceeded(userManager.adminUser.oidcId.get.toString)
     else
       Future(unauthorizedRedirect)
   }

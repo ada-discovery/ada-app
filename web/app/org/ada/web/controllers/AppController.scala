@@ -58,10 +58,10 @@ class AppController @Inject() (
         }
       } yield {
         user.map { user =>
-          logger.info("Studies accessed by " + user.ldapDn)
+          logger.info("Studies accessed by " + user.userId)
           val dataSpacesNum = metaInfos.map(dataSpaceService.countDataSpacesNumRecursively).sum
           val dataSetsNum = metaInfos.map(dataSpaceService.countDataSetsNumRecursively).sum
-          val userFirstName = user.ldapDn.split("\\.", -1).head.capitalize
+          val userFirstName = user.userId.split("\\.", -1).head.capitalize
 
           Ok(layout.dataSets(userFirstName, dataSpacesNum, dataSetsNum, metaInfos))
         }.getOrElse(
