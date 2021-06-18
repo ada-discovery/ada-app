@@ -4,6 +4,8 @@ scalaVersion := "2.11.12"
 
 libraryDependencies ++= Seq(cache, ws, filters)
 
+
+
 PlayKeys.devSettings := Seq(
   "play.server.netty.maxInitialLineLength" -> "16384",
   "play.server.netty.transport" -> "jdk"
@@ -23,7 +25,7 @@ routesImport ++= Seq(
 val playVersion = "2.5.9"
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-web" % version.value,
+  "org.adada" %% "ada-web" % version.value ,
   "org.adada" %% "ada-web" % version.value classifier "assets",
   "org.adada" %% "ada-dream-pd-challenge" % "0.1.1",
   "org.in-cal" %% "incal-dl4j" % "0.2.3",   // DL4J

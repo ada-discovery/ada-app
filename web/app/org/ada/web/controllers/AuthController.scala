@@ -53,7 +53,7 @@ class AuthController @Inject() (
     * Login switch - if OIDC available use it, otherwise redirect to a standard form login (LDAP)
     */
   def login = Action { implicit request =>
-    if (configuration.getString(s"oidc.discoveryURI").isDefined)
+    if (configuration.getString(s"oidc.discoveryUrl").isDefined)
       Redirect(org.ada.web.controllers.routes.OidcAuthController.oidcLogin())
     else
       Redirect(org.ada.web.controllers.routes.AuthController.loginWithForm())
@@ -77,7 +77,7 @@ class AuthController @Inject() (
         "success" -> "Logged out"
       ).removingFromSession("rememberme"))
 
-    if (configuration.getString(s"oidc.discoveryURI").isDefined) {
+    if (configuration.getString(s"oidc.discoveryUrl").isDefined) {
       // OIDC auth is present...first logout "standardly" and then by using PAC4J (can be local or global)
       logoutLocally.map( _ =>
         Redirect(org.pac4j.play.routes.LogoutController.logout())

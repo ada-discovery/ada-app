@@ -12,12 +12,13 @@ import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIde
 import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, User}
 import org.ada.web.controllers.dataset.{DataSetViewHelper, TableViewData}
 import org.ada.web.services.DataSpaceService
+import org.ada.web.services.oidc.BearerTokenService
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion._
 import org.incal.play.{Page, PageOrder}
 import play.api.Configuration
-import play.api.libs.json.{JsNull, JsObject, Json}
+import play.api.libs.json.{JsNull, Json}
 import play.api.libs.ws.WSClient
 import play.api.mvc.MultipartFormData.FilePart
 import reactivemongo.bson.BSONObjectID
@@ -64,7 +65,8 @@ class SampleRequestService @Inject() (
   sampleRequestSettingRepo: SampleRequestSettingRepo,
   config: Configuration,
   ws: WSClient,
-  val dataSpaceService: DataSpaceService
+  val dataSpaceService: DataSpaceService,
+  bearerTokenService: BearerTokenService
 ) extends DataSetViewHelper {
 
   private val remsUrl = config.getString("rems.url").getOrElse(
@@ -148,8 +150,13 @@ class SampleRequestService @Inject() (
    *
    * @return A sequence of catalogue items
    */
-  def getCatalogueItems: Future[Seq[CatalogueItem]] =
-    for {
+  def getCatalogueItems: Future[Seq[CatalogueItem]] = {
+    val token = for (beaerToken <- bearerTokenService.getBearerToken)
+      yield beaerToken.accessToken
+     println("=====> " + token)
+    Future(Nil)
+  }
+    /*for {
       res <- ws.url(remsUrl + "/api/catalogue").withHeaders(
         "x-rems-user-id" -> remsServiceUser,
         "x-rems-api-key" -> remsMasterApiKey
@@ -163,7 +170,7 @@ class SampleRequestService @Inject() (
           (catalogueItemJson \ "formid").as[Int]
         )
       }
-    }
+    }*/
 
   /**
    * Build object containing all data needed to render the sample request submission form

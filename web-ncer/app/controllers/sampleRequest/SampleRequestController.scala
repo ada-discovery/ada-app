@@ -2,22 +2,20 @@ package controllers.sampleRequest
 
 import akka.stream.Materializer
 import be.objectify.deadbolt.scala.AuthenticatedRequest
-import javax.inject.Inject
-import javax.ws.rs.BadRequestException
 import org.ada.server.models.Filter.filterConditionFormat
-import org.ada.server.models.User
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaBaseController
 import org.ada.web.controllers.dataset.DataSetWebContext
 import org.incal.core.FilterCondition
 import org.incal.play.controllers.WebContext
 import org.incal.play.formatters.JsonFormatter
-import org.incal.play.security.AuthAction
 import play.api.data.Form
 import play.api.data.Forms._
 import reactivemongo.bson.BSONObjectID
 import services.SampleRequestService
 
+import javax.inject.Inject
+import javax.ws.rs.BadRequestException
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -116,6 +114,7 @@ class SampleRequestController @Inject()(
         catalogueItems <- sampleRequestService.getCatalogueItems
       } yield Ok(views.html.sampleRequest.submissionForm(
         catalogueItems,
+        //Nil,
         formViewData.dataViewId,
         formViewData.tableViewParts,
         formViewData.dataSetSetting,

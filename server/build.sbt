@@ -12,10 +12,12 @@ resolvers ++= Seq(
 )
 
 val playVersion = "2.5.9"
+
 libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play" % playVersion,
   "com.typesafe.play" %% "play-json" % playVersion,
   "org.pac4j" % "play-pac4j" % "3.1.0",
+  "org.pac4j" % "pac4j-http" % "2.2.0",
   "org.pac4j" % "pac4j-oidc" % "2.2.0" exclude("commons-io" , "commons-io"),
   "org.reactivemongo" %% "play2-reactivemongo" % "0.18.1-play25" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11") exclude("com.typesafe.play", "play-iteratees_2.11") exclude("com.typesafe.play", "play-server_2.11") exclude("com.typesafe.play", "play-netty-server_2.11"),
   "org.reactivemongo" %% "reactivemongo-akkastream" % "0.18.1",
