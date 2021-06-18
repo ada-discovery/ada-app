@@ -45,7 +45,7 @@ class PacSecurityModule(environment: Environment, configuration: Configuration) 
     oidcConfiguration.setSecret(configuration.getString("oidc.secret").get)
     oidcConfiguration.setClientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
     oidcConfiguration.setPreferredJwsAlgorithm(JWSAlgorithm.RS256)
-    oidcConfiguration.setDiscoveryURI(configuration.getString("oidc.discoveryURI").get)
+    oidcConfiguration.setDiscoveryURI(configuration.getString("oidc.discoveryUrl").get)
     val oidcClient = new OidcClient[OidcProfile](oidcConfiguration)
     oidcClient
   }

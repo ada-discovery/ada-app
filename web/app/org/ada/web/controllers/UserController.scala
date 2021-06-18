@@ -6,7 +6,7 @@ import org.ada.web.controllers.core.AdaCrudControllerImpl
 import org.ada.web.controllers.dataset._
 import org.ada.server.dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
 import play.api.data.Form
-import play.api.data.Forms.{email, optional, ignored, mapping, boolean, nonEmptyText, seq, text, uuid}
+import play.api.data.Forms.{email, optional, ignored, mapping, boolean, nonEmptyText, seq, text}
 import org.ada.server.models.{DataSpaceMetaInfo, User}
 import org.incal.core.dataaccess.AscSort
 import reactivemongo.bson.BSONObjectID
@@ -35,7 +35,7 @@ class UserController @Inject() (
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "userId" -> nonEmptyText,
-      "oidcId" -> optional(uuid),
+      "userName" -> optional(text),
       "name" -> nonEmptyText,
       "email" -> email,
       "roles" -> seq(text),

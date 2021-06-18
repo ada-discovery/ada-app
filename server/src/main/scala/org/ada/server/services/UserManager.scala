@@ -33,8 +33,6 @@ trait UserManager {
 
   def findByEmail(email: String): Future[Option[User]]
 
-  def findByOidcId(oidcOpt: Option[UUID]): Future[Option[User]]
-
   def debugUsers: Traversable[User]
 
   /**
@@ -170,12 +168,4 @@ private class UserManagerImpl @Inject()(
     */
   override def findById(id: String): Future[Option[User]] =
     userRepo.find(Seq("userId" #== id)).map(_.headOption)
-
-  /**
-    * Given an oidcId, find the corresponding account.
-    * @param oidcId to be matched
-    * @return Option containing Account with matching oidcId; None otherwise
-    */
-  override def findByOidcId(oidcOpt: Option[UUID]): Future[Option[User]] =
-    userRepo.find(Seq("oidcId" #== oidcOpt)).map(_.headOption)
 }

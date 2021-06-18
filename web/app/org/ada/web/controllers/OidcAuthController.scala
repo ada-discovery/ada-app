@@ -36,20 +36,21 @@ class OidcAuthController @Inject() (
     Action.async { implicit request =>
 
       def successfulResult(user: User, extraMessage: String = "") = {
-        Logger.info(s"Successful authentication for the user '${user.userId}', id '${user.oidcId}' using the associated OIDC provider.$extraMessage")
-        gotoLoginSucceeded(user.oidcId.get.toString)
+        Logger.info(s"Successful authentication for the user '${user.userId}', id '${user.userName}' using the associated OIDC provider.$extraMessage")
+        gotoLoginSucceeded(user.userId)
       }
 
       /**
-        * Manage existing user updating oidc field and name or email if necessary
+        * Manage existing user updating userId with oidcId,
+        * username with old userId/username, name or email if necessary
         * @param existingUser user present in the database
         * @param oidcUser user from OpenID provider
         * @return Login information
         */
       def manageExistingUser(existingUser: User, oidcUser: User) = {
-        if (existingUser.oidcId.isEmpty)
+        if (existingUser.userName.isEmpty)
           updateUser(existingUser, oidcUser)
-        else if (existingUser.oidcId.isDefined &&
+        else if (existingUser.userName.isDefined &&
           (!existingUser.name.equalsIgnoreCase(oidcUser.name)
             || !existingUser.email.equalsIgnoreCase(oidcUser.email)))
           updateUser(existingUser, oidcUser)
@@ -64,18 +65,11 @@ class OidcAuthController @Inject() (
         * @param oidcUser user from OpenID provider
         * @return Saving information
         */
-       def manageNewUser(oidcUser: User) = {
-        if(oidcUser.oidcId.isDefined) {
-          for {user <- userManager.findByOidcId(oidcUser.oidcId)
+      def manageNewUser(oidcUser: User) = {
+          for {user <- userManager.findById(oidcUser.userId)
                result <- user.map(manageExistingUser(_, oidcUser))
                  .getOrElse(addNewUser(oidcUser))
                } yield result
-        } else {
-          // show an error message
-          val errorMessage = s"OIDC login cannot be fully completed. The user '${oidcUser.userId} doesn't have attribute ${subAttribute} in Jwt token."
-          logger.warn(errorMessage)
-          Future(Redirect(routes.AppController.index()).flashing("errors" -> errorMessage))
-        }
       }
 
       def addNewUser(oidcUser: User) =
@@ -85,9 +79,10 @@ class OidcAuthController @Inject() (
       def updateUser(existingUser: User, oidcUser: User) = {
         userRepo.update(
           existingUser.copy(
+            userId = oidcUser.userId,
+            userName = oidcUser.userName,
             name = oidcUser.name,
-            email = oidcUser.email,
-            oidcId = oidcUser.oidcId
+            email = oidcUser.email
           )
         ).flatMap(_ =>
           successfulResult(oidcUser)
@@ -95,25 +90,29 @@ class OidcAuthController @Inject() (
       }
 
       val profile = profiles.head
-      val userId = profile.getUsername
-
-      // get a user info from the OIDC return data (profile)
+      val userName = profile.getUsername
       val oidcIdOpt = subAttribute.flatMap(oidcIdName =>
-        Option(UUID.fromString(profile.getAttribute(oidcIdName).asInstanceOf[String])))
+        Option(profile.getAttribute(oidcIdName).asInstanceOf[String]))
 
-      val oidcUser = User(
-        userId = userId,
-        name = profile.getDisplayName,
-        email = profile.getEmail,
-        oidcId = oidcIdOpt
-      )
+      if(oidcIdOpt.isEmpty) {
+        val errorMessage = s"OIDC login cannot be fully completed. The user '${userName} doesn't have attribute ${subAttribute} in Jwt token."
+        logger.warn(errorMessage)
+        Future(Redirect(routes.AppController.index()).flashing("errors" -> errorMessage))
+      } else {
+        val oidcUser = User(
+          userId = oidcIdOpt.get,
+          userName = Option(userName),
+          name = profile.getDisplayName,
+          email = profile.getEmail
+        )
 
-      for {
-        user <- userManager.findById(userId)
-        result <- user
-                  .map(manageExistingUser(_, oidcUser))
-                  .getOrElse(manageNewUser(oidcUser))
-      } yield result
+        for {
+          user <- userManager.findById(userName)
+          result <- user
+            .map(manageExistingUser(_, oidcUser))
+            .getOrElse(manageNewUser(oidcUser))
+        } yield result
+      }
     }
   }
 }
