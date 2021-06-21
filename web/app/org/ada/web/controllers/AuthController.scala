@@ -159,7 +159,7 @@ class AuthController @Inject() (
   // immediately login as basic user
   def loginBasic = Action.async { implicit request =>
     if(userManager.debugUsers.nonEmpty)
-      gotoLoginSucceeded(userManager.basicUser.oidcId.get.toString)
+      gotoLoginSucceeded(userManager.basicUser.userId)
     else
       Future(unauthorizedRedirect)
   }
@@ -167,7 +167,7 @@ class AuthController @Inject() (
   // immediately login as admin user
   def loginAdmin = Action.async { implicit request =>
     if (userManager.debugUsers.nonEmpty)
-      gotoLoginSucceeded(userManager.adminUser.oidcId.get.toString)
+      gotoLoginSucceeded(userManager.adminUser.userId)
     else
       Future(unauthorizedRedirect)
   }

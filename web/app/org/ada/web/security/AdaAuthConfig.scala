@@ -8,7 +8,6 @@ import play.api.mvc.Results._
 import play.api.mvc.{Request, RequestHeader, Result}
 import org.ada.server.services.UserManager
 
-import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect._
@@ -72,7 +71,7 @@ trait AdaAuthConfig extends AuthConfig {
     * Retrieves user from Account class.
     */
   override def resolveUser(id: Id)(implicit ctx: ExecutionContext): Future[Option[User]] =
-    userManager.findByOidcId(Option(UUID.fromString(id)))
+    userManager.findById(id)
 
   /**
     * Where to redirect the user after a successful login.

@@ -13,7 +13,7 @@ import java.util.UUID
   *
   * @param _id BSON ID of entry/ user
   * @param userId User's id.
-  * @param oidcId An optional id obtained from an OIDC provider (if used), e.g. keycloak
+  * @param userName contains username identifier typically for LDAP
   * @param name Full user's name
   * @param email Email of user (can be used to send notifications.
   * @param roles Roles for Deadbolt.
@@ -22,7 +22,7 @@ import java.util.UUID
 case class User(
   _id: Option[BSONObjectID] = None,
   userId: String,
-  oidcId: Option[UUID] = None,
+  userName: Option[String] = None,
   name: String,
   email: String,
   roles: Seq[String] = Nil,

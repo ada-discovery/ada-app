@@ -1,7 +1,7 @@
 package scala.org.ada.server.controller
 
 
-import org.ada.server.services.GuicePlayTestApp
+import org.ada.web.services.GuicePlayWebTestApp
 import org.scalatestplus.play.PlaySpec
 import play.api.Application
 import play.api.http.Status
@@ -11,7 +11,7 @@ import play.api.test.Helpers.{GET, defaultAwaitTimeout, redirectLocation, route,
 
 class AuthControllerTest extends PlaySpec {
 
-  implicit val app: Application = GuicePlayTestApp()
+  implicit val app: Application = GuicePlayWebTestApp(excludeModules = Seq("org.ada.web.security.PacSecurityModule"))
 
   "The login entrypoint" should {
     "be redirect" in {
@@ -24,11 +24,4 @@ class AuthControllerTest extends PlaySpec {
     status(resp) mustEqual(Status.SEE_OTHER)
     redirectLocation(resp).contains(target)
   }
-
-
-
-
-
-
-
 }
