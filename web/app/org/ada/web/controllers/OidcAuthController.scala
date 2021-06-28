@@ -14,7 +14,6 @@ import play.api.mvc._
 import play.api.{Configuration, Logger}
 import play.libs.concurrent.HttpExecutionContext
 
-import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.Future
 

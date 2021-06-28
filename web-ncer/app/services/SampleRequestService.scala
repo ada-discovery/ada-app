@@ -4,12 +4,13 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import com.google.inject.Inject
-import org.ada.server.AdaException
+import models.sampleRequest.OrganisationRepresentation
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.dataaccess.dataset.FilterRepoExtra._
 import org.ada.server.field.FieldUtil
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, User}
+import org.ada.server.{AdaException, AdaParseException}
 import org.ada.web.controllers.dataset.{DataSetViewHelper, TableViewData}
 import org.ada.web.services.DataSpaceService
 import org.ada.web.services.oidc.BearerTokenService
@@ -18,12 +19,13 @@ import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion._
 import org.incal.play.{Page, PageOrder}
 import play.api.Configuration
-import play.api.libs.json.{JsNull, Json}
+import play.api.libs.json.{JsError, JsNull, JsSuccess, Json}
 import play.api.libs.ws.WSClient
 import play.api.mvc.MultipartFormData.FilePart
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.SampleRequestSettingRepo
 
+import javax.ws.rs.core.HttpHeaders
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -151,10 +153,20 @@ class SampleRequestService @Inject() (
    * @return A sequence of catalogue items
    */
   def getCatalogueItems: Future[Seq[CatalogueItem]] = {
-    val token = for (beaerToken <- bearerTokenService.getBearerToken)
-      yield beaerToken.accessToken
-     println("=====> " + token)
-    Future(Nil)
+    for {
+      bearerToken <- bearerTokenService.getBearerToken
+      res <- ws.url("http://localhost:8080/api/organisations/available")
+        .withHeaders(HttpHeaders.AUTHORIZATION -> "Bearer ".concat(bearerToken.accessToken))
+        .get()
+    } yield {
+        if (res.status != 200) throw new AdaException("Failed to retrieve organisation list. Reason: " + res.body)
+        res.json.validate[List[OrganisationRepresentation]] match {
+          case s: JsSuccess[List[OrganisationRepresentation]] => s.get.map(o => CatalogueItem(1, o.shortName, 2))
+          case e: JsError => throw AdaParseException("Error parsing bearer token", new Throwable(JsError.toJson(e).toString()))
+        }
+      }
+
+    //Future(Seq(CatalogueItem(1, "title1", 1), CatalogueItem(2, "title2", 2)))
   }
     /*for {
       res <- ws.url(remsUrl + "/api/catalogue").withHeaders(

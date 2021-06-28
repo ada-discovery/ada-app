@@ -1,7 +1,7 @@
 package org.ada.web.models
 
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
-import play.api.libs.json.{JsPath, Reads, __}
+import play.api.libs.json.{Reads, __}
 
 case class BearerToken(accessToken: String,
                        expiresIn: Int,
