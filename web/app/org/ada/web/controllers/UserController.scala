@@ -189,7 +189,7 @@ class UserController @Inject() (
       users <- userRepo.find()
     } yield {
       val idAndNames = users.toSeq.map( user =>
-        Json.obj("_id" -> user._id, "name" -> user.userId)
+        Json.obj("_id" -> user._id, "name" -> user.userName)
       )
       Ok(JsArray(idAndNames))
     }
