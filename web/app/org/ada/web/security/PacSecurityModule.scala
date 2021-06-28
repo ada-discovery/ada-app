@@ -33,6 +33,7 @@ class PacSecurityModule(environment: Environment, configuration: Configuration) 
     val logoutController = new LogoutController()
     logoutController.setDefaultUrl(adaBaseUrl)
     logoutController.setCentralLogout(true)
+    logoutController.setDestroySession(true)
     bind(classOf[LogoutController]).toInstance(logoutController)
 
   }
