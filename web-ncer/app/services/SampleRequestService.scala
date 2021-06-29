@@ -12,6 +12,7 @@ import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIde
 import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, User}
 import org.ada.server.{AdaException, AdaParseException}
 import org.ada.web.controllers.dataset.{DataSetViewHelper, TableViewData}
+import org.ada.web.models.JwtTokenInfo
 import org.ada.web.services.DataSpaceService
 import org.ada.web.services.oidc.BearerTokenService
 import org.incal.core.FilterCondition
@@ -19,9 +20,11 @@ import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion._
 import org.incal.play.{Page, PageOrder}
 import play.api.Configuration
+import play.api.cache.CacheApi
 import play.api.libs.json.{JsError, JsNull, JsSuccess, Json}
 import play.api.libs.ws.WSClient
 import play.api.mvc.MultipartFormData.FilePart
+import play.cache.NamedCache
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.SampleRequestSettingRepo
 
@@ -68,7 +71,8 @@ class SampleRequestService @Inject() (
   config: Configuration,
   ws: WSClient,
   val dataSpaceService: DataSpaceService,
-  bearerTokenService: BearerTokenService
+  bearerTokenService: BearerTokenService,
+  @NamedCache("jwt-user-cache") jwtUserCache: CacheApi
 ) extends DataSetViewHelper {
 
   private val remsUrl = config.getString("rems.url").getOrElse(
@@ -153,11 +157,10 @@ class SampleRequestService @Inject() (
    * @return A sequence of catalogue items
    */
   def getCatalogueItems: Future[Seq[CatalogueItem]] = {
+
     for {
       bearerToken <- bearerTokenService.getBearerToken
-      res <- ws.url("http://localhost:8080/api/organisations/available")
-        .withHeaders(HttpHeaders.AUTHORIZATION -> "Bearer ".concat(bearerToken.accessToken))
-        .get()
+      res <-
     } yield {
         if (res.status != 200) throw new AdaException("Failed to retrieve organisation list. Reason: " + res.body)
         res.json.validate[List[OrganisationRepresentation]] match {
@@ -165,6 +168,13 @@ class SampleRequestService @Inject() (
           case e: JsError => throw AdaParseException("Error parsing bearer token", new Throwable(JsError.toJson(e).toString()))
         }
       }
+
+    def getOrganisations(authHeader: String) = {
+      ws.url("http://localhost:8080/api/organisations/available")
+        .withHeaders(HttpHeaders.AUTHORIZATION -> authHeader)
+        .get()
+    }
+
 
     //Future(Seq(CatalogueItem(1, "title1", 1), CatalogueItem(2, "title2", 2)))
   }
