@@ -2,19 +2,20 @@ package models.sampleRequest
 
 
 
-import play.api.libs.json.{Json, OFormat, Reads}
+import play.api.libs.json.{Json, OFormat, OWrites, Reads}
 
 import java.util.UUID
 
-case class OrganisationRepresentation(id: Long,
-                                      name: String,
-                                      shortName: String,
-                                      activated: Boolean,
-                                      uuid: UUID,
-                                      requestTypes: Seq[RequestType.Value]
+case class OrganisationRepresentation(id: Option[Long],
+                                      name: Option[String],
+                                      shortName: Option[String],
+                                      activated: Option[Boolean],
+                                      uuid: Option[UUID],
+                                      requestTypes: Option[Seq[RequestType.Value]]
                                       )
 
 object OrganisationRepresentation {
-  implicit val organisationRepresentationFormat: OFormat[OrganisationRepresentation] = Json.format[OrganisationRepresentation]
+  implicit val organisationRepresentationRead: Reads[OrganisationRepresentation] = Json.reads[OrganisationRepresentation]
+  implicit val organisationRepresentationWrite: OWrites[OrganisationRepresentation] = Json.writes[OrganisationRepresentation]
 }
 

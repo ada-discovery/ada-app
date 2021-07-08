@@ -51,8 +51,6 @@ class SampleRequestController @Inject()(
   case class SampleRequest(
     dataSetId: String,
     tableColumnNames: Seq[String],
-    catalogueItemId: Int,
-    catalogueFormId: Int,
     selectedIds: Seq[BSONObjectID],
     conditions: Seq[FilterCondition]
   )
@@ -61,8 +59,6 @@ class SampleRequestController @Inject()(
     mapping(
       "dataSetId" -> nonEmptyText,
       "tableColumnNames" -> seq(nonEmptyText),
-      "catalogueItemId" -> number,
-      "catalogueFormId" -> number,
       "selectedIds" -> seq(of[BSONObjectID]),
       "conditions" -> seq(of[FilterCondition])
     )(SampleRequest.apply)(SampleRequest.unapply)
@@ -88,10 +84,8 @@ class SampleRequestController @Inject()(
               sampleRequest.tableColumnNames,
               sampleRequest.selectedIds
             )
-            url <- sampleRequestService.sendToRems(
+            url <- sampleRequestService.sendToPodium(
               csv,
-              sampleRequest.catalogueItemId,
-              sampleRequest.catalogueFormId,
               user
             )
           } yield {
@@ -111,10 +105,7 @@ class SampleRequestController @Inject()(
       implicit val dataSetWebCtx = dataSetWebContext(dataSet)
       for {
         formViewData <- sampleRequestService.getActionFormViewData(dataSet)
-        catalogueItems <- sampleRequestService.getCatalogueItems
       } yield Ok(views.html.sampleRequest.submissionForm(
-        catalogueItems,
-        //Nil,
         formViewData.dataViewId,
         formViewData.tableViewParts,
         formViewData.dataSetSetting,

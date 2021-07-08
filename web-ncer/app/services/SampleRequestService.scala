@@ -4,7 +4,7 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import com.google.inject.Inject
-import models.sampleRequest.OrganisationRepresentation
+import models.sampleRequest.{OrganisationRepresentation, RequestFileRepresentation, RequestFileType, RequestRepresentation}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.dataaccess.dataset.FilterRepoExtra._
 import org.ada.server.field.FieldUtil
@@ -12,19 +12,17 @@ import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIde
 import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, User}
 import org.ada.server.{AdaException, AdaParseException}
 import org.ada.web.controllers.dataset.{DataSetViewHelper, TableViewData}
-import org.ada.web.models.JwtTokenInfo
 import org.ada.web.services.DataSpaceService
-import org.ada.web.services.oidc.BearerTokenService
+import org.ada.web.services.oidc.AccessResourceService
 import org.incal.core.FilterCondition
 import org.incal.core.dataaccess.Criterion
 import org.incal.core.dataaccess.Criterion._
 import org.incal.play.{Page, PageOrder}
 import play.api.Configuration
-import play.api.cache.CacheApi
-import play.api.libs.json.{JsError, JsNull, JsSuccess, Json}
-import play.api.libs.ws.WSClient
+import play.api.libs.json.{JsError, JsNull, JsSuccess, JsValue, Json}
+import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.MultipartFormData.FilePart
-import play.cache.NamedCache
+import play.api.mvc.Results
 import reactivemongo.bson.BSONObjectID
 import services.BatchOrderRequestRepoTypes.SampleRequestSettingRepo
 
@@ -71,22 +69,17 @@ class SampleRequestService @Inject() (
   config: Configuration,
   ws: WSClient,
   val dataSpaceService: DataSpaceService,
-  bearerTokenService: BearerTokenService,
-  @NamedCache("jwt-user-cache") jwtUserCache: CacheApi
+  accessResourceService: AccessResourceService
 ) extends DataSetViewHelper {
 
-  private val remsUrl = config.getString("rems.url").getOrElse(
-    throw new AdaException("Configuration issue: 'rems.url' was not found in the configuration file.")
+
+  private val podiumApiUrl = config.getString("podium.apiUrl").getOrElse(
+    throw new AdaException("Configuration issue: 'podium.apiUrl' was not found in the configuration file.")
   )
-  private val remsServiceUser = config.getString("rems.serviceUser").getOrElse(
-    throw new AdaException("Configuration issue: 'rems.serviceUser' was not found in the configuration file.")
+  private val podiumFrontUrl = config.getString("podium.frontUrl").getOrElse(
+    throw new AdaException("Configuration issue: 'podium.frontUrl' was not found in the configuration file.")
   )
-  private val remsUserPrefix = config.getString("rems.userPrefix").getOrElse(
-    throw new AdaException("Configuration issue: 'rems.userPrefix' was not found in the configuration file.")
-  )
-  private val remsMasterApiKey = config.getString("rems.masterApiKey").getOrElse(
-    throw new AdaException("Configuration issue: 'rems.masterApiKey' was not found in the configuration file.")
-  )
+
 
   /**
    * Create a valid CSV which can be attached to an REMS application
@@ -127,72 +120,181 @@ class SampleRequestService @Inject() (
     }
   }
 
-  /**
-   * Creates an application in REMS
-   *
-   * @param csv A String representing a valid CSV file used as an application attachment
-   * @param catalogueItemId A REMS catalogue item to create an application for
-   * @param catalogueFormId The REMS form id used by the catalogue item
-   * @param user The Ada user who makes the request
-   * @return The URL pointing to the newly created application
-   */
-  def sendToRems(
-    csv: String,
-    catalogueItemId: Int,
-    catalogueFormId: Int,
-    user: User
-  ): Future[String] = {
+  def sendToPodium(csv: String,
+                   user: User): Future[String] = {
     for {
-      applicationId <- createApplication(catalogueItemId, user)
-      attachmentId <- addAttachment(applicationId, csv, user)
-      _ <- saveDraft(applicationId, attachmentId, catalogueFormId, user)
+        draft <- createDraft(user)
+        orgs <- getOrganisations(user)
+        updatedDraft <- updateDraft(user, draft, orgs)
+        attachmentInfo <- addAttachment(user, updatedDraft, csv)
+        _ <- setAttachmentType(user, attachmentInfo)
+        submittedDraft <- submitDraft(user, updatedDraft)
     } yield {
-      s"$remsUrl/application/$applicationId"
+      s"$podiumFrontUrl/#/requests/detail/${submittedDraft.uuid}"
     }
   }
 
-  /**
-   * Get available REMS catalogue items
-   *
-   * @return A sequence of catalogue items
-   */
-  def getCatalogueItems: Future[Seq[CatalogueItem]] = {
+
+  private def createDraft(user: User): Future[RequestRepresentation] = {
+
+    def createPodiumDraft(authHeader: String) = {
+      ws.url(s"$podiumApiUrl/api/requests/drafts")
+        .withHeaders(HttpHeaders.AUTHORIZATION -> authHeader)
+        .post(Results.EmptyContent())
+    }
 
     for {
-      bearerToken <- bearerTokenService.getBearerToken
-      res <-
-    } yield {
-        if (res.status != 200) throw new AdaException("Failed to retrieve organisation list. Reason: " + res.body)
-        res.json.validate[List[OrganisationRepresentation]] match {
-          case s: JsSuccess[List[OrganisationRepresentation]] => s.get.map(o => CatalogueItem(1, o.shortName, 2))
-          case e: JsError => throw AdaParseException("Error parsing bearer token", new Throwable(JsError.toJson(e).toString()))
-        }
-      }
+      res <- accessResourceService.accessResource(user, createPodiumDraft)
+    } yield
+      parseRequestRepresentation(res)
+  }
 
-    def getOrganisations(authHeader: String) = {
-      ws.url("http://localhost:8080/api/organisations/available")
+  private def updateDraft(user: User,
+                  requestRep: RequestRepresentation,
+                  organisationRep: List[OrganisationRepresentation]): Future[RequestRepresentation] = {
+
+
+    def createDummyRequestRepresentation(requestRep: RequestRepresentation,
+                                         orgRep: List[OrganisationRepresentation]): RequestRepresentation = {
+
+      val principalInvestigatorUpdated = requestRep.requestDetail.principalInvestigator
+        .copy(name = Option("AutomaticGenName"),
+          email = Option("AutomaticGenEmail@uni.lu"),
+          jobTitle = Option("Doctor"),
+          affiliation = Option("AutomaticGenAffiliation"))
+
+      val requestDetailUpdated = requestRep.requestDetail
+        .copy(title = Option("AutomaticGenRequest"),
+          background = Option("AutomaticGenBackground"),
+          researchQuestion = Option("AutomaticGenQuestion"),
+          hypothesis = Option("AutomaticGenHypthesis"),
+          methods = Option("AutomaticGenMethods"),
+          relatedRequestNumber = Option("AutomaticGenRequestNumber"),
+          principalInvestigator = principalInvestigatorUpdated,
+          searchQuery = Option("AutomaticGenSearchQuery")
+        )
+
+      requestRep.copy(organisations = List(orgRep.head), requestDetail = requestDetailUpdated)
+
+    }
+
+    def updatePodiumDraft(authHeader: String, body: JsValue) = {
+      ws.url(s"$podiumApiUrl/api/requests/drafts")
+        .withHeaders(HttpHeaders.AUTHORIZATION -> authHeader)
+        .put(body)
+    }
+
+    val dummyRequestRep = createDummyRequestRepresentation(requestRep, organisationRep)
+
+    for {
+      res <- accessResourceService.accessResource(user, Json.toJson(dummyRequestRep), updatePodiumDraft)
+    } yield
+      parseRequestRepresentation(res)
+  }
+
+
+  private def submitDraft(user: User,
+                  updatedDraftRep: RequestRepresentation): Future[RequestRepresentation] = {
+
+    def submitPodiumDraft(authHeader: String, body: String = "", requestRep: RequestRepresentation) = {
+      ws.url(s"$podiumApiUrl/api/requests/drafts/${requestRep.uuid}/submit")
         .withHeaders(HttpHeaders.AUTHORIZATION -> authHeader)
         .get()
     }
 
-
-    //Future(Seq(CatalogueItem(1, "title1", 1), CatalogueItem(2, "title2", 2)))
-  }
-    /*for {
-      res <- ws.url(remsUrl + "/api/catalogue").withHeaders(
-        "x-rems-user-id" -> remsServiceUser,
-        "x-rems-api-key" -> remsMasterApiKey
-      ).get()
+    for {
+      res <- accessResourceService.accessResource(
+        user = user,
+        requestBody = null,
+        additionalParam = updatedDraftRep,
+        callResource = submitPodiumDraft
+      )
     } yield {
-      if (res.status != 200) throw new AdaException("Failed to retrieve catalogue items from REMS. Reason: " + res.body)
-      res.json.as[Seq[JsObject]] map { catalogueItemJson =>
-        CatalogueItem(
-          (catalogueItemJson \ "id").as[Int],
-          (catalogueItemJson \ "localizations" \ "en" \ "title").as[String],
-          (catalogueItemJson \ "formid").as[Int]
-        )
+      res.json.validate[List[RequestRepresentation]] match {
+        case r: JsSuccess[List[RequestRepresentation]] => r.get.head
+        case e: JsError => throw AdaParseException("Error parsing RequestRepresentation Json", new Throwable(JsError.toJson(e).toString()))
       }
-    }*/
+    }
+  }
+
+  private def addAttachment(user: User,
+                            requestRep: RequestRepresentation, csv: String): Future[RequestFileRepresentation] = {
+
+    def addAttachmentToPodiumDraft(authHeader: String, csv: String, requestRep: RequestRepresentation) = {
+      ws.url(s"$podiumApiUrl/api/requests/${requestRep.uuid}/files")
+        .withHeaders(HttpHeaders.AUTHORIZATION -> authHeader).post(
+        Source(
+          Vector(
+            FilePart("file", "samples.csv", Option("text/csv"), Source(Vector(ByteString(csv))))
+          )
+        )
+      )
+    }
+
+    for {
+      res <- accessResourceService.accessResource(user, csv, requestRep, addAttachmentToPodiumDraft)
+    } yield {
+      parseRequestFileRepresentation(res)
+    }
+
+  }
+
+  private def setAttachmentType(user: User, requestFileRep: RequestFileRepresentation): Future[RequestFileRepresentation] = {
+
+    def setPodiumFileType(authHeader: String, body: JsValue, requestFileRep: RequestFileRepresentation) = {
+      ws.url(s"$podiumApiUrl/api/requests/${requestFileRep.request.uuid}/files/${requestFileRep.uuid}/type")
+        .withHeaders(HttpHeaders.AUTHORIZATION -> authHeader)
+        .put(body)
+    }
+
+    val requestFileUpdated = requestFileRep.copy(requestFileType = RequestFileType.METC_LETTER)
+
+    for {
+      res <- accessResourceService.accessResource(user, Json.toJson(requestFileUpdated), requestFileUpdated, setPodiumFileType)
+    } yield
+      parseRequestFileRepresentation(res)
+  }
+
+
+
+  private def parseRequestFileRepresentation(response: WSResponse): RequestFileRepresentation = {
+    response.json.validate[RequestFileRepresentation] match {
+      case r: JsSuccess[RequestFileRepresentation] => r.get
+      case e: JsError => throw AdaParseException("Error parsing RequestFileRepresentation Json", new Throwable(JsError.toJson(e).toString()))
+    }
+  }
+
+  private def parseRequestRepresentation(response: WSResponse): RequestRepresentation = {
+    response.json.validate[RequestRepresentation] match {
+      case r: JsSuccess[RequestRepresentation] => r.get
+      case e: JsError => throw AdaParseException("Error parsing RequestRepresentation Json", new Throwable(JsError.toJson(e).toString()))
+    }
+  }
+
+
+  /**
+    * Get available organisation in podium
+    * @param user
+    * @return
+    */
+  private def getOrganisations(user: User): Future[List[OrganisationRepresentation]] = {
+
+    def getPodiumOrganisations(authHeader: String) = {
+      ws.url(s"$podiumApiUrl/api/organisations/available")
+        .withHeaders(HttpHeaders.AUTHORIZATION -> authHeader)
+        .get()
+    }
+
+    for {
+      res <- accessResourceService.accessResource(user, getPodiumOrganisations)
+    } yield {
+      res.json.validate[List[OrganisationRepresentation]] match {
+        case s: JsSuccess[List[OrganisationRepresentation]] => s.get
+        case e: JsError => throw AdaParseException("Error parsing OrganisationRepresentation Json", new Throwable(JsError.toJson(e).toString()))
+      }
+    }
+  }
+
 
   /**
    * Build object containing all data needed to render the sample request submission form
@@ -265,63 +367,6 @@ class SampleRequestService @Inject() (
   ): Future[Map[String, String => Option[Any]]] =
     Future(Map())
 
-  private def createApplication(catalogueItemId: Int, user: User): Future[Int] =
-    for {
-      res <- ws.url(remsUrl + "/api/applications/create").withHeaders(
-        "x-rems-user-id" -> userToRemsUser(user),
-        "x-rems-api-key" -> remsMasterApiKey,
-        "Content-Type" -> "application/json"
-      ).post(
-        Json.obj("catalogue-item-ids" -> Vector(catalogueItemId))
-      )
-    } yield {
-      if (res.status != 200) throw new AdaException("Could not create application in REMS. Reason: " + res.body)
-      (res.json \ "application-id").as[Int]
-    }
 
-  private def addAttachment(applicationId: Int, csv: String, user: User): Future[Int] =
-    for {
-      res <- ws.url(remsUrl + "/api/applications/add-attachment").withQueryString(
-        "application-id" -> applicationId.toString
-      ).withHeaders(
-        "x-rems-user-id" -> userToRemsUser(user),
-        "x-rems-api-key" -> remsMasterApiKey,
-        "Content-Type" -> "multipart/form-data; boundary=---------------------------244194806337621270012523953493"
-      ).post(
-        Source(
-          Vector(
-            FilePart("file", "samples.csv", Option("text/csv"), Source(Vector(ByteString(csv))))
-          )
-        )
-      )
-    } yield {
-      if (res.status != 200) throw new AdaException("Could not add attachment in REMS. Reason: " + res.body)
-      (res.json \ "id").as[Int]
-    }
-
-  private def saveDraft(applicationId: Int, attachmentId: Int, catalogueFormId: Int, user: User): Future[Unit] =
-    for {
-      res <- ws.url(remsUrl + "/api/applications/save-draft").withHeaders(
-        "x-rems-user-id" -> userToRemsUser(user),
-        "x-rems-api-key" -> remsMasterApiKey,
-        "Content-Type" -> "application/json"
-      ).post(
-        Json.obj(
-          "application-id" -> applicationId,
-          "field-values" -> Json.arr(
-            Json.obj(
-              "form" -> catalogueFormId,
-              "field" -> "fld1", // TODO: Lookup correct fieldId based on configurable field name
-              "value" -> attachmentId.toString
-            )
-          )
-        )
-      )
-    } yield {
-      if (res.status != 200) throw new AdaException("Could not create application in REMS. Reason: " + res.body)
-    }
-
-  private def userToRemsUser(user: User) =
-    remsUserPrefix + user.email.split("@").head
 
 }

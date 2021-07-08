@@ -5,7 +5,6 @@
 @import services.CatalogueItem
 @import views.html.dataset.view.coreView
 @(
-        catalogueItems: Seq[CatalogueItem],
         dataViewId: BSONObjectID,
         tableViewParts: Seq[TableViewData],
         dataSetSetting: DataSetSetting,
@@ -15,6 +14,7 @@
         implicit context: DataSetWebContext
 )
 
+@*
 @catalogueItemDropdown = {
     <label for="remsCatalogueItemDropdown">REMS Catalogue Items:</label>
     <select id="remsCatalogueItemDropdown" class="form-control">
@@ -22,7 +22,7 @@
         <option value='{"id": @item.id, "formId": @item.formId}'>@item.name</option>
     }
     </select>
-}
+}*@
 
 @actions = {
     <div>
@@ -31,9 +31,9 @@
                 Request Samples
             </button>
         </div>
-        <div class="form-group">
+        @*<div class="form-group">
             @catalogueItemDropdown
-        </div>
+        </div>*@
         <div id="application-link" class="form-group">
             <label for="remsLink">Direct Link to Application:</label><br/>
             <a id="remsLink" href="" target="_blank"></a>
@@ -61,7 +61,7 @@
             })
             function submitForm() {
                 $('#request-error').hide()
-                const option = JSON.parse($('#remsCatalogueItemDropdown').val())
+                //const option = JSON.parse($('#remsCatalogueItemDropdown').val())
                 const action = '@Html(sampleRequestRoutes.submitRequest(dataSetSetting.dataSetId).url)'
                 const table = getSelectedRowIds($('#tablesTr .table-div'))
                 const selectedIds = []
@@ -70,8 +70,8 @@
                 })
                 const params = {
                     'tableColumnNames[]': '@tableViewParts.head.tableFields.map(_.name).toVector.mkString("\t")'.split("\t"),
-                    catalogueItemId: option.id,
-                    catalogueFormId: option.formId,
+                    //catalogueItemId: option.id,
+                    //catalogueFormId: option.formId,
                     'selectedIds[]': selectedIds,
                     'conditions[]': $('.filter-div').multiFilter('getModel').map(model => JSON.stringify(model))
                 }

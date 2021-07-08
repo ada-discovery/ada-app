@@ -1,5 +1,6 @@
 package org.ada.web.controllers
 
+import com.nimbusds.jwt.JWTParser
 import com.nimbusds.oauth2.sdk.token.{BearerAccessToken, RefreshToken}
 import jp.t2v.lab.play2.auth.Login
 import org.ada.server.AdaException

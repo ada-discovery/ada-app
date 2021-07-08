@@ -24,6 +24,8 @@ GET         /logout                                                             
 GET         /loggedout                                                              org.ada.web.controllers.AuthController.loggedOut
 GET         /logoutOIDC                                                             @org.pac4j.play.LogoutController.logout()
 
+# Access resource info
+GET         /externalResourceInfo/:info                                             org.ada.web.controllers.AuthController.accessExternalResourceInfo(info: String)
 # for no-authentication access
 GET         /loginBasic                                                             org.ada.web.controllers.AuthController.loginBasic
 GET         /loginAdmin                                                             org.ada.web.controllers.AuthController.loginAdmin
