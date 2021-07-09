@@ -11,7 +11,7 @@ case class RequestDetailRepresentation(id: Option[Long],
                                        relatedRequestNumber: Option[String],
                                        principalInvestigator: PrincipalInvestigatorRepresentation,
                                        searchQuery: Option[String],
-                                       requestType: Seq[RequestType.Value],
+                                       requestType: Option[Seq[RequestType.Value]],
                                        combinedRequest: Option[Boolean])
 
 object RequestDetailRepresentation {

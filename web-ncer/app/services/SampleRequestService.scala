@@ -47,21 +47,9 @@ case class ActionFormViewData(
   elementGridWidth: Int
 )
 
-/**
- * A REMS catalogue item
- *
- * @param id The id of the item
- * @param name The readable name of the item
- * @param formId The id associated with the catalogue item
- */
-case class CatalogueItem(
-  id: Int,
-  name: String,
-  formId: Int
-)
 
 /**
- * Service providing functionality to submit requests to REMS
+ * Service providing functionality to submit requests to Podium
  */
 class SampleRequestService @Inject() (
   dsaf: DataSetAccessorFactory,
@@ -171,6 +159,7 @@ class SampleRequestService @Inject() (
           methods = Option("AutomaticGenMethods"),
           relatedRequestNumber = Option("AutomaticGenRequestNumber"),
           principalInvestigator = principalInvestigatorUpdated,
+          requestType =Option(orgRep.head.requestTypes.getOrElse(Seq())),
           searchQuery = Option("AutomaticGenSearchQuery")
         )
 

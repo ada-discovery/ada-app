@@ -10,7 +10,7 @@ import org.ada.server.AdaException
 import org.ada.server.models.User
 import org.ada.web.models.JwtTokenInfo
 import org.ada.web.services.error.RefreshTokenExpiredException
-import play.api.Configuration
+import play.api.{Configuration, Logger}
 import play.api.cache.CacheApi
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.cache.NamedCache
@@ -128,6 +128,7 @@ class AccessResourceServiceImpl @Inject()(
             jwtUserCache.set(jwtAccessTokenClaim.getSubject, jwtTokenInfo)
             jwtTokenInfo
           } else {
+            Logger.warn("Refresh token expired for user " + jwtAccessTokenClaim.getSubject + ". Logout/Login needed.")
             jwtUserCache.remove(jwtAccessTokenClaim.getSubject)
             throw new RefreshTokenExpiredException("OpenId Refresh token expired. Please logout and login again.")
           }

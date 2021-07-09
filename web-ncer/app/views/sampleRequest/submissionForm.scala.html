@@ -2,7 +2,6 @@
 @import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo}
 @import org.ada.web.controllers.dataset.{DataSetWebContext, TableViewData}
 @import reactivemongo.bson.BSONObjectID
-@import services.CatalogueItem
 @import views.html.dataset.view.coreView
 @(
         dataViewId: BSONObjectID,
@@ -14,31 +13,36 @@
         implicit context: DataSetWebContext
 )
 
-@*
-@catalogueItemDropdown = {
-    <label for="remsCatalogueItemDropdown">REMS Catalogue Items:</label>
-    <select id="remsCatalogueItemDropdown" class="form-control">
-    @catalogueItems.map { item =>
-        <option value='{"id": @item.id, "formId": @item.formId}'>@item.name</option>
-    }
-    </select>
-}*@
-
 @actions = {
     <div>
         <div class="form-group">
-            <button class="btn btn-info btn-sm" type="button" onclick="submitForm();">
+            <button id="btnSamplesRequest" class="btn btn-info btn-sm" type="button" onclick="submitForm();">
                 Request Samples
             </button>
         </div>
-        @*<div class="form-group">
-            @catalogueItemDropdown
-        </div>*@
+
         <div id="application-link" class="form-group">
-            <label for="remsLink">Direct Link to Application:</label><br/>
-            <a id="remsLink" href="" target="_blank"></a>
+            <label for="podiumLink">Direct Link to Application:</label><br/>
+            <a id="podiumLink" href="" target="_blank"></a>
         </div>
-        <p id="request-error" style="display: none;"></p>
+
+
+        <div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="errorModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="errorModalLabel">Error during samples submission</h5>
+                    </div>
+                    <div class="modal-body">
+                        <iframe id="errorFrame" style="display: block; width: 100%"></iframe>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 }
 
@@ -59,8 +63,26 @@
                     $(filter).multiFilter('submitFilter');
                 })
             })
+
+            function openErrorDialog(text) {
+                var errorFrame = $("#errorFrame").contents().find('body');
+                errorFrame.html(text);
+                $('#errorModal').modal('show');
+            }
+
+            function btnLoading(elem) {
+                $(elem).attr("data-original-text", $(elem).html());
+                $(elem).prop("disabled", true);
+                $(elem).html('<i class="spinner-border spinner-border-sm"></i> Please wait ...');
+            }
+
+            function btnReset(elem) {
+                $(elem).prop("disabled", false);
+                $(elem).html($(elem).attr("data-original-text"));
+            }
+
+
             function submitForm() {
-                $('#request-error').hide()
                 //const option = JSON.parse($('#remsCatalogueItemDropdown').val())
                 const action = '@Html(sampleRequestRoutes.submitRequest(dataSetSetting.dataSetId).url)'
                 const table = getSelectedRowIds($('#tablesTr .table-div'))
@@ -70,32 +92,39 @@
                 })
                 const params = {
                     'tableColumnNames[]': '@tableViewParts.head.tableFields.map(_.name).toVector.mkString("\t")'.split("\t"),
-                    //catalogueItemId: option.id,
-                    //catalogueFormId: option.formId,
                     'selectedIds[]': selectedIds,
                     'conditions[]': $('.filter-div').multiFilter('getModel').map(model => JSON.stringify(model))
                 }
+                btnLoading("#btnSamplesRequest")
 
-                const form = $('<form></form>');
-                form.attr("method", "POST");
-                form.attr("action", action);
-                addParams(form, params)
-                $.ajax({
-                    type: form.attr('method'),
-                    url: form.attr('action'),
-                    data: form.serialize(),
-                    success: function(url) {
-                        const a = $('#remsLink')
-                        a.text(url)
-                        a.attr('href', url)
-                    },
-                    error: function(ctx) {
-                        const p = $('#request-error')
-                        p.text(ctx.responseText)
-                        p.show()
-                    }
-                });
-
+                if(selectedIds.length === 0) {
+                    alert("Please select at least one sample")
+                    btnReset("#btnSamplesRequest")
+                } else {
+                    const form = $('<form></form>');
+                    form.attr("method", "POST");
+                    form.attr("action", action);
+                    addParams(form, params)
+                    $.ajax({
+                        type: form.attr('method'),
+                        url: form.attr('action'),
+                        data: form.serialize(),
+                        success: function(url) {
+                            btnReset("#btnSamplesRequest")
+                            if (url.includes("<!DOCTYPE html>")) {
+                                openErrorDialog(url)
+                            } else {
+                                const a = $('#podiumLink')
+                                a.text(url)
+                                a.attr('href', url)
+                            }
+                        },
+                        error: function(ctx) {
+                            btnReset("#btnSamplesRequest")
+                            openErrorDialog(ctx.responseText)
+                        }
+                    });
+                }
             }
     </script>
 }

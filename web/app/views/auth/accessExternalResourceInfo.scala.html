@@ -3,7 +3,7 @@
 @(info: String)(implicit webContext: WebContext)
 @layout.main(webContext.configuration.getString("project.name").getOrElse("") + " Home") {
     <div class="container" style="padding-bottom: 190px;" xmlns="http://www.w3.org/1999/html">
-        <h2>Access external resource information</h2>
-        <h4><i>@info</i></h4>
+        <h3>Access external resource information</h3>
+        <h5><i>@info</i></h5>
     </div>
 }
