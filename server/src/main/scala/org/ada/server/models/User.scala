@@ -13,21 +13,21 @@ import java.util.UUID
   *
   * @param _id BSON ID of entry/ user
   * @param userId User's id.
-  * @param userName contains username identifier typically for LDAP
+  * @param oidcUserName contains username identifier typically for LDAP
   * @param name Full user's name
   * @param email Email of user (can be used to send notifications.
   * @param roles Roles for Deadbolt.
   * @param permissions Permissions for Deadbolt.
   */
 case class User(
-  _id: Option[BSONObjectID] = None,
-  userId: String,
-  userName: Option[String] = None,
-  name: String,
-  email: String,
-  roles: Seq[String] = Nil,
-  permissions: Seq[String] = Nil,
-  locked: Boolean = false
+ _id: Option[BSONObjectID] = None,
+ userId: String,
+ oidcUserName: Option[String] = None,
+ name: String,
+ email: String,
+ roles: Seq[String] = Nil,
+ permissions: Seq[String] = Nil,
+ locked: Boolean = false
 )
 
 object User {
