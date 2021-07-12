@@ -53,7 +53,7 @@ class OidcAuthController @Inject() (
     Action.async { implicit request =>
 
       def successfulResult(user: User, extraMessage: String = "") = {
-        Logger.info(s"Successful authentication for the user '${user.userId}', id '${user.userName}' using the associated OIDC provider.$extraMessage")
+        Logger.info(s"Successful authentication for the user '${user.userId}', id '${user.oidcUserName}' using the associated OIDC provider.$extraMessage")
         gotoLoginSucceeded(user.userId)
       }
 
@@ -65,9 +65,9 @@ class OidcAuthController @Inject() (
         * @return Login information
         */
       def manageExistingUser(existingUser: User, oidcUser: User) = {
-        if (existingUser.userName.isEmpty)
+        if (existingUser.oidcUserName.isEmpty)
           updateUser(existingUser, oidcUser)
-        else if (existingUser.userName.isDefined &&
+        else if (existingUser.oidcUserName.isDefined &&
           (!existingUser.name.equalsIgnoreCase(oidcUser.name)
             || !existingUser.email.equalsIgnoreCase(oidcUser.email)))
           updateUser(existingUser, oidcUser)
@@ -97,7 +97,7 @@ class OidcAuthController @Inject() (
         userRepo.update(
           existingUser.copy(
             userId = oidcUser.userId,
-            userName = oidcUser.userName,
+            oidcUserName = oidcUser.oidcUserName,
             name = oidcUser.name,
             email = oidcUser.email
           )
@@ -120,7 +120,7 @@ class OidcAuthController @Inject() (
       } else {
         val oidcUser = User(
           userId = oidcIdOpt.get,
-          userName = Option(userName),
+          oidcUserName = Option(userName),
           name = profile.getDisplayName,
           email = profile.getEmail
         )

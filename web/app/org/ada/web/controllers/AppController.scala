@@ -61,10 +61,8 @@ class AppController @Inject() (
           logger.info("Studies accessed by " + user.userId)
           val dataSpacesNum = metaInfos.map(dataSpaceService.countDataSpacesNumRecursively).sum
           val dataSetsNum = metaInfos.map(dataSpaceService.countDataSetsNumRecursively).sum
-          val userFirstName = user.userName match {
-            case Some(userName) => userName.split("\\.", -1).head.capitalize
-            case None => user.name
-          }
+          val userFirstName = user.name.split("\\.", -1).head.capitalize
+
           Ok(layout.dataSets(userFirstName, dataSpacesNum, dataSetsNum, metaInfos))
         }.getOrElse(
           BadRequest("No logged user.")
