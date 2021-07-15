@@ -327,6 +327,7 @@ function loadNewTableContent(element, url, data, callType) {
     success: function(content) {
       var tableDiv = element.closest(".table-div")
       $(tableDiv).html(content);
+      $(tableDiv).trigger("tableReloaded")
     },
     error: showErrorResponse
   });
