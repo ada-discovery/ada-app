@@ -4,7 +4,7 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import com.google.inject.Inject
-import models.sampleRequest.{OrganisationRepresentation, RequestFileRepresentation, RequestFileType, RequestRepresentation}
+import models.sampleRequest.{OrganisationRepresentation, RequestFileRepresentation, RequestFileType, RequestRepresentation, RequestType}
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.dataaccess.dataset.FilterRepoExtra._
 import org.ada.server.field.FieldUtil
@@ -64,10 +64,6 @@ class SampleRequestService @Inject() (
   private val podiumApiUrl = config.getString("podium.apiUrl").getOrElse(
     throw new AdaException("Configuration issue: 'podium.apiUrl' was not found in the configuration file.")
   )
-  private val podiumFrontUrl = config.getString("podium.frontUrl").getOrElse(
-    throw new AdaException("Configuration issue: 'podium.frontUrl' was not found in the configuration file.")
-  )
-
 
   /**
    * Create a valid CSV which can be attached to an REMS application
@@ -78,12 +74,13 @@ class SampleRequestService @Inject() (
    * @param selectedIds The selected row ids to use. If empty all are selected
    * @return A string representing a valid CSV file.
    */
-  def createCsv(
+  def createCsvByOrganisation(
+    user: User,
     dataSetId: String,
     conditions: Seq[FilterCondition],
     fieldNames: Seq[String],
     selectedIds: Seq[BSONObjectID]
-  ): Future[String] = {
+  ): Future[List[(OrganisationRepresentation, String)]] = {
     val SEPARATOR = "\t"
     val dsa = dsaf(dataSetId).getOrElse(throw new IllegalArgumentException(s"Dataset '$dataSetId' does not exist."))
     val fieldCriteria = if (fieldNames.nonEmpty) Vector(FieldIdentity.name #-> fieldNames) else Nil
@@ -92,33 +89,43 @@ class SampleRequestService @Inject() (
       fields <- dsa.fieldRepo.find(fieldCriteria)
       valueCriteria <- FieldUtil.toDataSetCriteria(dsa.fieldRepo, conditions)
       items <- dsa.dataSetRepo.find(valueCriteria ++ selectCriteria)
+      organisations <- getOrganisations(user)
     } yield {
       val header = fields.map(_.name)
-      val csv = new StringBuilder("")
-      csv ++= header.mkString(SEPARATOR)
-      csv += '\n'
-      items foreach { item =>
-        val row = header map { header =>
-          (item \ header).getOrElse(JsNull).toString
-        }
-        csv ++= row.mkString(SEPARATOR)
+      val itemsByOrg = items.groupBy(item => organisations((item \ "organisation_id").as[Long]))
+      itemsByOrg.map(itemOrg => {
+        val csv = new StringBuilder("")
+        csv ++= header.mkString(SEPARATOR)
         csv += '\n'
-      }
-      csv.toString
+        itemOrg._2 foreach { item =>
+          val row = header map { header =>
+            (item \ header).getOrElse(JsNull).toString
+          }
+          csv ++= row.mkString(SEPARATOR)
+          csv += '\n'
+        }
+        (itemOrg._1, csv.toString())
+      }).toList
     }
   }
 
-  def sendToPodium(csv: String,
-                   user: User): Future[String] = {
+  def sendToPodium(csvByOrg: List[(OrganisationRepresentation, String)],
+                   user: User): Future[List[String]] = {
+    Future.sequence(csvByOrg.map(csvOrg => sendRequest(csvOrg._1, csvOrg._2, user)))
+
+  }
+
+  private def sendRequest(orgRep: OrganisationRepresentation,
+                          csv: String,
+                          user: User): Future[String] = {
     for {
-        draft <- createDraft(user)
-        orgs <- getOrganisations(user)
-        updatedDraft <- updateDraft(user, draft, orgs)
-        attachmentInfo <- addAttachment(user, updatedDraft, csv)
-        _ <- setAttachmentType(user, attachmentInfo)
-        submittedDraft <- submitDraft(user, updatedDraft)
+      draft <- createDraft(user)
+      updatedDraft <- updateDraft(user, draft, orgRep)
+      attachmentInfo <- addAttachment(user, updatedDraft, csv)
+      _ <- setAttachmentType(user, attachmentInfo)
+      submittedDraft <- submitDraft(user, updatedDraft)
     } yield {
-      s"$podiumFrontUrl/#/requests/detail/${submittedDraft.uuid}"
+      s"/#/requests/detail/${submittedDraft.uuid}"
     }
   }
 
@@ -139,11 +146,11 @@ class SampleRequestService @Inject() (
 
   private def updateDraft(user: User,
                   requestRep: RequestRepresentation,
-                  organisationRep: List[OrganisationRepresentation]): Future[RequestRepresentation] = {
+                  organisationRep: OrganisationRepresentation): Future[RequestRepresentation] = {
 
 
     def createDummyRequestRepresentation(requestRep: RequestRepresentation,
-                                         orgRep: List[OrganisationRepresentation]): RequestRepresentation = {
+                                         orgRep: OrganisationRepresentation): RequestRepresentation = {
 
       val principalInvestigatorUpdated = requestRep.requestDetail.principalInvestigator
         .copy(name = Option("AutomaticGenName"),
@@ -159,11 +166,11 @@ class SampleRequestService @Inject() (
           methods = Option("AutomaticGenMethods"),
           relatedRequestNumber = Option("AutomaticGenRequestNumber"),
           principalInvestigator = principalInvestigatorUpdated,
-          requestType =Option(orgRep.head.requestTypes.getOrElse(Seq())),
+          requestType =Option(Seq(RequestType.Material)),
           searchQuery = Option("AutomaticGenSearchQuery")
         )
 
-      requestRep.copy(organisations = List(orgRep.head), requestDetail = requestDetailUpdated)
+      requestRep.copy(organisations = List(orgRep), requestDetail = requestDetailUpdated)
 
     }
 
@@ -236,7 +243,7 @@ class SampleRequestService @Inject() (
         .put(body)
     }
 
-    val requestFileUpdated = requestFileRep.copy(requestFileType = RequestFileType.METC_LETTER)
+    val requestFileUpdated = requestFileRep.copy(requestFileType = RequestFileType.OTHER)
 
     for {
       res <- accessResourceService.accessResource(user, Json.toJson(requestFileUpdated), requestFileUpdated, setPodiumFileType)
@@ -266,7 +273,7 @@ class SampleRequestService @Inject() (
     * @param user
     * @return
     */
-  private def getOrganisations(user: User): Future[List[OrganisationRepresentation]] = {
+  private def getOrganisations(user: User): Future[Map[Long, OrganisationRepresentation]] = {
 
     def getPodiumOrganisations(authHeader: String) = {
       ws.url(s"$podiumApiUrl/api/organisations/available")
@@ -278,7 +285,7 @@ class SampleRequestService @Inject() (
       res <- accessResourceService.accessResource(user, getPodiumOrganisations)
     } yield {
       res.json.validate[List[OrganisationRepresentation]] match {
-        case s: JsSuccess[List[OrganisationRepresentation]] => s.get
+        case s: JsSuccess[List[OrganisationRepresentation]] => s.get.map(org => org.id.get -> org).toMap
         case e: JsError => throw AdaParseException("Error parsing OrganisationRepresentation Json", new Throwable(JsError.toJson(e).toString()))
       }
     }

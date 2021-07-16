@@ -2,6 +2,7 @@ package controllers.sampleRequest
 
 import akka.stream.Materializer
 import be.objectify.deadbolt.scala.AuthenticatedRequest
+import org.ada.server.AdaException
 import org.ada.server.models.Filter.filterConditionFormat
 import org.ada.web.controllers.BSONObjectIDStringFormatter
 import org.ada.web.controllers.core.AdaBaseController
@@ -9,6 +10,7 @@ import org.ada.web.controllers.dataset.DataSetWebContext
 import org.incal.core.FilterCondition
 import org.incal.play.controllers.WebContext
 import org.incal.play.formatters.JsonFormatter
+import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms._
 import reactivemongo.bson.BSONObjectID
@@ -28,6 +30,7 @@ case class SampleRequest(
  * Controller that facilitates communication with REMS
  */
 class SampleRequestController @Inject()(
+  config: Configuration,
   sampleRequestService: SampleRequestService
 )(
   implicit materializer: Materializer
@@ -37,6 +40,10 @@ class SampleRequestController @Inject()(
   private def dataSetWebContext(dataSetId: String)(implicit context: WebContext) = DataSetWebContext(dataSetId)
   private implicit val filterConditionFormatter = JsonFormatter[FilterCondition]
   private def sampleRequestPermission(dataSet: String) = s"DS:$dataSet.dataSet"
+
+  private val podiumFrontUrl = config.getString("podium.frontUrl").getOrElse(
+    throw new AdaException("Configuration issue: 'podium.frontUrl' was not found in the configuration file.")
+  )
 
   /**
    * Information needed to build a data frame for submission to REMS
@@ -78,19 +85,20 @@ class SampleRequestController @Inject()(
         sampleRequest => {
           for {
             user <- getUserForRequest()
-            csv <- sampleRequestService.createCsv(
+            csvByOrg <- sampleRequestService.createCsvByOrganisation(
+              user,
               dataSetId,
               sampleRequest.conditions,
               sampleRequest.tableColumnNames,
               sampleRequest.selectedIds
             )
-            url <- sampleRequestService.sendToPodium(
-              csv,
+            urls <- sampleRequestService.sendToPodium(
+              csvByOrg,
               user
             )
-          } yield {
-            Ok(url)
-          }
+          } yield
+            Ok(if(urls.size == 1) s"$podiumFrontUrl${urls.head}"
+               else s"$podiumFrontUrl/#/requests/my-requests")
         }
       )
     }
