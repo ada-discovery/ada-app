@@ -137,7 +137,7 @@
 
             function submitForm() {
                 const action = '@Html(sampleRequestRoutes.submitRequest(dataSetSetting.dataSetId).url)'
-                const selectedIds = selectedRowMap.keys();
+                const selectedIds = Array.from(selectedRowMap.keys());
                 const params = {
                     'tableColumnNames[]': '@tableViewParts.head.tableFields.map(_.name).toVector.mkString("\t")'.split("\t"),
                     'selectedIds[]': selectedIds,
