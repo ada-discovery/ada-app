@@ -17,10 +17,12 @@ class DeNoPaFieldLabelImport @Inject() (dsaf: DataSetAccessorFactory) extends Fu
   private val inputFile = "/home/peter/Data/DeNoPa/DeNoPa_all_v2.csv"
   private val delimiter = ";"
 
-  override def runAsFuture: Future[Unit] = {
-    val fieldRepo = dsaf(dataSetId).get.fieldRepo
-
+  override def runAsFuture: Future[Unit] =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
+      fieldRepo = dsa.fieldRepo
+
       fields <- fieldRepo.find()
     } yield {
       val fieldNameSet = fields.map(_.name).toSet
@@ -46,7 +48,6 @@ class DeNoPaFieldLabelImport @Inject() (dsaf: DataSetAccessorFactory) extends Fu
       println("<<<")
       println()
     }
-  }
 
   private def readNameAndLabelsFromFile = {
     // Exam;group;label;sub group;original field name;associated question;type;values;note

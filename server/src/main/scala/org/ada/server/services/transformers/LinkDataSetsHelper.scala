@@ -27,7 +27,7 @@ trait LinkDataSetsHelper[T <: DataSetTransformation] {
 
     for {
       // data set accessor
-      dsa <- Future(dsaSafe(spec.dataSetId))
+      dsa <- dsaf.getOrError(spec.dataSetId)
 
       // load fields
       fields <- fieldNamesToLoad match {

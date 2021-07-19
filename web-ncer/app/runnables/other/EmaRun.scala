@@ -28,7 +28,7 @@ class EmaRun @Inject() (
   private val logger = Logger
 
   override def runAsFuture(input: EmaRunRunSpec) = {
-    val dsa = dsaf(input.dataSetId).getOrElse(
+    val dsa = dsaf.applySync(input.dataSetId).getOrElse(
       throw new IllegalArgumentException(s"Data set ${input.dataSetId} not found")
     )
 

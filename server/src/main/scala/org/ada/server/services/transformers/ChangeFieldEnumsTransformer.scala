@@ -39,7 +39,7 @@ private class ChangeFieldEnumsTransformer extends AbstractDataSetMetaTransformer
 
     for {
       // source data set accessor
-      sourceDsa <- Future(dsaSafe(spec.sourceDataSetId))
+      sourceDsa <- dsaf.getOrError(spec.sourceDataSetId)
 
       // all the fields
       fields <- sourceDsa.fieldRepo.find()

@@ -27,9 +27,10 @@ class CalcMatthewsBinaryClassCorrelations @Inject()(
 
   override def runAsFuture(input: CalcMatthewsBinaryClassCorrelationsSpec) = {
     val delimiter = StringEscapeUtils.unescapeJava(input.delimiter.getOrElse(defaultDelimiter))
-    val dsa = dsaf(input.dataSetId).get
 
     for {
+      dsa <- dsaf.getOrError(input.dataSetId)
+
       // get the boolean fields
       booleanFields <- dsa.fieldRepo.find(Seq("fieldType" #== FieldTypeId.Boolean))
 

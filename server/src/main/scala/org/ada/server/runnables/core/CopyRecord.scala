@@ -12,10 +12,10 @@ class CopyRecord extends DsaInputFutureRunnable[RecordSpec] {
 
   private val idName = JsObjectIdentity.name
 
-  override def runAsFuture(spec: RecordSpec) = {
-    val repo = createDataSetRepo(spec.dataSetId)
-
+  override def runAsFuture(spec: RecordSpec) =
     for {
+      repo <- createDataSetRepo(spec.dataSetId)
+
       // get a requested record
       recordOption <- repo.get(spec.recordId)
 
@@ -25,7 +25,6 @@ class CopyRecord extends DsaInputFutureRunnable[RecordSpec] {
       )
     } yield
       ()
-  }
 }
 
 case class RecordSpec(dataSetId: String, recordId: BSONObjectID)

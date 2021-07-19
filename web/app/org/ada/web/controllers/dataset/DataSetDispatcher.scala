@@ -150,6 +150,16 @@ class DataSetDispatcher @Inject() (
     filterOrId: FilterOrId
   ) = dispatchAjax(_.testIndependence(filterOrId))
 
+  override def getLineChart(
+    filterOrId: FilterOrId
+  ) = dispatch(_.getLineChart(filterOrId))
+
+  override def calcLineChart(
+    xFieldName: String,
+    groupFieldName: Option[String],
+    filterOrId: FilterOrId
+  ) = dispatchAjax(_.calcLineChart(xFieldName, groupFieldName, filterOrId))
+
   override def getClusterization = dispatch(_.getClusterization)
 
   override def cluster(
@@ -303,9 +313,9 @@ class DataSetDispatcher @Inject() (
   private def dataViewOwnerOrPublicFun(id: BSONObjectID) = {
     request: Request[AnyContent] =>
       val dataSetId = getControllerId(request)
-      val dsa = dsaf(dataSetId).getOrElse(throw new AdaException(s"Data set id $dataSetId not found."))
 
       for {
+        dsa <- dsaf.getOrError(dataSetId)
         dataView <- dsa.dataViewRepo.get(id)
       } yield dataView match {
         case Some(dataView) => (dataView.createdById, !dataView.isPrivate)

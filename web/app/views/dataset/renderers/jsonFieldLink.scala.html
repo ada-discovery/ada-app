@@ -7,6 +7,6 @@
     isArray: Boolean
 )
 
-<a href="#" onclick="showJsonFieldValue('@id.stringify', '@fieldName', '@fieldLabel', @isArray);">
+<a href="#" onclick="showJsonFieldValueAux(event);" data-row-id="@id.stringify" data-field-name="@fieldName" data-field-label="@fieldLabel" data-field-is_array="@isArray">
     <span class="glyphicon glyphicon-list"></span>
 </a>

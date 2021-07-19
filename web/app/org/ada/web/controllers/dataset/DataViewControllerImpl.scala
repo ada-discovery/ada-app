@@ -50,11 +50,11 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     dsaf: DataSetAccessorFactory,
     dataSpaceService: DataSpaceService,
     userRepo: UserRepo
-  ) extends AdaCrudControllerImpl[DataView, BSONObjectID](dsaf(dataSetId).get.dataViewRepo)
+  ) extends AdaCrudControllerImpl[DataView, BSONObjectID](dsaf.applySync(dataSetId).get.dataViewRepo)
     with DataViewController
     with HasFormShowEqualEditView[DataView, BSONObjectID] {
 
-  protected val dsa: DataSetAccessor = dsaf(dataSetId).get
+  protected val dsa: DataSetAccessor = dsaf.applySync(dataSetId).get
 
   protected lazy val dataViewRepo = dsa.dataViewRepo
   protected lazy val fieldRepo = dsa.fieldRepo
@@ -459,6 +459,21 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       }
     } yield
       ()
+  }
+
+  override def addLineChart(
+    dataViewId: BSONObjectID,
+    xFieldName: String,
+    groupFieldName: Option[String]
+  ) = Action.async { implicit request =>
+    val yFieldNames = request.body.asFormUrlEncoded.flatMap(_.get("yFieldNames[]")).getOrElse(Nil)
+
+    if (yFieldNames.isEmpty)
+      Future(BadRequest("No y field names provided for addLineChart function."))
+    else
+      processDataViewAux(dataViewId)(
+        addWidgetsAndUpdateView(Seq(XLineWidgetSpec(xFieldName, yFieldNames, groupFieldName)))
+      )
   }
 
   override def addCorrelation(

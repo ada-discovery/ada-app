@@ -91,6 +91,12 @@ class DataViewDispatcher @Inject()(
     groupOrValueFieldName: Option[String]
   ) = dispatchIsAdminOrPermissionAndOwnerAjax(dataViewId, _.addScatter(dataViewId, xFieldName, yFieldName, groupOrValueFieldName))
 
+  override def addLineChart(
+    dataViewId: BSONObjectID,
+    xFieldName: String,
+    groupFieldName: Option[String]
+  ) = dispatchIsAdminOrPermissionAndOwnerAjax(dataViewId, _.addLineChart(dataViewId, xFieldName, groupFieldName))
+
   def addHeatmap(
     dataViewId: BSONObjectID,
     xFieldName: String,
@@ -148,9 +154,11 @@ class DataViewDispatcher @Inject()(
   private def dataViewOwner(id: BSONObjectID) = {
     request: Request[AnyContent] =>
       val dataSetId = getControllerId(request)
-      val dsa = dsaf(dataSetId).getOrElse(throw new AdaException(s"Data set id $dataSetId not found."))
-      dsa.dataViewRepo.get(id).map { dataView =>
+
+      for {
+        dsa <- dsaf.getOrError(dataSetId)
+        dataView <- dsa.dataViewRepo.get(id)
+      } yield
         dataView.flatMap(_.createdById)
-      }
   }
 }

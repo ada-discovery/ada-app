@@ -56,9 +56,11 @@ class FilterDispatcher @Inject()(
   private def filterOwner(id: BSONObjectID) = {
     request: Request[AnyContent] =>
       val dataSetId = getControllerId(request)
-      val dsa = dsaf(dataSetId).getOrElse(throw new AdaException(s"Data set id $dataSetId not found."))
-      dsa.filterRepo.get(id).map { filter =>
+      for {
+        // data set accessor
+        dsa <- dsaf.getOrError(dataSetId)
+        filter <- dsa.filterRepo.get(id)
+      } yield
         filter.flatMap(_.createdById)
-      }
   }
 }

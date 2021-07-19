@@ -8,17 +8,16 @@ import play.api.libs.json._
 
 class UpdateItems extends DsaInputFutureRunnable[UpdateItemsSpec] with RunnableHtmlOutput with IdCriterionHelper {
 
-  override def runAsFuture(input: UpdateItemsSpec) = {
-    val dsa = createDsa(input.dataSetId)
-
+  override def runAsFuture(input: UpdateItemsSpec) =
     for {
+      dsa <- createDsa(input.dataSetId)
+
       jsons <- dsa.dataSetRepo.find(Seq(criterion(input.ids, input.negate)))
 
       newJsons = jsons.map(json => json.+((input.stringFieldName, JsString(input.value))))
       _ <- if (newJsons.size == 1) dsa.dataSetRepo.update(newJsons.head) else dsa.dataSetRepo.update(newJsons)
     } yield
       addParagraph(s"Updated <b>${newJsons.size}</b> items:<br/>")
-  }
 }
 
 case class UpdateItemsSpec(

@@ -37,12 +37,11 @@ class MoveDataSets @Inject() (
   private def move(
     dataSetId: String,
     newDataSpaceId: BSONObjectID
-  ): Future[Unit] = {
-    val dsa = dsaf(dataSetId).getOrElse(
-      throw new AdaException(s"Data set $dataSetId not found.")
-    )
-
+  ): Future[Unit] =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
+
       // get a meta info associated with the data set
       metaInfo <- dsa.metaInfo
 
@@ -91,7 +90,6 @@ class MoveDataSets @Inject() (
       _ <- dsa.updateMetaInfo(newMetaInfo)
     } yield
       ()
-  }
 }
 
 case class MoveDataSetsSpec(newDataSpaceId: BSONObjectID, dataSetId: String, suffixFrom: Option[Int], suffixTo: Option[Int])

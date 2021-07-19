@@ -1,7 +1,6 @@
 package org.ada.server.runnables.core
 
 import org.ada.server.dataaccess.RepoTypes.{FieldRepo, JsonCrudRepo}
-import org.ada.server.field.{FieldType, FieldTypeHelper}
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.ada.server.models.{Field, FieldTypeId}
 import org.ada.server.AdaException
@@ -14,16 +13,15 @@ import org.ada.server.field.FieldUtil.{FieldOps, JsonFieldOps, NamedFieldType}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.reflect.runtime.universe.typeOf
 
 class ReplaceString extends DsaInputFutureRunnable[ReplaceStringSpec] {
 
   private val idName = JsObjectIdentity.name
 
-  override def runAsFuture(spec: ReplaceStringSpec) = {
-    val dsa = createDsa(spec.dataSetId)
-
+  override def runAsFuture(spec: ReplaceStringSpec) =
     for {
+      dsa <- createDsa(spec.dataSetId)
+
       // field
       fieldOption <- dsa.fieldRepo.get(spec.fieldName)
       field = fieldOption.getOrElse(throw new AdaException(s"Field ${spec.fieldName} not found."))
@@ -36,7 +34,6 @@ class ReplaceString extends DsaInputFutureRunnable[ReplaceStringSpec] {
       }
     } yield
       ()
-  }
 
   private def replaceForString(
     repo: JsonCrudRepo,

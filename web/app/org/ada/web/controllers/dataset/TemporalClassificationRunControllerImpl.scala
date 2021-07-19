@@ -42,7 +42,7 @@ class TemporalClassificationRunControllerImpl @Inject()(
 ) extends ClassificationRunControllerImpl[TemporalClassificationResult]
     with TemporalClassificationRunController {
 
-  override protected def dsa = dsaf(dataSetId).get
+  override protected def dsa = dsaf.applySync(dataSetId).get
   override protected val repo = dsa.temporalClassificationRepo
 
   override protected val router = new TemporalClassificationRunRouter(dataSetId)

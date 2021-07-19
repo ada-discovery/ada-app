@@ -215,7 +215,7 @@
         enableDataLabels,
         pointFormat,
         height,
-        dataType,
+        xDataType,
         allowPointSelectionEvent,
         allowIntervalSelectionEvent,
         allowChartTypeChange,
@@ -263,7 +263,7 @@
                 text: title
             },
             xAxis: {
-                type: dataType,
+                type: xDataType,
                 title: {
                     text: xAxisCaption
                 },

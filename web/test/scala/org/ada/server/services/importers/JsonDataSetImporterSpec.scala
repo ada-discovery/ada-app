@@ -32,7 +32,11 @@ class JsonDataSetImporterSpec extends AsyncFlatSpec with BeforeAndAfter {
   }
 
   after {
-    dsaf(Iris.id) map { _.dataSetRepo.deleteAll }
+    for {
+      dsa <- dsaf.getOrError(Iris.id)
+      _ <- dsa.dataSetRepo.deleteAll
+    } yield
+      ()
   }
 
   behavior of "JsonDataSetImporter"
@@ -40,7 +44,7 @@ class JsonDataSetImporterSpec extends AsyncFlatSpec with BeforeAndAfter {
   it should "import iris.json to MongoDB" in {
     for {
       _ <- importer(Iris.importInfo(StorageType.Mongo))
-      dsa = dsaf(Iris.id).getOrElse(fail(s"Dataset '${Iris.name}' not found in Mongo."))
+      dsa <- dsaf(Iris.id).map(_.getOrElse(fail(s"Dataset '${Iris.name}' not found in Mongo.")))
       _ <- dsa.dataSetRepo.flushOps
       _ <- dsa.dataSetName map { name => assert(name == Iris.name) }
       _ <- dsa.dataSetRepo.count() map { count => assert(count == Iris.size)}
@@ -51,7 +55,7 @@ class JsonDataSetImporterSpec extends AsyncFlatSpec with BeforeAndAfter {
   it should "import iris.json to ElasticSearch" in {
     for {
       _ <- importer(Iris.importInfo(StorageType.ElasticSearch))
-      dsa = dsaf(Iris.id).getOrElse(fail(s"Dataset '${Iris.name}' not found in Elastic."))
+      dsa <- dsaf(Iris.id).map(_.getOrElse(fail(s"Dataset '${Iris.name}' not found in Mongo.")))
       _ <- dsa.dataSetRepo.flushOps
       _ <- dsa.dataSetName map { name => assert(name == Iris.name) }
       _ <- dsa.dataSetRepo.count() map { count => assert(count == Iris.size)}

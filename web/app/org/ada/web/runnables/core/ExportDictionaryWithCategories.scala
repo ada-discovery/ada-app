@@ -9,10 +9,11 @@ import runnables.DsaInputFutureRunnable
 class ExportDictionaryWithCategories extends DsaInputFutureRunnable[ExportDictionaryWithCategoriesSpec] with RunnableFileOutput {
 
   override def runAsFuture(input: ExportDictionaryWithCategoriesSpec) = {
-    val dsa = createDsa(input.dataSetId)
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(input.delimiter)
 
     for {
+      dsa <- createDsa(input.dataSetId)
+
       // get the fields
       fields <- dsa.fieldRepo.find()
 

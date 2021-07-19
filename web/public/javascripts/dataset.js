@@ -282,6 +282,20 @@ function generateTable(parentTableDiv, filterElement, fieldNames, showSuccessMes
     }
 }
 
+function showJsonFieldValueAux(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const link = $(event.target).parent()
+
+    const rowId = link.attr("data-row-id")
+    const fieldName = link.attr("data-field-name")
+    const fieldLabel = link.attr("data-field-label")
+    const isArray = link.attr("data-field-is_array") == "true"
+
+    showJsonFieldValue(rowId, fieldName, fieldLabel, isArray)
+}
+
 function showJsonFieldValue(id, fieldName, fieldLabel, isArray) {
     dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
         success: function(data) {
@@ -303,6 +317,19 @@ function showJsonFieldValue(id, fieldName, fieldLabel, isArray) {
         },
         error: showErrorResponse
     });
+}
+
+function showArrayFieldChartAux(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const link = $(event.target).parent()
+
+    const rowId = link.attr("data-row-id")
+    const fieldName = link.attr("data-field-name")
+    const fieldLabel = link.attr("data-field-label")
+
+    showArrayFieldChart(rowId, fieldName, fieldLabel)
 }
 
 function showArrayFieldChart(id, fieldName, fieldLabel) {

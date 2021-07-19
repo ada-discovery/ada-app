@@ -1,4 +1,4 @@
-@import org.ada.web.util.matchesPath
+@import org.ada.web.util.matchesCorePath
 @import be.objectify.deadbolt.scala.views.html.{subjectPresent, subjectPresentOr, restrict, pattern, dynamic}
 @import org.incal.play.security.SecurityRole
 @import org.incal.play.controllers.WebContext
@@ -20,7 +20,7 @@
 
 @listItemCustom(call: Call, matchPrefixDepth: Option[Int] = None)(element: Html) = {
 
-    <li @if(matchesPath(call.url, toRequest.path, matchPrefixDepth, toConfiguration.getString("play.http.context"))) { class="active"} >
+    <li @if(matchesCorePath(call.url, toRequest.path, matchPrefixDepth, toConfiguration.getString("play.http.context"))) { class="active"} >
         @element
     </li>
 }

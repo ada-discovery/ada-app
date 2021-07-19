@@ -21,22 +21,21 @@ class DropExtraMiliSecsPoints extends DsaInputFutureRunnable[DropExtraMiliSecsPo
   private val idName = JsObjectIdentity.name
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
-  override def runAsFuture(spec: DropExtraMiliSecsPointsSpec) = {
-    val dsa_ = createDsa(spec.dataSetId)
-
+  override def runAsFuture(spec: DropExtraMiliSecsPointsSpec) =
     for {
+      dsa <- createDsa(spec.dataSetId)
+
       // field
-      fieldOption <- dsa_.fieldRepo.get(spec.fieldName)
-      field = fieldOption.getOrElse(throw new AdaException(s"Field ${spec.fieldName} not found."))
+      fieldOption <- dsa.fieldRepo.get(spec.fieldName)
+      field = fieldOption.getOrElse(throw new AdaException(s"Field '${spec.fieldName}' not found."))
 
       // replace for String or Enum
       _ <- field.fieldType match {
-        case FieldTypeId.String => replaceForString(dsa_.dataSetRepo, field.toNamedType[String], spec)
+        case FieldTypeId.String => replaceForString(dsa.dataSetRepo, field.toNamedType[String], spec)
         case _ => throw new AdaException(s"DropExtraMiliSecsPoints is possible only for String type but got ${field.fieldTypeSpec}.")
       }
     } yield
       ()
-  }
 
   private def replaceForString(
     repo: JsonCrudRepo,

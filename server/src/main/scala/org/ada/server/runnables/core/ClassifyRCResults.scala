@@ -45,18 +45,15 @@ class ClassifyRCResults @Inject() (
       ()
 
   private def dataSetIds(input: ClassifyRCResultsSpec) = {
-    def resultsDataSetIds(dataSetId: String) = {
-      val dsa = dsaf(dataSetId).getOrElse(
-        throw new AdaException(s"Data set ${dataSetId} not found.")
-      )
-
+    def resultsDataSetIds(dataSetId: String) =
       for {
+        dsa <- dsaf.getOrError(dataSetId)
+
         jsons <- dsa.dataSetRepo.find(projection = Seq(dataSetFieldName))
       } yield
         jsons.map { json =>
           (json \ dataSetFieldName).get.as[String]
         }.toSeq.sorted
-      }
 
     (
       input.rcWeightDataSetIdPrefix,
@@ -72,19 +69,24 @@ class ClassifyRCResults @Inject() (
   }
 
   private def classify(dataSetId: String, spec: ClassifyRCResultsSpec): Future[Unit] = {
-    val dsa = dsaf(dataSetId).getOrElse(
-      throw new AdaException(s"Data set $dataSetId not found.")
-    )
-
     logger.info(s"Classifying RC weight data set $dataSetId.")
 
+    dsaf.getOrError(dataSetId).flatMap(classifyAux(spec))
+  }
+
+  private def classifyAux(
+    spec: ClassifyRCResultsSpec)(
+    dsa: DataSetAccessor
+  ): Future[Unit] = {
     val mlModelFuture = classificationRepo.get(spec.mlModelId)
+
     val filterFuture = spec.filterName match {
       case Some(filterName) =>
         dsa.filterRepo.find(Seq("name" #== Some(filterName))).map(_.headOption)
       case None =>
         Future(None)
     }
+
     val allFieldsFuture = dsa.fieldRepo.find()
 
     for {

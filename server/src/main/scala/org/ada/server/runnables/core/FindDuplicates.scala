@@ -6,17 +6,16 @@ import runnables.DsaInputFutureRunnable
 import org.incal.core.dataaccess.Criterion._
 import org.ada.server.field.FieldUtil.{FieldOps, JsonFieldOps}
 
-import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class FindDuplicates extends DsaInputFutureRunnable[FindDuplicatesSpec] {
 
   private val logger = Logger
 
-  override def runAsFuture(input: FindDuplicatesSpec) = {
-    val dsa = createDsa(input.dataSetId)
-
+  override def runAsFuture(input: FindDuplicatesSpec) =
     for {
+      dsa <- createDsa(input.dataSetId)
+
       // get the items
       jsons <- dsa.dataSetRepo.find(projection = input.fieldNames)
 
@@ -32,7 +31,6 @@ class FindDuplicates extends DsaInputFutureRunnable[FindDuplicatesSpec] {
       logger.info("-----------------")
       logger.info(duplicates.mkString(", ") + "\n")
     }
-  }
 }
 
 case class FindDuplicatesSpec(dataSetId: String, fieldNames: Seq[String])

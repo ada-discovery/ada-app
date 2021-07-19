@@ -2,6 +2,6 @@
 
 @(id: BSONObjectID, fieldName: String, fieldLabel: String)
 
-<a href="#" onclick="showArrayFieldChart('@id.stringify', '@fieldName', '@fieldLabel');">
+<a href="#" onclick="showArrayFieldChartAux(event);" data-row-id="@id.stringify" data-field-name="@fieldName" data-field-label="@fieldLabel">
     <span class="glyphicon glyphicon-stats"></span>
 </a>

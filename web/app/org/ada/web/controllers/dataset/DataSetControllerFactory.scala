@@ -37,7 +37,7 @@ protected class DataSetControllerFactoryImpl @Inject()(
     cache.get(dataSetId) match {
       case Some(controller) => Some(controller)
       case None =>
-        dsaf(dataSetId).map { dsa =>
+        dsaf.applySync(dataSetId).map { dsa =>
           val controllerFuture = createController(dsa).map { controller =>
             cache.put(dataSetId, controller)
             controller

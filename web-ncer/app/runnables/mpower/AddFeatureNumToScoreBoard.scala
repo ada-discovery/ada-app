@@ -21,10 +21,12 @@ class AddFeatureNumToScoreBoard @Inject()(
   private val featureNumField = Field("featureNum", Some("Feature Num"), FieldTypeId.Integer)
 
   override def runAsFuture(spec: AddFeatureNumToScoreBoardSpec) = {
-    val dsa = dsaf(spec.scoreBoardDataSetId).get
     val newDataSetId = spec.scoreBoardDataSetId + "_ext"
 
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(spec.scoreBoardDataSetId)
+
       // get the name of the source score data set
       dataSetName <- dsa.dataSetName
 
@@ -77,14 +79,16 @@ class AddFeatureNumToScoreBoard @Inject()(
     val defaultJsonFuture = Future(json + (featureNumField.name, JsNull))
 
     submissionId.map { submissionId =>
-      dsaf(submissionDataSetPrefix + "." + submissionId) match {
-        case Some(featureSetDsa) =>
-          featureSetDsa.fieldRepo.count().map { count =>
-            val featureNumJson = JsNumber(count - 1)
-            (json + (featureNumField.name, featureNumJson))
-          }
-        case None => defaultJsonFuture
-      }
+      dsaf(submissionDataSetPrefix + "." + submissionId).flatMap(
+        _ match {
+          case Some(featureSetDsa) =>
+            featureSetDsa.fieldRepo.count().map { count =>
+              val featureNumJson = JsNumber(count - 1)
+              (json + (featureNumField.name, featureNumJson))
+            }
+          case None => defaultJsonFuture
+        }
+      )
     }.getOrElse(defaultJsonFuture)
   }
 }

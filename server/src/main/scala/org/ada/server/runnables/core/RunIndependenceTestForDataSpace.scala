@@ -54,11 +54,15 @@ class RunIndependenceTestForDataSpace @Inject()(
     dataSetId: String
   ): Future[String] = {
     logger.info(s"Running an independence test for the data set $dataSetId using the target field '$targetFieldName'.")
-    val dsa = dsaf(dataSetId).get
 
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
+
       inputField <- dsa.fieldRepo.get(inputFieldName)
+
       targetField <- dsa.fieldRepo.get(targetFieldName)
+
       results <- statsService.testIndependence(dsa.dataSetRepo, Nil, Seq(inputField.get), targetField.get)
     } yield
       results.head.map(

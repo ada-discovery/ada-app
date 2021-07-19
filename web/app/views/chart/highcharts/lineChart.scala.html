@@ -10,7 +10,7 @@
     $(function() {
         var isDate = @{widget.data.headOption.map(_._2.headOption.map(_._1.isInstanceOf[java.util.Date])).flatten.getOrElse(false)};
         var isDouble = @{widget.data.headOption.map(_._2.headOption.map(_._1.isInstanceOf[Double])).flatten.getOrElse(false)};
-        var dataType = (isDate) ? 'datetime' : null;
+        var xDataType = (isDate) ? 'datetime' : null;
         var datas = [@toChartData(widget).map { singleSeries => {name: '@singleSeries._1', data: [@singleSeries._2.map { case (x, y) => [@x, @y], }]}, }];
 
         var seriesSize = datas.length
@@ -37,7 +37,7 @@
             true,
             pointFormat,
             height,
-            dataType,
+            xDataType,
             false,
             false,
             false,

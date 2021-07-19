@@ -2,27 +2,24 @@ package org.ada.server.runnables.core
 
 import javax.inject.Inject
 import play.api.Logger
-import org.incal.core.runnables.{InputFutureRunnable, InputFutureRunnableExt}
-import org.ada.server.AdaException
+import org.incal.core.runnables.InputFutureRunnableExt
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 
-import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class CompareFieldNames @Inject() (dsaf: DataSetAccessorFactory) extends InputFutureRunnableExt[CompareFieldNamesSpec] {
 
-  private val logger = Logger // (this.getClass())
+  private val logger = Logger
 
   override def runAsFuture(input: CompareFieldNamesSpec) =
     for {
       fieldNames <-
         Future.sequence(
           input.dataSetIds.map { dataSetId =>
-            val dsa = dsaf(dataSetId).getOrElse(
-              throw new AdaException(s"Data set id ${dataSetId} not found."))
-
-            dsa.fieldRepo.find().map(_.map(_.name))
+            dsaf.getOrError(dataSetId).flatMap(dsa =>
+              dsa.fieldRepo.find().map(_.map(_.name))
+            )
           }
         )
     } yield {

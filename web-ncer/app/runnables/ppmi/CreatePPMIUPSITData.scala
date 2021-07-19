@@ -56,24 +56,21 @@ class CreatePPMIUPSITData @Inject()(
   private val newGenderFieldType = ftf(newGenderField.fieldTypeSpec).asValueOf[Int]
   private val newFamilyHistoryFieldType = ftf(newFamilyHistoryField.fieldTypeSpec).asValueOf[Boolean]
 
-  override def runAsFuture = {
-    val dsa = dsaf(dataSetId).get
-    val repo = dsa.dataSetRepo
-    val fieldRepo = dsa.fieldRepo
-
-    val registerDataSetFuture = dataSetService.register(dsa, newDataSetId, newDataSetName, StorageType.ElasticSearch)
-    val jsonsFuture = repo.find(projection = fieldNames ++ Seq(idName))
-    val fieldsFuture  = fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
-
+  override def runAsFuture =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(dataSetId)
+      repo = dsa.dataSetRepo
+      fieldRepo = dsa.fieldRepo
+
       // register a data set
-      newDsa <- registerDataSetFuture
+      newDsa <- dataSetService.register(dsa, newDataSetId, newDataSetName, StorageType.ElasticSearch)
 
       // get the items
-      jsons <- jsonsFuture
+      jsons <- repo.find(projection = fieldNames ++ Seq(idName))
 
       // get the fields
-      fields <- fieldsFuture
+      fields <- fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
 
       // delete all the records from the new data set
       _ <- newDsa.dataSetRepo.deleteAll
@@ -155,5 +152,4 @@ class CreatePPMIUPSITData @Inject()(
       }
     } yield
       ()
-  }
 }
