@@ -1,11 +1,10 @@
 @import views.html.layout
 @import views.html.userprofile.editableUserProfileForm
-@import org.ada.server.models.User
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
-@import org.ada.web.controllers.routes
+@import org.ada.web.controllers.{UserUpdateEntry, routes}
 
-@(form: Form[User])(implicit webContext: WebContext))
+@(form: Form[UserUpdateEntry])(implicit webContext: WebContext))
 
 @layout.main(webContext.configuration.getString("project.name").getOrElse("") + " Home") {
     <div class="container" style="padding-bottom: 190px;" xmlns="http://www.w3.org/1999/html">
@@ -22,7 +21,7 @@
             <div class="col-md-8">
             @helper.form(routes.UserProfileController.updateSettings) {
                 <fieldset>
-                    @editableUserProfileForm("user", form)
+                    @editableUserProfileForm(form)
                 </fieldset>
 
                 <div class="actions">

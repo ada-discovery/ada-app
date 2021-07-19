@@ -63,8 +63,7 @@ class EmaRun @Inject() (
       // get the max value of a given field
       maxValue <- dsa.dataSetRepo.max(input.fieldName, addNotNullCriterion = true)
 
-      user1 <- userRepo.find(Seq(EqualsCriterion("ldapDn", input.email))).map(_.headOption)
-      user <- userRepo.find(Seq("ldapDn" #== input.email)).map(_.headOption)
+      user <- userRepo.find(Seq("userId" #== input.email)).map(_.headOption)
     } yield {
 
       logger.info("committee "+ commiteeRead.get.toString)
@@ -78,7 +77,7 @@ class EmaRun @Inject() (
 
       logger.info(s"Min/max value of ${input.fieldName}: $minValue/$maxValue.")
 
-      logger.info("User's name (if found): " + user.map(_.ldapDn).getOrElse("N/A"))
+      logger.info("User's name (if found): " + user.map(_.userId).getOrElse("N/A"))
 
       addParagraph(bold("Hooray"))
     }

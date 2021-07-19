@@ -1,7 +1,7 @@
 @import views.html.elements.inputText
+@import org.ada.web.controllers.UserUpdateEntry
 
-@** Very similar to editableUserForm.scala.html, but with key fields hidden from user **@
-@(domainName: String, form: Form[_])(implicit msg: play.api.i18n.Messages)
+@(form: Form[UserUpdateEntry])(implicit msg: play.api.i18n.Messages)
 
-@inputText(domainName, "name", form)
-@inputText(domainName, "affiliation", form)
+@inputText("user", "name", form)
+@inputText("user", "email", form)

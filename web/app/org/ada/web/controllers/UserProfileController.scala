@@ -23,13 +23,9 @@ class UserProfileController @Inject() (userRepo: UserRepo) extends AdaBaseContro
 
   protected val userUpdateForm = Form(
     mapping(
-      "id" -> ignored(Option.empty[BSONObjectID]),
-      "name" -> text,
-      "email" -> email,
-      "roles" -> ignored(Seq[String]()),
-      "permissions" -> ignored(Seq[String]()),
-      "locked" -> ignored(false)
-    )(User.apply)(User.unapply))
+      "name" -> nonEmptyText,
+      "email" -> email
+    )(UserUpdateEntry.apply)(UserUpdateEntry.unapply))
 
   /**
     * Leads to profile page which shows some basic user information.
@@ -50,7 +46,11 @@ class UserProfileController @Inject() (userRepo: UserRepo) extends AdaBaseContro
   def settings = restrictSubjectPresentAny(noCaching = true) { implicit request =>
     Future {
       currentUserFromRequest.map { case DeadboltUser(user) =>
-        Ok(views.profileSettings(userUpdateForm.fill(user)))
+        val updateEntry = UserUpdateEntry(user.name, user.email)
+
+        Ok(views.profileSettings(
+          userUpdateForm.fill(updateEntry)
+        ))
       }.getOrElse(
         BadRequest("The user has not been logged in.")
       )
@@ -68,12 +68,14 @@ class UserProfileController @Inject() (userRepo: UserRepo) extends AdaBaseContro
         { formWithErrors =>
           Future(BadRequest(formWithErrors.errors.toString).flashing("failure" -> "An unexpected error occurred"))
         },
-        (newUserData: User) =>
-          // we allow only email to be updated
-          userRepo.update(user.copy(email = newUserData.email)).map { _ =>
+        (newUserData: UserUpdateEntry) => {
+          // we allow only email and name to be updated
+          val updatedUser = user.copy(email = newUserData.email, name = newUserData.name)
+
+          userRepo.update(updatedUser).map { _ =>
             render {
-              case Accepts.Html() => Redirect(routes.UserProfileController.profile()).flashing("success" -> "Profile has been updated")
-              case Accepts.Json() => Ok(Json.obj("message" -> "Profile successfully updated"))
+              case Accepts.Html() => Redirect(routes.UserProfileController.profile()).flashing("success" -> "Your profile has been updated")
+              case Accepts.Json() => Ok(Json.obj("message" -> "Your profile successfully updated"))
             }
           }.recover {
             case t: TimeoutException =>
@@ -83,9 +85,15 @@ class UserProfileController @Inject() (userRepo: UserRepo) extends AdaBaseContro
               Logger.error("Problem found in the update process")
               InternalServerError(i.getMessage)
           }
-        )
-      }.getOrElse(
-        Future(BadRequest("The user has not been logged in."))
+        }
       )
+    }.getOrElse(
+      Future(BadRequest("The user has not been logged in."))
+    )
   }
 }
+
+case class UserUpdateEntry(
+  name: String,
+  email: String
+)
