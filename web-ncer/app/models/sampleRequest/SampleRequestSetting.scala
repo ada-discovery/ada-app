@@ -8,6 +8,7 @@ import reactivemongo.play.json.BSONFormats._
 case class SampleRequestSetting(
   _id: Option[BSONObjectID] = None,
   dataSetId: String,
+  organisationFieldIdName: String,
   viewId: BSONObjectID
 )
 

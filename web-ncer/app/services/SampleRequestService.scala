@@ -86,13 +86,19 @@ class SampleRequestService @Inject() (
     val fieldCriteria = if (fieldNames.nonEmpty) Vector(FieldIdentity.name #-> fieldNames) else Nil
     val selectCriteria = if (selectedIds.nonEmpty) Vector(JsObjectIdentity.name #-> selectedIds) else Nil
     for {
+      sampleRequestSetting <- sampleRequestSettingRepo.find(Seq("dataSetId" #== dataSetId))
       fields <- dsa.fieldRepo.find(fieldCriteria)
       valueCriteria <- FieldUtil.toDataSetCriteria(dsa.fieldRepo, conditions)
       items <- dsa.dataSetRepo.find(valueCriteria ++ selectCriteria)
       organisations <- getOrganisations(user)
     } yield {
+      val organisationIdentifier =
+        if(sampleRequestSetting.nonEmpty)
+          sampleRequestSetting.head.organisationFieldIdName
+        else throw new AdaException(s"Not found sample request settings for dataset '$dataSetId'")
+
       val header = fields.map(_.name)
-      val itemsByOrg = items.groupBy(item => organisations((item \ "organisation_id").as[Long]))
+      val itemsByOrg = items.groupBy(item => organisations((item \ organisationIdentifier).as[Long]))
       itemsByOrg.map(itemOrg => {
         val csv = new StringBuilder("")
         csv ++= header.mkString(SEPARATOR)
@@ -112,7 +118,6 @@ class SampleRequestService @Inject() (
   def sendToPodium(csvByOrg: List[(OrganisationRepresentation, String)],
                    user: User): Future[List[String]] = {
     Future.sequence(csvByOrg.map(csvOrg => sendRequest(csvOrg._1, csvOrg._2, user)))
-
   }
 
   private def sendRequest(orgRep: OrganisationRepresentation,

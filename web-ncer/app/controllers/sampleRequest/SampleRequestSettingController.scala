@@ -59,6 +59,7 @@ class SampleRequestSettingController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSetId" -> nonEmptyText,
+      "organisationFieldIdName" -> nonEmptyText,
       "viewId" -> of[BSONObjectID]
     )(SampleRequestSetting.apply)(SampleRequestSetting.unapply)
   )
@@ -178,6 +179,7 @@ class SampleRequestSettingController @Inject()(
   }
 
   override protected def listView = { implicit ctx =>
+
     (views.html.sampleRequestSetting.list(_, _)).tupled
   }
 
@@ -199,7 +201,6 @@ class SampleRequestSettingController @Inject()(
       Ok(Json.toJson(dataSetIdJsons))
     }
   }
-
 
 
 }
