@@ -9,7 +9,7 @@ import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.dataaccess.dataset.FilterRepoExtra._
 import org.ada.server.field.FieldUtil
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
-import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, User}
+import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo, FieldTypeId, User}
 import org.ada.server.{AdaException, AdaParseException}
 import org.ada.web.controllers.dataset.{DataSetViewHelper, TableViewData}
 import org.ada.web.services.DataSpaceService
@@ -104,8 +104,13 @@ class SampleRequestService @Inject() (
         csv ++= header.mkString(SEPARATOR)
         csv += '\n'
         itemOrg._2 foreach { item =>
-          val row = header map { header =>
-            (item \ header).getOrElse(JsNull).toString
+          val row = fields map { field => {
+            val res = (item \ field.name).toOption
+            if (res.isDefined && field.fieldTypeSpec.fieldType.compare(FieldTypeId.Enum) == 0) {
+              field.fieldTypeSpec.enumValues(res.get.as[Int])
+            } else
+              res.getOrElse(JsNull).toString
+            }
           }
           csv ++= row.mkString(SEPARATOR)
           csv += '\n'
