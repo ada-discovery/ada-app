@@ -50,7 +50,7 @@ class SampleRequestServiceSpec extends AsyncFlatSpec with BeforeAndAfter {
     }
   }
 
-  behavior of "createCsv"
+  /*behavior of "createCsv"
 
   it should "return a string representing a CSV file" in {
     for {
@@ -68,6 +68,6 @@ class SampleRequestServiceSpec extends AsyncFlatSpec with BeforeAndAfter {
     for {
       items <- sampleRequestService.getCatalogueItems
     } yield assert(items.nonEmpty)
-  }
+  }*/
 
 }
