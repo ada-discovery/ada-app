@@ -46,7 +46,7 @@ class SampleRequestServiceSpec extends AsyncFlatSpec with BeforeAndAfter {
     for {
       dsa <- dsaf(Iris.id)
     } yield {
-      Await.result(dsa.dataSetRepo.deleteAll, 10 seconds)
+      Await.result(dsa.get.dataSetRepo.deleteAll, 10 seconds)
     }
   }
 
