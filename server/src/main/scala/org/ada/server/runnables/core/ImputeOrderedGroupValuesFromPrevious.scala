@@ -33,10 +33,11 @@ class ImputeOrderedGroupValuesFromPrevious @Inject() (
 
   override def runAsFuture(
     input: ImputeOrderedGroupValuesFromPreviousSpec
-  ) = {
-    val dsa = dsaf(input.sourceDataSetId).get
-
+  ) =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(input.sourceDataSetId)
+
       // order field (and type)
       orderField <- dsa.fieldRepo.get(input.orderFieldName).map(_.get)
 
@@ -93,7 +94,6 @@ class ImputeOrderedGroupValuesFromPrevious @Inject() (
       _ <- dataSetService.saveDerivedDataSet(dsa, input.derivedDataSetSpec, newSource, fields.toSeq, input.streamSpec, true)
     } yield
       ()
-  }
 
   def updateOrderedJsons(orderedJsons: Seq[JsObject]) = {
     if (orderedJsons.size < 2)

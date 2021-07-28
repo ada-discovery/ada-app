@@ -19,11 +19,6 @@ import scala.concurrent.Future
 
 class TestElasticJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) extends FutureRunnable {
 
-  private val biosampleTestDsa = dsaf("lux_park.ibbl_biosample_tests").get
-  private val mPowerFeatureSetDsa = dsaf("mpower_challenge.9638887").get
-
-  private val biosampleTestDataSetRepo = biosampleTestDsa.dataSetRepo
-  private val mPowerFeatureSetRepo = mPowerFeatureSetDsa.dataSetRepo
   private val idName = JsObjectIdentity.name
 
   implicit val system = ActorSystem()
@@ -35,23 +30,35 @@ class TestElasticJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) exten
   }
 
   def calcCreationDateSum(withProjection: Boolean): Future[Long] =
-    biosampleTestDataSetRepo.findAsStream(
-      sort = Seq(AscSort("createdt")),
-      projection = if (withProjection) Seq("createdt") else Nil
-    ).flatMap { source =>
+    for {
+      biosampleTestDsa <- dsaf.getOrError("lux_park.ibbl_biosample_tests")
+
+      biosampleTestDataSetRepo = biosampleTestDsa.dataSetRepo
+
+      source <- biosampleTestDataSetRepo.findAsStream(
+        sort = Seq(AscSort("createdt")),
+        projection = if (withProjection) Seq("createdt") else Nil
+      )
+
       // materialize the flow, getting the Sinks materialized value
-      source.runWith(creationDateSumSink)
-    }
+      result <- source.runWith(creationDateSumSink)
+    } yield
+      result
 
   def calcCreationDateSumOld(withProjection: Boolean): Future[Long] =
-    biosampleTestDataSetRepo.find(
-      sort = Seq(AscSort("createdt")),
-      projection = if (withProjection) Seq("createdt") else Nil
-    ).map { jsons =>
+    for {
+      biosampleTestDsa <- dsaf.getOrError("lux_park.ibbl_biosample_tests")
+
+      biosampleTestDataSetRepo = biosampleTestDsa.dataSetRepo
+
+      jsons <- biosampleTestDataSetRepo.find(
+        sort = Seq(AscSort("createdt")),
+        projection = if (withProjection) Seq("createdt") else Nil
+      )
+    } yield
       jsons.map(json =>
         (json \ "createdt").asOpt[Long].getOrElse(0l)
       ).sum
-    }
 
   case class PersonNumeratorAccum(sum1: Double, sum2: Double, productSum: Double, count: Int)
 
@@ -64,25 +71,39 @@ class TestElasticJsonRepoStreaming @Inject()(dsaf: DataSetAccessorFactory) exten
   }
 
   def calcTwoFeaturePearsonNumerator(withProjection: Boolean): Future[Double] =
-    mPowerFeatureSetRepo.findAsStream(
-      sort = Seq(AscSort("Feature1")),
-      projection = if (withProjection) Seq("Feature1", "Feature2") else Nil
-    ).flatMap { source =>
-      // materialize the flow, getting the Sinks materialized value
-      source.runWith(twoFeaturePearsonNumeratorSink).map { case PersonNumeratorAccum(sum1, sum2, productSum, count) =>
-        val mean1 = sum1 / count
-        val mean2 = sum2 / count
-        val pMean = productSum / count
+    for {
+      mPowerFeatureSetDsa <- dsaf.getOrError("mpower_challenge.9638887")
 
-        pMean - mean1 * mean2
-      }
-    }
+      mPowerFeatureSetRepo = mPowerFeatureSetDsa.dataSetRepo
+
+      source <- mPowerFeatureSetRepo.findAsStream(
+        sort = Seq(AscSort("Feature1")),
+        projection = if (withProjection) Seq("Feature1", "Feature2") else Nil
+      )
+
+      // materialize the flow, getting the Sinks materialized value
+      result <-
+        source.runWith(twoFeaturePearsonNumeratorSink).map { case PersonNumeratorAccum(sum1, sum2, productSum, count) =>
+          val mean1 = sum1 / count
+          val mean2 = sum2 / count
+          val pMean = productSum / count
+
+          pMean - mean1 * mean2
+        }
+    } yield
+      result
 
   def calcTwoFeaturePearsonNumeratorOld(withProjection: Boolean): Future[Double] =
-    mPowerFeatureSetRepo.find(
-      sort = Seq(AscSort("Feature1")),
-      projection = if (withProjection) Seq("Feature1", "Feature2") else Nil
-    ).map { jsons =>
+    for {
+      mPowerFeatureSetDsa <- dsaf.getOrError("mpower_challenge.9638887")
+
+      mPowerFeatureSetRepo = mPowerFeatureSetDsa.dataSetRepo
+
+      jsons <- mPowerFeatureSetRepo.find(
+        sort = Seq(AscSort("Feature1")),
+        projection = if (withProjection) Seq("Feature1", "Feature2") else Nil
+      )
+    } yield {
       val els = jsons.map { json =>
         val feature1 = (json \ "Feature1").as[Double]
         val feature2 = (json \ "Feature2").as[Double]

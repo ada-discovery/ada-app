@@ -44,6 +44,7 @@ case class DistributionWidgetSpec(
   relativeValues: Boolean = false,
   numericBinCount: Option[Int] = None, // TODO: rename to binCount
   useDateMonthBins: Boolean = false,
+  orderByField: Option[Boolean] = None,
   displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
 ) extends WidgetSpec {
   override val fieldNames = Seq(groupFieldName, Some(fieldName)).flatten

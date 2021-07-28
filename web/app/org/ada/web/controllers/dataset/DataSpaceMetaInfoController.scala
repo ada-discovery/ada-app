@@ -189,7 +189,7 @@ class DataSpaceMetaInfoController @Inject() (
       // update the individual data set meta infos
       _ <- Future.sequence(
           newDataSetMetaInfos.map( newDataSetMetaInfo =>
-            dsaf(newDataSetMetaInfo.id).map { dsa =>
+            dsaf.applySync(newDataSetMetaInfo.id).map { dsa =>
               dsa.updateMetaInfo(newDataSetMetaInfo)
             }.getOrElse(
               Future(())
@@ -214,7 +214,7 @@ class DataSpaceMetaInfoController @Inject() (
         val dataSetId = requestMap.get("dataSetId").get.head
         val actionChoice = requestMap.get("actionChoice").get.head
 
-        val dsa = dsaf(dataSetId).get
+        val dsa = dsaf.applySync(dataSetId).get
 
         def unregisterDataSet: Future[_] =
           dataSpaceService.unregister(dataSpaceInfo, dataSetId)
@@ -300,7 +300,7 @@ class DataSpaceMetaInfoController @Inject() (
     spaceMetaInfo: DataSpaceMetaInfo
   ): Future[Map[String, Int]] = {
     val futures = spaceMetaInfo.dataSetMetaInfos.map { setMetaInfo =>
-      val dsa = dsaf(setMetaInfo.id).get
+      val dsa = dsaf.applySync(setMetaInfo.id).get
       dsa.dataSetRepo.count().map(size => (setMetaInfo.id, size))
     }
     Future.sequence(futures).map(_.toMap)

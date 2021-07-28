@@ -47,11 +47,12 @@ class CopyTrendVisitsWithIncrement @Inject()(dsaf: DataSetAccessorFactory) exten
     5 -> 10
   )
 
-  override def runAsFuture = {
-    val sourceDsa = dsaf(sourceDataSetId).get
-    val targetDsa = dsaf(targetDataSetId).get
-
+  override def runAsFuture =
     for {
+      sourceDsa <- dsaf.getOrError(sourceDataSetId)
+
+      targetDsa <- dsaf.getOrError(targetDataSetId)
+
       inputSource <- sourceDsa.dataSetRepo.findAsStream(Seq(visitFieldName #-> visitMap.keys.toSeq))
 
       remappedVisitSource = inputSource.map { json =>
@@ -71,5 +72,4 @@ class CopyTrendVisitsWithIncrement @Inject()(dsaf: DataSetAccessorFactory) exten
       }
     } yield
       ()
-  }
 }

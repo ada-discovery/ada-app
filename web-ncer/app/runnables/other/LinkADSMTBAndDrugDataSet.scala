@@ -20,15 +20,7 @@ class LinkADSMTBAndDrugDataSet @Inject()(
   ) extends FutureRunnable {
 
   private val globalDataSetId = "adsm-tb.global"
-  private val globalDsa = dsaf(globalDataSetId).get
-  private val globalDataSetRepo = globalDsa.dataSetRepo
-  private val globalFieldRepo = globalDsa.fieldRepo
-
   private val drugDataSetId = "adsm-tb.drug"
-  private val drugDsa = dsaf(drugDataSetId).get
-  private val drugDataSetRepo = drugDsa.dataSetRepo
-  private val drugFieldRepo = drugDsa.fieldRepo
-
   private val linkedDataSetId = "adsm-tb.global_w_drugs"
   private val linkedDataSetName = "Global with Drugs"
 
@@ -42,6 +34,16 @@ class LinkADSMTBAndDrugDataSet @Inject()(
 
   override def runAsFuture =
     for {
+      // global data set accessor
+      globalDsa <- dsaf.getOrError(globalDataSetId)
+      globalDataSetRepo = globalDsa.dataSetRepo
+      globalFieldRepo = globalDsa.fieldRepo
+
+      // drug data set accessor
+      drugDsa <- dsaf.getOrError(drugDataSetId)
+      drugDataSetRepo = drugDsa.dataSetRepo
+      drugFieldRepo = drugDsa.fieldRepo
+
       // register the linked data set (if not registered already)
       linkedDsa <- dataSetService.register(globalDsa, linkedDataSetId, linkedDataSetName, StorageType.ElasticSearch)
 

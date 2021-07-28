@@ -21,15 +21,7 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
   ) extends FutureRunnable {
 
   private val clinicalDataSetId = "lux_park.clinical"
-  private val clinicalDsa = dsaf(clinicalDataSetId).get
-  private val clinicalDataSetRepo = clinicalDsa.dataSetRepo
-  private val clinicalFieldRepo = clinicalDsa.fieldRepo
-
   private val biosampleDataSetId = "lux_park.ibbl_biosamples"
-  private val biosampleDsa = dsaf(biosampleDataSetId).get
-  private val biosampleDataSetRepo = biosampleDsa.dataSetRepo
-  private val biosampleFieldRepo = biosampleDsa.fieldRepo
-
   private val linkedDataSetId = "lux_park.ibbl_biosamples_blood_patient"
   private val linkedDataSetName = "Patient Blood Biosample"
 
@@ -47,6 +39,16 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
 
   override def runAsFuture =
     for {
+      // clinical data set accessor
+      clinicalDsa <- dsaf.getOrError(clinicalDataSetId)
+      clinicalDataSetRepo = clinicalDsa.dataSetRepo
+      clinicalFieldRepo = clinicalDsa.fieldRepo
+
+      // biosample data set accessor
+      biosampleDsa <- dsaf.getOrError(biosampleDataSetId)
+      biosampleDataSetRepo = biosampleDsa.dataSetRepo
+      biosampleFieldRepo = biosampleDsa.fieldRepo
+
       // register the merged data set (if not registered already)
       linkedDsa <- dataSetService.register(biosampleDsa, linkedDataSetId, linkedDataSetName, StorageType.ElasticSearch)
 

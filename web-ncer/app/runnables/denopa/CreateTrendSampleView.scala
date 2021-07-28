@@ -13,15 +13,15 @@ class CreateTrendSampleView extends DsaInputFutureRunnable[CreateTrendSampleView
 
   private val columnNames = Seq("Hertie_ID","Trend_ID","Datum","Tube_ID","Status","Material","IBBL_ID","Box_ID","Box_Position")
 
-  override def runAsFuture(input: CreateTrendSampleViewSpec) = {
-    val viewRepo = createDsa(input.dataSetId).dataViewRepo
-
+  override def runAsFuture(input: CreateTrendSampleViewSpec) =
     for {
-      // create and save the main view
-      _ <- viewRepo.save(createView)
+      // data set accessor
+      dsa <- createDsa(input.dataSetId)
+
+     // create and save the main view
+      _ <- dsa.dataViewRepo.save(createView)
     } yield
       ()
-  }
 
   private def createView: DataView = {
 

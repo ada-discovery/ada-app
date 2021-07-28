@@ -37,13 +37,13 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
     dataSpaceService: DataSpaceService
-  ) extends AdaCrudControllerImpl[Category, BSONObjectID](dsaf(dataSetId).get.categoryRepo)
+  ) extends AdaCrudControllerImpl[Category, BSONObjectID](dsaf.applySync(dataSetId).get.categoryRepo)
     with CategoryController
     with HasFormShowEqualEditView[Category, BSONObjectID] {
 
 //  implicit val ec = ExecutionContexts.fixed1000ThreadEC
 
-  protected val dsa: DataSetAccessor = dsaf(dataSetId).get
+  protected val dsa: DataSetAccessor = dsaf.applySync(dataSetId).get
 
   private val logger = Logger  // (this.getClass())
 

@@ -28,6 +28,7 @@ mds.title = MDS of {0}
 tsne.title = t-SNE of {0}
 documentation.title = Documentation: {0}
 heatmap.title = Heatmap of {0}
+lineChart.title = Line Chart of {0}
 table.title = {0} Table
 comparison.title = Comparison of {0}
 

@@ -158,6 +158,16 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
+  def getLineChart(
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
+  def calcLineChart(
+    xFieldName: String,
+    groupFieldName: Option[String],
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
   def getClusterization: Action[AnyContent]
 
   def cluster(

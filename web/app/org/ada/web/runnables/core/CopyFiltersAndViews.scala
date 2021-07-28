@@ -22,11 +22,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 // TODO: move to ada-server
 class CopyFiltersAndViews @Inject()(dsaf: DataSetAccessorFactory) extends InputFutureRunnableExt[CopyFiltersAndViewsSpec] {
 
-  override def runAsFuture(input: CopyFiltersAndViewsSpec) = {
-    val sourceDsa = dsaSafe(input.sourceDataSetId)
-    val targetDsa = dsaSafe(input.targetDataSetId)
-
+  override def runAsFuture(input: CopyFiltersAndViewsSpec) =
     for {
+      // source data set accessor
+      sourceDsa <- dsaf.getOrError(input.sourceDataSetId)
+
+      // target data set accessor
+      targetDsa <- dsaf.getOrError(input.targetDataSetId)
+
       // get source fields
       sourceFields <- sourceDsa.fieldRepo.find()
 
@@ -95,12 +98,6 @@ class CopyFiltersAndViews @Inject()(dsaf: DataSetAccessorFactory) extends InputF
       _ <- targetDsa.dataViewRepo.save(viewsToSave)
     } yield
       ()
-  }
-
-  protected def dsaSafe(dataSetId: String) =
-    dsaf(dataSetId).getOrElse(
-      throw new AdaException(s"Data set id ${dataSetId} not found.")
-    )
 }
 
 case class CopyFiltersAndViewsSpec(

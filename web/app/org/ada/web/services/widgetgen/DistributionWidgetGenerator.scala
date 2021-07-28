@@ -258,7 +258,7 @@ trait DistributionWidgetGeneratorHelper {
     field: Field,
     groupField: Option[Field]
   ) = (countSeries:  Traversable[(String, Traversable[Count[Any]])]) => {
-    val nonZeroCountSeriesSorted = sortCountSeries(spec.numericBinCount)(countSeries)
+    val nonZeroCountSeriesSorted = sortCountSeries(spec.numericBinCount, spec.orderByField)(countSeries)
 
     val displayOptions = spec.displayOptions
     val title = displayOptions.title.getOrElse(createTitle(field, groupField))
@@ -279,7 +279,8 @@ trait DistributionWidgetGeneratorHelper {
   }
 
   protected def sortCountSeries(
-    binCount: Option[Int]
+    binCount: Option[Int],
+    orderByField: Option[Boolean]
   ) = (countSeries:  Traversable[(String, Traversable[Count[Any]])]) => {
     // enforce the same categories in all the series
     val labelGroupedCounts = countSeries.flatMap(_._2).groupBy(_.value)
@@ -287,7 +288,11 @@ trait DistributionWidgetGeneratorHelper {
       (label, counts.map(_.count).sum)
     }.filter(_._2 > 0)
 
-    val sortedLabels: Seq[String] = nonZeroLabelSumCounts.toSeq.sortBy(_._2).map(_._1.toString)
+
+    val sortedLabels: Seq[String] = orderByField match {
+      case Some(isOrderByField) if isOrderByField => nonZeroLabelSumCounts.toSeq.sortBy(_._1.toString).map(_._1.toString)
+      case _ => nonZeroLabelSumCounts.toSeq.sortBy(_._2).map(_._1.toString)
+    }
 
     val topSortedLabels  = binCount match {
       case Some(maxCategoricalBinCount) => sortedLabels.takeRight(maxCategoricalBinCount)

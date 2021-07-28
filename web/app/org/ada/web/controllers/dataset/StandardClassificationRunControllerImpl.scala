@@ -41,7 +41,7 @@ class StandardClassificationRunControllerImpl @Inject()(
 ) extends ClassificationRunControllerImpl[StandardClassificationResult]
     with StandardClassificationRunController {
 
-  override protected def dsa = dsaf(dataSetId).get
+  override protected def dsa = dsaf.applySync(dataSetId).get
   override protected val repo = dsa.standardClassificationRepo
 
   override protected val router = new StandardClassificationRunRouter(dataSetId)

@@ -43,13 +43,13 @@ class CalculateMultipleVariances @Inject()(
   private def calcVariances(
     input: CalculateMultipleVariancesSpec
   ): Future[Traversable[String]] = {
-
     logger.info(s"Calculating variances for the data set ${input.dataSetId} using the ${input.fieldNames.size} fields.")
 
-    val dsa = dsaf(input.dataSetId).get
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(input.exportDelimiter)
 
     for {
+      dsa <- dsaf.getOrError(input.dataSetId)
+
       jsons <- dsa.dataSetRepo.find(projection = input.fieldNames)
       fields <- dsa.fieldRepo.find(Seq(FieldIdentity.name #-> input.fieldNames))
     } yield {

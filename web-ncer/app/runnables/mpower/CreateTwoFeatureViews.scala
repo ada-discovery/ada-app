@@ -15,12 +15,13 @@ class CreateTwoFeatureViews extends DsaInputFutureRunnable[CreateTwoFeatureViews
   private val defaultTableColumnNum = 11
   private val defaultWidgetNum = 100
 
-  override def runAsFuture(input: CreateTwoFeatureViewsSpec) = {
-    val dsa_ = createDsa(input.dataSetId)
-    val fieldRepo = dsa_.fieldRepo
-    val viewRepo = dsa_.dataViewRepo
-
+  override def runAsFuture(input: CreateTwoFeatureViewsSpec) =
     for {
+      // data set accessor
+      dsa <- createDsa(input.dataSetId)
+      fieldRepo = dsa.fieldRepo
+      viewRepo = dsa.dataViewRepo
+
       // get the fields
       fields <- fieldRepo.find()
 
@@ -66,13 +67,12 @@ class CreateTwoFeatureViews extends DsaInputFutureRunnable[CreateTwoFeatureViews
 
       // adapt the data set setting if needed
       _ <- if (input.adaptDataSetSetting)
-        dsa_.setting.flatMap { setting =>
-          dsa_.updateSetting(setting.copy(filterShowFieldStyle = Some(FilterShowFieldStyle.LabelsOnly), defaultDistributionFieldName = Some(numericFieldNames.head)))
+        dsa.setting.flatMap { setting =>
+          dsa.updateSetting(setting.copy(filterShowFieldStyle = Some(FilterShowFieldStyle.LabelsOnly), defaultDistributionFieldName = Some(numericFieldNames.head)))
         } else
           Future(())
     } yield
       ()
-  }
 
   private def distributionsView(
     tableColumnFieldNames: Seq[String],

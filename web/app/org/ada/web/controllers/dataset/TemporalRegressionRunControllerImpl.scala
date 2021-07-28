@@ -40,7 +40,7 @@ protected[controllers] class TemporalRegressionRunControllerImpl @Inject()(
 ) extends RegressionRunControllerImpl[TemporalRegressionResult]
   with TemporalRegressionRunController {
 
-  override protected def dsa = dsaf(dataSetId).get
+  override protected def dsa = dsaf.applySync(dataSetId).get
   override protected val repo = dsa.temporalRegressionResultRepo
 
   override protected val router = new TemporalRegressionRunRouter(dataSetId)

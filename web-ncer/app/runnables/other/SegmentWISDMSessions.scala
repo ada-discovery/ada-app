@@ -34,10 +34,11 @@ class SegmentWISDMSessions @Inject()(
 
   private val newSegmentIdField = Field("segmentId", Some("Segment Id"), FieldTypeId.Integer)
 
-  override def runAsFuture(input: SegmentWISDMSessionsSpec) = {
-    val dsa = dsaf(input.sourceDataSetId).get
-
+  override def runAsFuture(input: SegmentWISDMSessionsSpec) =
     for {
+      // data set accessor
+      dsa <- dsaf.getOrError(input.sourceDataSetId)
+
       // user ids
       userIds <- dsa.dataSetRepo.find(projection = Seq(FieldName.userId)).map(_.map(json => (json \ FieldName.userId).as[Int]).toSet)
 
@@ -85,7 +86,6 @@ class SegmentWISDMSessions @Inject()(
       _ <- dataSetService.saveDerivedDataSet(dsa, input.resultDataSetSpec, newSource, (fields ++ Seq(newSegmentIdField)).toSeq, input.streamSpec, true)
     } yield
       ()
-  }
 }
 
 case class SegmentWISDMSessionsSpec(
