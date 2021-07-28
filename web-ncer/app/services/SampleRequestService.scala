@@ -82,10 +82,10 @@ class SampleRequestService @Inject() (
     selectedIds: Seq[BSONObjectID]
   ): Future[List[(OrganisationRepresentation, String)]] = {
     val SEPARATOR = "\t"
-    val dsa = dsaf(dataSetId).getOrElse(throw new IllegalArgumentException(s"Dataset '$dataSetId' does not exist."))
     val fieldCriteria = if (fieldNames.nonEmpty) Vector(FieldIdentity.name #-> fieldNames) else Nil
     val selectCriteria = if (selectedIds.nonEmpty) Vector(JsObjectIdentity.name #-> selectedIds) else Nil
     for {
+      dsa <- dsaf.getOrError(dataSetId)
       sampleRequestSetting <- sampleRequestSettingRepo.find(Seq("dataSetId" #== dataSetId))
       fields <- dsa.fieldRepo.find(fieldCriteria)
       valueCriteria <- FieldUtil.toDataSetCriteria(dsa.fieldRepo, conditions)
@@ -314,8 +314,8 @@ class SampleRequestService @Inject() (
   )(
     implicit request: AuthenticatedRequest[_]
   ): Future[ActionFormViewData] = {
-    val dsa = dsaf(dataSetId).getOrElse(throw new IllegalArgumentException(s"Dataset with id '$dataSetId' not found."))
     for {
+      dsa <- dsaf.getOrError(dataSetId)
       (dataSetName, dataSpaceTree, dataSetSetting) <- getDataSetNameTreeAndSetting(dsa)
       sampleRequestSettings <- sampleRequestSettingRepo.find(Seq("dataSetId" #== dataSetId))
       _ = require(sampleRequestSettings.nonEmpty,

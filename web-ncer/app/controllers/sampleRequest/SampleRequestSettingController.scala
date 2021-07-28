@@ -157,9 +157,7 @@ class SampleRequestSettingController @Inject()(
       sampleRequestSetting = sampleRequestSettingOption.getOrElse(
         throw new AdaException(s"No request setting found for the id '${requestId.stringify}'.")
       )
-      dsa = dsaf(sampleRequestSetting.dataSetId).getOrElse(
-        throw new AdaException(s"No dsa found for the data set id '${sampleRequestSetting.dataSetId}'.")
-      )
+      dsa <- dsaf.getOrError(sampleRequestSetting.dataSetId)
       dataSetSetting <- dsa.setting
       dataSpaceTree <- dataSpaceService.getTreeForCurrentUser
     } yield {
