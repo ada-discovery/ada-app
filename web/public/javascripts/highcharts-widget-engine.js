@@ -1,4 +1,4 @@
-class HighchartsWidgetEngine extends WidgetEngine {
+class HighchartsWidgetEnginex extends WidgetEngine {
 
     constructor() {
         super();
@@ -704,6 +704,7 @@ class HighchartsWidgetEngine extends WidgetEngine {
         var exporting = {};
         if (allowChartTypeChange)
             exporting = this._chartTypeMenu(chartElementId, chartTypes)
+        this._adjustExporting(chartElementId, exporting)
 
         var cursor = '';
         if (allowSelectionEvent)
@@ -790,6 +791,7 @@ class HighchartsWidgetEngine extends WidgetEngine {
         var exporting = {};
         if (allowChartTypeChange)
             exporting = this._chartTypeMenu(chartElementId, chartTypes)
+        this._adjustExporting(chartElementId, exporting)
 
         var cursor = '';
         if (allowPointSelectionEvent || allowIntervalSelectionEvent)
@@ -920,6 +922,7 @@ class HighchartsWidgetEngine extends WidgetEngine {
         var exporting = {};
         if (allowChartTypeChange)
             exporting = this._chartTypeMenu(chartElementId, chartTypes)
+        this._adjustExporting(chartElementId, exporting)
 
         var cursor = '';
         if (allowPointSelectionEvent || allowIntervalSelectionEvent)
@@ -1041,6 +1044,7 @@ class HighchartsWidgetEngine extends WidgetEngine {
         var exporting = {};
         if (allowChartTypeChange)
             exporting = this._chartTypeMenu(chartElementId, chartTypes)
+        this._adjustExporting(chartElementId, exporting)
 
         var cursor = '';
         if (allowSelectionEvent)
@@ -1212,6 +1216,9 @@ class HighchartsWidgetEngine extends WidgetEngine {
             }
         }
 
+        var exporting = {};
+        this._adjustExporting(chartElementId, exporting)
+
         $('#' + chartElementId).highcharts({
             chart: {
                 type: 'scatter',
@@ -1253,6 +1260,7 @@ class HighchartsWidgetEngine extends WidgetEngine {
                 },
                 enabled: showLegend
             },
+            exporting: exporting,
             credits: {
                 enabled: false
             },
@@ -1323,6 +1331,9 @@ class HighchartsWidgetEngine extends WidgetEngine {
                 [1, Highcharts.getOptions().colors[0]]
             ]
 
+        var exporting = {};
+        this._adjustExporting(chartElementId, exporting)
+
         $('#' + chartElementId).highcharts({
             chart: {
                 type: 'heatmap',
@@ -1355,6 +1366,7 @@ class HighchartsWidgetEngine extends WidgetEngine {
                     }
                 }
             },
+            exporting: exporting,
             credits: {
                 enabled: false
             },
@@ -1414,6 +1426,9 @@ class HighchartsWidgetEngine extends WidgetEngine {
         height,
         dataType
     }) {
+        var exporting = {};
+        this._adjustExporting(chartElementId, exporting)
+
         $('#' + chartElementId).highcharts({
             chart: {
                 type: 'boxplot',
@@ -1439,6 +1454,7 @@ class HighchartsWidgetEngine extends WidgetEngine {
             legend: {
                 enabled: false
             },
+            exporting: exporting,
             credits: {
                 enabled: false
             },
@@ -1543,6 +1559,12 @@ class HighchartsWidgetEngine extends WidgetEngine {
             });
         });
         return (xMin) ? {xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax} : null
+    }
+
+    _adjustExporting(chartElementId, exporting) {
+        const width = $('#' + chartElementId).width()
+        exporting.sourceWidth = width
+        exporting.scale = 2
     }
 
     refresh() {
