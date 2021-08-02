@@ -2,6 +2,7 @@ package org.ada.web.controllers.dataset
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import controllers.WebJarAssets
+import org.ada.server.AdaException
 import org.incal.play.controllers.WebContext
 import play.api.Configuration
 import play.api.i18n.Messages
@@ -60,6 +61,15 @@ object DataSetWebContext {
   implicit def configuration(
     implicit webContext: DataSetWebContext
   ): Configuration = webContext.configuration
+
+  implicit def jsWidgetEngine(
+    implicit webContext: DataSetWebContext
+  ): String = {
+    val engineClassName = configuration.getString("widget_engine.name").getOrElse(
+      throw new AdaException("The widget engine config. entry 'widget_engine.name' not defined.")
+    )
+    s"new $engineClassName()"
+  }
 
   implicit def toWebContext(
     implicit webContext: DataSetWebContext
