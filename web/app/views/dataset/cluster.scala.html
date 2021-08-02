@@ -31,6 +31,8 @@
     )
 
     <script type="text/javascript">
+        const widgetEngine = @jsWidgetEngine
+
         $(function () {
             $.ajax({
                 url: '@Html(routes.ClusteringController.idAndNames.url)',
@@ -93,8 +95,6 @@
             dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.cluster(mlModelId, inputFieldNames, filterId, featuresNormalizationType, pcaDims).ajax( {
                 success: function(data) {
                     showMessage("'" + mlModelName + "'clusterization finished.")
-
-                    const widgetEngine = new HighchartsWidgetEngine()
 
                     const scatters = data.scatters;
                     const classSizes = data.classSizes;

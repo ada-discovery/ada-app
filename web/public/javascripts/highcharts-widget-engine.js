@@ -1,4 +1,4 @@
-class HighchartsWidgetEnginex extends WidgetEngine {
+class HighchartsWidgetEngine extends WidgetEngine {
 
     constructor() {
         super();
@@ -1568,6 +1568,7 @@ class HighchartsWidgetEnginex extends WidgetEngine {
     }
 
     refresh() {
+        console.log("Highcharts refresh called")
         Highcharts.charts.forEach(function (chart) {
             if (chart) chart.reflow();
         });

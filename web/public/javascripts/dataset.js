@@ -113,7 +113,7 @@ function refreshViewForFilter(viewId, filterOrId, filterElement, widgetGridEleme
     });
 }
 
-function addNewViewColumn(viewId, widgetGridElementWidth, enforceWidth, activateFilter) {
+function addNewViewColumn(widgetEngine, viewId, widgetGridElementWidth, enforceWidth, activateFilter) {
     // total count
     var totalCount = getViewTotalCount();
 
@@ -132,7 +132,7 @@ function addNewViewColumn(viewId, widgetGridElementWidth, enforceWidth, activate
             // widgets
             var widgetTd = $("<td style='vertical-align:top'>")
             $("#widgetsTr").append(widgetTd)
-            const widgetEngine = new HighchartsWidgetEngine()
+
             widgetEngine.refresh();
 
             // table

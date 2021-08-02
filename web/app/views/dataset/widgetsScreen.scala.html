@@ -53,6 +53,7 @@
     @dataSetFilterJs()
 
     <script type="text/javascript">
+        const widgetEngine = @jsWidgetEngine
 
         $(function() {
             $('#inputDiv').on('hidden.bs.collapse', function () {
@@ -60,7 +61,6 @@
                 $("#widgetsDiv").addClass("col-md-12");
                 $("#inputDiv").parent().removeClass("vertical-divider")
 
-                const widgetEngine = new HighchartsWidgetEngine()
                 widgetEngine.refresh();
 
                 // TODO: this is a hack, generalize
@@ -75,7 +75,6 @@
                 $("#widgetsDiv").addClass("col-md-8");
                 $("#inputDiv").parent().addClass("vertical-divider")
 
-                const widgetEngine = new HighchartsWidgetEngine()
                 widgetEngine.refresh();
 
                 // TODO: this is a hack, generalize

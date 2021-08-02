@@ -29,6 +29,8 @@
     )
 
     <script type="text/javascript">
+        const widgetEngine = @jsWidgetEngine
+
         $(function () {
             populateCategoricalTypeahead('outputField');
 
@@ -220,8 +222,6 @@
         }
 
         function addBinCurves(name, binCurves, columnWidth) {
-            const widgetEngine = new HighchartsWidgetEngine()
-
             var header ="<h4 align='center'><b>" + name + "</b></h4><hr/>"
 
             var div = $("<div class='col-md-" + columnWidth + "'>")

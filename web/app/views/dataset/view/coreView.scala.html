@@ -141,7 +141,9 @@
                 $("#multiFilterDiv").append($("#singleFilterDiv>table"));
                 $(".multi-filter-divider").show();
             }
-            addNewViewColumn('@{dataViewId.stringify}', defaultWidgetWidth, enforceWidth, activateFilter)
+
+            const widgetEngine = new HighchartsWidgetEngine()
+            addNewViewColumn(widgetEngine, '@{dataViewId.stringify}', defaultWidgetWidth, enforceWidth, activateFilter)
         }
 
         function removeColumnRight() {

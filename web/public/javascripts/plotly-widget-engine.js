@@ -1,4 +1,4 @@
-class HighchartsWidgetEnginex extends WidgetEngine {
+class PlotlyWidgetEngine extends WidgetEngine {
 
     _fontFamily = 'Helvetica'
 
@@ -1238,6 +1238,7 @@ class HighchartsWidgetEnginex extends WidgetEngine {
     }
 
     refresh() {
+        console.log("Plotly refresh called")
         $.each($(".js-plotly-plot"), function (index, chart) {
             const elementId = $(chart).attr('id')
 //            Plotly.Plots.resize(elementId)
