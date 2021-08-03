@@ -162,19 +162,15 @@ function showHideMessageBox() {
     $("#messageBoxDiv").hide();
     $("#showHideMessageBoxSpan").html("&#8612;")
 
-    if (Highcharts) {
-      const widgetEngine = new HighchartsWidgetEngine()
+    if (typeof widgetEngine !== "undefined")
       widgetEngine.refresh();
-    }
   } else {
     $("#contentDiv").removeClass("col-md-10").addClass("col-md-8-25")
     $("#messageBoxDiv").show();
     $("#showHideMessageBoxSpan").html("&#8614;")
 
-    if (Highcharts) {
-      const widgetEngine = new HighchartsWidgetEngine()
+    if (typeof widgetEngine !== "undefined")
       widgetEngine.refresh();
-    }
   }
 }
 
