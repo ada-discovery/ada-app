@@ -296,13 +296,6 @@ function handleModalButtonEnterPressed(modalName, action, hideOnEnter) {
   $("#" + modalName + " .btn-primary").click(action);
 }
 
-function shorten(string, length) {
-  return (string.length > length) ?
-    string.substring(0, length) + ".."
-    :
-    string
-}
-
 function loadNewContent(url, elementId, data, callType) {
   $.ajax({
     url: url,
@@ -679,16 +672,6 @@ function submitModalOnEnter(event, element) {
   }
 }
 
-function activateTableAllSelection() {
-  $(".table-selection-all").change(function() {
-    var rows = $(this).closest("table").find(".table-selection")
-    var checked = $(this).is(':checked')
-    $.each(rows, function(i, row) {
-      $(row).prop("checked", checked)
-    })
-  });
-}
-
 function getSelectedRowIds(tableElement) {
   var ids = []
 
@@ -702,6 +685,16 @@ function getSelectedRowIds(tableElement) {
   });
 
   return ids;
+}
+
+function activateTableAllSelection() {
+  $(".table-selection-all").change(function() {
+    var rows = $(this).closest("table").find(".table-selection")
+    var checked = $(this).is(':checked')
+    $.each(rows, function(i, row) {
+      $(row).prop("checked", checked)
+    })
+  });
 }
 
 function enableFieldDragover(fieldNameElement, fieldTypeaheadElement, execFun, acceptedTypes) {
