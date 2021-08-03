@@ -1,7 +1,15 @@
 @import reactivemongo.bson.BSONObjectID
+@import play.api.Configuration
+@import org.ada.web.controllers.dataset.DataSetWebContext.jsWidgetEngine
 
-@(id: BSONObjectID, fieldName: String, fieldLabel: String)
+@(
+    id: BSONObjectID,
+    fieldName: String,
+    fieldLabel: String
+)(
+    implicit configuration: Configuration
+)
 
-<a href="#" onclick="showArrayFieldChartAux(event);" data-row-id="@id.stringify" data-field-name="@fieldName" data-field-label="@fieldLabel">
+<a href="#" onclick="showArrayFieldChartAux(@jsWidgetEngine(configuration), event);" data-row-id="@id.stringify" data-field-name="@fieldName" data-field-label="@fieldLabel">
     <span class="glyphicon glyphicon-stats"></span>
 </a>

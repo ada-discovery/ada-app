@@ -736,7 +736,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filterOrId: FilterOrId,
     oldCountDiff: Option[Int],
     tableSelection: Boolean
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val tablePage = 0
 
     val dataSetNameFuture = dsa.dataSetName
@@ -786,7 +786,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         val pageHeader = messagesApi.apply("list.count.title", oldCountDiff.getOrElse(0) + viewResponse.count, itemName(dataSetName, setting))
 
-        val table = dataset.dataSetTable(newPage, Some(viewResponse.filter), viewResponse.tableFields, true, tableSelection)(request, router)
+        val table = dataset.dataSetTable(newPage, Some(viewResponse.filter), viewResponse.tableFields, true, tableSelection)
         val conditionPanel = views.html.filter.conditionPanel(Some(viewResponse.filter))
         val filterModel = Json.toJson(viewResponse.filter.conditions)
 
@@ -853,7 +853,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         val pageHeader = messagesApi.apply("list.count.title", totalCount + viewResponse.count, itemName(dataSetName, setting))
 
-        val table = dataset.dataSetTable(newPage, None, viewResponse.tableFields, true)(request, router)
+        val table = dataset.dataSetTable(newPage, None, viewResponse.tableFields, true)
         val countFilter = dataset.view.viewCountFilter(None, viewResponse.count, setting.filterShowFieldStyle, false)
 
         val jsonResponse = Ok(Json.obj(
@@ -1800,7 +1800,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     fieldNames: Seq[String],
     filterOrId: FilterOrId,
     tableSelection: Boolean
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val filterFuture = filterRepo.resolve(filterOrId)
     val fieldsFuture = getFields(fieldNames)
 
@@ -1827,7 +1827,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy)
         val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
 
-        Ok(dataset.dataSetTable(tablePage, Some(resolvedFilter), fieldsInOrder, true, tableSelection)(request, router))
+        Ok(dataset.dataSetTable(tablePage, Some(resolvedFilter), fieldsInOrder, true, tableSelection))
       }
     }.recover(handleExceptionsWithErrorCodes("a generateTable"))
   }
@@ -1837,7 +1837,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     orderBy: String,
     fieldNames: Seq[String],
     filterOrId: FilterOrId
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     {
       for {
         // use a given filter conditions or load one
@@ -1858,7 +1858,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // table
         val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy)
         val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
-        val table = dataset.dataSetTable(tablePage, Some(resolvedFilter), fieldsInOrder, true, true)(request, router)
+        val table = dataset.dataSetTable(tablePage, Some(resolvedFilter), fieldsInOrder, true, true)
 
         // filter model / condition panel
         val newFilter = setFilterLabels(resolvedFilter, nameFieldMap)

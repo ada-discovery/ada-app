@@ -171,13 +171,13 @@
             return {
                 success: function (data) {
                     // filter
-                    var filterElement = $(".filter-div");
+                    const filterElement = $(".filter-div");
                     filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
                     addDragAndDropSupportForFilter(filterElement)
 
                     // widgets
-                    var widgetsDiv = $("#widgetsDiv")
-                    updateWidgetsFromCallback(data.widgetsCallbackId, widgetsDiv, filterElement, 12, false, successMessage)
+                    const widgetsDiv = $("#widgetsDiv")
+                    updateWidgetsFromCallback(widgetEngine, data.widgetsCallbackId, widgetsDiv, filterElement, 12, false, successMessage)
                 },
                 error: function (data) {
                     $("#widgetsDiv").html("")

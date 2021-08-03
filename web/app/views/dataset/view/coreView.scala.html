@@ -86,6 +86,7 @@
     <script type="text/javascript">
         var defaultWidgetWidth = @widgetGridElementWidth;
         var enforceWidth = false;
+        const widgetEngine = @jsWidgetEngine
 
         $(function () {
             // activate filters
@@ -111,7 +112,7 @@
 
         function activateFilter(filterElement, jsonConditions, filterId) {
             var submitAjaxFun = function(filterOrId) {
-                refreshViewForFilter('@{dataViewId.stringify}', filterOrId, filterElement, defaultWidgetWidth, enforceWidth, @tableRowSelection);
+                refreshViewForFilter(widgetEngine, '@{dataViewId.stringify}', filterOrId, filterElement, defaultWidgetWidth, enforceWidth, @tableRowSelection);
             }
 
             activateDataSetFilterAux(
@@ -131,7 +132,6 @@
             defaultWidgetWidth = 12;
             enforceWidth = true;
 
-            const widgetEngine = new HighchartsWidgetEngine()
             widgetEngine.refresh();
         }
 
@@ -142,7 +142,6 @@
                 $(".multi-filter-divider").show();
             }
 
-            const widgetEngine = new HighchartsWidgetEngine()
             addNewViewColumn(widgetEngine, '@{dataViewId.stringify}', defaultWidgetWidth, enforceWidth, activateFilter)
         }
 
@@ -163,7 +162,6 @@
                 var oldHeaderText = oldHeader.substr(oldHeader.indexOf(" "))
                 $(".page-header").html("<h3>" + totalCount + oldHeaderText + "</h3>");
 
-                const widgetEngine = new HighchartsWidgetEngine()
                 widgetEngine.refresh();
 
                 showMessage("The right-most column/filter successfully removed from the view.")

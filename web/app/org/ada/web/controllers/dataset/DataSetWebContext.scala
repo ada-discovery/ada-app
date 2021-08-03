@@ -64,6 +64,10 @@ object DataSetWebContext {
 
   implicit def jsWidgetEngine(
     implicit webContext: DataSetWebContext
+  ): String = jsWidgetEngine(configuration)
+
+  def jsWidgetEngine(
+    configuration: Configuration
   ): String = {
     val engineClassName = configuration.getString("widget_engine.name").getOrElse(
       throw new AdaException("The widget engine config. entry 'widget_engine.name' not defined.")

@@ -68,7 +68,7 @@ function saveFilterToView(viewId) {
     });
 }
 
-function refreshViewForFilter(viewId, filterOrId, filterElement, widgetGridElementWidth, enforceWidth, tableSelection) {
+function refreshViewForFilter(widgetEngine, viewId, filterOrId, filterElement, widgetGridElementWidth, enforceWidth, tableSelection) {
     var index = $("#filtersTr").find(".filter-div").index(filterElement);
 
     var counts = $("#filtersTr").find(".count-hidden").map(function(index, element) {
@@ -104,7 +104,7 @@ function refreshViewForFilter(viewId, filterOrId, filterElement, widgetGridEleme
 
             // widgets
             var widgetsDiv = $("#widgetsTr > td:eq(" + index + ")")
-            updateWidgetsFromCallback(data.widgetsCallbackId, widgetsDiv, filterElement, widgetGridElementWidth, enforceWidth)
+            updateWidgetsFromCallback(widgetEngine, data.widgetsCallbackId, widgetsDiv, filterElement, widgetGridElementWidth, enforceWidth)
         },
         error: function(data) {
             showErrorResponse(data)
@@ -143,7 +143,7 @@ function addNewViewColumn(widgetEngine, viewId, widgetGridElementWidth, enforceW
             $(tableDiv).html(data.table);
 
             // get widgets from callback
-            updateWidgetsFromCallback(data.widgetsCallbackId, widgetTd, filterElement, widgetGridElementWidth, enforceWidth)
+            updateWidgetsFromCallback(widgetEngine, data.widgetsCallbackId, widgetTd, filterElement, widgetGridElementWidth, enforceWidth)
 
             showMessage("New column/filter successfully added to the view.")
         },
@@ -175,7 +175,7 @@ function addAllowedValuesUpdateForFilter(filterElement) {
 // Widgets //
 /////////////
 
-function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, defaultElementWidth, enforceWidth, successMessage) {
+function updateWidgetsFromCallback(widgetEngine, callbackId, widgetsDiv, filterElement, defaultElementWidth, enforceWidth, successMessage) {
     widgetsDiv.html("")
     addSpinner(widgetsDiv, "margin-bottom: 20px;")
 
@@ -184,13 +184,9 @@ function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, defaul
             "callbackId": callbackId
         },
         success: function(data) {
-            const widgetEngine = new HighchartsWidgetEngine()
-
             if (successMessage) showMessage(successMessage)
 
             var widgets = data[0]
-
-//                    var widgetHolders = widgetsDiv.find(".chart-holder")
 
             var row = $("<div class='row'>")
             $.each(widgets, function (j, widget) {
@@ -200,9 +196,6 @@ function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, defaul
             $.each(widgets, function (j, widget) {
                 widgetEngine.plot(widget, filterElement)
             })
-//                    $.each(widgetHolders, function(i, widgetHolder){
-//                        genericWidgetForElement(widgetHolder.id, widgets[i], filterElement)
-//                    })
         },
         error: function(data) {
             widgetsDiv.html("")
@@ -212,14 +205,12 @@ function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, defaul
     });
 }
 
-function updateAllWidgetsFromCallback(callbackId, defaultElementWidth) {
+function updateAllWidgetsFromCallback(widgetEngine, callbackId, defaultElementWidth) {
     dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getWidgets().ajax( {
         data: {
             "callbackId": callbackId
         },
         success: function(data) {
-            const widgetEngine = new HighchartsWidgetEngine()
-
             $("#widgetsTr").html("")
             $.each(data, function (i, widgets) {
                 var td = $("<td style='vertical-align:top'>")
@@ -324,7 +315,7 @@ function showJsonFieldValue(id, fieldName, fieldLabel, isArray) {
     });
 }
 
-function showArrayFieldChartAux(event) {
+function showArrayFieldChartAux(widgetEngine, event) {
     event.preventDefault();
     event.stopPropagation();
 
@@ -334,10 +325,10 @@ function showArrayFieldChartAux(event) {
     const fieldName = link.attr("data-field-name")
     const fieldLabel = link.attr("data-field-label")
 
-    showArrayFieldChart(rowId, fieldName, fieldLabel)
+    showArrayFieldChart(widgetEngine, rowId, fieldName, fieldLabel)
 }
 
-function showArrayFieldChart(id, fieldName, fieldLabel) {
+function showArrayFieldChart(widgetEngine, id, fieldName, fieldLabel) {
     dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
         success: function(data) {
             $("#lineChartDiv").html("")
@@ -366,8 +357,6 @@ function showArrayFieldChart(id, fieldName, fieldLabel) {
             }
 
             $('#lineChartArrayModal').modal("show");
-
-            const widgetEngine = new HighchartsWidgetEngine()
 
             $('#lineChartArrayModal').on('shown.bs.modal', function (e) {
                 const widget = {

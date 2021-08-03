@@ -74,7 +74,7 @@
             addSpinner($("#widgetsTr"), "margin-bottom: 20px;");
 
             // update widgets from callback
-            updateAllWidgetsFromCallback('@{widgetsCallbackId}', defaultWidgetWidth);
+            updateAllWidgetsFromCallback(widgetEngine, '@{widgetsCallbackId}', defaultWidgetWidth);
 
             var filters = $("#filtersTr").find(".filter-div")
 
