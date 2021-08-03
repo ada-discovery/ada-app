@@ -8,6 +8,10 @@ import play.api.Configuration
 import play.api.i18n.Messages
 import play.api.mvc.Flash
 
+import scala.collection.JavaConversions._
+import org.incal.play.routes.CustomDirAssets
+import play.twirl.api.Html
+
 class DataSetWebContext(
   val dataSetId: String)(
   implicit val flash: Flash, val msg: Messages, val request: AuthenticatedRequest[_], val webJarAssets: WebJarAssets, val configuration: Configuration) {
@@ -66,6 +70,10 @@ object DataSetWebContext {
     implicit webContext: DataSetWebContext
   ): String = jsWidgetEngine(configuration)
 
+  implicit def jsWidgetEngineImports(
+    implicit webContext: DataSetWebContext
+  ): Html = jsWidgetEngineImports(configuration, toWebJarAssets)
+
   def jsWidgetEngine(
     configuration: Configuration
   ): String = {
@@ -73,6 +81,41 @@ object DataSetWebContext {
       throw new AdaException("The widget engine config. entry 'widget_engine.name' not defined.")
     )
     s"new $engineClassName()"
+  }
+
+  private val coreWidgetJsPath = "widget-engine.js"
+
+  def jsWidgetEngineImports(
+    configuration: Configuration,
+    webJarAssets: WebJarAssets
+  ): Html = {
+    val jsImportConfigs = configuration.getObjectList("widget_engine.js_imports").getOrElse(
+      throw new AdaException("The widget engine config. entry 'widget_engine.js_imports' not defined.")
+    )
+
+    def localScript(path: String) = {
+      val src = CustomDirAssets.versioned("javascripts/" + path)
+      s"<script type='text/javascript' src='$src'></script>"
+    }
+
+    val importsString = jsImportConfigs.map { jsImportConfig =>
+      // path
+      val path = Option(jsImportConfig.get("path")).getOrElse(
+        throw new AdaException("The widget engine js config. entry 'path' not defined.")
+      ).unwrapped().asInstanceOf[String]
+
+      // check if it's a webjar or a local js
+      Option(jsImportConfig.get("webjar")) match {
+        case Some(webjar) =>
+          val src = controllers.routes.WebJarAssets.at(webJarAssets.fullPath(webjar.unwrapped.asInstanceOf[String], path))
+
+          s"<script src='$src'></script>"
+        case None =>
+          localScript(path)
+      }
+    }
+
+    Html((Seq(localScript(coreWidgetJsPath)) ++ importsString).mkString("\n"))
   }
 
   implicit def toWebContext(
