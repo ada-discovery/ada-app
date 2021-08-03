@@ -1,8 +1,26 @@
-@import views.html.widget.widgetJs
 @import org.ada.web.models.Widget
+@import org.ada.web.util.toJsonHtml
+@import play.api.Configuration
+@import org.ada.web.controllers.dataset.DataSetWebContext.jsWidgetEngine
 
-@(widgets : Traversable[Widget])
+@(
+    widgets : Traversable[Widget])(
+    implicit configuration: Configuration
+)
 
-@widgets.map { widget =>
-    @widgetJs(widget)
-}
+<script type="text/javascript">
+    const widgetEngine = @jsWidgetEngine(configuration)
+
+    $(function () {
+        const filterElement = $(".filter-div");
+
+        @widgets.map { widget =>
+            {
+                const w = JSON.parse('@{toJsonHtml(widget)}')
+                console.log("Widget " + w.concreteClass + " marshalled.")
+                widgetEngine.plot(w, filterElement)
+            }
+        }
+    });
+</script>
+
