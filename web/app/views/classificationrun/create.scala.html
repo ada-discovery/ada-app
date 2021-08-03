@@ -24,11 +24,12 @@
 )
 
 @bottomResources = {
-
     @helper.javascriptRouter("classificationRunJsRoutes")(
         standardClassificationRunJsRouter.launch,
         standardClassificationRunJsRouter.selectFeaturesAsAnovaChiSquare
     )
+
+    @jsWidgetEngineImports
 
     <script type="text/javascript">
         const widgetEngine = @jsWidgetEngine

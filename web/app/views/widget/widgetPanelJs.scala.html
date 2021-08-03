@@ -1,12 +1,14 @@
 @import org.ada.web.models.Widget
 @import org.ada.web.util.toJsonHtml
 @import play.api.Configuration
-@import org.ada.web.controllers.dataset.DataSetWebContext.jsWidgetEngine
+@import org.ada.web.controllers.dataset.DataSetWebContext._
 
 @(
     widgets : Traversable[Widget])(
-    implicit configuration: Configuration
+    implicit configuration: Configuration, webJarAssets: WebJarAssets
 )
+
+@jsWidgetEngineImports(configuration, webJarAssets)
 
 <script type="text/javascript">
     const widgetEngine = @jsWidgetEngine(configuration)
@@ -17,7 +19,6 @@
         @widgets.map { widget =>
             {
                 const w = JSON.parse('@{toJsonHtml(widget)}')
-                console.log("Widget " + w.concreteClass + " marshalled.")
                 widgetEngine.plot(w, filterElement)
             }
         }

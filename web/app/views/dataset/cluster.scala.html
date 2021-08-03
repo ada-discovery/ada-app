@@ -1,6 +1,5 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
-@import views.html.chart.highcharts.highchartsJsImport
 @import views.html.elements._
 @import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
 @import views.html.mlRun.{inputFieldAndFilterResources, mlElements, trainingSettingFields}
@@ -24,7 +23,7 @@
         Seq("filter"),
         setting.filterShowFieldStyle
     )
-    @highchartsJsImport()
+    @jsWidgetEngineImports
 
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.cluster

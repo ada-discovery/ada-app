@@ -1,6 +1,5 @@
 @import views.html.layout
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs, filterWidgetPanel}
-@import views.html.chart.highcharts.highchartsJsImport
 @import views.html.table.paginatedTable
 @import views.html.filter.{filter, filterWithJs}
 @import views.html.widget.widgetPanelJs
@@ -110,7 +109,6 @@
 }
 
 @bottomResources = {
-    @highchartsJsImport()
     @widgetPanelJs(widgets)
 }
 

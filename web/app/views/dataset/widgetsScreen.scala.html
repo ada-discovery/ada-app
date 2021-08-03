@@ -1,8 +1,5 @@
-@import org.ada.web.models.Widget
-@import org.ada.server.models.Field
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
-@import views.html.chart.highcharts.highchartsJsImport
 @import views.html.dataset.{dataSetFullMenu, datasetMenu, datasetSubNavWithJs}
 @import views.html.dataset.filter.{dataSetFilter, dataSetFilterJs}
 @import views.html.dataview.dataViewSelectionModal
@@ -24,7 +21,6 @@
     inputElements: Html,
     extraActions: Option[Html],
     extraBottomResources: Html,
-    highchartsUseBoost: Boolean = false,
     widgetsDivOnRight: Boolean = false
 )(
     implicit context: DataSetWebContext
@@ -47,8 +43,7 @@
 }
 
 @bottomResources = {
-
-    @highchartsJsImport(highchartsUseBoost)
+    @jsWidgetEngineImports
 
     @dataSetFilterJs()
 
