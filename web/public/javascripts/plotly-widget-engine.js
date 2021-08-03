@@ -475,7 +475,7 @@ class PlotlyWidgetEngine extends WidgetEngine {
 
             const sum = that._agg(series, widget)
             const data = series.map(function (item) {
-                const label = shorten(item.value)
+                const label = shorten(item.value, 50)
                 const count = item.count
                 const key = item.key
 
