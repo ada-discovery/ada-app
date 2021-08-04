@@ -37,9 +37,9 @@ libraryDependencies ++= Seq(
   "org.webjars" % "typeaheadjs" % "0.11.1",              // typeahead (autocompletion)
   "org.webjars" % "html5shiv" % "3.7.0",
   "org.webjars" % "respond" % "1.4.2",
-  "org.webjars" % "highcharts" % "6.2.0",                // highcharts for plotting
   "org.webjars.npm" % "bootstrap-select" % "1.13.2",     // bootstrap select element
-  "org.webjars.bower" % "plotly.js" % "1.54.1",          // Plotly
+  "org.webjars" % "highcharts" % "6.2.0",                // highcharts for plotting
+  "org.webjars.bower" % "plotly.js" % "1.54.1",          // plotly
   "org.webjars.bower" % "d3" % "3.5.16",
   "org.webjars.bower" % "Autolinker.js" % "0.25.0",      // to convert links to a-href elements
   "org.webjars" % "jquery-ui" % "1.11.1",
