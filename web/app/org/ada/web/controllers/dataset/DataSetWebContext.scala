@@ -1,8 +1,12 @@
 package org.ada.web.controllers.dataset
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
+import com.typesafe.config.{ConfigObject, ConfigValue}
 import controllers.WebJarAssets
 import org.ada.server.AdaException
+import java.{util => ju}
+import scala.collection.mutable
+
 import org.incal.play.controllers.WebContext
 import play.api.Configuration
 import play.api.i18n.Messages
@@ -65,58 +69,6 @@ object DataSetWebContext {
   implicit def configuration(
     implicit webContext: DataSetWebContext
   ): Configuration = webContext.configuration
-
-  implicit def jsWidgetEngine(
-    implicit webContext: DataSetWebContext
-  ): String = jsWidgetEngine(configuration)
-
-  implicit def jsWidgetEngineImports(
-    implicit webContext: DataSetWebContext
-  ): Html = jsWidgetEngineImports(configuration, toWebJarAssets)
-
-  def jsWidgetEngine(
-    configuration: Configuration
-  ): String = {
-    val engineClassName = configuration.getString("widget_engine.name").getOrElse(
-      throw new AdaException("The widget engine config. entry 'widget_engine.name' not defined.")
-    )
-    s"new $engineClassName()"
-  }
-
-  private val coreWidgetJsPath = "widget-engine.js"
-
-  def jsWidgetEngineImports(
-    configuration: Configuration,
-    webJarAssets: WebJarAssets
-  ): Html = {
-    val jsImportConfigs = configuration.getObjectList("widget_engine.js_imports").getOrElse(
-      throw new AdaException("The widget engine config. entry 'widget_engine.js_imports' not defined.")
-    )
-
-    def localScript(path: String) = {
-      val src = CustomDirAssets.versioned("javascripts/" + path)
-      s"<script type='text/javascript' src='$src'></script>"
-    }
-
-    val importsString = jsImportConfigs.map { jsImportConfig =>
-      // path
-      val path = Option(jsImportConfig.get("path")).getOrElse(
-        throw new AdaException("The widget engine js config. entry 'path' not defined.")
-      ).unwrapped().asInstanceOf[String]
-
-      // check if it's a webjar or a local js
-      Option(jsImportConfig.get("webjar")) match {
-        case Some(webjar) =>
-          val src = controllers.routes.WebJarAssets.at(webJarAssets.fullPath(webjar.unwrapped.asInstanceOf[String], path))
-
-          s"<script src='$src'></script>"
-        case None =>
-          localScript(path)
-      }
-    }
-
-    Html((Seq(localScript(coreWidgetJsPath)) ++ importsString).mkString("\n"))
-  }
 
   implicit def toWebContext(
     implicit webContext: DataSetWebContext
@@ -193,4 +145,96 @@ object DataSetWebContext {
   def temporalRegressionRunJsRouter(
     implicit webContext: DataSetWebContext
   ) = webContext.temporalRegressionRunJsRouter
+
+  // JS Widget Engine
+
+  implicit def jsWidgetEngine(
+    implicit webContext: DataSetWebContext
+  ): String = jsWidgetEngine(configuration)
+
+  implicit def jsWidgetEngineImports(
+    implicit webContext: DataSetWebContext
+  ): Html = jsWidgetEngineImports(configuration, toWebJarAssets)
+
+  def jsWidgetEngine(
+    configuration: Configuration
+  ): String = {
+    val engineClassName = getEntrySafe(configuration.getString(_, None), "widget_engine.defaultClassName")
+    s"new $engineClassName()"
+  }
+
+  def jsWidgetEngineImports(
+    configuration: Configuration,
+    webJarAssets: WebJarAssets
+  ): Html = {
+    val engineClassName = getEntrySafe(configuration.getString(_, None), "widget_engine.defaultClassName")
+
+    jsWidgetEngineProvidersMap(configuration, webJarAssets).get(engineClassName).getOrElse(
+      throw new AdaException(s"Configuration for a widget engine provider class '${engineClassName}' not found. You must register it first.")
+    )
+  }
+
+  private def jsWidgetEngineProvidersMap(
+    configuration: Configuration,
+    webJarAssets: WebJarAssets
+  ): Map[String, Html] = {
+    val providerConfigs = getEntrySafe(configuration.getObjectList, "widget_engine.providers")
+
+    providerConfigs.map { providerConfig =>
+      val className = configValue[String](providerConfig, "className")
+      val jsImportConfigs = configValue[ju.ArrayList[ju.HashMap[String, String]]](providerConfig, "jsImports")
+      val importsHtml = jsWidgetEngineImports(jsImportConfigs, webJarAssets)
+      (className, importsHtml)
+    }.toMap
+  }
+
+  private val coreWidgetJsPath = "widget-engine.js"
+
+  private def jsWidgetEngineImports(
+    jsImportConfigs: Seq[ju.HashMap[String, String]],
+    webJarAssets: WebJarAssets
+  ): Html = {
+    def localScript(path: String) = {
+      val src = CustomDirAssets.versioned("javascripts/" + path)
+      s"<script type='text/javascript' src='$src'></script>"
+    }
+
+    val importsString = jsImportConfigs.map { jsImportConfigJavaMap =>
+      val jsImportConfigMap: mutable.Map[String, String] = jsImportConfigJavaMap
+
+      // path
+      val path = jsImportConfigMap.getOrElse(
+        "path",
+        throw new AdaException("The widget engine config. entry 'path' not defined.")
+      )
+
+      // check if it's a webjar or a local js
+      jsImportConfigMap.get("webjar") match {
+        case Some(webjar) =>
+          val src = controllers.routes.WebJarAssets.at(webJarAssets.fullPath(webjar, path))
+
+          s"<script src='$src'></script>"
+        case None =>
+          localScript(path)
+      }
+    }
+
+    Html((Seq(localScript(coreWidgetJsPath)) ++ importsString).mkString("\n"))
+  }
+
+  private def getEntrySafe[T](
+    conf: String => Option[T],
+    path: String
+  ): T =
+    conf(path).getOrElse(
+      throw new AdaException(s"The widget engine config. entry '$path' not defined.")
+    )
+
+  private def configValue[T](
+    conf: ConfigObject,
+    path: String
+  ) =
+    Option(conf.get(path)).getOrElse(
+      throw new AdaException(s"The widget engine config. entry '$path' not defined.")
+    ).unwrapped().asInstanceOf[T]
 }
