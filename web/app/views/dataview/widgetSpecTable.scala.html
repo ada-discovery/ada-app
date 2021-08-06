@@ -374,10 +374,10 @@
                 displayElements.push("Keep Undefined: " + values["keepUndefined"])
             }
 
-            var subFilterIdValue = values["subFilterId"]
+            var subFilterValue = values["subFilterTypeahead"]
 
-            if (subFilterIdValue)
-                displayElements.push("Sub Filter Id: " + subFilterIdValue)
+            if (subFilterValue)
+                displayElements.push("Sub Filter: " + subFilterValue)
 
             contentDisplayColumn.append("<div class='row'>" + displayElements.join(", ") + "</div>")
 
@@ -417,7 +417,7 @@
             var gridWidthColumn = "<td><input type='text' id='gridWidth' style='width:40px' value='" + gridWidthValue + "'/></td>";
             var heightColumn = "<td><input type='text' id='height' style='width:60px' value='" + heightValue + "'/></td>";
             var isTextualFormColumn = "<td><input type='checkbox' id='isTextualForm' name='isTextualForm'" + textualFormChecked + "'/></td>";
-            var titleColumn = "<td><input type='text' id='height' style='width:60px' value='" + titleValue + "'/></td>";
+            var titleColumn = "<td><input type='text' id='title' style='width:60px' value='" + titleValue + "'/></td>";
             var chartTypeColumn = (isDistributionOrCumulativeCountType) ? `<td>@editableChartType(None)</td>` : "<td></td>";
 
             // concrete class name and check box columns
