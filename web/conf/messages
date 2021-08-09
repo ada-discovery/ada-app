@@ -64,6 +64,7 @@ dataSetImport.setting.mongoAutoCreateIndexForProjection.label = Mongo Auto-creat
 dataSetImport.setting.storageType.label = Storage Type
 dataSetImport.setting.customControllerClassName.label = Custom Controller Class
 dataSetImport.setting.description.label = Description
+dataSetImport.setting.widgetEngineClassName.label = Widget Engine Class Name
 
 dataSetImport.dataView.tableColumnNames.label = Table Column Names
 dataSetImport.dataView.distributionCalcFieldNames.label = Distribution Calc Field Names
