@@ -188,6 +188,18 @@ object DataSetWebContext {
     }.toMap
   }
 
+  def widgetEngineNames(
+    configuration: Configuration
+  ): Seq[(String, String)] = {
+    val providerConfigs = getEntrySafe(configuration.getObjectList, "widget_engine.providers")
+
+    providerConfigs.map { providerConfig =>
+      val name = configValue[String](providerConfig, "name")
+      val className = configValue[String](providerConfig, "className")
+      (className, name)
+    }
+  }
+
   private val coreWidgetJsPath = "widget-engine.js"
 
   private def jsWidgetEngineImports(

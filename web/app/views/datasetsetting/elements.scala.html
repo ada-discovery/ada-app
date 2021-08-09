@@ -1,12 +1,12 @@
-@import views.html.elements.{inputText, textarea, inputTextReadonly, labelValue, checkbox, select, inputFieldTypeahead}
+@import views.html.elements.{checkbox, inputFieldTypeahead, inputText, inputTextReadonly, labelValue, select, textarea}
 @import views.html.elements.{fieldTypeahead, inputTypeahead}
-@import views.html.table.{dynamicTwoColumnTable, dynamicThreeColumnTable}
+@import views.html.table.{dynamicThreeColumnTable, dynamicTwoColumnTable}
 @import views.html.attributeLabel
-@import org.ada.server.models.{DataSetSetting, StorageType, FilterShowFieldStyle}
+@import org.ada.server.models.{DataSetSetting, FilterShowFieldStyle, StorageType}
 @import org.incal.core.util.toHumanReadableCamel
-
 @import org.ada.server.models.Link
 @import org.ada.server.models.Menu
+@import org.ada.web.controllers.dataset.DataSetWebContext.widgetEngineNames
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
 
@@ -54,8 +54,8 @@
                 var header = value("field1")
                 if (!header)
                     header = ""
-                var label = value("field2")
-                var url = value("field3")
+                const label = value("field2")
+                const url = value("field3")
 
                 return {"concreteClass": "org.ada.server.models.Menu", "header": header, "links": [{"label": label, "url": url}]}
           }
@@ -78,3 +78,5 @@
 )
 
 @inputText("dataSetSetting", "customControllerClassName", form)
+
+@select("dataSetSetting", "widgetEngineClassName", form, widgetEngineNames(toConfiguration), true)
