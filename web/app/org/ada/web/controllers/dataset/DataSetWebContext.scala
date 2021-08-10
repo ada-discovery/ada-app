@@ -5,8 +5,10 @@ import com.typesafe.config.{ConfigObject, ConfigValue}
 import controllers.WebJarAssets
 import org.ada.server.AdaException
 import java.{util => ju}
-import scala.collection.mutable
 
+import org.ada.server.models.DataSetSetting
+
+import scala.collection.mutable
 import org.incal.play.controllers.WebContext
 import play.api.Configuration
 import play.api.i18n.Messages
@@ -149,25 +151,34 @@ object DataSetWebContext {
   // JS Widget Engine
 
   implicit def jsWidgetEngine(
+    dataSetSetting: Option[DataSetSetting])(
     implicit webContext: DataSetWebContext
-  ): String = jsWidgetEngine(configuration)
+  ): String = jsWidgetEngine(configuration, dataSetSetting)
 
   implicit def jsWidgetEngineImports(
+    dataSetSetting: Option[DataSetSetting])(
     implicit webContext: DataSetWebContext
-  ): Html = jsWidgetEngineImports(configuration, toWebJarAssets)
+  ): Html = jsWidgetEngineImports(configuration, toWebJarAssets, dataSetSetting)
 
   def jsWidgetEngine(
-    configuration: Configuration
+    configuration: Configuration,
+    dataSetSetting: Option[DataSetSetting]
   ): String = {
-    val engineClassName = getEntrySafe(configuration.getString(_, None), "widget_engine.defaultClassName")
+    val engineClassName = dataSetSetting.flatMap(_.widgetEngineClassName).getOrElse(
+      getEntrySafe(configuration.getString(_, None), "widget_engine.defaultClassName")
+    )
+
     s"new $engineClassName()"
   }
 
   def jsWidgetEngineImports(
     configuration: Configuration,
-    webJarAssets: WebJarAssets
+    webJarAssets: WebJarAssets,
+    dataSetSetting: Option[DataSetSetting]
   ): Html = {
-    val engineClassName = getEntrySafe(configuration.getString(_, None), "widget_engine.defaultClassName")
+    val engineClassName = dataSetSetting.flatMap(_.widgetEngineClassName).getOrElse(
+      getEntrySafe(configuration.getString(_, None), "widget_engine.defaultClassName")
+    )
 
     jsWidgetEngineProvidersMap(configuration, webJarAssets).get(engineClassName).getOrElse(
       throw new AdaException(s"Configuration for a widget engine provider class '${engineClassName}' not found. You must register it first.")

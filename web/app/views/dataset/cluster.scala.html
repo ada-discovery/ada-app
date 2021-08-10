@@ -23,14 +23,14 @@
         Seq("filter"),
         setting.filterShowFieldStyle
     )
-    @jsWidgetEngineImports
+    @jsWidgetEngineImports(Some(setting))
 
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.cluster
     )
 
     <script type="text/javascript">
-        const widgetEngine = @jsWidgetEngine
+        const widgetEngine = @jsWidgetEngine(Some(setting))
 
         $(function () {
             $.ajax({

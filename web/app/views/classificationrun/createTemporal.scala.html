@@ -29,7 +29,7 @@
     )
 
     <script type="text/javascript">
-        const widgetEngine = @jsWidgetEngine
+        const widgetEngine = @jsWidgetEngine(Some(setting))
 
         $(function () {
             populateCategoricalTypeahead('outputField');

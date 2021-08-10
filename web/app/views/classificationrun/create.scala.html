@@ -29,10 +29,10 @@
         standardClassificationRunJsRouter.selectFeaturesAsAnovaChiSquare
     )
 
-    @jsWidgetEngineImports
+    @jsWidgetEngineImports(Some(setting))
 
     <script type="text/javascript">
-        const widgetEngine = @jsWidgetEngine
+        const widgetEngine = @jsWidgetEngine(Some(setting))
 
         $(function () {
             populateCategoricalTypeahead('outputField');

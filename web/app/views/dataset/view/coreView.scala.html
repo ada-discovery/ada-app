@@ -74,7 +74,7 @@
         dataViewJsRouter.saveFilter
     )
 
-    @jsWidgetEngineImports
+    @jsWidgetEngineImports(Some(dataSetSetting))
 
     @dataSetFilterJs()
 
@@ -83,7 +83,7 @@
     <script type="text/javascript">
         var defaultWidgetWidth = @widgetGridElementWidth;
         var enforceWidth = false;
-        const widgetEngine = @jsWidgetEngine
+        const widgetEngine = @jsWidgetEngine(Some(dataSetSetting))
 
         $(function () {
             // activate filters

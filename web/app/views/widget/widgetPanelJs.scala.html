@@ -2,16 +2,18 @@
 @import org.ada.web.util.toJsonHtml
 @import play.api.Configuration
 @import org.ada.web.controllers.dataset.DataSetWebContext._
+@import org.ada.server.models.DataSetSetting
 
 @(
-    widgets : Traversable[Widget])(
+    widgets : Traversable[Widget],
+    dataSetSetting: Option[DataSetSetting] = None)(
     implicit configuration: Configuration, webJarAssets: WebJarAssets
 )
 
-@jsWidgetEngineImports(configuration, webJarAssets)
+@jsWidgetEngineImports(configuration, webJarAssets, dataSetSetting)
 
 <script type="text/javascript">
-    const widgetEngine = @jsWidgetEngine(configuration)
+    const widgetEngine = @jsWidgetEngine(configuration, dataSetSetting)
 
     $(function () {
         const filterElement = $(".filter-div");
