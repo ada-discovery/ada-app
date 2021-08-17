@@ -29,8 +29,7 @@ PlayKeys.devSettings := Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-server" % "0.9.0-HCRC.2",
-  "org.in-cal" %% "incal-play" % "0.3.0.RC.1",
+  "org.in-cal" %% "incal-play" % "0.3.0,
   "com.typesafe.play" %% "play-mailer" % "6.0.1",        // to send emails
   "com.typesafe.play" %% "play-mailer-guice" % "6.0.1",  // to send emails (Guice)
   "jp.t2v" %% "play2-auth" % "0.14.1",
