@@ -1,4 +1,4 @@
-# Ada App [![version](https://img.shields.io/badge/version-0.8.1-green.svg)](https://ada-discovery.github.io) [![License: CC BY-NC 3.0](https://img.shields.io/badge/License-CC%20BY--NC%203.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/3.0/) [![License](https://img.shields.io/badge/License-Apache%202.0-lightgrey.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Build Status](https://travis-ci.com/ada-discovery/ada-app.svg?branch=master)](https://travis-ci.com/ada-discovery/ada-app)
+# Ada App [![version](https://img.shields.io/badge/version-0.8.1-green.svg)](https://ada-discovery.github.io) [![License](https://img.shields.io/badge/License-Apache%202.0-lightgrey.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Build Status](https://travis-ci.com/ada-discovery/ada-app.svg?branch=master)](https://travis-ci.com/ada-discovery/ada-app)
 
 <img src="https://ada-discovery.github.io/images/logo.png" width="450px" alt="A Discovery Analytics">
 
@@ -82,11 +82,9 @@ Alternatively if you use maven  your *pom.xml* has to contain
 
 #### License
 
-The project and all its source code is distributed under the terms of:
+The project and all its source code (i.e., everything belonging to *Ada Server*, *Ada Web* and *Ada Web NCER* subprojects) is distributed under the terms of the <a href="https://www.apache.org/licenses/LICENSE-2.0.txt">Apache 2.0 license</a>.
 
-1. *Ada Server* - the <a href="https://www.apache.org/licenses/LICENSE-2.0.txt">Apache 2.0 license</a>.
-2. *Ada Web* - the <a href="https://creativecommons.org/licenses/by-nc/3.0/">CC BY-NC 3.0 license</a>.
-3. *Ada Web NCER* - the <a href="https://creativecommons.org/licenses/by-nc/3.0/">CC BY-NC 3.0 license</a>.
+Note that if you wish to use the [Highcharts](https://www.highcharts.com)-based widget engine in Ada, along with or as a replacement for the default one implemented using [Plotly](https://plotly.com/) library, you can do so by using/extending [Ada Web Highcharts project](https://github.com/ada-discovery/ada-web-highcharts), which is however distributed under the <a href="https://creativecommons.org/licenses/by-nc/3.0/">CC BY-NC 3.0 license</a>.   
 
 #### Acknowledgement and Support
 
