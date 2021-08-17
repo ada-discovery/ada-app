@@ -8,10 +8,7 @@ name := "ada-web"
 
 description := "Web part of Ada Discovery Analytics backed by Play Framework."
 
-licenses ++= Seq(
-  "Creative Commons Attribution-NonCommercial 3.0" -> url("http://creativecommons.org/licenses/by-nc/3.0"),
-  "Highcharts" -> url("https://www.highcharts.com/blog/products/highcharts")
-)
+licenses += "Apache 2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
 
 resolvers ++= Seq(
   Resolver.mavenLocal
