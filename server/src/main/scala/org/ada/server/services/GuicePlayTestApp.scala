@@ -1,11 +1,12 @@
 package org.ada.server.services
 
 import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
 
-object GuicePlayTestApp {
+trait GuicePlayTestApp {
 
-  def apply(moduleNames: Seq[String] = Nil): Application = {
+  def apply(moduleNames: Seq[String] , excludeModules: Seq[String]): Application
+
+  def getModules(moduleNames: Seq[String], excludeModules: Seq[String]): Seq[String] = {
     val env = play.api.Environment.simple()
     val config = play.api.Configuration.load(env)
 
@@ -17,6 +18,7 @@ object GuicePlayTestApp {
         config.getStringList("play.modules.enabled").fold(
           List.empty[String])(l => iterableAsScalaIterable(l).toList)
       }
-    new GuiceApplicationBuilder().configure("play.modules.enabled" -> modules).build
+    modules.filterNot(excludeModules.contains(_))
   }
+
 }

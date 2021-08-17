@@ -27,6 +27,8 @@ PlayKeys.devSettings := Seq(
 
 libraryDependencies ++= Seq(
   "org.in-cal" %% "incal-play" % "0.3.0",
+  "org.pac4j" % "play-pac4j" % "3.1.0",
+  "org.pac4j" % "pac4j-oidc" % "2.2.0" exclude("commons-io" , "commons-io"),
   "com.typesafe.play" %% "play-mailer" % "6.0.1",        // to send emails
   "com.typesafe.play" %% "play-mailer-guice" % "6.0.1",  // to send emails (Guice)
   "jp.t2v" %% "play2-auth" % "0.14.1",

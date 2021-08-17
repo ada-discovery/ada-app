@@ -19,6 +19,7 @@ script:
   - sbt clean
   - sbt "project server" "test"
   - sbt "project web" "testOnly *Spec"
+  - sbt "project web" "testOnly *Test"
 #  - sbt "project webNcer" "testOnly *Spec"
 before_cache:
   - docker save -o docker_images/images.tar $(docker images -a -q)

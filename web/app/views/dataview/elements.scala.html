@@ -23,7 +23,7 @@
 
 @inputText("dataView", "name", form)
 
-@form.value.map(_.createdBy.map ( user => value("dataView", "Created By", user.ldapDn))).flatten.getOrElse("")
+@form.value.map(_.createdBy.map ( user => value("dataView", "Created By", user.userId))).flatten.getOrElse("")
 
 @checkbox("dataView", "default", form)
 
