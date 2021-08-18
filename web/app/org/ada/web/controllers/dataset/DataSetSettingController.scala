@@ -72,7 +72,8 @@ class DataSetSettingController @Inject() (
       "showSideCategoricalTree" -> boolean,
       "extraNavigationItems" -> seq(of[NavigationItem]).transform(mergeMenus, mergeMenus),
       "customControllerClassName" -> optional(text),
-      "description" -> optional(text)
+      "description" -> optional(text),
+      "widgetEngineClassName" -> optional(text)
     )(DataSetSetting.apply)(DataSetSetting.unapply)
   )
 

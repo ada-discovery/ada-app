@@ -1,7 +1,7 @@
 package org.ada.web.services.widgetgen
 
 import org.incal.core.dataaccess.Criterion
-import org.ada.server.models.{Field, ScatterWidgetSpec}
+import org.ada.server.models.{Field, FieldTypeId, ScatterWidgetSpec}
 import org.ada.web.models.ScatterWidget
 import org.ada.server.calc.impl.GroupTupleCalcTypePack
 import org.ada.web.util.{fieldLabel, shorten}
@@ -45,6 +45,8 @@ private class GroupScatterWidgetGenerator[T1, T2](
           yField.name,
           xField.labelOrElseName,
           yField.labelOrElseName,
+          xField.fieldType,
+          yField.fieldType,
           finalData,
           spec.displayOptions
         )

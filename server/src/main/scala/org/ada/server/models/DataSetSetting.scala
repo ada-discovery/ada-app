@@ -21,7 +21,8 @@ case class DataSetSetting(
   showSideCategoricalTree: Boolean = true,
   extraNavigationItems: Seq[NavigationItem] = Nil,
   customControllerClassName: Option[String] = None,
-  description: Option[String] = None
+  description: Option[String] = None,
+  widgetEngineClassName: Option[String] = None
 ) {
   def this(
     dataSetId: String,

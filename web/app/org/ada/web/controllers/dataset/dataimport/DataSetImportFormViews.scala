@@ -58,7 +58,8 @@ abstract protected[controllers] class DataSetImportFormViews[E <: DataSetImport:
     "showSideCategoricalTree" -> boolean,
     "extraNavigationItems" -> ignored(Seq[NavigationItem]()),
     "customControllerClassName" -> optional(text),
-    "description" -> optional(text)
+    "description" -> optional(text),
+    "widgetEngineClassName" -> optional(text)
   )(DataSetSetting.apply)(DataSetSetting.unapply)
 
   protected val dataViewMapping: Mapping[DataView] = mapping(
@@ -101,7 +102,7 @@ abstract protected[controllers] class DataSetImportFormViews[E <: DataSetImport:
   protected val viewElements: (Form[E], WebContext) => Html
 
   protected def editViews(form: Form[E])(implicit webContext: WebContext) =
-    view.edit(form, className, imagePath, imageLink)(viewElements(form, webContext))(webContext.msg)
+    view.edit(form, className, imagePath, imageLink)(viewElements(form, webContext))(webContext.msg, webContext.configuration)
 
   protected val defaultCreateInstance: Option[() => E] = None
 

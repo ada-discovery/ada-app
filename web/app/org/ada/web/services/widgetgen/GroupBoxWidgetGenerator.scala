@@ -3,7 +3,7 @@ package org.ada.web.services.widgetgen
 import org.incal.core.dataaccess.Criterion
 import org.ada.server.field.FieldTypeHelper
 import org.ada.web.models.BoxWidget
-import org.ada.server.models.{BoxWidgetSpec, Field}
+import org.ada.server.models.{BoxWidgetSpec, Field, FieldTypeId}
 import org.ada.server.calc.impl.GroupQuartilesCalcNoOptionsTypePack
 
 object GroupBoxWidgetGenerator extends CalculatorWidgetGenerator[BoxWidgetSpec, BoxWidget[Any], GroupQuartilesCalcNoOptionsTypePack[Any, Any]]
@@ -44,7 +44,17 @@ object GroupBoxWidgetGenerator extends CalculatorWidgetGenerator[BoxWidgetSpec, 
           (groupString, quartiles)
         }.sortBy(_._1)
 
-        val widget = BoxWidget[Any](chartTitle, Some(groupField.labelOrElseName), field.labelOrElseName, finalData, None, None, spec.displayOptions)
+        val widget = BoxWidget[Any](
+          chartTitle,
+          Some(groupField.labelOrElseName),
+          field.labelOrElseName,
+          field.fieldType,
+          finalData,
+          None,
+          None,
+          spec.displayOptions
+        )
+
         Some(widget)
       } else
         None
