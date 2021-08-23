@@ -1,8 +1,29 @@
-@import views.html.widget.widgetJs
 @import org.ada.web.models.Widget
+@import org.ada.web.util.toJsonHtml
+@import play.api.Configuration
+@import org.ada.web.controllers.dataset.DataSetWebContext._
+@import org.ada.server.models.DataSetSetting
 
-@(widgets : Traversable[Widget])
+@(
+    widgets : Traversable[Widget],
+    dataSetSetting: Option[DataSetSetting] = None)(
+    implicit configuration: Configuration, webJarAssets: WebJarAssets
+)
 
-@widgets.map { widget =>
-    @widgetJs(widget)
-}
+@jsWidgetEngineImports(configuration, webJarAssets, dataSetSetting)
+
+<script type="text/javascript">
+    const widgetEngine = @jsWidgetEngine(configuration, dataSetSetting)
+
+    $(function () {
+        const filterElement = $(".filter-div");
+
+        @widgets.map { widget =>
+            {
+                const w = JSON.parse('@{toJsonHtml(widget)}')
+                widgetEngine.plot(w, filterElement)
+            }
+        }
+    });
+</script>
+

@@ -31,6 +31,7 @@ private class GroupLineWidgetGenerator[G: TypeTag]
           )
 
         val xField = getFieldSafe(spec.xFieldName)
+        val yField = spec.yFieldNames.headOption.map(getFieldSafe)
         val groupField = getFieldSafe(spec.groupFieldName.getOrElse(
           throw new AdaException(s"Group field undefined but expected.")
         ))
@@ -65,6 +66,8 @@ private class GroupLineWidgetGenerator[G: TypeTag]
           spec.xFieldName,
           xAxisCaption = xField.labelOrElseName,
           yAxisCaption = yAxisCaption,
+          xFieldType = xField.fieldType,
+          yFieldType = yField.map(_.fieldType).getOrElse(FieldTypeId.Null),
           data = data,
           displayOptions = spec.displayOptions
         )

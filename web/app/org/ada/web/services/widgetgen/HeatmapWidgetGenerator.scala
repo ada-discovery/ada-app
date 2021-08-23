@@ -52,12 +52,27 @@ private trait HeatmapWidgetGenerator[S <: WidgetSpec, ACCUM, AGG] extends Calcul
         val yValues = groupedIndecesAggs.head.map(_._1(1).setScale(2, BigDecimal.RoundingMode.FLOOR).toString)
         val xValues = groupedIndecesAggs.map(_.head._1(0).setScale(2, BigDecimal.RoundingMode.FLOOR).toString)
 
-
         val fieldNames = spec.fieldNames.toSeq
         val titlex = title(spec).getOrElse(caption(fieldNames.map(label(_))))
 
+        val xFieldType = fieldNameMap.get(fieldNames(0)).map(_.fieldType)
+        val yFieldType = fieldNameMap.get(fieldNames(1)).map(_.fieldType)
+
         val widget = HeatmapWidget(
-          titlex, xValues, yValues, Some(label(fieldNames(0))), Some(label(fieldNames(1))), aggs, Some(definedAggs.min), Some(definedAggs.max), false, spec.displayOptions
+          titlex,
+          xValues,
+          yValues,
+          Some(label(fieldNames(0))),
+          Some(label(fieldNames(1))),
+          Some(fieldNames(0)),
+          Some(fieldNames(1)),
+          xFieldType,
+          yFieldType,
+          aggs,
+          Some(definedAggs.min),
+          Some(definedAggs.max),
+          false,
+          spec.displayOptions
         )
         Some(widget)
       } else

@@ -18,13 +18,12 @@ libraryDependencies ++= Seq(
   "org.reactivemongo" %% "play2-reactivemongo" % "0.18.1-play25" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11") exclude("com.typesafe.play", "play-iteratees_2.11") exclude("com.typesafe.play", "play-server_2.11") exclude("com.typesafe.play", "play-netty-server_2.11"),
   "org.reactivemongo" %% "reactivemongo-akkastream" % "0.18.1",
   "com.typesafe.play" %% "play-iteratees" % playVersion,
-  "org.in-cal" %% "incal-core" % "0.3.0.RC.1",                                                      // just temporary - remove later
-  "org.in-cal" %% "incal-access-elastic" % "0.2.4",                                                 // Elastic search
+  "org.in-cal" %% "incal-access-elastic" % "0.3.0",                                                 // Elastic search
   "org.apache.ignite" % "ignite-core" % "1.6.0",
   "org.apache.ignite" % "ignite-spring" % "1.6.0",
   "org.apache.ignite" % "ignite-indexing" % "1.6.0",
   "org.apache.ignite" % "ignite-scalar" % "1.6.0",
-  "org.in-cal" %% "incal-spark_ml" % "0.2.3" exclude("com.fasterxml.jackson.core", "jackson-databind"),
+  "org.in-cal" %% "incal-spark_ml" % "0.3.0" exclude("com.fasterxml.jackson.core", "jackson-databind"),
   "org.reflections" % "reflections" % "0.9.10" exclude("com.google.code.findbugs", "annotations"),  // class finder
   "com.typesafe.play" %% "play-java-ws" % playVersion,                                              // WS
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",                                                  // LDAP

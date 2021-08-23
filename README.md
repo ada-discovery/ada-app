@@ -1,4 +1,4 @@
-# Ada App [![version](https://img.shields.io/badge/version-0.8.1-green.svg)](https://ada-discovery.github.io) [![License: CC BY-NC 3.0](https://img.shields.io/badge/License-CC%20BY--NC%203.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/3.0/) [![License](https://img.shields.io/badge/License-Apache%202.0-lightgrey.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Build Status](https://travis-ci.com/ada-discovery/ada-app.svg?branch=master)](https://travis-ci.com/ada-discovery/ada-app)
+# Ada App [![version](https://img.shields.io/badge/version-0.9.0-green.svg)](https://ada-discovery.github.io) [![License](https://img.shields.io/badge/License-Apache%202.0-lightgrey.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Build Status](https://travis-ci.com/ada-discovery/ada-app.svg?branch=master)](https://travis-ci.com/ada-discovery/ada-app)
 
 <img src="https://ada-discovery.github.io/images/logo.png" width="450px" alt="A Discovery Analytics">
 
@@ -44,7 +44,7 @@ There are essentially two ways how to install a full-stack _Ada Web_:
 If you want to use *Ada Server* in your own project all you need is *Scala 2.11*. To pull the library you have to add the following dependency to *build.sbt*
 
 ```
-"org.adada" %% "ada-server" % "0.8.1"
+"org.adada" %% "ada-server" % "0.9.0"
 ```
 
 or to *pom.xml* (if you use maven)
@@ -53,15 +53,15 @@ or to *pom.xml* (if you use maven)
 <dependency>
     <groupId>org.adada</groupId>
     <artifactId>ada-server_2.11</artifactId>
-    <version>0.8.1</version>
+    <version>0.9.0</version>
 </dependency>
 ```
 
 Similarly, if instead of installing a stand alone Ada app, you want to use the _Ada Web_ libraries in your project, you can do so by adding the following dependencies in *build.sbt* (be sure the Scala compilation version is *2.11*)
 
 ```
-"org.adada" %% "ada-web" % "0.8.1",
-"org.adada" %% "ada-web" % "0.8.1" classifier "assets"
+"org.adada" %% "ada-web" % "0.9.0",
+"org.adada" %% "ada-web" % "0.9.0" classifier "assets"
 ```
 
 Alternatively if you use maven  your *pom.xml* has to contain
@@ -70,23 +70,21 @@ Alternatively if you use maven  your *pom.xml* has to contain
 <dependency>
     <groupId>org.adada</groupId>
     <artifactId>ada-web_2.11</artifactId>
-    <version>0.8.1</version>
+    <version>0.9.0</version>
 </dependency>
 <dependency>
     <groupId>org.adada</groupId>
     <artifactId>ada-web_2.11</artifactId>
-    <version>0.8.1</version>
+    <version>0.9.0</version>
     <classifier>assets</classifier>
 </dependency>
 ```
 
 #### License
 
-The project and all its source code is distributed under the terms of:
+The project and all its source code (i.e., everything belonging to *Ada Server*, *Ada Web* and *Ada Web NCER* subprojects) is distributed under the terms of the <a href="https://www.apache.org/licenses/LICENSE-2.0.txt">Apache 2.0 license</a>.
 
-1. *Ada Server* - the <a href="https://www.apache.org/licenses/LICENSE-2.0.txt">Apache 2.0 license</a>.
-2. *Ada Web* - the <a href="https://creativecommons.org/licenses/by-nc/3.0/">CC BY-NC 3.0 license</a>.
-3. *Ada Web NCER* - the <a href="https://creativecommons.org/licenses/by-nc/3.0/">CC BY-NC 3.0 license</a>.
+Note that if you wish to use the [Highcharts](https://www.highcharts.com)-based widget engine in Ada, along with or as a replacement for the default one implemented using [Plotly](https://plotly.com/) library, you can do so by using/extending [Ada Web Highcharts project](https://github.com/ada-discovery/ada-web-highcharts), which is however distributed under the <a href="https://creativecommons.org/licenses/by-nc/3.0/">CC BY-NC 3.0 license</a>.   
 
 #### Acknowledgement and Support
 

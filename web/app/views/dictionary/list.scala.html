@@ -5,7 +5,6 @@
 @import views.html.layout
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs, filterWidgetPanel}
 @import views.html.table.paginatedTable
-@import views.html.chart.highcharts.highchartsJsImport
 @import views.html.widget.widgetPanelJs
 @import views.html.modal
 @import views.html.export.exportDropdown
@@ -156,8 +155,7 @@
 }
 
 @bottomResources = {
-    @highchartsJsImport()
-    @widgetPanelJs(widgets)
+    @widgetPanelJs(widgets, Some(setting))
 }
 
 @layout.list(

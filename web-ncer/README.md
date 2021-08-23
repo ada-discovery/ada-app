@@ -1,5 +1,5 @@
 # Ada-Web - NCER-PD Project
-[![version](https://img.shields.io/badge/version-0.8.1-green.svg)](https://ada.parkinson.lu) [![License: CC BY-NC 3.0](https://img.shields.io/badge/License-CC%20BY--NC%203.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/3.0/)
+[![version](https://img.shields.io/badge/version-0.9.0-green.svg)](https://ada.parkinson.lu) [![License](https://img.shields.io/badge/License-Apache%202.0-lightgrey.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 ## Application Server (Netty)
 

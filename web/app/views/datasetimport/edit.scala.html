@@ -3,6 +3,7 @@
 @import views.html.elements._
 @import play.api.i18n.Messages
 @import org.incal.play.routes.CustomDirAssets
+@import play.api.Configuration
 
 @(
     form: Form[_ <: DataSetImport],
@@ -10,7 +11,7 @@
     image: Option[String],
     link: Option[String])(
     typeSpecificElements: Html)(
-    implicit msg: Messages
+    implicit msg: Messages, configuration: Configuration
 )
 
 <input type="hidden" id="concreteClass" name="concreteClass" value="@{className}">

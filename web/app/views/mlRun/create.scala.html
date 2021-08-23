@@ -1,5 +1,4 @@
 @import views.html.layout.main
-@import views.html.chart.highcharts.highchartsJsImport
 @import views.html.elements._
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
 @import views.html.mlRun.{inputFieldAndFilterResources, mlElements, trainingSettingFields}
@@ -30,7 +29,6 @@
         Seq("filter", "replicationFilter"),
         setting.filterShowFieldStyle
     )
-    @highchartsJsImport()
 
     <script type="text/javascript">
 

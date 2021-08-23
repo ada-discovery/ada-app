@@ -149,14 +149,4 @@
             error: showErrorResponse
          });
     }
-
-    var chartsExportFileName = '@{dataSetName.replaceAllLiterally(".","_").replaceAllLiterally(" ", "_").toLowerCase + "-charts"}'
-
-    function exportCharts(type) {
-        var chartIds = $.map($(".chart-holder"), function (chart, i) {
-            return chart.id;
-        })
-
-        Highcharts.exportCharts(chartIds, {type: type, filename: chartsExportFileName});
-    }
 </script>

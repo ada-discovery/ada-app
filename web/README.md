@@ -1,4 +1,4 @@
-# Ada Web [![version](https://img.shields.io/badge/version-0.8.1-green.svg)](https://ada-discovery.github.io) [![License: CC BY-NC 3.0](https://img.shields.io/badge/License-CC%20BY--NC%203.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/3.0/) [![Build Status](https://travis-ci.com/ada-discovery/ada-web.svg?branch=master)](https://travis-ci.com/ada-discovery/ada-web)
+# Ada Web [![version](https://img.shields.io/badge/version-0.9.0-green.svg)](https://ada-discovery.github.io) [![License](https://img.shields.io/badge/License-Apache%202.0-lightgrey.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Build Status](https://travis-ci.com/ada-discovery/ada-web.svg?branch=master)](https://travis-ci.com/ada-discovery/ada-web)
 
 <img src="https://ada-discovery.github.io/images/logo.png" width="450px">
 
@@ -17,8 +17,8 @@ There are essentially two ways how to install a full-stack _Ada web_:
 Note that if instead of installing a stand alone Ada app you want to use the _Ada web_ libraries in your project you can do so by adding the following dependencies in *build.sbt* (be sure the Scala compilation version is **2.11**)
 
 ```
-"org.adada" %% "ada-web" % "0.8.1",
-"org.adada" %% "ada-web" % "0.8.1" classifier "assets"
+"org.adada" %% "ada-web" % "0.9.0",
+"org.adada" %% "ada-web" % "0.9.0" classifier "assets"
 ```
 
 Alternativelly if you use maven  your *pom.xml* has to contain
@@ -27,19 +27,19 @@ Alternativelly if you use maven  your *pom.xml* has to contain
 <dependency>
     <groupId>org.adada</groupId>
     <artifactId>ada-web_2.11</artifactId>
-    <version>0.8.1</version>
+    <version>0.9.0</version>
 </dependency>
 <dependency>
     <groupId>org.adada</groupId>
     <artifactId>ada-web_2.11</artifactId>
-    <version>0.8.1</version>
+    <version>0.9.0</version>
     <classifier>assets</classifier>
 </dependency>
 ```
 
 #### License
 
-The project and all source its code is distributed under the terms of the <a href="https://creativecommons.org/licenses/by-nc/3.0/">CC BY-NC 3.0 license</a>.
+The project and all source its code is distributed under the terms of the <a href="https://www.apache.org/licenses/LICENSE-2.0.txt">Apache 2.0 license</a>.
 
 #### Acknowledgement and Support
 

@@ -12,8 +12,9 @@
     nestedDataSpaceCount: Int,
     nestedDataSetCount: Int,
     dataSetIdSizeMap: Map[String, Int],
-    id: Option[BSONObjectID]
-)(implicit msg: play.api.i18n.Messages)
+    id: Option[BSONObjectID])(
+    implicit msg: play.api.i18n.Messages
+)
 
 @editableInput(key: String, value: Any) = {
     <input type="text" class="form-control" id="@key" name="@key" value="@value">
