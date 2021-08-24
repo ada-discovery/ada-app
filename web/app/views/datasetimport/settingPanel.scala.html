@@ -2,8 +2,10 @@
 @import views.html.elements._
 @import org.ada.server.models.{StorageType, FilterShowFieldStyle}
 @import org.ada.web.util.enumToValueString
+@import org.ada.web.controllers.dataset.DataSetWebContext.widgetEngineNames
+@import play.api.Configuration
 
-@(form: Form[_])(implicit msg: Messages)
+@(form: Form[_])(implicit msg: Messages, configuration: Configuration)
 
 <div class="panel panel-default">
     <div class="panel-heading">Setting</div>
@@ -34,7 +36,8 @@
                 @checkbox("dataSetImport", "setting.filterShowNonNullCount", form)
                 @checkbox("dataSetImport", "setting.showSideCategoricalTree", form)
                 @textarea("dataSetImport", "setting.description", form, Seq('cols -> 20, 'rows -> 5))
-                @inputText("dataSetImport", "setting.customControllerClassName", form)
+                @inputText("dataSetImport", "setting.customControllerClassName", form),
+                @select("dataSetImport", "setting.widgetEngineClassName", form, widgetEngineNames(configuration), true)
             </div>
         </div>
     </div>

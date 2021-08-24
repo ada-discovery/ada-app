@@ -4,9 +4,10 @@ import org.ada.server.models.{Field, FieldTypeId}
 import play.api.libs.json.JsValue
 import play.twirl.api.{Html, HtmlFormat}
 import org.ada.server.field.FieldTypeHelper
+import play.api.Configuration
 import reactivemongo.bson.BSONObjectID
 import views.html.dataset.{renderers => rendererView}
-import scala.collection.immutable.{ Seq => ISeq }
+import scala.collection.immutable.{Seq => ISeq}
 
 trait FieldTypeRenderer {
   def apply(json: Option[JsValue]): Html
@@ -35,23 +36,30 @@ object FieldTypeFullRenderer {
       rendererView.jsonFieldLink(input._1, input._2, fieldLabel, false)
   }
 
-  private def arrayRender(fieldLabel: String): FieldTypeFullRenderer = {
-    input: FieldTypeFullInput =>
+  private def arrayRender(
+    fieldLabel: String)(
+    implicit configuration: Configuration
+  ) : FieldTypeFullRenderer =
+    (input: FieldTypeFullInput) =>
       HtmlFormat.fill(ISeq(
         rendererView.jsonFieldLink(input._1, input._2, fieldLabel, true),
         rendererView.arrayFieldLink(input._1, input._2, fieldLabel)
       ))
-  }
 
-  private def jsonArrayRender(fieldLabel: String): FieldTypeFullRenderer = {
-    input: FieldTypeFullInput =>
+  private def jsonArrayRender(
+    fieldLabel: String)(
+    implicit configuration: Configuration
+  ) : FieldTypeFullRenderer =
+    (input: FieldTypeFullInput) =>
       HtmlFormat.fill(ISeq(
         rendererView.jsonFieldLink(input._1, input._2, fieldLabel, true),
         rendererView.arrayFieldLink(input._1, input._2, fieldLabel)
       ))
-  }
 
-  def apply(field: Field): FieldTypeFullRenderer =
+  def apply(
+    field: Field)(
+    implicit configuration: Configuration
+  ): FieldTypeFullRenderer =
     if (field.isArray) {
       if(field.fieldType == FieldTypeId.Json)
         jsonArrayRender(field.labelOrElseName)

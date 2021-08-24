@@ -25,6 +25,6 @@ object BoxWidgetGenerator extends CalculatorWidgetGenerator[BoxWidgetSpec, BoxWi
         implicit val ordering = quartiles.ordering
         val field = fieldNameMap.get(spec.fieldName).get
         val chartTitle = title(spec).getOrElse(field.labelOrElseName)
-        BoxWidget[Any](chartTitle, None, field.labelOrElseName, Seq(("", quartiles)), None, None, spec.displayOptions)
+        BoxWidget[Any](chartTitle, None, field.labelOrElseName, field.fieldType, Seq(("", quartiles)), None, None, spec.displayOptions)
       }
 }

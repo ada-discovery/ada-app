@@ -1,8 +1,5 @@
-@import org.ada.web.models.Widget
-@import org.ada.server.models.Field
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
-@import views.html.chart.highcharts.highchartsJsImport
 @import views.html.dataset.{dataSetFullMenu, datasetMenu, datasetSubNavWithJs}
 @import views.html.dataset.filter.{dataSetFilter, dataSetFilterJs}
 @import views.html.dataview.dataViewSelectionModal
@@ -24,7 +21,6 @@
     inputElements: Html,
     extraActions: Option[Html],
     extraBottomResources: Html,
-    highchartsUseBoost: Boolean = false,
     widgetsDivOnRight: Boolean = false
 )(
     implicit context: DataSetWebContext
@@ -47,12 +43,12 @@
 }
 
 @bottomResources = {
-
-    @highchartsJsImport(highchartsUseBoost)
+    @jsWidgetEngineImports(Some(setting))
 
     @dataSetFilterJs()
 
     <script type="text/javascript">
+        const widgetEngine = @jsWidgetEngine(Some(setting))
 
         $(function() {
             $('#inputDiv').on('hidden.bs.collapse', function () {
@@ -60,7 +56,7 @@
                 $("#widgetsDiv").addClass("col-md-12");
                 $("#inputDiv").parent().removeClass("vertical-divider")
 
-                refreshHighcharts();
+                widgetEngine.refresh();
 
                 // TODO: this is a hack, generalize
                 const heatmapDiv = $("#heatmapDiv")
@@ -74,7 +70,7 @@
                 $("#widgetsDiv").addClass("col-md-8");
                 $("#inputDiv").parent().addClass("vertical-divider")
 
-                refreshHighcharts();
+                widgetEngine.refresh();
 
                 // TODO: this is a hack, generalize
                 const heatmapDiv = $("#heatmapDiv")
@@ -170,13 +166,13 @@
             return {
                 success: function (data) {
                     // filter
-                    var filterElement = $(".filter-div");
+                    const filterElement = $(".filter-div");
                     filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
                     addDragAndDropSupportForFilter(filterElement)
 
                     // widgets
-                    var widgetsDiv = $("#widgetsDiv")
-                    updateWidgetsFromCallback(data.widgetsCallbackId, widgetsDiv, filterElement, 12, false, successMessage)
+                    const widgetsDiv = $("#widgetsDiv")
+                    updateWidgetsFromCallback(widgetEngine, data.widgetsCallbackId, widgetsDiv, filterElement, 12, false, successMessage)
                 },
                 error: function (data) {
                     $("#widgetsDiv").html("")

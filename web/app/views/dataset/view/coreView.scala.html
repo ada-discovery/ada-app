@@ -1,6 +1,5 @@
 @import views.html.layout
 @import views.html.dataset.{fixedTableRow, dataSetFullMenu, datasetMenu, datasetSubNav, datasetSubNavJs, bootstrapSelectImport, datasetJsImport}
-@import views.html.chart.highcharts.{highchartsJsImport, highchartsJsImportForBulkExport}
 @import views.html.dataset.view.{viewExportDropdown, viewTables, viewCountFilters}
 @import views.html.dataset.filter.dataSetFilterJs
 @import views.html.filter.{filter, filterJs, filterJsImport, jsTreeImport}
@@ -75,17 +74,16 @@
         dataViewJsRouter.saveFilter
     )
 
-    @highchartsJsImport()
+    @jsWidgetEngineImports(Some(dataSetSetting))
 
     @dataSetFilterJs()
 
     @datasetSubNavJs()
 
-    @highchartsJsImportForBulkExport()
-
     <script type="text/javascript">
         var defaultWidgetWidth = @widgetGridElementWidth;
         var enforceWidth = false;
+        const widgetEngine = @jsWidgetEngine(Some(dataSetSetting))
 
         $(function () {
             // activate filters
@@ -111,7 +109,7 @@
 
         function activateFilter(filterElement, jsonConditions, filterId) {
             var submitAjaxFun = function(filterOrId) {
-                refreshViewForFilter('@{dataViewId.stringify}', filterOrId, filterElement, defaultWidgetWidth, enforceWidth, @tableRowSelection);
+                refreshViewForFilter(widgetEngine, '@{dataViewId.stringify}', filterOrId, filterElement, defaultWidgetWidth, enforceWidth, @tableRowSelection);
             }
 
             activateDataSetFilterAux(
@@ -123,7 +121,7 @@
         }
 
         function setFullWidth() {
-            var widgets = $("#widgetsTr .chart-holder")
+            const widgets = $("#widgetsTr .chart-holder")
             $.each(widgets, function (index, widget) {
                 $(widget).parent().attr("class", "col-md-12");
             })
@@ -131,7 +129,7 @@
             defaultWidgetWidth = 12;
             enforceWidth = true;
 
-            refreshHighcharts();
+            widgetEngine.refresh();
         }
 
         function addNewColumn() {
@@ -140,7 +138,8 @@
                 $("#multiFilterDiv").append($("#singleFilterDiv>table"));
                 $(".multi-filter-divider").show();
             }
-            addNewViewColumn('@{dataViewId.stringify}', defaultWidgetWidth, enforceWidth, activateFilter)
+
+            addNewViewColumn(widgetEngine, '@{dataViewId.stringify}', defaultWidgetWidth, enforceWidth, activateFilter)
         }
 
         function removeColumnRight() {
@@ -160,7 +159,7 @@
                 var oldHeaderText = oldHeader.substr(oldHeader.indexOf(" "))
                 $(".page-header").html("<h3>" + totalCount + oldHeaderText + "</h3>");
 
-                refreshHighcharts();
+                widgetEngine.refresh();
 
                 showMessage("The right-most column/filter successfully removed from the view.")
             } else {

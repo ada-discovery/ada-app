@@ -22,13 +22,11 @@ routesImport ++= Seq(
   "org.ada.web.controllers.pdchallenge.QueryStringBinders._"
 )
 
-val playVersion = "2.5.9"
-
 libraryDependencies ++= Seq(
   "org.adada" %% "ada-web" % version.value ,
   "org.adada" %% "ada-web" % version.value classifier "assets",
   "org.adada" %% "ada-dream-pd-challenge" % "0.1.1",
-  "org.in-cal" %% "incal-dl4j" % "0.2.3",   // DL4J
+  "org.in-cal" %% "incal-dl4j" % "0.3.0",   // DL4J
   "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.1" % "test",
   "org.mockito" % "mockito-core" % "2.13.0" % "test",
 "org.apache.pdfbox" % "pdfbox" % "2.0.1",

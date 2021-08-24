@@ -68,7 +68,7 @@ function saveFilterToView(viewId) {
     });
 }
 
-function refreshViewForFilter(viewId, filterOrId, filterElement, widgetGridElementWidth, enforceWidth, tableSelection) {
+function refreshViewForFilter(widgetEngine, viewId, filterOrId, filterElement, widgetGridElementWidth, enforceWidth, tableSelection) {
     var index = $("#filtersTr").find(".filter-div").index(filterElement);
 
     var counts = $("#filtersTr").find(".count-hidden").map(function(index, element) {
@@ -104,7 +104,7 @@ function refreshViewForFilter(viewId, filterOrId, filterElement, widgetGridEleme
 
             // widgets
             var widgetsDiv = $("#widgetsTr > td:eq(" + index + ")")
-            updateWidgetsFromCallback(data.widgetsCallbackId, widgetsDiv, filterElement, widgetGridElementWidth, enforceWidth)
+            updateWidgetsFromCallback(widgetEngine, data.widgetsCallbackId, widgetsDiv, filterElement, widgetGridElementWidth, enforceWidth)
         },
         error: function(data) {
             showErrorResponse(data)
@@ -113,7 +113,7 @@ function refreshViewForFilter(viewId, filterOrId, filterElement, widgetGridEleme
     });
 }
 
-function addNewViewColumn(viewId, widgetGridElementWidth, enforceWidth, activateFilter) {
+function addNewViewColumn(widgetEngine, viewId, widgetGridElementWidth, enforceWidth, activateFilter) {
     // total count
     var totalCount = getViewTotalCount();
 
@@ -132,7 +132,8 @@ function addNewViewColumn(viewId, widgetGridElementWidth, enforceWidth, activate
             // widgets
             var widgetTd = $("<td style='vertical-align:top'>")
             $("#widgetsTr").append(widgetTd)
-            refreshHighcharts();
+
+            widgetEngine.refresh();
 
             // table
             var tableTd = $("<td style='padding-left: 10px; padding-right: 10px; vertical-align:top'>")
@@ -142,7 +143,7 @@ function addNewViewColumn(viewId, widgetGridElementWidth, enforceWidth, activate
             $(tableDiv).html(data.table);
 
             // get widgets from callback
-            updateWidgetsFromCallback(data.widgetsCallbackId, widgetTd, filterElement, widgetGridElementWidth, enforceWidth)
+            updateWidgetsFromCallback(widgetEngine, data.widgetsCallbackId, widgetTd, filterElement, widgetGridElementWidth, enforceWidth)
 
             showMessage("New column/filter successfully added to the view.")
         },
@@ -174,7 +175,7 @@ function addAllowedValuesUpdateForFilter(filterElement) {
 // Widgets //
 /////////////
 
-function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, defaultElementWidth, enforceWidth, successMessage) {
+function updateWidgetsFromCallback(widgetEngine, callbackId, widgetsDiv, filterElement, defaultElementWidth, enforceWidth, successMessage) {
     widgetsDiv.html("")
     addSpinner(widgetsDiv, "margin-bottom: 20px;")
 
@@ -187,19 +188,14 @@ function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, defaul
 
             var widgets = data[0]
 
-//                    var widgetHolders = widgetsDiv.find(".chart-holder")
-
             var row = $("<div class='row'>")
             $.each(widgets, function (j, widget) {
-                row.append(widgetDiv(widget, defaultElementWidth, enforceWidth))
+                row.append(widgetEngine.widgetDiv(widget, defaultElementWidth, enforceWidth))
             })
             widgetsDiv.html(row)
             $.each(widgets, function (j, widget) {
-                genericWidget(widget, filterElement)
+                widgetEngine.plot(widget, filterElement)
             })
-//                    $.each(widgetHolders, function(i, widgetHolder){
-//                        genericWidgetForElement(widgetHolder.id, widgets[i], filterElement)
-//                    })
         },
         error: function(data) {
             widgetsDiv.html("")
@@ -209,7 +205,7 @@ function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, defaul
     });
 }
 
-function updateAllWidgetsFromCallback(callbackId, defaultElementWidth) {
+function updateAllWidgetsFromCallback(widgetEngine, callbackId, defaultElementWidth) {
     dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getWidgets().ajax( {
         data: {
             "callbackId": callbackId
@@ -220,7 +216,7 @@ function updateAllWidgetsFromCallback(callbackId, defaultElementWidth) {
                 var td = $("<td style='vertical-align:top'>")
                 var row = $("<div class='row'>")
                 $.each(widgets, function (j, widget) {
-                    row.append(widgetDiv(widget, defaultElementWidth))
+                    row.append(widgetEngine.widgetDiv(widget, defaultElementWidth))
                 })
                 td.append(row)
                 $("#widgetsTr").append(td)
@@ -229,7 +225,7 @@ function updateAllWidgetsFromCallback(callbackId, defaultElementWidth) {
             $.each(data, function (i, widgets) {
                 var filterElement = filterElements[i];
                 $.each(widgets, function (j, widget) {
-                    genericWidget(widget, filterElement)
+                    widgetEngine.plot(widget, filterElement)
                 })
             })
         },
@@ -319,7 +315,7 @@ function showJsonFieldValue(id, fieldName, fieldLabel, isArray) {
     });
 }
 
-function showArrayFieldChartAux(event) {
+function showArrayFieldChartAux(widgetEngine, event) {
     event.preventDefault();
     event.stopPropagation();
 
@@ -329,40 +325,53 @@ function showArrayFieldChartAux(event) {
     const fieldName = link.attr("data-field-name")
     const fieldLabel = link.attr("data-field-label")
 
-    showArrayFieldChart(rowId, fieldName, fieldLabel)
+    showArrayFieldChart(widgetEngine, rowId, fieldName, fieldLabel)
 }
 
-function showArrayFieldChart(id, fieldName, fieldLabel) {
+function showArrayFieldChart(widgetEngine, id, fieldName, fieldLabel) {
     dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
         success: function(data) {
             $("#lineChartDiv").html("")
 
             var series = []
-            var pointFormat = '<span style="color:{point.color}">{point.x:.2f}</span>: <b>{point.y:.2f}</b><br/>'
+            // TODO: do we want to use a special point format?
+            const pointFormat = '<span style="color:{point.color}">{point.x:.2f}</span>: <b>{point.y:.2f}</b><br/>'
 
             if (data && data.length > 0) {
-                var flattenData = $.map(data, function (item, i) {
+                const flattenData = $.map(data, function (item, i) {
                     return flatten(item)
                 });
 
-                var firstItem = flattenData[0]
+                const firstItem = flattenData[0]
 
-                var numericKeys = Object.keys(firstItem).filter(function(key) {
+                const numericKeys = Object.keys(firstItem).filter(function(key) {
                     return !isNaN(firstItem[key])
                 });
 
                 series = $.map(numericKeys, function (key, j) {
-                    var seriesData = $.map(flattenData, function (item, i) {
-                        return item[key];
+                    const seriesData = $.map(flattenData, function (item, i) {
+                        return [[i, item[key]]]
                     });
-                    return [{name: key, data: seriesData}]
+                    return [[key, seriesData]]
                 });
             }
 
             $('#lineChartArrayModal').modal("show");
 
             $('#lineChartArrayModal').on('shown.bs.modal', function (e) {
-                lineChart(fieldLabel, "lineChartDiv", null, series, 'Point', 'Value', true, false, pointFormat, null, null, false, false,  false);
+                const widget = {
+                    concreteClass: "org.ada.web.models.LineWidget",
+                    title: fieldLabel,
+                    xAxisCaption: "Point",
+                    yAxisCaption: "Value",
+                    data: series,
+                    displayOptions: {
+                        gridWidth: 12,
+                        height: 450
+                    }
+                }
+
+                widgetEngine.plotForElement("lineChartDiv", widget)
             })
         },
         error: showErrorResponse

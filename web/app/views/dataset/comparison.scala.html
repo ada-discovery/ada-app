@@ -119,7 +119,7 @@
                         // widgets
                         var widgetsDiv = $("#widgetsDiv")
                         var successMessage = "Comparison generation for the field '" + fieldLabel + "' finished."
-                        updateWidgetsFromCallback(data.widgetsCallbackId, widgetsDiv, null, 12, false, successMessage)
+                        updateWidgetsFromCallback(widgetEngine, data.widgetsCallbackId, widgetsDiv, null, 12, false, successMessage)
                     },
                     error: function (data) {
                         $("#widgetsDiv").html("")

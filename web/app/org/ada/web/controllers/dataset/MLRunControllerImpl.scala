@@ -7,7 +7,7 @@ import org.ada.server.models.{DistributionWidgetSpec, _}
 import org.ada.server.models.Filter.{FilterIdentity, FilterOrId}
 import org.ada.server.models.DataSetFormattersAndIds._
 import org.ada.server.dataaccess.dataset.FilterRepoExtra._
-import org.ada.web.models.Widget.{WidgetWrites, scatterWidgetFormat}
+import org.ada.web.models.Widget.scatterWidgetFormat
 import org.ada.server.dataaccess.dataset.DataSetAccessor
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -22,7 +22,7 @@ import org.ada.server.field.FieldUtil
 import org.ada.server.field.FieldUtil.caseClassToFlatFieldTypes
 import org.ada.web.controllers.core.AdaReadonlyControllerImpl
 import org.ada.web.controllers.core.{ExportableAction, WidgetRepoController}
-import org.ada.web.models.Widget
+import org.ada.web.models.{ScatterWidget, Widget}
 import org.ada.server.AdaException
 import org.ada.server.field.FieldTypeHelper
 import org.ada.server.json.OrdinalEnumFormat
@@ -176,9 +176,23 @@ protected[controllers] abstract class MLRunControllerImpl[R <: MLResult : Format
       val mlMethodIdNameMap = mlMethods.map(mlMethods => (identity.of(mlMethods).get, mlMethodName(mlMethods))).toMap
       val filterIdNameMap = filters.map(filter => (filter._id.get, filter.name.get)).toMap
 
-      (dataSetName + " " + entityName, dataSetName, page, conditions, widgets.flatten, fieldNameLabelMap, resultFields, mlMethodIdNameMap, filterIdNameMap, setting, tree)
+      (dataSetName + " " + entityName, dataSetName, page, conditions, alterWidgets(widgets.flatten), fieldNameLabelMap, resultFields, mlMethodIdNameMap, filterIdNameMap, setting, tree)
     }
   }
+
+  protected def alterWidgets(widgets: Traversable[Widget]) =
+    widgets.map { widget =>
+      widget match {
+        // fixing the group name for scatters (BSON object id)
+        case w: ScatterWidget[_, _] =>
+          w.copy(data =
+            w.data.map { case (group, rest) =>
+              (group.substring(9, group.length - 2), rest)
+            }
+          )
+        case _ => widget
+      }
+    }
 
   // create view and data
 

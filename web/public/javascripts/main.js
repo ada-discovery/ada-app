@@ -162,17 +162,15 @@ function showHideMessageBox() {
     $("#messageBoxDiv").hide();
     $("#showHideMessageBoxSpan").html("&#8612;")
 
-    if (Highcharts) {
-      refreshHighcharts();
-    }
+    if (typeof widgetEngine !== "undefined")
+      widgetEngine.refresh();
   } else {
     $("#contentDiv").removeClass("col-md-10").addClass("col-md-8-25")
     $("#messageBoxDiv").show();
     $("#showHideMessageBoxSpan").html("&#8614;")
 
-    if (Highcharts) {
-      refreshHighcharts();
-    }
+    if (typeof widgetEngine !== "undefined")
+      widgetEngine.refresh();
   }
 }
 
@@ -296,13 +294,6 @@ function handleModalButtonEnterPressed(modalName, action, hideOnEnter) {
   });
 
   $("#" + modalName + " .btn-primary").click(action);
-}
-
-function shorten(string, length) {
-  return (string.length > length) ?
-    string.substring(0, length) + ".."
-    :
-    string
 }
 
 function loadNewContent(url, elementId, data, callType) {
@@ -638,9 +629,21 @@ function createIndependenceTestTable(results, withTestType) {
   return createTable(header, rowData);
 }
 
-function msToStandardDateString(ms) {
-  var date = new Date(ms)
+function msOrDateToStandardDateString(ms) {
+  const date = new Date(ms)
+  return dateToStandardString(date);
+}
+
+function dateToStandardString(date) {
   return date.getFullYear() + '-' +('0' + (date.getMonth()+1)).slice(-2)+ '-' + date.getDate() + ' ' + date.getHours() + ':'+('0' + (date.getMinutes())).slice(-2)+ ':' + date.getSeconds();
+}
+
+function asTypedStringValue(value, isDouble, isDate, ceiling) {
+  function intValue() { return (ceiling) ? Math.ceil(value) : Math.floor(value) }
+
+  return (isDate) ? msOrDateToStandardDateString(value) :
+      (isDouble) ? value.toString() :
+          intValue().toString()
 }
 
 function addFilterModelBeforeModalSubmit(modalId, filterElement, filterParamName) {
@@ -670,16 +673,6 @@ function submitModalOnEnter(event, element) {
   }
 }
 
-function activateTableAllSelection() {
-  $(".table-selection-all").change(function() {
-    var rows = $(this).closest("table").find(".table-selection")
-    var checked = $(this).is(':checked')
-    $.each(rows, function(i, row) {
-      $(row).prop("checked", checked)
-    })
-  });
-}
-
 function getSelectedRowIds(tableElement) {
   var ids = []
 
@@ -693,6 +686,16 @@ function getSelectedRowIds(tableElement) {
   });
 
   return ids;
+}
+
+function activateTableAllSelection() {
+  $(".table-selection-all").change(function() {
+    var rows = $(this).closest("table").find(".table-selection")
+    var checked = $(this).is(':checked')
+    $.each(rows, function(i, row) {
+      $(row).prop("checked", checked)
+    })
+  });
 }
 
 function enableFieldDragover(fieldNameElement, fieldTypeaheadElement, execFun, acceptedTypes) {
@@ -749,4 +752,34 @@ function enableFieldTableDragover(fieldTableElement, execFun, acceptedTypes) {
   }).on("dragleave", function () {
     $(this).removeClass("dragged-over")
   })
+}
+
+function shorten(string, length) {
+  var initLength = length || 25
+  return (string.length > initLength) ? string.substring(0, initLength) + ".." : string
+}
+
+function svgToDataUrl(svg) {
+  try {
+    return URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=UTF-8,' }));
+  } catch (e) {
+    return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+  }
+}
+
+function getSVGWidth(svgres) {
+  return +svgres.match(/^<svg[^>]*width\s*=\s*\"?(\d+)\"?[^>]*>/)[1]
+}
+
+function getSVGHeight(svgres) {
+  return +svgres.match(/^<svg[^>]*height\s*=\s*\"?(\d+)\"?[^>]*>/)[1]
+}
+
+function downloadFile(dataURL, filename) {
+  const a = document.createElement('a');
+  a.href = dataURL;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }

@@ -333,6 +333,7 @@ trait DistributionWidgetGeneratorHelper {
       field.labelOrElseName,
       spec.relativeValues,
       false,
+      field.fieldType,
       nonZeroNumCountSeries,
       initializedDisplayOptions
     )

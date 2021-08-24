@@ -667,3 +667,11 @@ a.carousel-control.right{
 .btn-help-modal {
     color: #7A9437;
 }
+
+.dot {
+    height: 17px;
+    width: 17px;
+    background-color: #666666;
+    border-radius: 50%;
+    display: inline-block;
+}

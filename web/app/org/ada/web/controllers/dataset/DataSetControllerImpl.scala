@@ -20,7 +20,6 @@ import org.ada.web.controllers.{routes, _}
 import org.ada.server.models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import org.apache.commons.lang3.StringEscapeUtils
 import org.ada.server.models.Filter.FilterOrId
-import org.ada.web.models.Widget.WidgetWrites
 import org.ada.server.json._
 import org.ada.server.models.ml._
 import org.ada.web.controllers.dataset.IndependenceTestResult._
@@ -681,30 +680,19 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
+  // TODO: fieldNames and fieldMap not needed anymore
   private def widgetsToJsons(
     widgets: Seq[Widget],
     fieldNames: Seq[Seq[String]],
     fieldMap: Map[String, Field]
   ): JsArray = {
+    import Widget.writes
+
     val jsons = fieldNames.zip(widgets).map { case (fieldNames, widget) =>
-      widgetToJson(widget, fieldNames, fieldMap)
+      Json.toJson(widget)
     }
 
     JsArray(jsons)
-  }
-
-  private def widgetToJson(
-    widget: Widget,
-    fieldNames: Seq[String],
-    fieldMap: Map[String, Field]
-  ): JsValue = {
-    val fields = fieldNames.map(fieldMap.get).flatten
-    val fieldTypes = fields.map(field => ftf(field.fieldTypeSpec).asValueOf[Any])
-
-    // make a scalar type out of it
-    val scalarFieldTypesToUse = fieldTypes.map(fieldType => ftf(fieldType.spec.copy(isArray = false)).asInstanceOf[FieldType[Any]])
-    implicit val writes = new WidgetWrites[Any](scalarFieldTypesToUse, Some(doubleFieldType))
-    Json.toJson(widget)
   }
 
   private def canEditView(
@@ -748,7 +736,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filterOrId: FilterOrId,
     oldCountDiff: Option[Int],
     tableSelection: Boolean
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val tablePage = 0
 
     val dataSetNameFuture = dsa.dataSetName
@@ -798,7 +786,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         val pageHeader = messagesApi.apply("list.count.title", oldCountDiff.getOrElse(0) + viewResponse.count, itemName(dataSetName, setting))
 
-        val table = dataset.dataSetTable(newPage, Some(viewResponse.filter), viewResponse.tableFields, true, tableSelection)(request, router)
+        val table = dataset.dataSetTable(newPage, Some(viewResponse.filter), viewResponse.tableFields, true, tableSelection)
         val conditionPanel = views.html.filter.conditionPanel(Some(viewResponse.filter))
         val filterModel = Json.toJson(viewResponse.filter.conditions)
 
@@ -865,7 +853,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         val pageHeader = messagesApi.apply("list.count.title", totalCount + viewResponse.count, itemName(dataSetName, setting))
 
-        val table = dataset.dataSetTable(newPage, None, viewResponse.tableFields, true)(request, router)
+        val table = dataset.dataSetTable(newPage, None, viewResponse.tableFields, true)
         val countFilter = dataset.view.viewCountFilter(None, viewResponse.count, setting.filterShowFieldStyle, false)
 
         val jsonResponse = Ok(Json.obj(
@@ -1812,7 +1800,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     fieldNames: Seq[String],
     filterOrId: FilterOrId,
     tableSelection: Boolean
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val filterFuture = filterRepo.resolve(filterOrId)
     val fieldsFuture = getFields(fieldNames)
 
@@ -1839,7 +1827,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy)
         val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
 
-        Ok(dataset.dataSetTable(tablePage, Some(resolvedFilter), fieldsInOrder, true, tableSelection)(request, router))
+        Ok(dataset.dataSetTable(tablePage, Some(resolvedFilter), fieldsInOrder, true, tableSelection))
       }
     }.recover(handleExceptionsWithErrorCodes("a generateTable"))
   }
@@ -1849,7 +1837,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     orderBy: String,
     fieldNames: Seq[String],
     filterOrId: FilterOrId
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     {
       for {
         // use a given filter conditions or load one
@@ -1870,7 +1858,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // table
         val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy)
         val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
-        val table = dataset.dataSetTable(tablePage, Some(resolvedFilter), fieldsInOrder, true, true)(request, router)
+        val table = dataset.dataSetTable(tablePage, Some(resolvedFilter), fieldsInOrder, true, true)
 
         // filter model / condition panel
         val newFilter = setFilterLabels(resolvedFilter, nameFieldMap)
@@ -2130,13 +2118,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           val idClassMap = idClasses.toMap
 
           // PCA 1-2 Scatter
-          val displayOptions = BasicDisplayOptions(height = Some(500))
+          val pcaDisplayOptions = BasicDisplayOptions(gridWidth = Some(10), gridOffset = Some(1), height = Some(600))
 
           val pca12WidgetData = idPCA12s.map { case (id, pca12) =>
             (idClassMap.get(id).get.toString, pca12)
           }.toGroupMap.toSeq.sortBy(_._1)
 
-          val pca12Scatter = ScatterWidget("PCA", "PC1", "PC2", "PC1", "PC2", pca12WidgetData, displayOptions)
+          val pca12Scatter = ScatterWidget("PCA", "PC1", "PC2", "PC1", "PC2", FieldTypeId.Double, FieldTypeId.Double, pca12WidgetData, pcaDisplayOptions)
 
           val jsonsWithClasses = jsonsWithStringIds.flatMap { json =>
             val stringId = (json \ JsObjectIdentity.name).as[String]
@@ -2150,6 +2138,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           ): Option[Widget] = {
             val clusterClassField = Field("cluster_class", Some("Cluster Class"), FieldTypeId.Integer, false)
 
+            val displayOptions = BasicDisplayOptions(gridWidth = Some(4), gridOffset = Some(1), height = Some(350))
             val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, Some(clusterClassField.name), None, displayOptions)
 
             // generate a scatter widget
@@ -2159,8 +2148,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           // Transform Scatters into JSONs
           val scatters = numericFields.combinations(2).take(64).flatMap { fields => createScatter(fields(0), fields(1)) }
 
+          implicit val jsonWrites = Widget.writes
           val scatterJsons = (Seq(pca12Scatter) ++ scatters).map(scatter =>
-            scatterToJson(scatter.asInstanceOf[ScatterWidget[_, _]])
+            Json.toJson(scatter)
           )
 
           val classSizeJsons = idClasses.groupBy(_._2).toSeq.sortBy(_._1).map { case (_, values) => JsNumber(values.size) }
@@ -2208,30 +2198,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
     } yield
       criteria
-
-  // TODO: this is ugly... fix by introducing a proper JSON formatter
-  private def scatterToJson(scatter: ScatterWidget[_, _]): JsValue = {
-    def toJson(point: Any) =
-      point match {
-        case x: Double => JsNumber(x)
-        case x: Long => JsNumber(x)
-        case x: ju.Date => JsNumber(x.getTime)
-        case _ => JsString(point.toString)
-      }
-
-    val seriesJsons = scatter.data.map { case (name, data) =>
-      Json.obj(
-        "name" -> shorten(name),
-        "data" -> JsArray(
-          data.toSeq.map { case (point1, point2) =>
-            JsArray(Seq(toJson(point1), toJson(point2)))
-          }
-        )
-      )
-    }
-
-    Json.obj("title" -> scatter.title, "xAxisCaption" -> scatter.xAxisCaption, "yAxisCaption" -> scatter.yAxisCaption, "data" -> JsArray(seriesJsons))
-  }
 
   @Deprecated
   override def getFields(

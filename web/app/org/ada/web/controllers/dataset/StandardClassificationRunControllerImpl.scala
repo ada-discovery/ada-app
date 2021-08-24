@@ -23,6 +23,7 @@ import org.ada.server.services.DataSetService
 import org.ada.web.services.{DataSpaceService, WidgetGenerationService}
 import org.ada.server.services.ml.MachineLearningService
 import org.ada.server.services.StatsService
+import org.ada.web.models.{ScatterWidget, Widget}
 import views.html.{classificationrun => view}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -121,7 +122,7 @@ class StandardClassificationRunControllerImpl @Inject()(
         )
 
       // main data
-      mainData <- dsa.dataSetRepo.find(replicationCriteria, projection = selectedFields.map(_.name))
+      mainData <- dsa.dataSetRepo.find(criteria, projection = selectedFields.map(_.name))
 
       // run the selected classifier (ML model)
       resultsHolder <- mlModel.map { mlModel =>

@@ -20,9 +20,12 @@ private class LineWidgetGenerator
   ) =
     (xSeq: XOrderedSeqCalcTypePack[Any]#OUT) =>
       if (xSeq.nonEmpty) {
-        val xField = fieldNameMap.get(spec.xFieldName).getOrElse(
-          throw new AdaException(s"X field '${spec.xFieldName}' not found.")
+        // aux function
+        def getFieldSafe(name: String) = fieldNameMap.get(name).getOrElse(
+          throw new AdaException(s"Field '${name}' not found.")
         )
+        val xField = getFieldSafe(spec.xFieldName)
+        val yField = spec.yFieldNames.headOption.map(getFieldSafe)
 
         val data = spec.yFieldNames.zipWithIndex.map { case (yFieldName, index) =>
           val seq = xSeq.flatMap { case (x, seq) => seq(index).map((x, _))}.toSeq
@@ -41,6 +44,8 @@ private class LineWidgetGenerator
           spec.xFieldName,
           xAxisCaption = xField.labelOrElseName,
           yAxisCaption = "Value",
+          xFieldType = xField.fieldType,
+          yFieldType = yField.map(_.fieldType).getOrElse(FieldTypeId.Null),
           data = data,
           displayOptions = spec.displayOptions
         )

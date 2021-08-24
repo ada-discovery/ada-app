@@ -1,5 +1,4 @@
 @import views.html.layout.main
-@import views.html.chart.highcharts.highchartsJsImport
 @import views.html.elements._
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
 @import views.html.mlRun._
@@ -30,6 +29,8 @@
     )
 
     <script type="text/javascript">
+        const widgetEngine = @jsWidgetEngine(Some(setting))
+
         $(function () {
             populateCategoricalTypeahead('outputField');
 
@@ -226,14 +227,14 @@
             var div = $("<div class='col-md-" + columnWidth + "'>")
             var row = $("<div class='row'>")
             $.each(binCurves, function (i, widget) {
-                row.append(widgetDiv(widget))
+                row.append(widgetEngine.widgetDiv(widget))
             })
             div.append(header)
             div.append(row)
             $("#binCurvesPanelDiv").append(div)
 
             $.each(binCurves, function (i, widget) {
-                genericWidget(widget)
+                widgetEngine.plot(widget)
             })
         }
 

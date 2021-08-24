@@ -3,6 +3,8 @@
 @import org.ada.server.models.{Field, Filter}
 @import org.ada.web.controllers.dataset.DataSetRouter
 @import org.incal.play.Page
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import org.ada.web.controllers.dataset.DataSetWebContext._
 
 @(
     page: Page[JsObject],
@@ -11,7 +13,7 @@
     withRowClickableJs: Boolean = false,
     tableRowSelection: Boolean = false
 )(
-    implicit request: Request[_], dataSetRouter: DataSetRouter
+    implicit dataSetWebContext: DataSetWebContext
 )
 
 @if(page.items.nonEmpty) {

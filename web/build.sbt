@@ -8,10 +8,7 @@ name := "ada-web"
 
 description := "Web part of Ada Discovery Analytics backed by Play Framework."
 
-licenses ++= Seq(
-  "Creative Commons Attribution-NonCommercial 3.0" -> url("http://creativecommons.org/licenses/by-nc/3.0"),
-  "Highcharts" -> url("https://www.highcharts.com/blog/products/highcharts")
-)
+licenses += "Apache 2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
 
 resolvers ++= Seq(
   Resolver.mavenLocal
@@ -30,9 +27,9 @@ PlayKeys.devSettings := Seq(
 
 libraryDependencies ++= Seq(
   cache,
+  "org.in-cal" %% "incal-play" % "0.3.0",
   "org.pac4j" % "play-pac4j" % "3.1.0",
   "org.pac4j" % "pac4j-oidc" % "2.2.0" exclude("commons-io" , "commons-io"),
-  "org.in-cal" %% "incal-play" % "0.3.0.RC.1",
   "com.typesafe.play" %% "play-mailer" % "6.0.1",        // to send emails
   "com.typesafe.play" %% "play-mailer-guice" % "6.0.1",  // to send emails (Guice)
   "jp.t2v" %% "play2-auth" % "0.14.1",
@@ -40,9 +37,8 @@ libraryDependencies ++= Seq(
   "org.webjars" % "typeaheadjs" % "0.11.1",              // typeahead (autocompletion)
   "org.webjars" % "html5shiv" % "3.7.0",
   "org.webjars" % "respond" % "1.4.2",
-  "org.webjars" % "highcharts" % "6.2.0",                // highcharts for plotting
   "org.webjars.npm" % "bootstrap-select" % "1.13.2",     // bootstrap select element
-  "org.webjars.bower" % "plotly.js" % "1.5.1",           // Plotly
+  "org.webjars.bower" % "plotly.js" % "1.54.1",          // plotly
   "org.webjars.bower" % "d3" % "3.5.16",
   "org.webjars.bower" % "Autolinker.js" % "0.25.0",      // to convert links to a-href elements
   "org.webjars" % "jquery-ui" % "1.11.1",
