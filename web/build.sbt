@@ -67,8 +67,8 @@ signedArtifacts := {
   val artifacts: Map[sbt.Artifact, java.io.File] = signedArtifacts.value
   val assets: java.io.File = (playPackageAssets in Compile).value
   artifacts ++ Seq(
-    Artifact(moduleName.value, "jar", "jar",     "assets") -> assets
-//    Artifact(moduleName.value, "jar", "jar.asc", "assets") -> new java.io.File(assets.getAbsolutePath + ".asc")  // manually sign assets.jar, uncomment, and republish
+    Artifact(moduleName.value, "jar", "jar",     "assets") -> assets,
+    Artifact(moduleName.value, "jar", "jar.asc", "assets") -> new java.io.File(assets.getAbsolutePath + ".asc")  // manually sign assets.jar, uncomment, and republish
   )
 }
 
