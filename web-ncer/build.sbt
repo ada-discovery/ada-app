@@ -4,6 +4,8 @@ scalaVersion := "2.11.12"
 
 libraryDependencies ++= Seq(cache, ws, filters)
 
+
+
 PlayKeys.devSettings := Seq(
   "play.server.netty.maxInitialLineLength" -> "16384",
   "play.server.netty.transport" -> "jdk"
@@ -17,17 +19,17 @@ routesImport ++= Seq(
   "reactivemongo.bson.BSONObjectID",
   "org.ada.web.controllers.PathBindables._",
   "org.ada.web.controllers.QueryStringBinders._",
-  "org.ada.web.controllers.pdchallenge.QueryStringBinders._",
-  "controllers.QueryStringBinders._"
+  "org.ada.web.controllers.pdchallenge.QueryStringBinders._"
 )
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-web" % "0.9.0-SNAPSHOT",
-  "org.adada" %% "ada-web" % "0.9.0-SNAPSHOT" classifier "assets",
+  "org.adada" %% "ada-web" % version.value ,
+  "org.adada" %% "ada-web" % version.value classifier "assets",
   "org.adada" %% "ada-dream-pd-challenge" % "0.1.1",
   "org.in-cal" %% "incal-dl4j" % "0.3.0",   // DL4J
   "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.1" % "test",
-  "org.apache.pdfbox" % "pdfbox" % "2.0.1",
+  "org.mockito" % "mockito-core" % "2.13.0" % "test",
+"org.apache.pdfbox" % "pdfbox" % "2.0.1",
   "org.irods.jargon" % "jargon-core" % "4.3.0.2-RELEASE"  from "https://github.com/DICE-UNC/jargon/releases/download/4.3.0.2-RELEASE/jargon-core-4.3.0.2-RELEASE.jar"
 ) map { _.exclude("org.slf4j","slf4j-log4j12") }
 

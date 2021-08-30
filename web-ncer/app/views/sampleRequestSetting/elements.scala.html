@@ -1,0 +1,45 @@
+@import views.html.table.dynamicTableJsImport
+@import views.html.elements._
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import org.ada.web.controllers.dataset.DataSetWebContext._
+@import org.ada.server.models.{FilterShowFieldStyle, FieldTypeId}
+
+@import models.sampleRequest.SampleRequestSetting
+@(
+        form: Form[SampleRequestSetting]
+)(
+        implicit context: DataSetWebContext
+)
+
+@labelValue("dataSetId", attributeLabel("requestSetting", "dataSetId")) {
+    <input id="dataSetId" name="dataSetId" value="@context.dataSetId" readonly="true">
+}
+
+
+@labelValue("organisationFieldIdName", attributeLabel("requestSetting", "organisationFieldIdName"), labelGridWidth = 2) {
+    @typeahead("organisationFieldIdNameTypeahead", "organisationFieldIdName",
+                typeaheadValue = form("organisationFieldIdName").value,
+                value = form("organisationFieldIdName").value,
+                extraClass = Some("form-control"))
+}
+
+@inputTypeahead("dataView", "viewId", "viewNameTypeahead", form, "Data View")
+
+
+@typeaheadJsImport()
+<script type="text/javascript">
+        $(function () {
+            populateFieldTypeaheadFromUrl({
+                typeaheadElement: $('#organisationFieldIdNameTypeahead'),
+                fieldNameElement: $('#organisationFieldIdName'),
+                url: '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Double, FieldTypeId.Integer)).url)',
+                showOption: @FilterShowFieldStyle.LabelsOnly.id
+            });
+        });
+</script>
+
+
+@dynamicTableJsImport()
+
+
+

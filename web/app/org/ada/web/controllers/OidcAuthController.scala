@@ -1,20 +1,25 @@
 package org.ada.web.controllers
 
+import com.nimbusds.jwt.JWTParser
+import com.nimbusds.oauth2.sdk.token.{BearerAccessToken, RefreshToken}
 import jp.t2v.lab.play2.auth.Login
+import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.UserRepo
 import org.ada.server.models.User
 import org.ada.server.services.UserManager
+import org.ada.web.models.JwtTokenInfo
 import org.ada.web.security.AdaAuthConfig
 import org.pac4j.core.config.Config
 import org.pac4j.core.profile._
 import org.pac4j.play.scala._
 import org.pac4j.play.store.PlaySessionStore
+import play.api.cache.CacheApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc._
 import play.api.{Configuration, Logger}
+import play.cache.NamedCache
 import play.libs.concurrent.HttpExecutionContext
 
-import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.Future
 
@@ -24,13 +29,25 @@ class OidcAuthController @Inject() (
   override val ec: HttpExecutionContext,    // for PAC4J
   val userManager: UserManager,             // for Play2 Auth (AuthConfig)
   userRepo: UserRepo,
-  configuration: Configuration
+  configuration: Configuration,
+  @NamedCache("jwt-user-cache") jwtUserCache: CacheApi
 ) extends Controller
     with Security[CommonProfile]            // PAC4J
     with Login                              // Play2 Auth
     with AdaAuthConfig {                    // Play2 Auth
 
-  private val subAttribute = configuration.getString("oidc.returnAttributeIdName")
+  private val subAttribute = configuration.getString("oidc.returnAttributeIdName").getOrElse(
+    new AdaException("Configuration issue: 'oidc.returnAttributeIdName' was not found in the configuration file.")
+  )
+
+  private val accessTokenAttribute = configuration.getString("oidc.accessTokenName").getOrElse(
+    new AdaException("Configuration issue: 'oidc.accessTokenName' was not found in the configuration file.")
+  )
+
+  private val refreshTokenAttribute = configuration.getString("oidc.refreshTokenName").getOrElse(
+    new AdaException("Configuration issue: 'oidc.refreshTokenName' was not found in the configuration file.")
+  )
+
 
   def oidcLogin = Secure("OidcClient") { profiles =>
     Action.async { implicit request =>
@@ -91,11 +108,13 @@ class OidcAuthController @Inject() (
 
       val profile = profiles.head
       val userName = profile.getUsername
-      val oidcIdOpt = subAttribute.flatMap(oidcIdName =>
-        Option(profile.getAttribute(oidcIdName).asInstanceOf[String]))
+      val oidcIdOpt = Option(profile.getAttribute(s"$subAttribute", classOf[String]))
+      val accessTokenOpt = Option(profile.getAttribute(s"$accessTokenAttribute", classOf[BearerAccessToken]))
+      val refreshTokenOpt = Option(profile.getAttribute(s"$refreshTokenAttribute", classOf[RefreshToken]))
 
-      if(oidcIdOpt.isEmpty) {
-        val errorMessage = s"OIDC login cannot be fully completed. The user '${userName} doesn't have attribute ${subAttribute} in Jwt token."
+      if(oidcIdOpt.isEmpty || accessTokenOpt.isEmpty || refreshTokenOpt.isEmpty) {
+        val errorMessage =
+          s"OIDC login cannot be fully completed. The user '${userName} doesn't have one of these attributes ${subAttribute}, ${accessTokenAttribute}, ${refreshTokenAttribute} in Jwt token."
         logger.warn(errorMessage)
         Future(Redirect(routes.AppController.index()).flashing("errors" -> errorMessage))
       } else {
@@ -105,6 +124,8 @@ class OidcAuthController @Inject() (
           name = profile.getDisplayName,
           email = profile.getEmail
         )
+
+        jwtUserCache.set(oidcUser.userId, JwtTokenInfo(accessTokenOpt.get, refreshTokenOpt.get))
 
         for {
           user <- userManager.findById(userName)
