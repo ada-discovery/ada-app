@@ -22,9 +22,9 @@ routesImport ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.adada" %% "ada-web" % "0.9.0-SNAPSHOT",
-  "org.adada" %% "ada-web" % "0.9.0-SNAPSHOT" classifier "assets",
-  "org.adada" %% "ada-dream-pd-challenge" % "0.1.1",
+  "org.adada" %% "ada-web" % "0.9.0",
+  "org.adada" %% "ada-web" % "0.9.0" classifier "assets",
+  "org.adada" %% "ada-dream-pd-challenge" % "0.1.2",
   "org.in-cal" %% "incal-dl4j" % "0.3.0",   // DL4J
   "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.1" % "test",
   "org.apache.pdfbox" % "pdfbox" % "2.0.1",
