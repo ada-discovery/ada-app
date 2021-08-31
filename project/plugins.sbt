@@ -43,3 +43,5 @@ addSbtPlugin("net.ground5hark.sbt" % "sbt-css-compress" % "0.1.3")
 addSbtPlugin("net.ground5hark.sbt" % "sbt-closure" % "0.1.3")
 
 
+// util
+addSbtPlugin("au.com.onegeek" %% "sbt-dotenv" % "2.1.146")

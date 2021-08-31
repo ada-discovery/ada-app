@@ -73,7 +73,10 @@ class DataSetSettingController @Inject() (
       "extraNavigationItems" -> seq(of[NavigationItem]).transform(mergeMenus, mergeMenus),
       "customControllerClassName" -> optional(text),
       "description" -> optional(text),
-      "widgetEngineClassName" -> optional(text)
+      "widgetEngineClassName" -> optional(text),
+      "dataSetIdGlobalReference" -> optional(text)
+        .verifying("Global id reference must not be empty",
+        s => s.isDefined && s.get.trim.nonEmpty)
     )(DataSetSetting.apply)(DataSetSetting.unapply)
   )
 

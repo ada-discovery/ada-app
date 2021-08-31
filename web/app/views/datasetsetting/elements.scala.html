@@ -1,18 +1,16 @@
-@import views.html.elements.{checkbox, inputFieldTypeahead, inputText, inputTextReadonly, labelValue, select, textarea}
-@import views.html.elements.{fieldTypeahead, inputTypeahead}
-@import views.html.table.{dynamicThreeColumnTable, dynamicTwoColumnTable}
-@import views.html.attributeLabel
-@import org.ada.server.models.{DataSetSetting, FilterShowFieldStyle, StorageType}
-@import org.incal.core.util.toHumanReadableCamel
-@import org.ada.server.models.Link
-@import org.ada.server.models.Menu
+@import org.ada.server.models.{DataSetSetting, FilterShowFieldStyle, Link, Menu, StorageType}
 @import org.ada.web.controllers.dataset.DataSetWebContext.widgetEngineNames
+@import org.incal.core.util.toHumanReadableCamel
 @import org.incal.play.controllers.WebContext
 @import org.incal.play.controllers.WebContext._
-
+@import views.html.elements._
+@import views.html.table.dynamicThreeColumnTable
 @(form: Form[DataSetSetting])(implicit webContext: WebContext)
 
 @inputTextReadonly("dataSetSetting", "dataSetId", form)
+
+@inputText("dataSetSetting", "dataSetIdGlobalReference", form,
+    Seq('_helpModal -> "<p>Global id reference of <i>Data Set Id</i> contained in <i>Data Catalog</i>.</p>"))
 
 @select("dataSetSetting", "storageType", form,
     StorageType.values.toSeq.sortBy(_.id).map(value => (value.toString, value.toString)), false

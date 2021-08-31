@@ -59,7 +59,8 @@ abstract protected[controllers] class DataSetImportFormViews[E <: DataSetImport:
     "extraNavigationItems" -> ignored(Seq[NavigationItem]()),
     "customControllerClassName" -> optional(text),
     "description" -> optional(text),
-    "widgetEngineClassName" -> optional(text)
+    "widgetEngineClassName" -> optional(text),
+    "dataSetIdGlobalReference" -> optional(text)
   )(DataSetSetting.apply)(DataSetSetting.unapply)
 
   protected val dataViewMapping: Mapping[DataView] = mapping(
