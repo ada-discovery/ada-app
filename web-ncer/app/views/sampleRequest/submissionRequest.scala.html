@@ -1,6 +1,6 @@
-@import controllers.sampleRequest.routes.{SampleRequestController => sampleRequestRoutes}
 @import org.ada.server.models.{DataSetSetting, DataSpaceMetaInfo}
 @import org.ada.web.controllers.dataset.{DataSetWebContext, TableViewData}
+@import org.ada.web.controllers.dataset.DataSetWebContext._
 @import reactivemongo.bson.BSONObjectID
 @import views.html.dataset.view.coreView
 @(
@@ -16,7 +16,7 @@
 @actions = {
     <div>
         <div class="form-group">
-            <button id="btnSamplesRequest" class="btn btn-info btn-sm" type="button" onclick="submitForm();">
+            <button id="btnSamplesRequest" class="btn btn-info btn-sm" type="button" onclick="submitRequest();">
                 Request Samples
             </button>
         </div>
@@ -47,6 +47,9 @@
 }
 
 @extraBottomResources = {
+    @helper.javascriptRouter("sampleRequestJsRoutes")(
+        controllers.sampleRequest.routes.javascript.SampleRequestController.submitRequest
+    )
     <script type="text/javascript">
             $(function () {
                 // get all the filters available
@@ -135,27 +138,22 @@
                 $(elem).html($(elem).attr("data-original-text"));
             }
 
-            function submitForm() {
-                const action = '@Html(sampleRequestRoutes.submitRequest(dataSetSetting.dataSetId).url)'
+            function submitRequest() {
+                const dataSetId = '@dataSetSetting.dataSetId';
                 const selectedIds = Array.from(selectedRowMap.keys());
-                const params = {
-                    'tableColumnNames[]': '@tableViewParts.head.tableFields.map(_.name).toVector.mkString("\t")'.split("\t"),
-                    'selectedIds[]': selectedIds,
-                    'conditions[]': $('.filter-div').multiFilter('getModel').map(model => JSON.stringify(model))
+                const sampleRequestParam = {
+                    'dataSetId': dataSetId,
+                    'tableColumnNames': '@tableViewParts.head.tableFields.map(_.name).toVector.mkString("\t")'.split("\t"),
+                    'selectedIds': selectedIds
                 }
                 btnLoading("#btnSamplesRequest")
                 if(selectedIds.length === 0) {
                     alert("Please select at least one sample.")
                     btnReset("#btnSamplesRequest")
                 } else {
-                    const form = $('<form></form>');
-                    form.attr("method", "POST");
-                    form.attr("action", action);
-                    addParams(form, params)
-                    $.ajax({
-                        type: form.attr('method'),
-                        url: form.attr('action'),
-                        data: form.serialize(),
+                    sampleRequestJsRoutes.controllers.sampleRequest.SampleRequestController.submitRequest(dataSetId).ajax({
+                        data: JSON.stringify(sampleRequestParam),
+                        contentType: 'application/json',
                         success: function(url) {
                             btnReset("#btnSamplesRequest")
                             if (url.includes("<!DOCTYPE html>")) {
@@ -170,7 +168,7 @@
                             btnReset("#btnSamplesRequest")
                             openErrorDialog(ctx.responseText)
                         }
-                    });
+                    })
                 }
             }
     </script>
