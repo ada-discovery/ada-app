@@ -200,5 +200,4 @@ class SampleRequestSettingController @Inject()(
     }
   }
 
-
 }
