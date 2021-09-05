@@ -2,8 +2,8 @@ name := "ada-app"
 
 organization in ThisBuild := "org.adada"
 scalaVersion in ThisBuild := "2.11.12"
-version in ThisBuild := "0.9.0"
-isSnapshot in ThisBuild := false
+version in ThisBuild := "0.9.1-SNAPSHOT"
+isSnapshot in ThisBuild := true
 
 lazy val server = (project in file("server"))
 
