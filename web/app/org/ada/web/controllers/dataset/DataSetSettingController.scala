@@ -75,8 +75,6 @@ class DataSetSettingController @Inject() (
       "description" -> optional(text),
       "widgetEngineClassName" -> optional(text),
       "dataSetIdGlobalReference" -> optional(text)
-        .verifying("Global id reference must not be empty",
-        s => s.isDefined && s.get.trim.nonEmpty)
     )(DataSetSetting.apply)(DataSetSetting.unapply)
   )
 
