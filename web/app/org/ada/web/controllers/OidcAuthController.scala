@@ -66,7 +66,7 @@ class OidcAuthController @Inject() (
 
   private val dataSetGlobalIdRegex = new Regex(s"$dataSetGlobalIdRegexStr")
 
-  def oidcLogin = Secure("OidcClient") { profiles =>
+  def oidcLogin: Action[AnyContent] = Secure("OidcClient") { profiles =>
     Action.async { implicit request =>
 
       def successfulResult(user: User, extraMessage: String = "") = {
@@ -128,7 +128,8 @@ class OidcAuthController @Inject() (
         * @param dataSetViewOnlyPermissions dataset view only permissions
         * @return permission info
         */
-      def verifyViewOnlyPermissions(localUserPermissions: Seq[String], dataSetViewOnlyPermissions: DataSetsViewOnlyPermissions): PermissionInfo = {
+      def verifyViewOnlyPermissions(localUserPermissions: Seq[String],
+                                    dataSetViewOnlyPermissions: DataSetsViewOnlyPermissions): PermissionInfo = {
 
         val dataSetWithGlobalIdsRefViewOnlyPermission = dataSetViewOnlyPermissions.dataSetWithGlobalIdsRefViewOnlyPermission
         val oidcUserViewOnlyPermissions = dataSetViewOnlyPermissions.oidcUserViewOnlyPermissions
@@ -156,7 +157,9 @@ class OidcAuthController @Inject() (
         * @param dataSetViewOnlyPermissions datasets view only permission setiings
         * @return Login information
         */
-      def manageExistingUser(existingUser: User, oidcUser: User, dataSetViewOnlyPermissions: DataSetsViewOnlyPermissions) = {
+      def manageExistingUser(existingUser: User,
+                             oidcUser: User,
+                             dataSetViewOnlyPermissions: DataSetsViewOnlyPermissions) = {
 
         val permissionInfo = verifyViewOnlyPermissions(existingUser.permissions, dataSetViewOnlyPermissions)
 
