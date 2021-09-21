@@ -21,6 +21,7 @@ import play.api.{Configuration, Logger}
 import play.cache.NamedCache
 import play.libs.concurrent.HttpExecutionContext
 import org.incal.core.dataaccess.Criterion._
+import org.incal.play.security.SecurityRole
 
 import javax.inject.Inject
 import scala.concurrent.Future
@@ -56,6 +57,10 @@ class OidcAuthController @Inject() (
     new AdaException("Configuration issue: 'oidc.rolesAttributeName' was not found in the configuration file.")
   )
 
+  private val roleAdminName = configuration.getString("oidc.roleAdminName").getOrElse(
+    new AdaException("Configuration issue: 'oidc.roleAdminName' was not found in the configuration file.")
+  )
+
   private val dataSetGlobalIdPrefix = configuration.getString("oidc.dataSetGlobalIdPrefix").getOrElse(
     new AdaException("Configuration issue: 'oidc.dataSetGlobalIdPrefix' was not found in the configuration file.")
   )
@@ -66,6 +71,7 @@ class OidcAuthController @Inject() (
 
   private val dataSetGlobalIdRegex = new Regex(s"$dataSetGlobalIdRegexStr")
 
+
   def oidcLogin: Action[AnyContent] = Secure("OidcClient") { profiles =>
     Action.async { implicit request =>
 
@@ -74,44 +80,51 @@ class OidcAuthController @Inject() (
         gotoLoginSucceeded(user.userId)
       }
 
+      case class RolesDataSetIdsInfo(roles: Seq[String], dataSetIdsGlobalRef: Set[String])
+
       /**
-        * Parse JWT access token to get dataSetGlobalIdsReference
+        * Parse JWT access token to get user roles and dataSetGlobalIdsReference
         * @param accessToken access token
-        * @return Global ids sequence (DataCatalog)
+        * @return Roles and Global ids sequence (DataCatalog)
         */
-      def parseDataSetIdsGlobalReference(accessToken: BearerAccessToken): Set[String] = {
+      def parseRolesAndDataSetIdsGlobalReference(accessToken: BearerAccessToken): RolesDataSetIdsInfo = {
         val jwtAccessTokenClaim = JWTParser.parse(accessToken.getValue).getJWTClaimsSet
-        val roles = jwtAccessTokenClaim.getStringArrayClaim(s"$rolesAttribute").toSet
-        roles.filter(_.startsWith(s"$dataSetGlobalIdPrefix"))
+        val oidcRoles = jwtAccessTokenClaim.getStringArrayClaim(s"$rolesAttribute").toSet
+        val dataSetIdsGlobalRef = oidcRoles.filter(_.startsWith(s"$dataSetGlobalIdPrefix"))
           .map(access => dataSetGlobalIdRegex.findFirstMatchIn(access) match {
             case Some(acc) => acc.group(2)
             case _ => throw new AdaException(s"Error parsing access data set id: '$access'")
           })
+        val userAdminRole = oidcRoles.filter(_ == s"$roleAdminName").map(_ => SecurityRole.admin).toSeq
+
+        RolesDataSetIdsInfo(userAdminRole, dataSetIdsGlobalRef)
       }
 
-      /**
-        * Class containing information datasets with view only permissions
-        * @param dataSetWithGlobalIdsRefViewOnlyPermission datasets with global id reference (view only permission settings)
-        * @param oidcUserViewOnlyPermissions datasets with global id reference (view only permission settings) given by OIDC provider
-        */
-      case class DataSetsViewOnlyPermissions(dataSetWithGlobalIdsRefViewOnlyPermission: Set[String],
-                                             oidcUserViewOnlyPermissions: Set[String])
-      /**
-        * Get datasets with view only permission settings and defined global id reference
-        * @param dataSetIdsGlobalRef dataset global id reference list
-        * @return Set of dataset ViewOnly permission
-        */
-      def getViewOnlyDateSetPermissions(dataSetIdsGlobalRef: Set[String]) = {
+      def createViewOnlyPermission(dataSetsIds: Set[String]) =
+        dataSetsIds.flatMap(dataSetId => viewOnly.map(permission => s"DS:${dataSetId}.$permission"))
 
-        def createViewOnlyPermission(dataSets: Traversable[DataSetSetting]) =
-          dataSets.flatMap(dataSet => viewOnly.map(permission => s"DS:${dataSet.dataSetId}.$permission")).toSet
+      /**
+        * Class containing datasets ids
+        * @param dataSetIdsWithGlobalIdRef datasets with global id reference
+        * @param dataSetIdsOidc datasets with global id reference given by OIDC provider
+        */
+      case class DataSetIds(dataSetIdsWithGlobalIdRef: Set[String],
+                                 dataSetIdsOidc: Set[String])
+
+      /**
+        * Get datasets ids with global id reference and from OIDC provider
+        * @param dataSetIdsGlobalRef dataset global id reference list
+        * @return DataSetIds class
+        */
+      def getDateSetIds(dataSetIdsGlobalRef: Set[String]) = {
 
         for (dataSets <- dataSettingRepo.find(Seq("dataSetIdGlobalReference" #!= None)))
           yield {
-            val dataSetWithGlobalIdsRefViewOnlyPermission = createViewOnlyPermission(dataSets)
-            val oidcDataSetsWithGlobalIdsRef = dataSets.filter(dataSet => dataSetIdsGlobalRef.contains(dataSet.dataSetIdGlobalReference.get))
-            val oidcUserViewOnlyPermissions = createViewOnlyPermission(oidcDataSetsWithGlobalIdsRef)
-            DataSetsViewOnlyPermissions(dataSetWithGlobalIdsRefViewOnlyPermission, oidcUserViewOnlyPermissions)
+            val dataSetIdsWithGlobalIdRef = dataSets.map(_.dataSetId).toSet
+            val dataSetIdsOidc = dataSets
+              .filter(dataSet => dataSetIdsGlobalRef.contains(dataSet.dataSetIdGlobalReference.get))
+              .map(_.dataSetId).toSet
+            DataSetIds(dataSetIdsWithGlobalIdRef, dataSetIdsOidc)
           }
       }
 
@@ -123,52 +136,70 @@ class OidcAuthController @Inject() (
       case class PermissionInfo(isPermissionsUpdate: Boolean = false, permissions: Seq[String]);
 
       /**
-        * Verify viewOnly permission according OIDC provider and local permission settings
+        * Verify permission according OIDC provider and local permission settings
         * @param localUserPermissions current local permissions
-        * @param dataSetViewOnlyPermissions dataset view only permissions
+        * @param dataSetIds dataset ids
         * @return permission info
         */
-      def verifyViewOnlyPermissions(localUserPermissions: Seq[String],
-                                    dataSetViewOnlyPermissions: DataSetsViewOnlyPermissions): PermissionInfo = {
+      def verifyPermissions(localUserPermissions: Seq[String],
+                            dataSetIds: DataSetIds): PermissionInfo = {
 
-        val dataSetWithGlobalIdsRefViewOnlyPermission = dataSetViewOnlyPermissions.dataSetWithGlobalIdsRefViewOnlyPermission
-        val oidcUserViewOnlyPermissions = dataSetViewOnlyPermissions.oidcUserViewOnlyPermissions
+        val dataSetIdsWithGlobalIdRef = dataSetIds.dataSetIdsWithGlobalIdRef
+        val dataSetIdsOidc = dataSetIds.dataSetIdsOidc
 
-        val userNotViewOnlyPermissions = localUserPermissions.filter(perm => viewOnly.forall(permView => !perm.endsWith(permView))).toSet
-        val userViewOnlyPermissions = localUserPermissions.filter(perm => viewOnly.exists(permView => perm.endsWith(permView))).toSet
-        val userViewOnlyPermissionsWithGlobalIdsRef = dataSetWithGlobalIdsRefViewOnlyPermission.intersect(userViewOnlyPermissions)
-        val userViewOnlyPermissionsWithoutGlobalIdRef = userViewOnlyPermissions.diff(dataSetWithGlobalIdsRefViewOnlyPermission)
+        val userLocalPermissionWithGlobalIdRef = {
+          for {
+            dataSetId <- dataSetIdsWithGlobalIdRef
+            permissions <- localUserPermissions if permissions.contains(dataSetId)
+          } yield
+            (dataSetId, permissions)
+        }.groupBy(_._1)
+          .map(dataSetIdPermission => (dataSetIdPermission._1, dataSetIdPermission._2.map(_._2)))
 
-        val userViewOnlyDiff = userViewOnlyPermissionsWithGlobalIdsRef.diff(oidcUserViewOnlyPermissions)
-        val oidcViewOnlyPermDiff = oidcUserViewOnlyPermissions.diff(userViewOnlyPermissionsWithGlobalIdsRef)
+        val userLocalPermissionWithoutGlobalIdRef = localUserPermissions
+          .filter(permission => dataSetIdsWithGlobalIdRef.forall(dataSetId => !permission.contains(dataSetId)))
 
-        if(userViewOnlyDiff.isEmpty && oidcViewOnlyPermDiff.isEmpty)
+        val userLocalDataSetIdsWithGlobalIdRef = userLocalPermissionWithGlobalIdRef.keys.toSet
+        val userLocalDataSetIdsWithGloabalIdRefDiff = userLocalDataSetIdsWithGlobalIdRef.diff(dataSetIdsOidc)
+        val dataSetIdsOidcDiff = dataSetIdsOidc.diff(userLocalDataSetIdsWithGlobalIdRef)
+
+        if(userLocalDataSetIdsWithGloabalIdRefDiff.isEmpty && dataSetIdsOidcDiff.isEmpty)
           PermissionInfo(permissions = localUserPermissions)
-        else
+        else {
+          val userLocalPermissionOidcIntersection = userLocalPermissionWithGlobalIdRef
+            .filter(userPerm => dataSetIdsOidc.contains(userPerm._1))
+            .flatMap(_._2)
+
           PermissionInfo(isPermissionsUpdate = true,
-            (userNotViewOnlyPermissions ++ userViewOnlyPermissionsWithoutGlobalIdRef ++ oidcUserViewOnlyPermissions).toSeq.sorted)
+            (userLocalPermissionWithoutGlobalIdRef.toSet ++
+              userLocalPermissionOidcIntersection.toSet ++
+              createViewOnlyPermission(dataSetIdsOidcDiff)).toSeq.sorted)
+        }
       }
+
 
       /**
         * Manage existing user updating userId with oidcId,
-        * username with old userId/username, name, email, permissions if necessary
+        * username with old userId/username, name, email, roles and permissions if necessary
         * @param existingUser user present in the database
         * @param oidcUser user from OpenID provider
-        * @param dataSetViewOnlyPermissions datasets view only permission setiings
+        * @param dataSetIds datasets ids
         * @return Login information
         */
       def manageExistingUser(existingUser: User,
                              oidcUser: User,
-                             dataSetViewOnlyPermissions: DataSetsViewOnlyPermissions) = {
+                             dataSetIds: DataSetIds) = {
 
-        val permissionInfo = verifyViewOnlyPermissions(existingUser.permissions, dataSetViewOnlyPermissions)
+        val permissionInfo = verifyPermissions(existingUser.permissions, dataSetIds)
+        val isRoleNotChange = existingUser.roles.diff(oidcUser.roles).isEmpty && oidcUser.roles.diff(existingUser.roles).isEmpty
 
         if (existingUser.oidcUserName.isEmpty)
           updateUser(existingUser, oidcUser, permissionInfo.permissions)
         else if (existingUser.oidcUserName.isDefined &&
           (!existingUser.name.equalsIgnoreCase(oidcUser.name)
             || !existingUser.email.equalsIgnoreCase(oidcUser.email)
-            || permissionInfo.isPermissionsUpdate))
+            || permissionInfo.isPermissionsUpdate
+            || !isRoleNotChange))
           updateUser(existingUser, oidcUser, permissionInfo.permissions)
         else
           successfulResult(existingUser)
@@ -181,10 +212,10 @@ class OidcAuthController @Inject() (
         * @param oidcUser user from OpenID provider
         * @return Saving information
         */
-      def manageNewUser(oidcUser: User, dataSetViewOnlyPermissions: DataSetsViewOnlyPermissions) = {
+      def manageNewUser(oidcUser: User, dataSetIds: DataSetIds) = {
           for {user <- userManager.findById(oidcUser.userId)
-               result <- user.map(manageExistingUser(_, oidcUser, dataSetViewOnlyPermissions))
-                 .getOrElse(addNewUser(oidcUser, dataSetViewOnlyPermissions.oidcUserViewOnlyPermissions))
+               result <- user.map(manageExistingUser(_, oidcUser, dataSetIds))
+                 .getOrElse(addNewUser(oidcUser, createViewOnlyPermission(dataSetIds.dataSetIdsOidc)))
                } yield result
       }
 
@@ -199,6 +230,7 @@ class OidcAuthController @Inject() (
             oidcUserName = oidcUser.oidcUserName,
             name = oidcUser.name,
             email = oidcUser.email,
+            roles = oidcUser.roles,
             permissions = dataSetPermissions
           )
         ).flatMap(_ =>
@@ -219,21 +251,24 @@ class OidcAuthController @Inject() (
         Future(Redirect(routes.AppController.index()).flashing("errors" -> errorMessage))
       } else {
 
+        val rolesDataSetIdsInfo = parseRolesAndDataSetIdsGlobalReference(accessTokenOpt.get)
+
         val oidcUser = User(
           userId = oidcIdOpt.get,
           oidcUserName = Option(userName),
           name = profile.getDisplayName,
-          email = profile.getEmail
+          email = profile.getEmail,
+          roles = rolesDataSetIdsInfo.roles
         )
 
         jwtUserCache.set(oidcUser.userId, JwtTokenInfo(accessTokenOpt.get, refreshTokenOpt.get))
 
         for {
           user <- userManager.findById(userName)
-          dataSetViewOnlyPermissions <- getViewOnlyDateSetPermissions(parseDataSetIdsGlobalReference(accessTokenOpt.get))
+          dataSetIds <- getDateSetIds(rolesDataSetIdsInfo.dataSetIdsGlobalRef)
           result <- user
-            .map(manageExistingUser(_, oidcUser, dataSetViewOnlyPermissions))
-            .getOrElse(manageNewUser(oidcUser, dataSetViewOnlyPermissions))
+            .map(manageExistingUser(_, oidcUser, dataSetIds))
+            .getOrElse(manageNewUser(oidcUser, dataSetIds))
         } yield result
       }
     }
