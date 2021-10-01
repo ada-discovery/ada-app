@@ -1704,7 +1704,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }.flatten
 
       val mergedDistributionData = distributionWidgets.map { case (filterName, widget) => (filterName, widget.data.head._2) }
-      val nonZeroCountSeriesSorted = sortCountSeries(None)(mergedDistributionData)
+      val nonZeroCountSeriesSorted = sortCountSeries(None, None)(mergedDistributionData)
       val distributionWidget = distributionWidgets.head._2.copy(data = nonZeroCountSeriesSorted)
 
       // chi-square

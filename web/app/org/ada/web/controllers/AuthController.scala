@@ -171,4 +171,9 @@ class AuthController @Inject() (
     else
       Future(unauthorizedRedirect)
   }
+
+  def accessExternalResourceInfo(info: String) = AuthAction { implicit request =>
+    Future(Ok(views.html.auth.accessExternalResourceInfo(info)))
+  }
+
 }

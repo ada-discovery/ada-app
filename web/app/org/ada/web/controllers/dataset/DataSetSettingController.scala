@@ -73,7 +73,8 @@ class DataSetSettingController @Inject() (
       "extraNavigationItems" -> seq(of[NavigationItem]).transform(mergeMenus, mergeMenus),
       "customControllerClassName" -> optional(text),
       "description" -> optional(text),
-      "widgetEngineClassName" -> optional(text)
+      "widgetEngineClassName" -> optional(text),
+      "dataSetIdGlobalReference" -> optional(text)
     )(DataSetSetting.apply)(DataSetSetting.unapply)
   )
 

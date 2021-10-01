@@ -1,0 +1,69 @@
+@import controllers.sampleRequest.routes.{SampleRequestSettingController => settingRoutes}
+@import org.ada.server.models.FilterShowFieldStyle
+@import org.ada.web.util.typeColumns
+@import org.incal.core.FilterCondition
+@import org.incal.play.Page
+@import org.incal.play.controllers.WebContext
+@import org.incal.play.controllers.WebContext._
+@import views.html.elements.typeahead
+@import views.html.layout
+@import views.html.table.paginatedTable
+
+@import models.sampleRequest.SampleRequestSetting
+@(
+        page: Page[SampleRequestSetting],
+        conditions: Seq[FilterCondition]
+)(
+        implicit context: WebContext
+)
+
+@modalBody = {
+@typeahead("dataSetIdTypeahead", "dataSetId", "Data Set Id", isLarge = true)
+}
+
+@actions = {
+    <div class="row">
+        <div class="pull-right">
+            <a class="btn btn-info btn-sm" data-toggle="modal" data-target="#addSettingModal" title="Add New">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                Setting
+            </a>
+        </div>
+        @modal("addSettingModal", "Add New Request Setting", modalBody, Some(settingRoutes.create()), None, None)
+    </div>
+}
+
+@table = @{
+    paginatedTable(
+        page,
+        settingRoutes.find(_, _, conditions),
+        typeColumns[SampleRequestSetting](
+            (Some("dataSetId"), "Dataset id", _.dataSetId)
+        ),
+        Some({ item: Any => settingRoutes.edit(item.asInstanceOf[SampleRequestSetting]._id.get) })
+    )
+}
+
+@bottomResources = {
+    @typeaheadJsImport()
+    <script type="text/javascript">
+            $(function () {
+                populateFieldTypeaheadFromUrl({
+                    typeaheadElement: $('#dataSetIdTypeahead'),
+                    fieldNameElement: $('#dataSetId'),
+                    url: '@Html(settingRoutes.dataSetIds().url)',
+                    showOption: @FilterShowFieldStyle.LabelsOnly.id
+                })
+
+            })
+    </script>
+}
+
+@layout.list(
+    "request setting",
+    None,
+    page.total,
+    Some(actions),
+    Some(table),
+    bottomResources = Some(bottomResources)
+)

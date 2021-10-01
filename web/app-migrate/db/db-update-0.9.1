@@ -1,0 +1,38 @@
+db.getCollection('dataset_imports').update({concreteClass : "org.ada.server.models.dataimport.CsvDataSetImport"},
+	{$set:{"explicitNullAliases":[]}},
+    {multi: true}
+)
+
+db.getCollection('dataset_imports').update({concreteClass : "org.ada.server.models.dataimport.JsonDataSetImport"},
+	{$set:{"explicitNullAliases":[]}},
+    {multi: true}
+)
+
+db.getCollection('dataset_imports').update({concreteClass : "org.ada.server.models.dataimport.TranSmartDataSetImport"},
+	{$set:{"explicitNullAliases":[]}},
+    {multi: true}
+)
+
+db.getCollection('dataset_imports').update({concreteClass : "org.ada.server.models.dataimport.RedCapDataSetImport"},
+	{$set:{"explicitNullAliases":[]}},
+    {multi: true}
+)
+
+db.getCollection('dataset_transformations').update({concreteClass : "org.ada.server.models.datatrans.SwapFieldsDataSetTransformation"},
+	{$set:{"concreteClass":"org.ada.server.models.datatrans.ChangeFieldTypesDataSetTransformation"}},
+    {multi: true}
+)
+
+db.getCollection('users').updateMany( {}, { $rename: { "ldapDn": "userId" } } )
+
+String.prototype.toCamelCase = function() {
+  return this.replace(/\b(\w)/g, function(match, capture) {
+    return capture.toUpperCase();
+  })
+}
+
+db.getCollection('users').find({}).forEach(function(user)
+{
+    user.name = user.userId.replace(/\./g,' ').toCamelCase();
+    db.getCollection('users').save(user);
+})

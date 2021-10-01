@@ -22,7 +22,8 @@ case class DataSetSetting(
   extraNavigationItems: Seq[NavigationItem] = Nil,
   customControllerClassName: Option[String] = None,
   description: Option[String] = None,
-  widgetEngineClassName: Option[String] = None
+  widgetEngineClassName: Option[String] = None,
+  dataSetIdGlobalReference: Option[String] = None
 ) {
   def this(
     dataSetId: String,

@@ -12,6 +12,7 @@ resolvers ++= Seq(
 )
 
 val playVersion = "2.5.9"
+
 libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play" % playVersion,
   "com.typesafe.play" %% "play-json" % playVersion,

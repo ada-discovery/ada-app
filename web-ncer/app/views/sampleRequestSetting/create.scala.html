@@ -1,0 +1,22 @@
+@import views.html.layout
+@import views.html.sampleRequestSetting.{elements, bottomJsResources}
+@import controllers.sampleRequest.routes.{SampleRequestSettingController => settingRoutes}
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import org.ada.web.controllers.dataset.DataSetWebContext._
+
+@import models.sampleRequest.SampleRequestSetting
+@(
+        form: Form[SampleRequestSetting]
+)(
+        implicit context: DataSetWebContext
+)
+
+@layout.create(
+    "Request setting",
+    "requestSetting",
+    form = form,
+    elements = elements(form),
+    saveCall = settingRoutes.save(),
+    listCall = settingRoutes.find(),
+    bottomResources = Some(bottomJsResources())
+)

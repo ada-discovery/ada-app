@@ -1,7 +1,6 @@
 package scala.org.ada.server.services
 
 import com.google.inject.Injector
-import org.ada.server.services.GuicePlayServerTestApp
 import net.codingwell.scalaguice.InjectorExtensions._
 import org.ada.web.services.GuicePlayWebTestApp
 
