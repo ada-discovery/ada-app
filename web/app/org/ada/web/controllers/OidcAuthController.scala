@@ -3,6 +3,7 @@ package org.ada.web.controllers
 import com.nimbusds.jwt.JWTParser
 import com.nimbusds.oauth2.sdk.token.{BearerAccessToken, RefreshToken}
 import jp.t2v.lab.play2.auth.Login
+import net.minidev.json.{JSONArray, JSONObject}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
 import org.ada.server.models.{DataSetSetting, User}
@@ -41,6 +42,11 @@ class OidcAuthController @Inject() (
     with Login                              // Play2 Auth
     with AdaAuthConfig {                    // Play2 Auth
 
+
+  private val clientId =  configuration.getString("oidc.clientId").getOrElse(
+    new AdaException("Configuration issue: 'oidc.clientId' was not found in the configuration file.")
+  )
+
   private val subAttribute = configuration.getString("oidc.returnAttributeIdName").getOrElse(
     new AdaException("Configuration issue: 'oidc.returnAttributeIdName' was not found in the configuration file.")
   )
@@ -55,6 +61,14 @@ class OidcAuthController @Inject() (
 
   private val rolesAttribute = configuration.getString("oidc.rolesAttributeName").getOrElse(
     new AdaException("Configuration issue: 'oidc.rolesAttributeName' was not found in the configuration file.")
+  )
+
+  private val realmAccessAttribute =  configuration.getString("oidc.realmAccessAttribute").getOrElse(
+    new AdaException("Configuration issue: 'oidc.realmAccessAttribute' was not found in the configuration file.")
+  )
+
+  private val resourceAccessAttribute =  configuration.getString("oidc.resourceAccessAttribute").getOrElse(
+    new AdaException("Configuration issue: 'oidc.resourceAccessAttribute' was not found in the configuration file.")
   )
 
   private val roleAdminName = configuration.getString("oidc.roleAdminName").getOrElse(
@@ -89,7 +103,16 @@ class OidcAuthController @Inject() (
         */
       def parseRolesAndDataSetIdsGlobalReference(accessToken: BearerAccessToken): RolesDataSetIdsInfo = {
         val jwtAccessTokenClaim = JWTParser.parse(accessToken.getValue).getJWTClaimsSet
-        val oidcRoles = jwtAccessTokenClaim.getStringArrayClaim(s"$rolesAttribute").toSet
+
+        val realmAccessRoles = jwtAccessTokenClaim.getJSONObjectClaim(s"$realmAccessAttribute")
+          .get(s"$rolesAttribute").asInstanceOf[JSONArray].toArray.map(_.toString).toSet
+        val resourceAccess = jwtAccessTokenClaim.getJSONObjectClaim(s"$resourceAccessAttribute")
+          .get(s"$clientId").asInstanceOf[JSONObject]
+        val resourceAccessRoles = resourceAccess.get(s"$rolesAttribute").asInstanceOf[JSONArray].toArray
+          .map(_.toString).toSet
+
+        val oidcRoles = realmAccessRoles ++ resourceAccessRoles
+
         val dataSetIdsGlobalRef = oidcRoles.filter(_.startsWith(s"$dataSetGlobalIdPrefix"))
           .map(access => dataSetGlobalIdRegex.findFirstMatchIn(access) match {
             case Some(acc) => acc.group(2)
