@@ -3,26 +3,26 @@ package org.ada.web.controllers
 import com.nimbusds.jwt.JWTParser
 import com.nimbusds.oauth2.sdk.token.{BearerAccessToken, RefreshToken}
 import jp.t2v.lab.play2.auth.Login
-import net.minidev.json.{JSONArray, JSONObject}
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
-import org.ada.server.models.{DataSetSetting, User}
+import org.ada.server.models.User
 import org.ada.server.services.UserManager
 import org.ada.web.controllers.UserDataSetPermissions.viewOnly
 import org.ada.web.models.JwtTokenInfo
 import org.ada.web.security.AdaAuthConfig
+import org.incal.core.dataaccess.Criterion._
+import org.incal.play.security.SecurityRole
 import org.pac4j.core.config.Config
 import org.pac4j.core.profile._
 import org.pac4j.play.scala._
 import org.pac4j.play.store.PlaySessionStore
 import play.api.cache.CacheApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 import play.api.{Configuration, Logger}
 import play.cache.NamedCache
 import play.libs.concurrent.HttpExecutionContext
-import org.incal.core.dataaccess.Criterion._
-import org.incal.play.security.SecurityRole
 
 import javax.inject.Inject
 import scala.concurrent.Future
@@ -102,15 +102,15 @@ class OidcAuthController @Inject() (
         * @return Roles and Global ids sequence (DataCatalog)
         */
       def parseRolesAndDataSetIdsGlobalReference(accessToken: BearerAccessToken): RolesDataSetIdsInfo = {
-        val jwtAccessTokenClaim = JWTParser.parse(accessToken.getValue).getJWTClaimsSet
+        val jsonAccessToken = Json.parse(JWTParser.parse(accessToken.getValue).getJWTClaimsSet.toString)
 
-        val realmAccessRoles = jwtAccessTokenClaim.getJSONObjectClaim(s"$realmAccessAttribute")
-          .get(s"$rolesAttribute").asInstanceOf[JSONArray].toArray.map(_.toString).toSet
-        val resourceAccess = jwtAccessTokenClaim.getJSONObjectClaim(s"$resourceAccessAttribute")
-          .get(s"$clientId").asInstanceOf[JSONObject]
-        val resourceAccessRoles = resourceAccess.get(s"$rolesAttribute").asInstanceOf[JSONArray].toArray
-          .map(_.toString).toSet
+        def evalAccessRoles(roles: Option[JsValue]): Set[String] = roles match {
+          case Some(rolesAttrJson) => rolesAttrJson.as[Set[String]]
+          case None => Set()
+        }
 
+        val realmAccessRoles = evalAccessRoles((jsonAccessToken \ s"$realmAccessAttribute" \ s"$rolesAttribute").toOption)
+        val resourceAccessRoles = evalAccessRoles((jsonAccessToken \ s"$resourceAccessAttribute" \ s"$clientId" \ s"$rolesAttribute").toOption)
         val oidcRoles = realmAccessRoles ++ resourceAccessRoles
 
         val dataSetIdsGlobalRef = oidcRoles.filter(_.startsWith(s"$dataSetGlobalIdPrefix"))
