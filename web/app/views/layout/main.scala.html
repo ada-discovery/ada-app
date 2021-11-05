@@ -96,6 +96,9 @@
             activateRowClickable();
             addMessageDividerIfNeeded();
             registerMessageDividerRemoval();
+            @if(showMessageBox) {
+                showHideMessageBox();
+            }
         </script>
         @subjectPresent() {
             @trollboxJs()

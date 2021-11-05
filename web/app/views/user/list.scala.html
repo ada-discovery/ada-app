@@ -67,24 +67,13 @@
                 </button>
                 <ul class="dropdown-menu">
                     <li>
-                        <a href="@routes.UserController.create()">
-                            Add a new user
-                        </a>
-                    </li>
-                    <li>
                         <a data-toggle="modal" data-target="#filterByPermissionPrefixModal" title="Filter By Permission Prefix">
                             Filter by permission
-                        </a>
-                    </li>
-                    <li>
-                        <a data-toggle="modal" data-target="#copyPermissionsModal" title="Copy User's Permissions">
-                            Copy User's Permissions
                         </a>
                     </li>
                 </ul>
             </div>
             @modal("filterByPermissionPrefixModal", "Filter By Permission Prefix", filterByPermissionModalBody, Some(routes.UserController.listUsersForPermissionPrefix(None)))
-            @modal("copyPermissionsModal", "Copy Permission From/To User", copyPermissionsModalBody, None, Some(copyPermissionsModalButtons))
         </div>
     </div>
 }
@@ -106,31 +95,11 @@
     )
 }
 
-@bottomResources = {
-    @helper.javascriptRouter("userJsRoutes")(
-        org.ada.web.controllers.routes.javascript.UserController.copyPermissions
-    )
-
-    <script type="text/javascript">
-        function copyPermissions() {
-            var sourceId = $("#sourceUserId").val()
-            var targetId = $("#targetUserId").val()
-
-            if (sourceId != targetId) {
-                var r = userJsRoutes.org.ada.web.controllers.UserController.copyPermissions(sourceId, targetId);
-                submit('post', r.url, getQueryParams(r.url))
-            } else {
-                showError("Source and target user cannot be the same.")
-            }
-        }
-    </script>
-}
 
 @layout.list(
     "user",
     None,
     page.total,
     Some(actions),
-    Some(table),
-    bottomResources = Some(bottomResources)
+    Some(table)
 )

@@ -120,12 +120,18 @@
     }
 }
 
+@hiddenElementSubFilter(idFilter: String, valueFilterId: Any, filterDefId: String, valueFilterDef: Any) = {
+    <input type="hidden" id="@idFilter" value="@valueFilterId">
+    <input type="hidden" id="@filterDefId" value="@valueFilterDef">
+}
+
 @dataHiddenElement(widgetSpec: WidgetSpec) = {
     @{
         Json.toJson(widgetSpec).as[JsObject].-("displayOptions").fields.map {
             case (fieldName, jsValue) =>
                 if (fieldName == "subFilterId") {
-                    hiddenElement(fieldName, jsValue.asOpt[JsObject].map(json => JsonUtil.toString(json \ "$oid")))
+                    hiddenElementSubFilter(fieldName, jsValue.asOpt[JsObject].map(json => JsonUtil.toString(json \ "$oid")),
+                                            "subFilterTypeahead", idFilterNameMap.get(jsValue.as[BSONObjectID]).getOrElse(""))
                 } else
                     jsValue match {
                         case JsArray(seq) => hiddenElement(fieldName, seq.map(JsonUtil.toString).flatten.mkString(", "))
@@ -376,9 +382,10 @@
 
             var subFilterValue = values["subFilterTypeahead"]
 
-            if (subFilterValue)
+            if (subFilterValue){
                 displayElements.push("Sub Filter: " + subFilterValue)
-
+                dataColumn.append("<input type='hidden' id='subFilterTypeahead' value='" + subFilterValue + "'/>");
+            }
             contentDisplayColumn.append("<div class='row'>" + displayElements.join(", ") + "</div>")
 
             // DISPLAY OPTIONS
@@ -770,7 +777,9 @@
 
         var subFilterId = getValue("subFilterId")
         if (subFilterId) {
+            var subFilterTypeaheadDef =  getValue("subFilterTypeahead")
             setIfNotNull(output, "subFilterId", {"$oid": subFilterId})
+            setIfNotNull(output, "subFilterTypeahead", subFilterTypeaheadDef)
         }
 
         // display options
@@ -862,9 +871,12 @@
 
 
         var subFilterId = model["subFilterId"]
+        var subFilterDef = model["subFilterTypeahead"]
         if (subFilterId)
             subFilterId = subFilterId["$oid"];
         $('#edit_widgetSpecModal #subFilterId').val(subFilterId);
+        $('#edit_widgetSpecModal #subFilterTypeahead').val(subFilterDef);
+
 
         $("#edit_widgetSpecModal").modal("show");
     }
