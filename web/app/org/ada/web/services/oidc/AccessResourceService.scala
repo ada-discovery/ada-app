@@ -95,7 +95,7 @@ class AccessResourceServiceImpl @Inject()(
 
   private def checkResourceResponse(response: WSResponse): WSResponse = response match {
     case response if response.status >= Http.Status.OK && response.status <= Http.Status.MULTIPLE_CHOICES => response
-    case _ => throw new AdaException("Failed to retrieve resource: http status" + response.status + ", body: "+ response.body)
+    case _ => throw new AdaException("Failed to retrieve resource: http status " + response.status + ", body: "+ response.body)
   }
 
 

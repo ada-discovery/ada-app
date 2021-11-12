@@ -1,19 +1,17 @@
 package org.ada.server.dataaccess.ignite
 
-import java.io.Serializable
-import java.util
-import javax.cache.Cache.Entry
-import javax.cache.configuration.Factory
-
-import org.apache.ignite.cache.store.{CacheStore, CacheStoreAdapter}
+import org.ada.server.models.User
+import org.apache.ignite.cache.store.CacheStoreAdapter
 import org.apache.ignite.lang.IgniteBiInClosure
 import org.incal.core.dataaccess.{AsyncCrudRepo, RepoSynchronizer}
 import play.api.Logger
 
-import scala.concurrent.duration._
+import java.io.Serializable
+import java.util
+import javax.cache.Cache.Entry
+import javax.cache.configuration.Factory
 import scala.collection.JavaConversions._
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 
 //@CacheLocalStore
 abstract class AbstractCacheAsyncCrudRepoProvider[ID, E, REPO_E] extends CacheStoreAdapter[ID, E] with Serializable {
@@ -27,6 +25,8 @@ abstract class AbstractCacheAsyncCrudRepoProvider[ID, E, REPO_E] extends CacheSt
   private val crudRepo: AsyncCrudRepo[REPO_E, ID] = repoFactory.create
   private lazy val syncRepo = RepoSynchronizer(crudRepo, 2 minutes)
 
+  private val userClassName = User.getClass.getSimpleName.replace("$","")
+
   override def delete(key: Any) =
     syncRepo.delete(key.asInstanceOf[ID])
 
@@ -36,23 +36,23 @@ abstract class AbstractCacheAsyncCrudRepoProvider[ID, E, REPO_E] extends CacheSt
   override def write(entry: Entry[_ <: ID, _ <: E]): Unit = {
     val id = entry.getKey
     val item = toRepoItem(entry.getValue)
-//    val version = entry.getVersion
 
-    // TODO: replace with a single upsert (save/update) call
-    //      syncRepo.get(id).map { _ =>
-    val future = for {
-      exists <- crudRepo.exists(id)
-      _ <- if (exists) {
-        logger.info(s"Updating an item of type ${item.getClass.getSimpleName}")
-        crudRepo.update(item)
-      } else {
-        logger.info(s"Saving an item of type ${item.getClass.getSimpleName}")
-        crudRepo.save(item)
+    def trackWritingOps(className: String, operationType: String, item: REPO_E, result: Option[REPO_E] = None): Unit = {
+      logger.info(s"$operationType an item of type $className")
+      if (className.equalsIgnoreCase(userClassName))
+        logger.info(s"$operationType -> $item . Found in cache $result")
+    }
+
+    syncRepo.get(id)
+      .map( result => {
+        trackWritingOps(item.getClass.getSimpleName, "Updating", item, Option(result))
+        syncRepo.update(item)
+      })
+      .getOrElse{
+        trackWritingOps(item.getClass.getSimpleName, "Saving", item)
+        syncRepo.save(item)
       }
-    } yield
-      ()
 
-    Await.result(future, 2 minutes)
   }
 
   override def writeAll(entries: util.Collection[Entry[_ <: ID, _ <: E]]): Unit = {

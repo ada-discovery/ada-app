@@ -1,0 +1,21 @@
+db.users.aggregate([
+    {$group: {
+        _id: "$oidcUserName",
+        uniqueIds: {$addToSet: "$_id"},
+        count: {$sum: 1}
+        }
+    },
+    {$match: { $and: [{count: {"$gt": 1}}, {_id : {$ne:null}}] }
+    },
+ ]).forEach(function(item)
+ {
+    for(i = 0; i < item.uniqueIds.length; i++){
+        var uniqueId = "" + item.uniqueIds[i]
+        db.users.find({ $and: [{_id: ObjectId(uniqueId)}, {permissions: { $exists: true, $size: 0 }}]})
+            .forEach(function(itemF){
+            var itemF_Id = "" + itemF._id;
+            db.users.remove({_id : ObjectId(itemF_Id)})
+            print("Delete duplicate user _id: " + itemF_Id + " oidcUserName: " + itemF.oidcUserName + " permissions: '" + itemF.permissions +"'")
+            })
+    }
+ });
