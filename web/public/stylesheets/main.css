@@ -675,3 +675,10 @@ a.carousel-control.right{
     border-radius: 50%;
     display: inline-block;
 }
+
+.btn-expand-collapse {
+    padding: 3px;
+    font-size: 18px;
+    line-height: 1.5;
+    border-radius: 3px;
+}

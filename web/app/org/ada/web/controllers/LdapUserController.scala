@@ -15,6 +15,7 @@ class LdapUserController @Inject() (
   ldapSettings: LdapSettings
 ) extends AdaBaseController {
 
+  @Deprecated
   def listAll = restrictAdminAny(noCaching = true) {
     implicit request => Future {
       implicit val msg = messagesApi.preferred(request)
@@ -24,6 +25,7 @@ class LdapUserController @Inject() (
     }
   }
 
+  @Deprecated
   def get(id: String) = restrictAdminAny(noCaching = true) {
     implicit request => Future {
       implicit val msg = messagesApi.preferred(request)
@@ -37,6 +39,7 @@ class LdapUserController @Inject() (
     }
   }
 
+  @Deprecated
   def settings = restrictAdminAny(noCaching = true) {
     implicit request => Future (
       Ok(views.html.ldapviews.viewSettings(ldapSettings))
