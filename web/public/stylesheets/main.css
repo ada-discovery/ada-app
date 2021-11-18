@@ -677,8 +677,8 @@ a.carousel-control.right{
 }
 
 .btn-expand-collapse {
-    padding: 3px;
-    font-size: 18px;
+    padding: 1px 7px;
+    font-size: 21px;
     line-height: 1.5;
     border-radius: 3px;
 }

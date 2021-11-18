@@ -1,3 +1,5 @@
+// Launch the query 1 in order to verify if there are double users
+//1
 db.users.aggregate([
     {$group: {
         _id: "$oidcUserName",
@@ -14,8 +16,16 @@ db.users.aggregate([
         db.users.find({ $and: [{_id: ObjectId(uniqueId)}, {permissions: { $exists: true, $size: 0 }}]})
             .forEach(function(itemF){
             var itemF_Id = "" + itemF._id;
-            db.users.remove({_id : ObjectId(itemF_Id)})
-            print("Delete duplicate user _id: " + itemF_Id + " oidcUserName: " + itemF.oidcUserName + " permissions: '" + itemF.permissions +"'")
+            var createDataViewsCnt  = db.dictionaries.count({"dataviews.createdById" : ObjectId(itemF_Id)})
+            var createFilterCnt = db.dictionaries.count({"filters.createdById" : ObjectId(itemF_Id)})
+
+            print("Should delete duplicate user _id: " + itemF_Id + " oidcUserName: " + itemF.oidcUserName + " permissions: '" + itemF.permissions +"' created views: " + createDataViewsCnt +
+            " created filters: " + createFilterCnt + (createDataViewsCnt == 0 && createFilterCnt == 0 ? " delete cmd: db.users.remove({_id : ObjectId(" + itemF_Id + ")})" : ""))
             })
     }
  });
+
+// In case "created views num" and "created filters num" is zero just delete user. Ex: db.users.remove({_id : ObjectId("userId")}
+// If "created views" or "created filters" is not zero, launch updates with the right associates. Queries 2,3 .
+// 2 db.dictionaries.update({"dataviews.createdById" : ObjectId("userId_to_remove")}, { $set : {"dataviews.index_array.createdById" : ObjectId("userId_to_update")}});
+// 3 db.dictionaries.update({"filters.createdById" : ObjectId("userId_to_remove")}, { $set : {"filters.index_array.createdById" : ObjectId("userId_to_update")}});
