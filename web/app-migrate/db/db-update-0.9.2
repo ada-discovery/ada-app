@@ -20,7 +20,7 @@ db.users.aggregate([
             var createFilterCnt = db.dictionaries.count({"filters.createdById" : ObjectId(itemF_Id)})
 
             print("Should delete duplicate user _id: " + itemF_Id + " oidcUserName: " + itemF.oidcUserName + " permissions: '" + itemF.permissions +"' created views: " + createDataViewsCnt +
-            " created filters: " + createFilterCnt + (createDataViewsCnt == 0 && createFilterCnt == 0 ? " delete cmd: db.users.remove({_id : ObjectId(" + itemF_Id + ")})" : ""))
+            " created filters: " + createFilterCnt + (createDataViewsCnt == 0 && createFilterCnt == 0 ? " delete cmd: db.users.remove({_id : ObjectId('" + itemF_Id + "')})" : ""))
             })
     }
  });
