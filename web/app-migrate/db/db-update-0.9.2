@@ -18,14 +18,36 @@ db.users.aggregate([
             var itemF_Id = "" + itemF._id;
             var createDataViewsCnt  = db.dictionaries.count({"dataviews.createdById" : ObjectId(itemF_Id)})
             var createFilterCnt = db.dictionaries.count({"filters.createdById" : ObjectId(itemF_Id)})
+            var ownerIdCnt = db.dataset_settings.count({"ownerId" : ObjectId(itemF_Id)});
 
             print("Should delete duplicate user _id: " + itemF_Id + " oidcUserName: " + itemF.oidcUserName + " permissions: '" + itemF.permissions +"' created views: " + createDataViewsCnt +
-            " created filters: " + createFilterCnt + (createDataViewsCnt == 0 && createFilterCnt == 0 ? " delete cmd: db.users.remove({_id : ObjectId('" + itemF_Id + "')})" : ""))
+            " created filters: " + createFilterCnt + " ownerIdCnt: " + ownerIds + (createDataViewsCnt == 0 && createFilterCnt == 0 && ownerIdCnt == 0 ? " delete cmd: db.users.remove({_id : ObjectId('" + itemF_Id + "')})" : ""))
             })
     }
  });
 
-// In case "created views num" and "created filters num" is zero just delete user. Ex: db.users.remove({_id : ObjectId("userId")}
-// If "created views" or "created filters" is not zero, launch updates with the right associates. Queries 2,3 .
-// 2 db.dictionaries.update({"dataviews.createdById" : ObjectId("userId_to_remove")}, { $set : {"dataviews.index_array.createdById" : ObjectId("userId_to_update")}});
-// 3 db.dictionaries.update({"filters.createdById" : ObjectId("userId_to_remove")}, { $set : {"filters.index_array.createdById" : ObjectId("userId_to_update")}});
+// In case "created views", "created filters" and "ownerIds" is zero just delete user. Ex: db.users.remove({_id : ObjectId("userId")}
+// If "created views", "created filters" or "ownerIds" is not zero, launch updates with the right associates. Queries 2,3 .
+
+// a) Find dataviews with createdById = ObjectId("userId_to_lock"):
+//    db.dictionaries.find({"dataviews.createdById" : ObjectId("userId_to_lock")}, {"dataviews.createdById" : 1, "dataviews.default": 1, "dataviews.isPrivate": 1});
+// b) Find index of array to update. Fn return _id "document_id" and matchedIndex "must be >= 0":
+//    db.dictionaries.aggregate([ { $project: { "matchedIndex": { $indexOfArray: [ "$dataviews.createdById", ObjectId("userId_to_lock")] } } } ])
+// c) Update dataviews with right user _id:
+//    db.dictionaries.update({"_id" : ObjectId("document_id")}, { $set : {"$dataviews.matchedIndex.createdById" : ObjectId("userId_to_update")}});
+
+// d) Find filters with createdById = ObjectId("userId_to_lock"):
+//    db.dictionaries.find({"filters.createdById" : ObjectId("userId_to_lock")}, {"filters.createdById" : 1, "filters.name" : 1});
+// e) Find index of array to update. Fn return _id "document_id" and matchedIndex "must be >= 0":
+//    db.dictionaries.aggregate([ { $project: { "matchedIndex": { $indexOfArray: [ "$filters.createdById", ObjectId("userId_to_lock")] } } } ]);
+// f) Update dataviews with right user _id:
+//    db.dictionaries.update({"_id" : ObjectId("document_id")}, { $set : {"$filters.matchedIndex.createdById" : ObjectId("userId_to_update")}});
+
+// g) Find datasetting with duplicate ownerId:
+//    db.dataset_settings.find({"ownerId" : ObjectId("userId_to_lock")});
+// h) Update ownerid with right user if there is a result from "g":
+//    db.dataset_settings.updateMany({"ownerId" : ObjectId("userId_to_lock")}, {$set : {"ownerId" : ObjectId("userId_to_update")}})
+
+// i) Lock user and change userId value
+//    db.users.update({"_id": ObjectId("userId_to_lock")},{$set: {"locked" : true, "userId" : "userName_Duplicate"}})
+
