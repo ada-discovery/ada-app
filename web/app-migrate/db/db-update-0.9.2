@@ -27,7 +27,7 @@ db.users.aggregate([
  });
 
 // In case "created views", "created filters" and "ownerIds" is zero just delete user. Ex: db.users.remove({_id : ObjectId("userId")}
-// If "created views", "created filters" or "ownerIds" is not zero, launch updates with the right associates. Queries 2,3 .
+// If "created views", "created filters" or "ownerIds" is not zero, launch updates with the following associates queries:
 
 // a) Find dataviews with createdById = ObjectId("userId_to_lock"):
 //    db.dictionaries.find({"dataviews.createdById" : ObjectId("userId_to_lock")}, {"dataviews.createdById" : 1, "dataviews.default": 1, "dataviews.isPrivate": 1});
