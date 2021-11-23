@@ -21,7 +21,7 @@ db.users.aggregate([
             var ownerIdCnt = db.dataset_settings.count({"ownerId" : ObjectId(itemF_Id)});
 
             print("Should delete duplicate user _id: " + itemF_Id + " oidcUserName: " + itemF.oidcUserName + " permissions: '" + itemF.permissions +"' created views: " + createDataViewsCnt +
-            " created filters: " + createFilterCnt + " ownerIdCnt: " + ownerIds + (createDataViewsCnt == 0 && createFilterCnt == 0 && ownerIdCnt == 0 ? " delete cmd: db.users.remove({_id : ObjectId('" + itemF_Id + "')})" : ""))
+            " created filters: " + createFilterCnt + " ownerIds: " + ownerIdCnt + (createDataViewsCnt == 0 && createFilterCnt == 0 && ownerIdCnt == 0 ? " delete cmd: db.users.remove({_id : ObjectId('" + itemF_Id + "')})" : ""))
             })
     }
  });
@@ -34,14 +34,14 @@ db.users.aggregate([
 // b) Find index of array to update. Fn return _id "document_id" and matchedIndex "must be >= 0":
 //    db.dictionaries.aggregate([ { $project: { "matchedIndex": { $indexOfArray: [ "$dataviews.createdById", ObjectId("userId_to_lock")] } } } ])
 // c) Update dataviews with right user _id:
-//    db.dictionaries.update({"_id" : ObjectId("document_id")}, { $set : {"$dataviews.matchedIndex.createdById" : ObjectId("userId_to_update")}});
+//    db.dictionaries.update({"_id" : ObjectId("document_id")}, { $set : {"dataviews.matchedIndex.createdById" : ObjectId("userId_to_update")}});
 
 // d) Find filters with createdById = ObjectId("userId_to_lock"):
 //    db.dictionaries.find({"filters.createdById" : ObjectId("userId_to_lock")}, {"filters.createdById" : 1, "filters.name" : 1});
 // e) Find index of array to update. Fn return _id "document_id" and matchedIndex "must be >= 0":
 //    db.dictionaries.aggregate([ { $project: { "matchedIndex": { $indexOfArray: [ "$filters.createdById", ObjectId("userId_to_lock")] } } } ]);
 // f) Update dataviews with right user _id:
-//    db.dictionaries.update({"_id" : ObjectId("document_id")}, { $set : {"$filters.matchedIndex.createdById" : ObjectId("userId_to_update")}});
+//    db.dictionaries.update({"_id" : ObjectId("document_id")}, { $set : {"filters.matchedIndex.createdById" : ObjectId("userId_to_update")}});
 
 // g) Find datasetting with duplicate ownerId:
 //    db.dataset_settings.find({"ownerId" : ObjectId("userId_to_lock")});
@@ -49,5 +49,6 @@ db.users.aggregate([
 //    db.dataset_settings.updateMany({"ownerId" : ObjectId("userId_to_lock")}, {$set : {"ownerId" : ObjectId("userId_to_update")}})
 
 // i) Lock user and change userId value
-//    db.users.update({"_id": ObjectId("userId_to_lock")},{$set: {"locked" : true, "userId" : "userName_Duplicate"}})
+//    db.users.update({"_id": ObjectId("userId_to_lock")},{$set: {"locked" : true, "userId" : "userName.Duplicate.locked", "oidcUserName" : "userName.Duplicate.locked"}})
+
 
