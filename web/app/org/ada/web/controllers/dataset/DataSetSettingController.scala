@@ -1,33 +1,30 @@
 package org.ada.web.controllers.dataset
 
-import java.util.concurrent.TimeoutException
-
 import be.objectify.deadbolt.scala.AuthenticatedRequest
-import javax.inject.Inject
-import org.ada.web.controllers._
-import org.ada.web.controllers.core.AdaCrudControllerImpl
-import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInfoRepo}
-import org.ada.server.models.{ChartType, DataSetFormattersAndIds, DataSetSetting, FilterShowFieldStyle, StorageType, WidgetSpec}
+import org.ada.server.dataaccess.RepoTypes.DataSetSettingRepo
+import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
 import org.ada.server.models.DataSetFormattersAndIds.{DataSetSettingIdentity, serializableDataSetSettingFormat, widgetSpecFormat}
 import org.ada.server.models.NavigationItem.navigationItemFormat
 import org.ada.server.models._
-import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
-import play.api.Logger
-import play.api.data.{Form, FormError, Mapping}
-import play.api.data.Forms._
-import play.api.mvc._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import reactivemongo.bson.BSONObjectID
 import org.ada.server.services.DataSetService
-import org.ada.web.services.DataSpaceService
-import views.html.{category, datasetsetting => view}
+import org.ada.web.controllers._
+import org.ada.web.controllers.core.AdaCrudControllerImpl
+import org.ada.web.controllers.dataset.dataimport.DataSetInfoValidation.dataSetJoinIdNameConstraint
 import org.ada.web.controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
+import org.ada.web.services.DataSpaceService
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.controllers._
 import org.incal.play.formatters._
-import play.api.data.format.Formatter
-import play.api.libs.json.Json
+import play.api.Logger
+import play.api.data.Form
+import play.api.data.Forms._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.mvc._
+import reactivemongo.bson.BSONObjectID
+import views.html.{datasetsetting => view}
 
+import java.util.concurrent.TimeoutException
+import javax.inject.Inject
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 
@@ -51,6 +48,8 @@ class DataSetSettingController @Inject() (
   private implicit val widgetSpecFormatter = JsonFormatter[WidgetSpec]
   private implicit val bsonObjectIdFormatter = BSONObjectIDStringFormatter
   private implicit val navigationItemFormatter = JsonFormatter[NavigationItem]
+  private implicit val dataSetTypeFormatter = EnumFormatter(DataSetType)
+
 
   override protected[controllers] val form = Form(
     mapping(
@@ -74,7 +73,11 @@ class DataSetSettingController @Inject() (
       "customControllerClassName" -> optional(text),
       "description" -> optional(text),
       "widgetEngineClassName" -> optional(text),
-      "dataSetIdGlobalReference" -> optional(text)
+      "dataSetIdGlobalReference" -> optional(text),
+      "dataSetInfo" -> optional(mapping(
+        "dataSetType" -> of[DataSetType.Value],
+        "dataSetJoinIdName" ->  text
+      )(DataSetInfo.apply)(DataSetInfo.unapply).verifying(dataSetJoinIdNameConstraint))
     )(DataSetSetting.apply)(DataSetSetting.unapply)
   )
 

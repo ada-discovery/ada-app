@@ -1,7 +1,6 @@
 package org.ada.server.models
 
 import java.util.UUID
-
 import org.ada.server.dataaccess.BSONObjectIdentity
 import org.ada.server.json.{EnumFormat, RuntimeClassFormat, SerializableFormat, SubTypeFormat}
 import org.incal.core.Identity

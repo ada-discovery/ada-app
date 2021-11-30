@@ -1,12 +1,12 @@
 package org.ada.web.controllers.dataset.dataimport
 
 import java.util.Date
-
 import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
 import org.ada.server.models._
 import org.ada.server.models.dataimport.{CsvDataSetImport, DataSetImport}
 import org.ada.web.controllers.MappingHelper
 import org.ada.web.controllers.core.GenericMapping
+import org.ada.web.controllers.dataset.dataimport.DataSetInfoValidation.dataSetJoinIdNameConstraint
 import org.incal.core.util.{firstCharToLowerCase, hasNonAlphanumericUnderscore}
 import org.incal.core.util.toHumanReadableCamel
 import org.incal.play.controllers.{CreateEditFormViews, IdForm, WebContext}
@@ -38,6 +38,8 @@ abstract protected[controllers] class DataSetImportFormViews[E <: DataSetImport:
   private implicit val filterShowFieldStyleFormatter = EnumFormatter(FilterShowFieldStyle)
   private implicit val storageTypeFormatter = EnumFormatter(StorageType)
   private implicit val widgetGenerationMethodFormatter = EnumFormatter(WidgetGenerationMethod)
+  private implicit val dataSetTypeFormatter = EnumFormatter(DataSetType)
+
 
   protected val dataSetSettingMapping: Mapping[DataSetSetting] = mapping(
     "id" -> ignored(Option.empty[BSONObjectID]),
@@ -60,7 +62,11 @@ abstract protected[controllers] class DataSetImportFormViews[E <: DataSetImport:
     "customControllerClassName" -> optional(text),
     "description" -> optional(text),
     "widgetEngineClassName" -> optional(text),
-    "dataSetIdGlobalReference" -> optional(text)
+    "dataSetIdGlobalReference" -> optional(text),
+    "dataSetInfo" -> optional(mapping(
+        "dataSetType" -> of[DataSetType.Value],
+        "dataSetJoinIdName" -> text
+    )(DataSetInfo.apply)(DataSetInfo.unapply).verifying(dataSetJoinIdNameConstraint))
   )(DataSetSetting.apply)(DataSetSetting.unapply)
 
   protected val dataViewMapping: Mapping[DataView] = mapping(

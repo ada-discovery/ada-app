@@ -23,7 +23,8 @@ case class DataSetSetting(
   customControllerClassName: Option[String] = None,
   description: Option[String] = None,
   widgetEngineClassName: Option[String] = None,
-  dataSetIdGlobalReference: Option[String] = None
+  dataSetIdGlobalReference: Option[String] = None,
+  dataSetInfo: Option[DataSetInfo] = None
 ) {
   def this(
     dataSetId: String,

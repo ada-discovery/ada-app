@@ -57,6 +57,13 @@
                   showOption,
                   initSelectByNameElement: true
                 });
+                populateFieldTypeahead({
+                    typeaheadElement: $('#dataSetInfo\\.dataSetJoinIdTypeahead'),
+                    fieldNameElement: $('#dataSetInfo\\.dataSetJoinIdName'),
+                    fieldNameAndLabels: fieldNamesAndLabelsWithNone,
+                    showOption: @FilterShowFieldStyle.LabelsOnly.id,
+                    initSelectByNameElement: true
+                });
             },
             error: showErrorResponse
         });

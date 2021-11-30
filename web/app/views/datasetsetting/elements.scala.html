@@ -5,7 +5,22 @@
 @import org.incal.play.controllers.WebContext._
 @import views.html.elements._
 @import views.html.table.dynamicThreeColumnTable
+@import org.ada.server.models.DataSetType
+
 @(form: Form[DataSetSetting])(implicit webContext: WebContext)
+
+@if(form.hasErrors) {
+    <div class="form-group">
+        <div class="alert alert-danger col-sm-12 text-center">
+        @for(error <- form.errors){
+            @for(messageErr <- error.messages){
+                @messageErr <br/>
+            }
+        }
+        </div>
+    </div>
+}
+
 
 @inputTextReadonly("dataSetSetting", "dataSetId", form)
 
@@ -15,6 +30,14 @@
 @select("dataSetSetting", "storageType", form,
     StorageType.values.toSeq.sortBy(_.id).map(value => (value.toString, value.toString)), false
 )
+
+@select("dataSetSetting", "dataSetInfo.dataSetType", form,
+    DataSetType.values.toSeq.sortBy(_.id).map(value => (value.toString, value.toString)), true
+)
+
+
+@inputFieldTypeahead("dataSetSetting", "dataSetInfo.dataSetJoinId", form)
+
 @checkbox("dataSetSetting", "mongoAutoCreateIndexForProjection", form)
 
 <hr/>
