@@ -5,6 +5,7 @@
 @import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 @import org.ada.web.util.FieldTypeFullRenderer.FieldTypeFullRenderer
 @import org.ada.server.models.DataSetFormattersAndIds.JsObjectIdentity
+@import org.ada.server.models.DataSetInfo
 
 @(
     items : Traversable[JsObject],
@@ -14,12 +15,19 @@
     rowClickCall : Option[JsObject => Call] = None,
     fieldNameRenderMap: Option[Map[String, FieldTypeFullRenderer]] = None,
     tableId: Option[String] = None,
-    tableSelection: Boolean = false
+    tableSelection: Boolean = false,
+    dataSetInfo: Option[DataSetInfo] = None
 )
 
 @idValue(id: BSONObjectID) = {
     <input type="hidden" id="@JsObjectIdentity.name" value="@id.stringify">
 }
+
+@idValueAndDataSetJoinId(id: BSONObjectID, dataSetJoinId: String) = {
+    <input type="hidden" id="@JsObjectIdentity.name" value="@id.stringify">
+    <input type="hidden" id="dataSetJoinId" value="@dataSetJoinId">
+}
+
 
 <div class="horizontal-scroll">
 <table @if(tableId.isDefined) {id="@tableId.get"} class="table table-striped">
@@ -49,7 +57,15 @@
                 @if(tableSelection) {
                     <td>
                         <input type="checkbox" class="table-selection" onclick='preventEventPropagation(event)'/>
-                        @{(item \ JsObjectIdentity.name).asOpt[BSONObjectID].map(idValue)}
+                        @{ if(dataSetInfo.isDefined) {
+                                idValueAndDataSetJoinId(
+                                    (item \ JsObjectIdentity.name).asOpt[BSONObjectID].get,
+                                    (item \ dataSetInfo.get.dataSetJoinIdName).asOpt[String].getOrElse("no-val-dataSetJoinId")
+                                )
+                            } else {
+                                (item \ JsObjectIdentity.name).asOpt[BSONObjectID].map(idValue)
+                            }
+                        }
                     </td>
                 }
                 @if(fieldsToShow.isDefined) {

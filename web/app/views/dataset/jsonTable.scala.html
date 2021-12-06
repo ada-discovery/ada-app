@@ -9,6 +9,8 @@
 @import org.ada.web.util.FieldTypeFullRenderer
 @import play.api.Configuration
 
+
+@import org.ada.server.models.DataSetInfo
 @(
     page: Page[JsObject],
     tableFields: Traversable[Field],
@@ -16,7 +18,8 @@
     rowClickCall: Option[BSONObjectID => Call] = None,
     withRowClickableJs: Boolean = false,
     isAjaxRefresh: Boolean = false,
-    tableSelection: Boolean = false
+    tableSelection: Boolean = false,
+    dataSetInfo: Option[DataSetInfo] = None
 )(
     implicit request: Request[_], configuration: Configuration
 )
@@ -33,7 +36,8 @@
     rowClickCall.map( rowClick => { item : JsObject => rowClick((item \ JsObjectIdentity.name).as[BSONObjectID]) }),
     Some(tableFields.map(field => (field.name, FieldTypeFullRenderer(field))).toMap),
     isAjaxRefresh,
-    tableSelection
+    tableSelection,
+    dataSetInfo
 )
 
 @if(withRowClickableJs) {

@@ -1,0 +1,113 @@
+@import org.ada.server.models.{DataSetSetting, FilterShowFieldStyle}
+@import org.ada.web.controllers.dataset.omics.routes.{OmicsDataSetController => omicsRoutes}
+@import views.html.elements.typeahead
+@import org.ada.web.controllers.dataset.routes
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@import org.ada.web.controllers.dataset.DataSetWebContext._
+
+@import play.mvc.Http.Context.Implicit.request
+@(dataSetSetting: DataSetSetting)(implicit context: DataSetWebContext)
+
+@modalBody = {
+    <p id="omicsDataSetId">@typeahead("dataSetIdTypeahead", "dataSetId", "Data Set Id", isLarge = true)<p>
+}
+
+@modalButtons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="submit" id="submitButton" class="btn btn-primary" onclick="searchInOmicsDataSet()">Search</button>
+}
+
+<a class="btn btn-info btn-sm disabled" data-toggle="modal" data-target="#joinOmicsDataSetModal" title="Search in another Data Set">
+    <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+    Omics Search
+</a>
+
+@modal("joinOmicsDataSetModal", "Search in another Omics Data Set", modalBody, None, Some(modalButtons), None)
+
+
+@helper.javascriptRouter("fieldAndNamesJsRoute")(
+    org.ada.web.controllers.dataset.omics.routes.javascript.OmicsDataSetController.getFieldsNamesAndLabels
+)
+
+@helper.javascriptRouter("dataViewsJsRoute")(
+    org.ada.web.controllers.dataset.omics.routes.javascript.OmicsDataSetController.getDataviews
+)
+
+@helper.javascriptRouter("getViewJsRoute")(
+    org.ada.web.controllers.dataset.routes.javascript.DataSetDispatcher.getView
+)
+
+
+
+
+<script type="text/javascript">
+
+        $(function () {
+            populateFieldTypeaheadFromUrl({
+                typeaheadElement: $('#dataSetIdTypeahead'),
+                fieldNameElement: $('#dataSetId'),
+                url: '@Html(omicsRoutes.dataSetIds(dataSetSetting.dataSetId).url)',
+                showOption: @FilterShowFieldStyle.LabelsOnly.id
+            });
+        })
+
+        function removeOmicsJoinFieldAndDataView(){
+            if($("#omicsJoinField").length && $("#omicsdataView").length){
+                $("#omicsJoinField").remove()
+                $("#omicsdataView").remove()
+            }
+        }
+
+        function generateOmicsJoinFieldAndDataView(){
+            var omicsJoinField = "<p id='omicsJoinField'> <input id='joinFieldIdTypeahead' class='typeahead typeahead-large typeahead-full-width' type='text' placeholder='Join Field Id' value=''> <input id='joinFieldId' name='joinFieldId' type='hidden' value=''></p>"
+            var omicsDataView = "<p id='omicsdataView'> <input id='dataViewIdTypeahead' class='typeahead typeahead-large typeahead-full-width' type='text' placeholder='Data view Id' value=''> <input id='dataViewId' name='dataViewId' type='hidden' value=''></p>"
+            return omicsJoinField.concat(omicsDataView)
+        }
+
+        $('#dataSetIdTypeahead').blur(function (){
+            if($(this).val()){
+                removeOmicsJoinFieldAndDataView()
+                $("#omicsDataSetId").after(generateOmicsJoinFieldAndDataView())
+
+                var chosenDataSetId = $("#dataSetId").val()
+                var urlFieldsAndName =  fieldAndNamesJsRoute.org.ada.web.controllers.dataset.omics.OmicsDataSetController.getFieldsNamesAndLabels(chosenDataSetId).url
+                populateFieldTypeaheadFromUrl({
+                    typeaheadElement: $('#joinFieldIdTypeahead'),
+                    fieldNameElement: $('#joinFieldId'),
+                    url: urlFieldsAndName,
+                    showOption: @FilterShowFieldStyle.LabelsOnly.id
+                });
+                var urlDataViews = dataViewsJsRoute.org.ada.web.controllers.dataset.omics.OmicsDataSetController.getDataviews(chosenDataSetId).url
+                populateFieldTypeaheadFromUrl({
+                    typeaheadElement: $('#dataViewIdTypeahead'),
+                    fieldNameElement: $('#dataViewId'),
+                    url: urlDataViews,
+                    showOption: @FilterShowFieldStyle.LabelsOnly.id
+                });
+
+            } else{
+                removeOmicsJoinFieldAndDataView()
+            }
+        })
+
+        function getJoinFields(){
+            var joinFieldIds = []
+             for (let value of getSelectedRowMap().values()){
+                 joinFieldIds.push(value["dataSetJoinId"])
+             }
+             return joinFieldIds.join();
+        }
+
+        function searchInOmicsDataSet(){
+            var dataSetId = $("#dataSetId").val()
+            var joinFieldId = $("#joinFieldId").val()
+            var dataViewId = $("#dataViewId").val()
+            var joinFields = getJoinFields()
+            var filterOrId = [[{"fieldName":joinFieldId,"conditionType":"in","value": joinFields,"fieldLabel": joinFieldId}]]
+            window.location.href= getViewJsRoute.org.ada.web.controllers.dataset.DataSetDispatcher.getView(dataViewId, null, JSON.stringify(filterOrId), true).url + "&dataSet=" + dataSetId;
+        }
+
+
+
+
+</script>

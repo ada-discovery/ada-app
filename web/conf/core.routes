@@ -355,3 +355,8 @@ GET         /assets/*file                                                       
 
 # Map the webjar static assets to the /webjars URL
 GET         /webjars/*file                                                          controllers.WebJarAssets.at(file)
+
+#Omics
+GET         /omics/:currentDataSetId/dataSetIds                                     org.ada.web.controllers.dataset.omics.OmicsDataSetController.dataSetIds(currentDataSetId: String)
+GET         /omics/:dataSetIdToSearch/fieldsNamesLabels                             org.ada.web.controllers.dataset.omics.OmicsDataSetController.getFieldsNamesAndLabels(dataSetIdToSearch: String)
+GET         /omics/:dataSetIdToSearch/dataViews                                     org.ada.web.controllers.dataset.omics.OmicsDataSetController.getDataviews(dataSetIdToSearch: String)

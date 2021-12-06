@@ -68,59 +68,6 @@
 
             });
 
-            let selectedRowMap = new Map();
-            let selector = $("#tablesTr .table-div");
-
-            function setSelectedRowMap(id, checkedFlag) {
-                if (checkedFlag)
-                    selectedRowMap.set(id, checkedFlag)
-                else
-                    selectedRowMap.delete(id)
-            }
-
-            function setAllSelectedRows() {
-                selector.find('tbody').find('tr').each(function() {
-                    var checked = $(this).find("td input.table-selection[type=checkbox]").is(':checked');
-                    var id = $(this).find("#_id").val();
-                    setSelectedRowMap(id, checked)
-                });
-            }
-
-            function setHeaderCheckBox(totalRows, rowSelectedCnt){
-                var elemAllSelection = selector
-                        .find('thead').find('tr')
-                        .find("input.table-selection-all[type=checkbox]");
-                if (rowSelectedCnt !== 0 && rowSelectedCnt % totalRows === 0)
-                    elemAllSelection.prop('checked', true)
-                else
-                    elemAllSelection.prop('checked', false)
-            }
-
-            function setSelectedRows() {
-                var rowSelectedCnt = 0;
-                var rows = selector.find('tbody').find('tr')
-                var totalRows = rows.length;
-                rows.each(function() {
-                    var elem = $(this).find("td input.table-selection[type=checkbox]");
-                    var id = $(this).find("#_id").val();
-                    if(selectedRowMap.has(id)){
-                        rowSelectedCnt++
-                        elem.prop('checked', selectedRowMap.get(id))
-                    }
-                });
-                setHeaderCheckBox(totalRows, rowSelectedCnt)
-            }
-
-            selector.on('change', 'input.table-selection[type=checkbox]', function(){
-                var checked = $(this).is(':checked');
-                var id = $(this).next().val();
-                setSelectedRowMap(id, checked)
-                });
-
-            selector.on('change', 'input.table-selection-all[type=checkbox]', () => setAllSelectedRows());
-
-            $(document).on('tableReloaded', () => setSelectedRows());
-
             function openErrorDialog(text) {
                 var errorFrame = $("#errorFrame").contents().find('body');
                 errorFrame.html(text);
@@ -140,7 +87,7 @@
 
             function submitRequest() {
                 const dataSetId = '@dataSetSetting.dataSetId';
-                const selectedIds = Array.from(selectedRowMap.keys());
+                const selectedIds = Array.from(getSelectedRowMap().keys());
                 const sampleRequestParam = {
                     'dataSetId': dataSetId,
                     'tableColumnNames': '@tableViewParts.head.tableFields.map(_.name).toVector.mkString("\t")'.split("\t"),

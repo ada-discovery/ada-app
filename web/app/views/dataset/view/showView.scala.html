@@ -6,6 +6,7 @@
 @import org.ada.web.controllers.dataset.{DataSetWebContext, TableViewData}
 @import org.ada.server.models.DataSetSetting
 
+@import views.html.dataset.view.omicsView
 @(
     dataSetName: String,
     itemName: String,
@@ -23,6 +24,11 @@
 
 @actions = {
     <ul class="list-inline">
+        <li>
+            @if(dataSetSetting.dataSetInfo.isDefined){
+                @omicsView(dataSetSetting)
+            }
+        </li>
         <li>
             @viewExportDropdown(dataViewId, dataSetName, dataSetSetting.filterShowFieldStyle)
         </li>

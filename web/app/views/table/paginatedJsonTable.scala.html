@@ -4,6 +4,8 @@
 @import org.ada.web.util.FieldTypeFullRenderer.FieldTypeFullRenderer
 @import org.incal.play.Page
 
+
+@import org.ada.server.models.DataSetInfo
 @(
     page: Page[JsObject],
     refreshCall : (Int, String) => Call,
@@ -12,7 +14,8 @@
     rowClickCall : Option[JsObject => Call] = None,
     fieldNameRenderMap: Option[Map[String, FieldTypeFullRenderer]] = None,
     isAjaxRefresh: Boolean = false,
-    tableSelection: Boolean = false
+    tableSelection: Boolean = false,
+    dataSetInfo: Option[DataSetInfo] = None
 )
 
 @refreshCallAux(newPage : Int, newOrderBy : Option[String]) = @{
@@ -34,7 +37,8 @@
         rowClickCall,
         fieldNameRenderMap,
         None,
-        tableSelection
+        tableSelection,
+        dataSetInfo
     )
     <hr/>
     @pagination(page, refreshCallAux, isAjaxRefresh)

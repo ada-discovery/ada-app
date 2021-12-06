@@ -26,6 +26,8 @@
     implicit context: DataSetWebContext
 )
 
+@isTableRowSelection = @{if(dataSetSetting.dataSetInfo.isDefined) true else tableRowSelection}
+
 @actionsDiv = {
     <div class="row">
         <div id="singleFilterDiv" class="col-md-10">
@@ -109,7 +111,7 @@
 
         function activateFilter(filterElement, jsonConditions, filterId) {
             var submitAjaxFun = function(filterOrId) {
-                refreshViewForFilter(widgetEngine, '@{dataViewId.stringify}', filterOrId, filterElement, defaultWidgetWidth, enforceWidth, @tableRowSelection);
+                refreshViewForFilter(widgetEngine, '@{dataViewId.stringify}', filterOrId, filterElement, defaultWidgetWidth, enforceWidth, @isTableRowSelection);
             }
 
             activateDataSetFilterAux(
@@ -167,6 +169,79 @@
                 showError("No more columns/filters to remove.")
             }
         }
+
+        let selectedRowMap = new Map();
+        let selector = $("#tablesTr .table-div");
+        let checkedFlag = "checkedFlag"
+        let dataSetJoinId = "dataSetJoinId"
+
+        function getSelectedRowMap() {
+            return selectedRowMap;
+        }
+
+        function setSelectedRowMap(id, rowObj) {
+            if (rowObj[checkedFlag])
+                selectedRowMap.set(id, rowObj)
+            else
+                selectedRowMap.delete(id)
+        }
+
+        function creteRowObj(checked, dsJoinId){
+            var rowObj = {}
+            rowObj[checkedFlag] = checked
+            rowObj[dataSetJoinId] = dsJoinId
+            return rowObj
+        }
+
+        function setAllSelectedRows() {
+            selector.find('tbody').find('tr').each(function() {
+                var checked = $(this).find("td input.table-selection[type=checkbox]").is(':checked');
+                var id = $(this).find("#_id").val();
+                var dsJoinIdElem = $(this).find("#dataSetJoinId")
+                var dsJoinId = dsJoinIdElem.length ? dsJoinIdElem.val() : null
+                setSelectedRowMap(id, creteRowObj(checked, dsJoinId))
+            });
+        }
+
+        function setHeaderCheckBox(totalRows, rowSelectedCnt){
+            var elemAllSelection = selector
+                    .find('thead').find('tr')
+                    .find("input.table-selection-all[type=checkbox]");
+            if (rowSelectedCnt !== 0 && rowSelectedCnt % totalRows === 0)
+                elemAllSelection.prop('checked', true)
+            else
+                elemAllSelection.prop('checked', false)
+        }
+
+        function setSelectedRows(checkElem) {
+            var rowSelectedCnt = 0;
+            var rows = selector.find('tbody').find('tr')
+            var totalRows = rows.length;
+            rows.each(function() {
+                var elem = $(this).find("td input.table-selection[type=checkbox]");
+                var id = $(this).find("#_id").val();
+                if(selectedRowMap.has(id)){
+                    rowSelectedCnt++
+                    if(checkElem)
+                        elem.prop('checked', selectedRowMap.get(id)[checkedFlag])
+                }
+            });
+            setHeaderCheckBox(totalRows, rowSelectedCnt)
+        }
+
+        selector.on('change', 'input.table-selection[type=checkbox]', function(){
+            var checked = $(this).is(':checked');
+            var id = $(this).next().val();
+            var dsJoinIdElem = $(this).next().next()
+            var dsJoinId = dsJoinIdElem.length ? dsJoinIdElem.val() : null
+            setSelectedRowMap(id, creteRowObj(checked, dsJoinId))
+            setSelectedRows(false)
+        });
+
+        selector.on('change', 'input.table-selection-all[type=checkbox]', () => setAllSelectedRows());
+
+        $(document).on('tableReloaded', () => setSelectedRows(true));
+
     </script>
 
     @extraBottomResources.getOrElse(Html(""))
@@ -186,7 +261,8 @@
     tableViewParts.map(_.page.total).sum,
     Some(actionsDiv),
     if(tableViewParts.exists(_.tableFields.nonEmpty)) {
-        Some(viewTables(dataViewId, tableViewParts, tableRowSelection))
+        Some(viewTables(dataViewId, tableViewParts, isTableRowSelection,
+            dataSetSetting.dataSetInfo))
     } else {
         None
     },
