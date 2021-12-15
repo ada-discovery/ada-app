@@ -6,7 +6,7 @@ import org.ada.server.dataaccess.ignite.FilterCacheCrudRepoFactory
 import org.ada.server.models.Filter
 import org.ada.server.models.Filter.FilterOrId
 import org.ada.server.models.User.UserIdentity
-import org.incal.core.ConditionType
+import org.incal.core.{ConditionType, FilterCondition}
 import org.incal.core.dataaccess.Criterion.Infix
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -53,7 +53,7 @@ object FilterRepoExtra {
           Future(Filter(conditions = conditions))
       }
 
-    def resolve(filterOrId: FilterOrId): Future[Filter] =
+    def resolveWithOmics(filterOrId: FilterOrId, omicsFilters: Seq[FilterCondition]): Future[Filter] =
       for {
         filter <- resolveBasic(filterOrId)
       } yield {
@@ -67,7 +67,10 @@ object FilterRepoExtra {
             }
           }.toSeq.sortBy(_._2).map(_._1)
 
-        filter.copy(conditions = optimizedConditions)
+        filter.copy(conditions = optimizedConditions ++ omicsFilters)
       }
+
+  def resolve(filterOrId: FilterOrId) = resolveWithOmics(filterOrId, Nil)
+
   }
 }

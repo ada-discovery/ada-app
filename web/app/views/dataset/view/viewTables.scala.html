@@ -6,12 +6,10 @@
 @import org.ada.web.controllers.dataset.DataSetWebContext
 @import org.ada.web.controllers.dataset.DataSetWebContext._
 
-@import org.ada.server.models.DataSetInfo
 @(
     dataViewId: BSONObjectID,
     viewParts: Seq[TableViewData],
-    tableRowSelection: Boolean = false,
-    dataSetInfo: Option[DataSetInfo] = None
+    tableRowSelection: Boolean = false
 )(
     implicit dataSetWebContext: DataSetWebContext
 )
@@ -25,8 +23,7 @@
                     viewPart.filter,
                     viewPart.tableFields,
                     false,
-                    tableRowSelection,
-                    dataSetInfo
+                    tableRowSelection
                 )
             </div>
         </td>

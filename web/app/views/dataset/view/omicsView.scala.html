@@ -1,23 +1,20 @@
 @import org.ada.server.models.{DataSetSetting, FilterShowFieldStyle}
-@import org.ada.web.controllers.dataset.omics.routes.{OmicsDataSetController => omicsRoutes}
-@import views.html.elements.typeahead
-@import org.ada.web.controllers.dataset.routes
 @import org.ada.web.controllers.dataset.DataSetWebContext
 @import org.ada.web.controllers.dataset.DataSetWebContext._
-
-@import play.mvc.Http.Context.Implicit.request
+@import org.ada.web.controllers.dataset.omics.routes.{OmicsDataSetController => omicsRoutes}
+@import views.html.elements.typeahead
 @(dataSetSetting: DataSetSetting)(implicit context: DataSetWebContext)
 
 @modalBody = {
-    <p id="omicsDataSetId">@typeahead("dataSetIdTypeahead", "dataSetId", "Data Set Id", isLarge = true)<p>
+    <p id="omicsDataSetId">@typeahead("dataSetIdTypeahead", "dataSetId", "Data Set Id", isLarge = true, None, Option("invisible"))<p>
 }
 
 @modalButtons = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="submit" id="submitButton" class="btn btn-primary" onclick="searchInOmicsDataSet()">Search</button>
+    <button type="submit" id="omicsSubmitButton" class="btn btn-primary" onclick="searchInOmicsDataSet()">Search</button>
 }
 
-<a class="btn btn-info btn-sm disabled" data-toggle="modal" data-target="#joinOmicsDataSetModal" title="Search in another Data Set">
+<a class="btn btn-info btn-sm" data-toggle="modal" data-target="#joinOmicsDataSetModal" title="Search in another Data Set">
     <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
     Omics Search
 </a>
@@ -37,6 +34,10 @@
     org.ada.web.controllers.dataset.routes.javascript.DataSetDispatcher.getView
 )
 
+@helper.javascriptRouter("searchInOmicsJsRoute")(
+    org.ada.web.controllers.dataset.routes.javascript.DataSetDispatcher.searchInOmics
+)
+
 
 
 
@@ -50,6 +51,82 @@
                 showOption: @FilterShowFieldStyle.LabelsOnly.id
             });
         })
+
+        $(document).on('shown.bs.modal', '#joinOmicsDataSetModal', function (e) {
+            checkFilterSelection()
+        });
+
+        function getSelectionFilterMessage(){
+            return "<p id='selectFilterInfo' class='text-danger h4'> Please select a filter before submitting an Omics search.</p>"
+        }
+
+        function disableOmicsSearch(){
+            if($("#selectFilterInfo").length == 0)
+                $("#omicsDataSetId").before(getSelectionFilterMessage())
+
+            if(!$("#dataSetIdTypeahead").hasClass("invisible"))
+                $("#dataSetIdTypeahead").addClass("invisible")
+
+            if(!$("#omicsSubmitButton").hasClass("disabled"))
+                $("#omicsSubmitButton").addClass("disabled")
+        }
+
+        function enableOmicsSearch(){
+            if($("#selectFilterInfo").length)
+                $("#selectFilterInfo").remove()
+
+            if($("#dataSetIdTypeahead").hasClass("invisible"))
+                $("#dataSetIdTypeahead").removeClass("invisible")
+
+            if($("#omicsSubmitButton").hasClass("disabled"))
+                $("#omicsSubmitButton").removeClass("disabled")
+        }
+
+
+        function checkFilterSelection(){
+            if(getFilters().length == 0) {
+                disableOmicsSearch()
+            } else {
+                enableOmicsSearch()
+            }
+
+        }
+
+        /*function getFilters(filters){
+            var fieldName = "fieldName"
+            var fieldLabel = "fieldLabel"
+            var conditionType = "conditionType"
+            var value = "value"
+            var filterArr = []
+            $.each(filters, function (index) {
+                var conditions = $("#condition-full" + index).find(".condition > span")
+                var filter = {fieldName:"","conditionType":"","value": "",fieldLabel: ""}
+                $.each(conditions, function (){
+                    if ($(this).attr("id") === fieldLabel){
+                        filter[fieldName] = $(this).text()
+                        filter[fieldLabel] = $(this).text()
+                    } else if ($(this).attr("id") === conditionType){
+                        filter[conditionType] = $(this).find("b").text()
+                    } else if ($(this).attr("id") === "valueNotTrim") {
+                        filter[value] = $(this).text()
+                    }
+                })
+                filterArr.push(filter)
+            })
+
+            return filterArr
+        }*/
+
+        function getFilters(){
+            var filterElements = $("#filtersTr").find(".filter-div").toArray();
+
+            var filterOrIds = filterElements.map(function(filterElement, index) {
+                return $(filterElement).multiFilter('getIdOrModel');
+            });
+
+            return filterOrIds[0]
+        }
+
 
         function removeOmicsJoinFieldAndDataView(){
             if($("#omicsJoinField").length && $("#omicsdataView").length){
@@ -90,21 +167,24 @@
             }
         })
 
-        function getJoinFields(){
-            var joinFieldIds = []
-             for (let value of getSelectedRowMap().values()){
-                 joinFieldIds.push(value["dataSetJoinId"])
-             }
-             return joinFieldIds.join();
-        }
 
         function searchInOmicsDataSet(){
-            var dataSetId = $("#dataSetId").val()
+            var currentDataSetId = '@dataSetSetting.dataSetId'
+            var dataSetIdToSearch = $("#dataSetId").val()
             var joinFieldId = $("#joinFieldId").val()
-            var dataViewId = $("#dataViewId").val()
-            var joinFields = getJoinFields()
-            var filterOrId = [[{"fieldName":joinFieldId,"conditionType":"in","value": joinFields,"fieldLabel": joinFieldId}]]
-            window.location.href= getViewJsRoute.org.ada.web.controllers.dataset.DataSetDispatcher.getView(dataViewId, null, JSON.stringify(filterOrId), true).url + "&dataSet=" + dataSetId;
+            var dataViewIdToSearch = $("#dataViewId").val()
+            var filterOrIds = getFilters()
+
+            searchInOmicsJsRoute.org.ada.web.controllers.dataset.DataSetDispatcher.searchInOmics(currentDataSetId, JSON.stringify(filterOrIds), dataViewIdToSearch, joinFieldId).ajax({
+                success: function(res) {
+                    var omicsFilterTmpId = res["omicsFilterTmpId"]
+                    window.location.href = getViewJsRoute.org.ada.web.controllers.dataset.DataSetDispatcher.getView(dataViewIdToSearch, null, null, false, omicsFilterTmpId).url + "&dataSet=" + dataSetIdToSearch;
+                },
+                error: function(error) {
+                    document.getElementsByTagName("html")[0].innerHTML = error
+                }
+            })
+
         }
 
 

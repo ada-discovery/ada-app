@@ -362,7 +362,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     Action.async { implicit request =>
       update(
         id,
-        {_ => Redirect(dataSetRouter.getView(id, Nil, Nil, false))}
+        {_ => Redirect(dataSetRouter.getView(id, Nil, Nil, false, None))}
       ).apply(request)
     }
 

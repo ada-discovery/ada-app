@@ -42,15 +42,17 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     dataViewId: BSONObjectID,
     tablePages: Seq[PageOrder],
     filterOrIds: Seq[FilterOrId],
-    filterChanged: Boolean
+    filterChanged: Boolean,
+    omicsFilterTmpId: Option[String]
   ): Action[AnyContent]
 
   def getViewElementsAndWidgetsCallback(
     dataViewId: BSONObjectID,
     tableOrder: String,
-    filterOrId: FilterOrId,
     oldCountDiff: Option[Int],
-    tableSelection: Boolean
+    tableSelection: Boolean,
+    filterTmpId: Option[String],
+    filterOrId: FilterOrId
   ): Action[AnyContent]
 
   def getNewFilter: Action[AnyContent]
@@ -265,4 +267,14 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     limit: Option[Int],
     skip: Option[Int]
   ): Action[AnyContent]
+
+  def searchInOmics(
+    dataSet: String,
+    filterOrIdCurrentDatSet: FilterOrId,
+    dataViewIdToSearch: BSONObjectID,
+    searchField: String): Action[AnyContent]
+
+  def cacheFilterOrIds(filterOrId: FilterOrId): Action[AnyContent]
+
+
 }

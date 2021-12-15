@@ -178,16 +178,18 @@ class DataSetDispatcher @Inject() (
     dataViewId: BSONObjectID,
     tablePages: Seq[PageOrder],
     filterOrIds: Seq[FilterOrId],
-    filterChanged: Boolean
-  ) = dispatchIsAdminOrPermissionAndOwnerOrPublic(dataViewId, _.getView(dataViewId, tablePages, filterOrIds, filterChanged))
+    filterChanged: Boolean,
+    omicsFilterTmpId: Option[String]
+  ) = dispatchIsAdminOrPermissionAndOwnerOrPublic(dataViewId, _.getView(dataViewId, tablePages, filterOrIds, filterChanged, omicsFilterTmpId))
 
   override def getViewElementsAndWidgetsCallback(
     dataViewId: BSONObjectID,
     tableOrder: String,
-    filterOrId: FilterOrId,
     oldCountDiff: Option[Int],
-    tableSelection: Boolean
-  ) = dispatchIsAdminOrPermissionAndOwnerOrPublicAjax(dataViewId, _.getViewElementsAndWidgetsCallback(dataViewId, tableOrder, filterOrId, oldCountDiff, tableSelection))
+    tableSelection: Boolean,
+    filterTmpId: Option[String],
+    filterOrId: FilterOrId
+  ) = dispatchIsAdminOrPermissionAndOwnerOrPublicAjax(dataViewId, _.getViewElementsAndWidgetsCallback(dataViewId, tableOrder,  oldCountDiff, tableSelection, filterTmpId, filterOrId))
 
   override def getNewFilterViewElementsAndWidgetsCallback(
     dataViewId: BSONObjectID,
@@ -295,6 +297,13 @@ class DataSetDispatcher @Inject() (
     skip: Option[Int]
   ) = dispatch(_.findCustom(filterOrId, orderBy, projection, limit, skip))
 
+  override def searchInOmics(
+    dataSet: String,
+    filterOrIdCurrentDatSet: FilterOrId,
+    dataViewIdToSearch: BSONObjectID,
+    searchField: String): Action[AnyContent] = dispatchIsAdminOrPermissionAndOwnerOrPublic(dataViewIdToSearch, _.searchInOmics(dataSet, filterOrIdCurrentDatSet, dataViewIdToSearch, searchField))
+
+  override def cacheFilterOrIds(filterOrId: FilterOrId): Action[AnyContent] = dispatch(_.cacheFilterOrIds(filterOrId))
 
   // aux function for access control
 
@@ -322,4 +331,6 @@ class DataSetDispatcher @Inject() (
         case None => (None, false) // no data view found we say it is NOT public
       }
   }
+
+
 }

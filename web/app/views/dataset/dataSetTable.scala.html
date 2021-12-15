@@ -6,14 +6,12 @@
 @import org.ada.web.controllers.dataset.DataSetWebContext
 @import org.ada.web.controllers.dataset.DataSetWebContext._
 
-@import org.ada.server.models.DataSetInfo
 @(
     page: Page[JsObject],
     filter: Option[Filter],
     tableFields: Traversable[Field],
     withRowClickableJs: Boolean = false,
-    tableRowSelection: Boolean = false,
-    dataSetInfo: Option[DataSetInfo] = None
+    tableRowSelection: Boolean = false
 )(
     implicit dataSetWebContext: DataSetWebContext
 )
@@ -32,7 +30,6 @@
         Some(dataSetRouter.get),
         withRowClickableJs,
         true,
-        tableRowSelection,
-        dataSetInfo
+        tableRowSelection
     )
 }

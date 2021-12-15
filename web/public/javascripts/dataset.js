@@ -69,48 +69,65 @@ function saveFilterToView(viewId) {
 }
 
 function refreshViewForFilter(widgetEngine, viewId, filterOrId, filterElement, widgetGridElementWidth, enforceWidth, tableSelection) {
-    var index = $("#filtersTr").find(".filter-div").index(filterElement);
 
-    var counts = $("#filtersTr").find(".count-hidden").map(function(index, element) {
-        return parseInt($(element).val());
-    }).toArray();
 
-    // add the old count to the params
-    var totalCount = counts.reduce(function (a, b) {return a + b;}, 0);
-    var oldCountDiff = totalCount - counts[index];
+    dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.cacheFilterOrIds(filterOrId).ajax({
+        success: function (response) {
+            var filterTmpId = response["filterTmpId"]
 
-    dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getViewElementsAndWidgetsCallback(viewId, "", filterOrId, oldCountDiff, tableSelection).ajax( {
-        success: function(data) {
-            hideErrors();
+            var index = $("#filtersTr").find(".filter-div").index(filterElement);
 
-            // filter
-            filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
-            addDragAndDropSupportForFilter(filterElement)
+            var counts = $("#filtersTr").find(".count-hidden").map(function(index, element) {
+                return parseInt($(element).val());
+            }).toArray();
 
-            // display count
-            var countDisplayElement = filterElement.closest(".row").parent().find(".count-div")
-            countDisplayElement.html("<h3>" + data.count + "</h3>");
+            // add the old count to the params
+            var totalCount = counts.reduce(function (a, b) {return a + b;}, 0);
+            var oldCountDiff = totalCount - counts[index];
 
-            // (hidden) count
-            var countHiddenElement = filterElement.parent().find(".count-hidden")
-            countHiddenElement.val(data.count);
+            dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getViewElementsAndWidgetsCallback(viewId, "", oldCountDiff, tableSelection, filterTmpId, null).ajax( {
+                success: function(data) {
+                    hideErrors();
 
-            // page header
-            $(".page-header").html("<h3>" + data.pageHeader + "</h3>");
+                    // filter
+                    filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
+                    addDragAndDropSupportForFilter(filterElement)
 
-            // table
-            var tableElement = $("#tablesTr").find(".table-div:eq(" + index + ")")
-            tableElement.html(data.table);
+                    // display count
+                    var countDisplayElement = filterElement.closest(".row").parent().find(".count-div")
+                    countDisplayElement.html("<h3>" + data.count + "</h3>");
 
-            // widgets
-            var widgetsDiv = $("#widgetsTr > td:eq(" + index + ")")
-            updateWidgetsFromCallback(widgetEngine, data.widgetsCallbackId, widgetsDiv, filterElement, widgetGridElementWidth, enforceWidth)
+                    // (hidden) count
+                    var countHiddenElement = filterElement.parent().find(".count-hidden")
+                    countHiddenElement.val(data.count);
+
+                    // page header
+                    $(".page-header").html("<h3>" + data.pageHeader + "</h3>");
+
+                    // table
+                    var tableElement = $("#tablesTr").find(".table-div:eq(" + index + ")")
+                    tableElement.html(data.table);
+
+                    // widgets
+                    var widgetsDiv = $("#widgetsTr > td:eq(" + index + ")")
+                    updateWidgetsFromCallback(widgetEngine, data.widgetsCallbackId, widgetsDiv, filterElement, widgetGridElementWidth, enforceWidth)
+                },
+                error: function(data) {
+                    showErrorResponse(data)
+                    filterElement.multiFilter("rollbackModelOnError");
+                }
+            });
+
         },
-        error: function(data) {
-            showErrorResponse(data)
-            filterElement.multiFilter("rollbackModelOnError");
+        error: function(response) {
+            showErrorResponse(response)
         }
-    });
+
+    })
+
+
+
+
 }
 
 function addNewViewColumn(widgetEngine, viewId, widgetGridElementWidth, enforceWidth, activateFilter) {

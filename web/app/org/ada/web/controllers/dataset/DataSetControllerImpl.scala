@@ -2,8 +2,8 @@ package org.ada.web.controllers.dataset
 
 import java.util.UUID
 import java.{util => ju}
-
 import akka.stream.Materializer
+
 import javax.inject.Inject
 import org.ada.web.util.WebExportUtil._
 import org.ada.web.util.shorten
@@ -23,7 +23,7 @@ import org.ada.server.models.Filter.FilterOrId
 import org.ada.server.json._
 import org.ada.server.models.ml._
 import org.ada.web.controllers.dataset.IndependenceTestResult._
-import org.ada.server.dataaccess.RepoTypes.{ClassifierRepo, ClusteringRepo, RegressorRepo}
+import org.ada.server.dataaccess.RepoTypes.{ClassifierRepo, ClusteringRepo, DataSetSettingRepo, RegressorRepo}
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.data.{Form, Mapping}
@@ -62,6 +62,9 @@ import org.incal.spark_ml.models.VectorScalerType
 import org.ada.server.services.importers.TranSMARTService
 import org.ada.web.services.{DataSpaceService, WidgetGenerationService}
 import org.ada.web.services.widgetgen.DistributionWidgetGeneratorHelper
+import play.cache.NamedCache
+import play.api.cache.CacheApi
+import scala.concurrent.duration._
 
 import scala.math.Ordering.Implicits._
 import scala.concurrent.{Future, TimeoutException}
@@ -70,18 +73,20 @@ trait GenericDataSetControllerFactory {
   def apply(dataSetId: String): DataSetController
 }
 
-protected[controllers] class DataSetControllerImpl @Inject() (
+protected[controllers] class DataSetControllerImpl @Inject()(
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
     mlService: MachineLearningService,
     statsService: StatsService,
     dataSetService: DataSetService,
     widgetService: WidgetGenerationService,
+    dataSetSettingRepo: DataSetSettingRepo,
     classificationRepo: ClassifierRepo,
     regressionRepo: RegressorRepo,
     clusteringRepo: ClusteringRepo,
     val dataSpaceService: DataSpaceService,
-    tranSMARTService: TranSMARTService)(
+    tranSMARTService: TranSMARTService,
+    @NamedCache("filters-cache") filtersCache: CacheApi)(
     implicit materializer: Materializer
   ) extends AdaReadonlyControllerImpl[JsObject, BSONObjectID]
     with DataSetController
@@ -473,7 +478,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       )
     } yield
       selectedView match {
-        case Some(view) => Redirect(router.getView(view._id.get, Nil, Nil, false))
+        case Some(view) => Redirect(router.getView(view._id.get, Nil, Nil, false, None))
         case None => Redirect(new DataViewRouter(dataSetId).plainList).flashing("errors" -> "No view to show. You must first define one.")
       }
   }
@@ -482,7 +487,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     dataViewId: BSONObjectID,
     tablePages: Seq[PageOrder],
     filterOrIds: Seq[FilterOrId],
-    filterChanged: Boolean
+    filterChanged: Boolean,
+    omicsFilterTmpId: Option[String]
   ) = AuthAction { implicit request =>
     val start = new ju.Date()
 
@@ -509,12 +515,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         editPossible <- dataView.map(canEditView(_)).getOrElse(Future(false))
 
         // initialize filters
-        filterOrIdsToUse: Seq[FilterOrId] =
+        filterOrIdsToUse: Seq[FilterOrId] = {
           if (!filterChanged) {
             dataView.map(_.filterOrIds) match {
               case Some(viewFilterOrIds) =>
                 val initViewFilterOrIds = if (viewFilterOrIds.nonEmpty) viewFilterOrIds else Seq(Left(Nil))
-
                 val padding = Seq.fill(Math.max(initViewFilterOrIds.size - filterOrIds.size, 0))(Left(Nil))
 
                 (filterOrIds ++ padding).zip(initViewFilterOrIds).map { case (filterOrId, viewFilterOrId) =>
@@ -523,16 +528,18 @@ protected[controllers] class DataSetControllerImpl @Inject() (
                   } else
                     filterOrId
                 }
-
               case None =>
                 filterOrIds
             }
           } else
             filterOrIds
+        }
+
+        omicsFilters = getOmicsFilterTmp(omicsFilterTmpId)
 
         // initialize table pages
         tablePagesToUse = {
-          val padding = Seq.fill(Math.max(filterOrIdsToUse.size - tablePages.size, 0))(PageOrder(0, ""))
+          val padding = Seq.fill(Math.max((filterOrIdsToUse.size + omicsFilters.size) - tablePages.size, 0))(PageOrder(0, ""))
           tablePages ++ padding
         }
 
@@ -540,7 +547,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         (tableColumnNames, widgetSpecs) = dataView.map(view => (view.tableColumnNames, view.widgetSpecs)).getOrElse((Nil, Nil))
 
         // load all the filters if needed
-        resolvedFilters <- Future.sequence(filterOrIdsToUse.map(filterRepo.resolve))
+        resolvedFilters <- Future.sequence(filterOrIdsToUse.map(filterOrId => filterRepo.resolveWithOmics(filterOrId, omicsFilters)))
 
         // collect the filters' conditions
         conditions = resolvedFilters.map(_.conditions)
@@ -614,6 +621,43 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
     }.recover(handleExceptionsWithId("a show-view", dataViewId))
   }
+
+  private def getOmicsFilterTmp(omicsFilterTmpId: Option[String]): Seq[FilterCondition] = {
+    if (omicsFilterTmpId.isDefined){
+       filtersCache.get(omicsFilterTmpId.get).getOrElse(Nil)
+    } else
+       Nil
+  }
+
+  private def getTmpFilter(filterTmpId: Option[String]) : Option[FilterOrId] = {
+    if (filterTmpId.isDefined) {
+        filtersCache.get(filterTmpId.get)
+    } else
+      None
+  }
+
+  override def searchInOmics(
+      dataSet: String,
+      filterOrIdCurrentDatSet: FilterOrId,
+      dataViewIdToSearch: BSONObjectID,
+      searchField: String) = AuthAction { implicit request =>
+
+      val currentDisplayedDataSetRepo = dsa.dataSetRepo
+      for {
+          dataSettings <- dataSetSettingRepo.find(Seq("dataSetId" #== dataSetId, "dataSetInfo" #!= None))
+          resolvedFilter <- filterRepo.resolve(filterOrIdCurrentDatSet)
+          criteria <- toCriteria(resolvedFilter.conditions)
+          result <- currentDisplayedDataSetRepo.find(criteria = criteria, projection = Seq(dataSettings.head.dataSetInfo.get.dataSetJoinIdName))
+        } yield {
+          val values = result.map(res => (res \ searchField).as[String]).mkString(",")
+          val filterConditions = Seq(FilterCondition(searchField, None, conditionType = ConditionType.In, value = Option(values), None))
+          val omicsFilterTmpId = UUID.randomUUID().toString
+          filtersCache.set(omicsFilterTmpId, filterConditions, 1.day)
+          Ok(Json.obj("omicsFilterTmpId" -> omicsFilterTmpId))
+        }
+
+  }
+
 
   // This is just to demonstrate how an action view can be used... can be deleted
   private def getViewWithAction(
@@ -730,18 +774,25 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
+  override def cacheFilterOrIds(filterOrId: FilterOrId): Action[AnyContent] = AuthAction { implicit request =>
+    val filterTmpId =  UUID.randomUUID().toString
+    filtersCache.set(filterTmpId, filterOrId, 2.minute)
+    Future(Ok(Json.obj("filterTmpId" -> filterTmpId)))
+  }
+
   override def getViewElementsAndWidgetsCallback(
     dataViewId: BSONObjectID,
     tableOrder: String,
-    filterOrId: FilterOrId,
     oldCountDiff: Option[Int],
-    tableSelection: Boolean
+    tableSelection: Boolean,
+    filterTmpId: Option[String],
+    filterOrId: FilterOrId
   ) = AuthAction { implicit request =>
     val tablePage = 0
 
     val dataSetNameFuture = dsa.dataSetName
     val dataViewFuture = dataViewRepo.get(dataViewId)
-    val resolvedFilterFuture = filterRepo.resolve(filterOrId)
+    val resolvedFilterFuture = filterRepo.resolve(getTmpFilter(filterTmpId).getOrElse(filterOrId))
     val settingFuture = dsa.setting
 
     {
