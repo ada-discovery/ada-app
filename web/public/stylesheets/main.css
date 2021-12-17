@@ -682,3 +682,7 @@ a.carousel-control.right{
     line-height: 1.5;
     border-radius: 3px;
 }
+
+.omics-pd-left{
+    padding-left: 10px;
+}

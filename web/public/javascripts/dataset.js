@@ -68,13 +68,12 @@ function saveFilterToView(viewId) {
     });
 }
 
-function refreshViewForFilter(widgetEngine, viewId, filterOrId, filterElement, widgetGridElementWidth, enforceWidth, tableSelection) {
 
+function refreshViewForFilter(widgetEngine, viewId, filterOrId, filterElement, widgetGridElementWidth, enforceWidth, tableSelection, dataSetId) {
 
-    dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.cacheFilterOrIds(filterOrId).ajax({
+    cacheFilterOrIdsJsRoute.org.ada.web.controllers.dataset.omics.OmicsDataSetController.cacheFilterOrIds(filterOrId, dataSetId).ajax({
         success: function (response) {
             var filterTmpId = response["filterTmpId"]
-
             var index = $("#filtersTr").find(".filter-div").index(filterElement);
 
             var counts = $("#filtersTr").find(".count-hidden").map(function(index, element) {
@@ -85,7 +84,7 @@ function refreshViewForFilter(widgetEngine, viewId, filterOrId, filterElement, w
             var totalCount = counts.reduce(function (a, b) {return a + b;}, 0);
             var oldCountDiff = totalCount - counts[index];
 
-            dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getViewElementsAndWidgetsCallback(viewId, "", oldCountDiff, tableSelection, filterTmpId, null).ajax( {
+            dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getViewElementsAndWidgetsCallback(viewId, "", oldCountDiff, tableSelection, filterTmpId, null).ajax({
                 success: function(data) {
                     hideErrors();
 
@@ -117,17 +116,12 @@ function refreshViewForFilter(widgetEngine, viewId, filterOrId, filterElement, w
                     filterElement.multiFilter("rollbackModelOnError");
                 }
             });
-
         },
         error: function(response) {
             showErrorResponse(response)
         }
 
     })
-
-
-
-
 }
 
 function addNewViewColumn(widgetEngine, viewId, widgetGridElementWidth, enforceWidth, activateFilter) {

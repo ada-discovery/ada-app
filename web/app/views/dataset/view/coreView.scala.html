@@ -67,8 +67,11 @@
         dataSetJsRouter.getWidgets,
         dataSetJsRouter.getFieldValue,
         dataSetJsRouter.getViewElementsAndWidgetsCallback,
-        dataSetJsRouter.getNewFilterViewElementsAndWidgetsCallback,
-        dataSetJsRouter.cacheFilterOrIds
+        dataSetJsRouter.getNewFilterViewElementsAndWidgetsCallback
+    )
+
+    @helper.javascriptRouter("cacheFilterOrIdsJsRoute")(
+        org.ada.web.controllers.dataset.omics.routes.javascript.OmicsDataSetController.cacheFilterOrIds
     )
 
     @helper.javascriptRouter("dataViewJsRoutes")(
@@ -110,7 +113,7 @@
 
         function activateFilter(filterElement, jsonConditions, filterId) {
             var submitAjaxFun = function(filterOrId) {
-                refreshViewForFilter(widgetEngine, '@{dataViewId.stringify}', filterOrId, filterElement, defaultWidgetWidth, enforceWidth, @tableRowSelection);
+                refreshViewForFilter(widgetEngine, '@{dataViewId.stringify}', filterOrId, filterElement, defaultWidgetWidth, enforceWidth, @tableRowSelection, '@dataSetSetting.dataSetId');
             }
 
             activateDataSetFilterAux(

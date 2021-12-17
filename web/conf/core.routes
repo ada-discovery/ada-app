@@ -158,7 +158,6 @@ GET         /dataSets/newFilterViewElementsAndWidgetsCallback                   
 GET         /dataSets/newFilter                                                      org.ada.web.controllers.dataset.DataSetDispatcher.getNewFilter
 GET         /dataSets/categoriesWithFieldsAsTreeNodes                                org.ada.web.controllers.dataset.DataSetDispatcher.getCategoriesWithFieldsAsTreeNodes(filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID])
 GET         /dataSets/records/findCustom                                             org.ada.web.controllers.dataset.DataSetDispatcher.findCustom(filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil), orderBy: String ?= "", projection: Seq[String] ?= Nil, limit: Option[Int] ?= None, skip: Option[Int] ?= None)
-POST        /dataSets/cacheFilterOrIds                                               org.ada.web.controllers.dataset.DataSetDispatcher.cacheFilterOrIds(filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID])
 
 # DictionaryDispatcher
 GET         /dataSets/dictionary                                                     org.ada.web.controllers.dataset.DictionaryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[org.incal.core.FilterCondition] ?= Nil)
@@ -361,4 +360,6 @@ GET         /webjars/*file                                                      
 GET         /omics/:currentDataSetId/dataSetIds                                     org.ada.web.controllers.dataset.omics.OmicsDataSetController.dataSetIds(currentDataSetId: String)
 GET         /omics/:dataSetIdToSearch/fieldsNamesLabels                             org.ada.web.controllers.dataset.omics.OmicsDataSetController.getFieldsNamesAndLabels(dataSetIdToSearch: String)
 GET         /omics/:dataSetIdToSearch/dataViews                                     org.ada.web.controllers.dataset.omics.OmicsDataSetController.getDataviews(dataSetIdToSearch: String)
-POST        /omics/searchInOmics                                                    org.ada.web.controllers.dataset.DataSetDispatcher.searchInOmics(dataSet: String, filterOrIdCurrentDatSet: Either[Seq[org.incal.core.FilterCondition], BSONObjectID], dataViewIdToSearch: BSONObjectID, searchField: String)
+GET         /omics/:dataSetIdToSearch/dataSetInfo                                   org.ada.web.controllers.dataset.omics.OmicsDataSetController.getDataSetInfo(dataSetIdToSearch: String)
+POST        /omics/searchInOmics                                                    org.ada.web.controllers.dataset.omics.OmicsDataSetController.searchInOmics(currentDataSetId: String, filterOrIdCurrentDatSet: Either[Seq[org.incal.core.FilterCondition], BSONObjectID], dataSetIdToSearch: String, searchField: String)
+POST        /dataSets/cacheFilterOrIds                                              org.ada.web.controllers.dataset.omics.OmicsDataSetController.cacheFilterOrIds(filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID], currentDataSetId: String)

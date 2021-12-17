@@ -1,36 +1,38 @@
 package org.ada.web.controllers.dataset.omics
 
 
-import be.objectify.deadbolt.scala.AuthenticatedRequest
 import org.ada.server.dataaccess.RepoTypes.DataSetSettingRepo
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
-import org.ada.server.models.{DataSetInfo, DataSetType}
-import org.ada.server.models.Filter.FilterOrId
-import org.ada.web.controllers.core.{AdaBaseController, AdaReadonlyControllerImpl}
-import org.ada.web.services.DataSpaceService
-import org.incal.core.dataaccess.Criterion._
 import org.ada.server.dataaccess.dataset.FilterRepoExtra._
-import org.incal.core.FilterCondition
-import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion}
-import org.incal.play.Page
-import play.api.libs.json.{JsArray, JsObject, Json}
-import play.api.mvc.Call
-import reactivemongo.bson.BSONObjectID
+import org.ada.server.models.DataSetType
+import org.ada.server.models.Filter.FilterOrId
+import org.ada.web.controllers.core.AdaBaseController
+import org.ada.web.services.DataSpaceService
+import org.incal.core.dataaccess.Criterion
+import org.incal.core.dataaccess.Criterion._
+import org.incal.core.{ConditionType, FilterCondition}
+import play.api.cache.CacheApi
+import play.api.libs.json.Json
+import play.api.mvc.{Action, AnyContent}
+import play.cache.NamedCache
 
+import java.util.UUID
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 
 
 class OmicsDataSetController @Inject()(
    dataSetSettingRepo: DataSetSettingRepo,
    dataSpaceService: DataSpaceService,
-   dataSetAccessorFactory: DataSetAccessorFactory) extends AdaBaseController
+   dataSetAccessorFactory: DataSetAccessorFactory,
+   @NamedCache("filters-cache") filtersCache: CacheApi) extends AdaBaseController
 {
 
 
-  private def dataSetRequestPermission(dataSetId: String) = s"DS:$dataSetId.dataSet"
+  private def dataSetRequestPermission(dataSetId: String) = s"DS:$dataSetId.dataSet.getView"
 
   def dataSetIds(currentDataSetId: String) =
     restrictAdminOrPermissionAny(dataSetRequestPermission(currentDataSetId)) { implicit request =>
@@ -82,25 +84,43 @@ class OmicsDataSetController @Inject()(
 
     }
 
+  def getDataSetInfo(dataSetIdToSearch: String) =
+    restrictAdminOrPermissionAny(dataSetRequestPermission(dataSetIdToSearch)) { implicit request =>
+      for {
+        dataSettings <- dataSetSettingRepo.find(criteria = Seq("dataSetId" #== dataSetIdToSearch, "dataSetInfo" #!= None))
+      } yield {
+        Ok(Json.toJson(dataSettings.head.dataSetInfo))
+      }
+    }
 
-  /*def searchInOmics(currentDataSetId: String,
+
+  def cacheFilterOrIds(filterOrId: FilterOrId, currentDataSetId: String): Action[AnyContent] =
+    restrictAdminOrPermissionAny(dataSetRequestPermission(currentDataSetId)){ implicit request =>
+        val filterTmpId =  UUID.randomUUID().toString
+        filtersCache.set(filterTmpId, filterOrId, 2.minute)
+        Future(Ok(Json.obj("filterTmpId" -> filterTmpId)))
+  }
+
+  def searchInOmics(currentDataSetId: String,
                         filterOrIdCurrentDatSet: FilterOrId,
                         dataSetIdToSearch: String,
-                        dataViewId: BSONObjectID,
                         searchField: String) =
     restrictAdminOrPermissionAny(dataSetRequestPermission(dataSetIdToSearch)) { implicit request =>
 
       val currentRepo = dataSetAccessorFactory.applySync(currentDataSetId).get
-      var currentDataSetRepo = currentRepo.dataSetRepo
-      //val repoToSearch = dataSetAccessorFactory.applySync(dataSetIdToSearch).get
-
+      val currentDisplayedDataSetRepo = currentRepo.dataSetRepo
+      val filterRepo = currentRepo.filterRepo
       for {
         dataSettings <- dataSetSettingRepo.find(Seq("dataSetId" #== currentDataSetId, "dataSetInfo" #!= None))
-        resolvedFilter <- currentRepo.filterRepo.resolve(filterOrIdCurrentDatSet)
+        resolvedFilter <- filterRepo.resolve(filterOrIdCurrentDatSet)
         criteria <- toCriteria(resolvedFilter.conditions)
-        result <- currentDataSetRepo.find(criteria = criteria, projection = Seq(dataSettings.head.dataSetInfo.get.dataSetJoinIdName))
+        result <- currentDisplayedDataSetRepo.find(criteria = criteria, projection = Seq(dataSettings.head.dataSetInfo.get.dataSetJoinIdName))
       } yield {
-        Ok(Json.obj("Res" -> result.toSeq))
+        val values = result.map(res => (res \ searchField).as[String]).mkString(",")
+        val filterConditions = Seq(FilterCondition(searchField, None, conditionType = ConditionType.In, value = Option(values), None))
+        val omicsFilterTmpId = UUID.randomUUID().toString
+        filtersCache.set(omicsFilterTmpId, filterConditions, 1.day)
+        Ok(Json.obj("omicsFilterTmpId" -> omicsFilterTmpId))
       }
 
     }
@@ -113,7 +133,7 @@ class OmicsDataSetController @Inject()(
   }
 
   private def filterValueConverters(fieldNames: Traversable[String]): Future[Map[String, String => Option[Any]]] =
-    Future(Map())*/
+    Future(Map())
 
 
 }
