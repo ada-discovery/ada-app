@@ -636,28 +636,6 @@ protected[controllers] class DataSetControllerImpl @Inject()(
       None
   }
 
-  /*override def searchInOmics(
-      dataSet: String,
-      filterOrIdCurrentDatSet: FilterOrId,
-      dataViewIdToSearch: BSONObjectID,
-      searchField: String) = AuthAction { implicit request =>
-
-      val currentDisplayedDataSetRepo = dsa.dataSetRepo
-      for {
-          dataSettings <- dataSetSettingRepo.find(Seq("dataSetId" #== dataSet, "dataSetInfo" #!= None))
-          resolvedFilter <- filterRepo.resolve(filterOrIdCurrentDatSet)
-          criteria <- toCriteria(resolvedFilter.conditions)
-          result <- currentDisplayedDataSetRepo.find(criteria = criteria, projection = Seq(dataSettings.head.dataSetInfo.get.dataSetJoinIdName))
-        } yield {
-          val values = result.map(res => (res \ searchField).as[String]).mkString(",")
-          val filterConditions = Seq(FilterCondition(searchField, None, conditionType = ConditionType.In, value = Option(values), None))
-          val omicsFilterTmpId = UUID.randomUUID().toString
-          filtersCache.set(omicsFilterTmpId, filterConditions, 1.day)
-          Ok(Json.obj("omicsFilterTmpId" -> omicsFilterTmpId))
-        }
-
-  }*/
-
 
   // This is just to demonstrate how an action view can be used... can be deleted
   private def getViewWithAction(
@@ -773,12 +751,6 @@ protected[controllers] class DataSetControllerImpl @Inject()(
         )
     }
   }
-
-  /*override def cacheFilterOrIds(filterOrId: FilterOrId): Action[AnyContent] = AuthAction { implicit request =>
-    val filterTmpId =  UUID.randomUUID().toString
-    filtersCache.set(filterTmpId, filterOrId, 2.minute)
-    Future(Ok(Json.obj("filterTmpId" -> filterTmpId)))
-  }*/
 
   override def getViewElementsAndWidgetsCallback(
     dataViewId: BSONObjectID,

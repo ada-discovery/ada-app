@@ -97,7 +97,7 @@ class OmicsDataSetController @Inject()(
   def cacheFilterOrIds(filterOrId: FilterOrId, currentDataSetId: String): Action[AnyContent] =
     restrictAdminOrPermissionAny(dataSetRequestPermission(currentDataSetId)){ implicit request =>
         val filterTmpId =  UUID.randomUUID().toString
-        filtersCache.set(filterTmpId, filterOrId, 2.minute)
+        filtersCache.set(filterTmpId, filterOrId, 3.seconds)
         Future(Ok(Json.obj("filterTmpId" -> filterTmpId)))
   }
 
@@ -116,10 +116,13 @@ class OmicsDataSetController @Inject()(
         criteria <- toCriteria(resolvedFilter.conditions)
         result <- currentDisplayedDataSetRepo.find(criteria = criteria, projection = Seq(dataSettings.head.dataSetInfo.get.dataSetJoinIdName))
       } yield {
-        val values = result.map(res => (res \ searchField).as[String]).mkString(",")
-        val filterConditions = Seq(FilterCondition(searchField, None, conditionType = ConditionType.In, value = Option(values), None))
+        val values = result.map(res => (res \ dataSettings.head.dataSetInfo.get.dataSetJoinIdName).as[String]).mkString(",")
+        val filterConditions = Seq(FilterCondition(searchField, None,
+                                    conditionType = ConditionType.In,
+                                    value = Option(if(values.isEmpty) "No results found from data set : " + currentDataSetId else values),
+                                    None))
         val omicsFilterTmpId = UUID.randomUUID().toString
-        filtersCache.set(omicsFilterTmpId, filterConditions, 1.day)
+        filtersCache.set(omicsFilterTmpId, filterConditions, 3.seconds)
         Ok(Json.obj("omicsFilterTmpId" -> omicsFilterTmpId))
       }
 

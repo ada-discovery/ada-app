@@ -50,7 +50,6 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val exportTranSMARTMapping = routeFun(_.exportTranSMARTMappingFile())
   val getCategoriesWithFieldsAsTreeNodes = routes.getCategoriesWithFieldsAsTreeNodes _ map route
   val findCustom = routes.findCustom _ map route
-  //val cacheFilterOrIds = routes.cacheFilterOrIds _ map route
 }
 
 final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.DataSetDispatcher, "dataSet", dataSetId) {
@@ -74,5 +73,4 @@ final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.ja
   val getViewElementsAndWidgetsCallback = routeFun(_.getViewElementsAndWidgetsCallback)
   val getNewFilterViewElementsAndWidgetsCallback = routeFun(_.getNewFilterViewElementsAndWidgetsCallback)
   val getNewFilter = routeFun(_.getNewFilter)
-  //val cacheFilterOrIds = routeFun(_.cacheFilterOrIds)
 }

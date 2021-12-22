@@ -296,15 +296,6 @@ class DataSetDispatcher @Inject() (
     limit: Option[Int],
     skip: Option[Int]
   ) = dispatch(_.findCustom(filterOrId, orderBy, projection, limit, skip))
-
-  /*override def searchInOmics(
-    dataSet: String,
-    filterOrIdCurrentDatSet: FilterOrId,
-    dataViewIdToSearch: BSONObjectID,
-    searchField: String): Action[AnyContent] = dispatchIsAdminOrPermissionAndOwnerOrPublic(dataViewIdToSearch, _.searchInOmics(dataSet, filterOrIdCurrentDatSet, dataViewIdToSearch, searchField))
-*/
-  /*override def cacheFilterOrIds(filterOrId: FilterOrId): Action[AnyContent] = dispatch(_.cacheFilterOrIds(filterOrId))*/
-
   // aux function for access control
 
   protected def dispatchIsAdminOrPermissionAndOwnerOrPublic(

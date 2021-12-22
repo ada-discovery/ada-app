@@ -268,13 +268,4 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     skip: Option[Int]
   ): Action[AnyContent]
 
-  /*def searchInOmics(
-    dataSet: String,
-    filterOrIdCurrentDatSet: FilterOrId,
-    dataViewIdToSearch: BSONObjectID,
-    searchField: String): Action[AnyContent]*/
-
-  /*def cacheFilterOrIds(filterOrId: FilterOrId): Action[AnyContent]*/
-
-
 }
