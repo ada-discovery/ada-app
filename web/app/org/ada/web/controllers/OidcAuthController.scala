@@ -262,14 +262,14 @@ class OidcAuthController @Inject() (
       }
 
       val profile = profiles.head
-      val userName = profile.getUsername
+      val userEmail = profile.getEmail
       val oidcIdOpt = Option(profile.getAttribute(s"$subAttribute", classOf[String]))
       val accessTokenOpt = Option(profile.getAttribute(s"$accessTokenAttribute", classOf[BearerAccessToken]))
       val refreshTokenOpt = Option(profile.getAttribute(s"$refreshTokenAttribute", classOf[RefreshToken]))
 
       if(oidcIdOpt.isEmpty || accessTokenOpt.isEmpty || refreshTokenOpt.isEmpty) {
         val errorMessage =
-          s"OIDC login cannot be fully completed. The user '${userName} doesn't have one of these attributes ${subAttribute}, ${accessTokenAttribute}, ${refreshTokenAttribute} in Jwt token."
+          s"OIDC login cannot be fully completed. The user '${userEmail} doesn't have one of these attributes ${subAttribute}, ${accessTokenAttribute}, ${refreshTokenAttribute} in Jwt token."
         logger.warn(errorMessage)
         Future(Redirect(routes.AppController.index()).flashing("errors" -> errorMessage))
       } else {
@@ -278,16 +278,16 @@ class OidcAuthController @Inject() (
 
         val oidcUser = User(
           userId = oidcIdOpt.get,
-          oidcUserName = Option(userName),
+          oidcUserName = Option(profile.getUsername),
           name = profile.getDisplayName,
-          email = profile.getEmail,
+          email = userEmail,
           roles = rolesDataSetIdsInfo.roles
         )
 
         jwtUserCache.set(oidcUser.userId, JwtTokenInfo(accessTokenOpt.get, refreshTokenOpt.get))
 
         for {
-          user <- userManager.findById(userName)
+          user <- userManager.findByEmail(userEmail)
           dataSetIds <- getDateSetIds(rolesDataSetIdsInfo.dataSetIdsGlobalRef)
           result <- user
             .map(manageExistingUser(_, oidcUser, dataSetIds))
