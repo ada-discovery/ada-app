@@ -38,12 +38,12 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
       )
 
       // collect the column names and labels
-      val columnNameLabelsInfo = dataSetService.getColumnNameLabelsInfo(delimiter, lines)
+      val columnsInfo = dataSetService.getColumnsInfo(delimiter, lines)
 
       // parse lines
       logger.info(s"Parsing lines...")
       val prefixSuffixSeparators = if (importInfo.matchQuotes) Seq(quotePrefixSuffix) else Nil
-      val values = dataSetService.parseLines(columnNameLabelsInfo, lines, delimiter, false, prefixSuffixSeparators)
+      val values = dataSetService.parseLines(columnsInfo, lines, delimiter, false, prefixSuffixSeparators)
 
       for {
         // create/retrieve a dsa
@@ -52,9 +52,9 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
         // save the jsons and dictionary
         _ <-
           if (importInfo.inferFieldTypes)
-            saveJsonsWithTypeInference(dsa, columnNameLabelsInfo.colNamesAndLabels, values, importInfo)
+            saveJsonsWithTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo)
           else
-            saveJsonsWithoutTypeInference(dsa, columnNameLabelsInfo.colNamesAndLabels, values, importInfo)
+            saveJsonsWithoutTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo)
       } yield
         ()
     } catch {

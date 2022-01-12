@@ -72,13 +72,13 @@ trait DataSetService {
     deleteNonReferenced: Boolean
   ): Future[Unit]
 
-  def getColumnNameLabelsInfo(
+  def getColumnsInfo(
     delimiter: String,
     lineIterator: Iterator[String]
-  ): ColumnNameLabelsInfo
+  ): ColumnsInfo
 
   def parseLines(
-    columnNameLabelsInfo: ColumnNameLabelsInfo,
+    columnsInfo: ColumnsInfo,
     lines: Iterator[String],
     delimiter: String,
     skipFirstLine: Boolean,
@@ -182,7 +182,7 @@ trait DataSetService {
   ): Option[Seq[Double]]
 }
 
-case class ColumnNameLabelsInfo(colNamesAndLabels: Seq[(String, String)], doubleColsMap: Map[String, Int])
+case class ColumnsInfo(namesAndLabels: Seq[(String, String)], doubleColsMap: Map[String, Int])
 
 class DataSetServiceImpl @Inject()(
     dsaf: DataSetAccessorFactory,
@@ -401,13 +401,13 @@ class DataSetServiceImpl @Inject()(
       ()
 
   override def parseLines(
-    columnNameLabelsInfo: ColumnNameLabelsInfo,
-    lines: Iterator[String],
-    delimiter: String,
-    skipFirstLine: Boolean,
-    prefixSuffixSeparators: Seq[(String, String)] = Nil
+                           columnsInfo: ColumnsInfo,
+                           lines: Iterator[String],
+                           delimiter: String,
+                           skipFirstLine: Boolean,
+                           prefixSuffixSeparators: Seq[(String, String)] = Nil
   ): Iterator[Seq[String]] = {
-    val columnCount = columnNameLabelsInfo.colNamesAndLabels.size
+    val columnCount = columnsInfo.namesAndLabels.size
     val contentLines = if (skipFirstLine) lines.drop(1) else lines
 
     val lineBuffer = ListBuffer[String]()
@@ -443,8 +443,8 @@ class DataSetServiceImpl @Inject()(
       } else if (values.get.size > columnCount) {
         //Check possible double columns error
         val doubleColsInfo =
-          if(columnNameLabelsInfo.doubleColsMap.keySet.nonEmpty){
-            "\n <br> There are double columns: " + columnNameLabelsInfo.doubleColsMap.mkString(", ") + ".\n <br>"
+          if(columnsInfo.doubleColsMap.keySet.nonEmpty){
+            "\n <br> There are double columns: " + columnsInfo.doubleColsMap.mkString(", ") + ".\n <br>"
           } else ""
         throw new AdaParseException(s"Buffered line ${index} has overflown an unexpected count '${values.get.size}' vs '${columnCount}'. ${doubleColsInfo} Parsing terminated. Line: ${line}. Parsed values:\n <br>${values.get.mkString(",")}")
       } else {
@@ -1799,10 +1799,10 @@ class DataSetServiceImpl @Inject()(
     (jsons, fieldTypes.map(_._2.spec))
   }
 
-  override def getColumnNameLabelsInfo(
+  override def getColumnsInfo(
     delimiter: String,
     lineIterator: Iterator[String]
-  ): ColumnNameLabelsInfo = {
+  ): ColumnsInfo = {
     val columnNameLabels = lineIterator.take(1).flatMap {
       _.split(delimiter).map { columnName =>
         val trimmedName = columnName.trim.replaceAll("\"", "")
@@ -1825,7 +1825,7 @@ class DataSetServiceImpl @Inject()(
     val columnNameSetMap = columnNameLabels.groupBy(_._1)
     val doubleColsMap = columnNameSetMap.mapValues(_.size).filter(_._2 > 1)
 
-    val colNamesAndLabels = columnNameLabels.flatMap { case (name, _) =>
+    val namesAndLabels = columnNameLabels.flatMap { case (name, _) =>
       val columns = columnNameSetMap.get(name).getOrElse(
         throw new AdaException(s"The column $name not found.")
       )
@@ -1840,7 +1840,7 @@ class DataSetServiceImpl @Inject()(
       }
     }
 
-    ColumnNameLabelsInfo(colNamesAndLabels, doubleColsMap)
+    ColumnsInfo(namesAndLabels, doubleColsMap)
   }
 
   // parse the line, returns the parsed items

@@ -26,12 +26,12 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
       )
 
       // collect the column names and labels
-      val columnNameLabelsInfo = dataSetService.getColumnNameLabelsInfo(importInfo.delimiter, lines)
+      val columnsInfo = dataSetService.getColumnsInfo(importInfo.delimiter, lines)
 
       // parse lines
       logger.info(s"Parsing lines...")
       val prefixSuffixSeparators = if (importInfo.matchQuotes) Seq(quotePrefixSuffix) else Nil
-      val values = dataSetService.parseLines(columnNameLabelsInfo, lines, importInfo.delimiter, importInfo.eol.isDefined, prefixSuffixSeparators)
+      val values = dataSetService.parseLines(columnsInfo, lines, importInfo.delimiter, importInfo.eol.isDefined, prefixSuffixSeparators)
 
       for {
         // create/retrieve a dsa
@@ -40,9 +40,9 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
         // save the jsons and dictionary
         _ <-
           if (importInfo.inferFieldTypes)
-            saveDataAndDictionaryWithTypeInference(dsa, columnNameLabelsInfo.colNamesAndLabels, values, importInfo)
+            saveDataAndDictionaryWithTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo)
           else
-            saveStringsAndDictionaryWithoutTypeInference(dsa, columnNameLabelsInfo.colNamesAndLabels, values, importInfo.saveBatchSize)
+            saveStringsAndDictionaryWithoutTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo.saveBatchSize)
       } yield
         ()
     } catch {
