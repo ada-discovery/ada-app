@@ -167,13 +167,13 @@ private class SynapseDataSetImporter @Inject() (
     val lines = csv.split(synapseEol).iterator
 
     // collect the column names and labels
-    val columnNamesAndLabels = dataSetService.getColumnNameLabels(delimiter, lines)
+    val columnsInfo = dataSetService.getColumnsInfo(delimiter, lines)
 
     // parse lines
-    val values = dataSetService.parseLines(columnNamesAndLabels.size, lines, delimiter, true, prefixSuffixSeparators)
+    val values = dataSetService.parseLines(columnsInfo, lines, delimiter, true, prefixSuffixSeparators)
 
     // create jsons and field types
-    createSynapseJsonsWithFields(columnNamesAndLabels, fileFieldNames.toSet, values.toSeq, fields)
+    createSynapseJsonsWithFields(columnsInfo.namesAndLabels, fileFieldNames.toSet, values.toSeq, fields)
   }
 
   protected def updateJsonsFileFields(

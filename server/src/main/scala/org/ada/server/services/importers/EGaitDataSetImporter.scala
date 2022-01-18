@@ -107,9 +107,9 @@ private class EGaitDataSetImporter @Inject()(
             val columnsAndLines = csvFiles.map { csvFile =>
               // collect the column names and lines
               val csvFileIterator = csvFile.toIterator
-              val columnNameLabels = dataSetService.getColumnNameLabels(delimiter.toString, csvFileIterator)
-              val lines = dataSetService.parseLines(columnNameLabels.size, csvFileIterator, delimiter.toString, true, prefixSuffixSeparators)
-              (columnNameLabels, lines)
+              val columnsInfo = dataSetService.getColumnsInfo(delimiter.toString, csvFileIterator)
+              val lines = dataSetService.parseLines(columnsInfo, csvFileIterator, delimiter.toString, true, prefixSuffixSeparators)
+              (columnsInfo.namesAndLabels, lines)
             }
 
             val columnNamesAndLabelsInOrder = columnsAndLines.flatMap(_._1).toGroupMap.map { case (columnName, labels) => (columnName, labels.head) }.toSeq
