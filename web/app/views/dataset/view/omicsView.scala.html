@@ -80,44 +80,8 @@
         })
 
         $(document).on('shown.bs.modal', '#joinOmicsDataSetModal', function (e) {
-            checkFilterSelection()
+            refreshFilters()
         });
-
-        function getSelectionFilterMessage(){
-            return "<p id='selectFilterInfo' class='text-danger h4'> Please select a filter before submitting an Omics search.</p>"
-        }
-
-        function disableOmicsSearch(){
-            if($("#selectFilterInfo").length == 0)
-                $("#omicsDataSetId").before(getSelectionFilterMessage())
-
-            if(!$("#dataSetIdTypeahead").hasClass("invisible"))
-                $("#dataSetIdTypeahead").addClass("invisible")
-
-            if(!$("#omicsSubmitButton").hasClass("disabled"))
-                $("#omicsSubmitButton").addClass("disabled")
-        }
-
-        function enableOmicsSearch(){
-            if($("#selectFilterInfo").length)
-                $("#selectFilterInfo").remove()
-
-            if($("#dataSetIdTypeahead").hasClass("invisible"))
-                $("#dataSetIdTypeahead").removeClass("invisible")
-
-            if($("#omicsSubmitButton").hasClass("disabled"))
-                $("#omicsSubmitButton").removeClass("disabled")
-        }
-
-        function checkFilterSelection(){
-            var filters = getFiltersOrIds()
-            if(filters[0].length == 0) {
-                disableOmicsSearch()
-            } else {
-                enableOmicsSearch()
-            }
-
-        }
 
         function getFilterElements(){
             return $("#filtersTr").find(".filter-div").toArray();
@@ -171,25 +135,34 @@
             return str.length > 120 ? str.substring(0, 120) + "..." : str
         }
 
+        function renderFilters(){
+            var filters = getFilterElements()
+            var filtersRadioStr = ""
+            for (var index = 0; index < filters.length; index++){
+                filtersRadioStr += getFilterRadio(index, filters[index].innerText, index === 0)
+            }
+            $("#currentDataSetFilters").html(filtersRadioStr)
+        }
+
+        function refreshFilters(){
+            if(!$("#omicsCurrentDataSet").is(":empty") && !$("#omicsCurrentDataSetJoinField").is(":empty")){
+                renderFilters()
+            }
+        }
 
         function showSearchSummary(chosenDataSetJoinField){
             makeVisibleOmicsSearchSummary()
             var chosenDataSetId = $("#dataSetId").val()
             var currentDataSetId = '@dataSetSetting.dataSetId'
             var currentDataSetJoinField = '@dataSetSetting.dataSetInfo.get.dataSetJoinIdName'
-            var filters = getFilterElements()
+
             $("#omicsCurrentDataSet").html("<span>Data set:</span><span class='text-info omics-pd-left'><b>" + currentDataSetId + "</b></span>")
             $("#omicsCurrentDataSetJoinField").html("<span>Join field:</span><span class='text-info omics-pd-left'><b>" + currentDataSetJoinField + "</b></span>")
 
-            var filtersRadioStr = ""
-            for (var index = 0; index < filters.length; index++){
-                filtersRadioStr += getFilterRadio(index, filters[index].innerText, index === 0)
-            }
-            $("#currentDataSetFilters").html(filtersRadioStr)
+            renderFilters()
 
             $("#omicsChosenDataSet").html("<span>Data set:</span><span class='text-info omics-pd-left'><b>" + chosenDataSetId + "</b></span>")
             $("#omicsChosenDataSetJoinField").html("<span>Join field:</span><span class='text-info omics-pd-left'><b>" + chosenDataSetJoinField + "</b></span><input type='hidden' id='omicsJoinFieldId' value='" + chosenDataSetJoinField + "'>")
-
 
         }
 
@@ -256,13 +229,15 @@
         })
 
 
-        function checkSelection(dataSetIdToSearch, dataViewIdToSearch) {
+        function checkSelection(dataSetIdToSearch, dataViewIdToSearch, selectedFilters) {
             removeErrorSelection()
             var errStr = ""
-            if (dataSetIdToSearch === "invisible" || !dataSetIdToSearch.trim())
+            if (dataSetIdToSearch && (dataSetIdToSearch === "invisible" || !dataSetIdToSearch.trim()))
                 errStr += "<h4 class='text-danger'>Please select Data set Id</h4>"
             if ($("#omicsdataView").length && !dataViewIdToSearch.trim())
                 errStr += "<h4 class='text-danger'>Please select Data view Id</h4>"
+            if (selectedFilters && selectedFilters.length === 0)
+                errStr += "<h4 class='text-danger'>Please select a filter before submitting an Omics search</h4>"
 
             return errStr
         }
@@ -280,17 +255,19 @@
         function searchInOmicsDataSet() {
             var dataSetIdToSearch = $("#dataSetId").val()
             var dataViewIdToSearch = $("#dataViewId").val()
-            var errStr = checkSelection(dataSetIdToSearch, dataViewIdToSearch)
+            var filterOrIds = getFiltersOrIds()
+            var indexFilterStr = $("input[name='filterRadio']:checked").val();
+            var indexFilter = parseInt(indexFilterStr)
+            var selectedFilters = filterOrIds[indexFilter]
+
+            var errStr = checkSelection(dataSetIdToSearch, dataViewIdToSearch, selectedFilters)
             if (errStr) {
                 showErrorSelection(errStr)
             } else {
                 var currentDataSetId = '@dataSetSetting.dataSetId'
                 var joinFieldId = $("#omicsJoinFieldId").val()
-                var filterOrIds = getFiltersOrIds()
-                var indexFilterStr = $("input[name='filterRadio']:checked").val();
-                var indexFilter = parseInt(indexFilterStr)
 
-                searchInOmicsJsRoute.org.ada.web.controllers.dataset.omics.OmicsDataSetController.searchInOmics(currentDataSetId, JSON.stringify(filterOrIds[indexFilter]), dataSetIdToSearch, joinFieldId).ajax({
+                searchInOmicsJsRoute.org.ada.web.controllers.dataset.omics.OmicsDataSetController.searchInOmics(currentDataSetId, JSON.stringify(selectedFilters), dataSetIdToSearch, joinFieldId).ajax({
                     success: function (res) {
                         var omicsFilterTmpId = res["omicsFilterTmpId"]
                         window.location.href = getViewJsRoute.org.ada.web.controllers.dataset.DataSetDispatcher.getView(dataViewIdToSearch, null, null, false, omicsFilterTmpId).url + "&dataSet=" + dataSetIdToSearch;
