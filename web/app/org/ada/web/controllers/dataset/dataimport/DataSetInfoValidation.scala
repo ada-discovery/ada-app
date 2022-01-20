@@ -8,7 +8,7 @@ object DataSetInfoValidation {
   val dataSetJoinIdNameConstraint: Constraint[DataSetInfo] = Constraint("constraints.dataSetJoinIdName")({
     dataSetInfo =>
       if (dataSetInfo.dataSetType.toString.nonEmpty && dataSetInfo.dataSetJoinIdName.isEmpty)
-        Invalid(Seq(ValidationError("Data Set Info.data Set Join Id Name must not be empty '[None]'")))
+        Invalid(Seq(ValidationError("Data Set Join Field must not be empty '[None]'")))
       else
         Valid
   })

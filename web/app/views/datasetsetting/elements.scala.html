@@ -31,12 +31,20 @@
     StorageType.values.toSeq.sortBy(_.id).map(value => (value.toString, value.toString)), false
 )
 
-@select("dataSetSetting", "dataSetInfo.dataSetType", form,
-    DataSetType.values.toSeq.sortBy(_.id).map(value => (value.toString, value.toString)), true
-)
 
+@labelValue("dataSetInfo.dataSetTypeName", attributeLabel("dataSetSetting", "Data Set Type"), labelGridWidth = 2,
+    helpModalContent = Option(Html("<p>Mandatory only if Omics data set type</p>"))) {
+    @selectEnum("dataSetInfo.dataSetType", DataSetType, true, Some("form-control"), form.value.flatMap(_.dataSetInfo.map(_.dataSetType.toString)))
 
-@inputFieldTypeahead("dataSetSetting", "dataSetInfo.dataSetJoinId", form)
+}
+
+@labelValue("dataSetInfo.dataSetJoinIdName", attributeLabel("dataSetSetting", "Data Set Join Field"), labelGridWidth = 2,
+            helpModalContent = Option(Html("<p>Field used to make join with other Omics data sets</p>"))) {
+    @typeahead("dataSetInfo.dataSetJoinIdTypeahead", "dataSetInfo.dataSetJoinIdName",
+        typeaheadValue = form("dataSetInfo.dataSetJoinIdName").value,
+        value = form("dataSetInfo.dataSetJoinIdName").value,
+        extraClass = Some("form-control"))
+}
 
 @checkbox("dataSetSetting", "mongoAutoCreateIndexForProjection", form)
 
