@@ -1,7 +1,6 @@
 package org.ada.server.services.importers
 
 import java.util.Date
-
 import org.ada.server.models.dataimport.TranSmartDataSetImport
 import org.ada.server.AdaParseException
 import org.ada.server.dataaccess.dataset.CategoryRepo._
@@ -10,12 +9,14 @@ import org.ada.server.dataaccess.RepoTypes.{CategoryRepo, FieldRepo}
 import org.ada.server.models.{Category, Field}
 import org.ada.server.dataaccess.dataset.DataSetAccessor
 import org.ada.server.field.inference.FieldTypeInferrerFactory
+import org.ada.server.util.ManageResource.using
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.util.seqFutures
 
 import collection.mutable.{Map => MMap}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.io.Source
 
 private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmartDataSetImport] {
 
@@ -31,32 +32,30 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
     val delimiter = tranSmartDelimeter.toString
 
     try {
-      val lines = createCsvFileLineIterator(
-        importInfo.dataPath.get,
-        importInfo.charsetName,
-        None
-      )
+      using(getResource(importInfo.dataPath.get, importInfo.charsetName)) {
+        source => {
+          val lines = createCsvFileLineIterator(None, source)
+          // collect the column names and labels
+          val columnsInfo = dataSetService.getColumnsInfo(delimiter, lines)
+          // parse lines
+          logger.info(s"Parsing lines...")
+          val prefixSuffixSeparators = if (importInfo.matchQuotes) Seq(quotePrefixSuffix) else Nil
+          val values = dataSetService.parseLines(columnsInfo, lines, delimiter, false, prefixSuffixSeparators)
 
-      // collect the column names and labels
-      val columnsInfo = dataSetService.getColumnsInfo(delimiter, lines)
+          for {
+            // create/retrieve a dsa
+            dsa <- createDataSetAccessor(importInfo)
 
-      // parse lines
-      logger.info(s"Parsing lines...")
-      val prefixSuffixSeparators = if (importInfo.matchQuotes) Seq(quotePrefixSuffix) else Nil
-      val values = dataSetService.parseLines(columnsInfo, lines, delimiter, false, prefixSuffixSeparators)
-
-      for {
-        // create/retrieve a dsa
-        dsa <- createDataSetAccessor(importInfo)
-
-        // save the jsons and dictionary
-        _ <-
-          if (importInfo.inferFieldTypes)
-            saveJsonsWithTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo)
-          else
-            saveJsonsWithoutTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo)
-      } yield
-        ()
+            // save the jsons and dictionary
+            _ <-
+              if (importInfo.inferFieldTypes)
+                saveJsonsWithTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo)
+              else
+                saveJsonsWithoutTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo)
+          } yield
+            ()
+        }
+      }
     } catch {
       case e: Exception => Future.failed(e)
     }
@@ -76,19 +75,22 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
       // save, or update the dictionary
       _ <- {
         if (importInfo.mappingPath.isDefined) {
-          importTranSMARTDictionary(
-            importInfo.dataSetId,
-            dsa.fieldRepo,
-            dsa.categoryRepo,
-            tranSmartFieldGroupSize,
-            tranSmartDelimeter.toString,
-            createCsvFileLineIterator(
-              importInfo.mappingPath.get,
-              importInfo.charsetName,
-              None
-            ),
-            fields
-          )
+          using(getResource(importInfo.mappingPath.get, importInfo.charsetName)){
+            source => {
+              importTranSMARTDictionary(
+                importInfo.dataSetId,
+                dsa.fieldRepo,
+                dsa.categoryRepo,
+                tranSmartFieldGroupSize,
+                tranSmartDelimeter.toString,
+                createCsvFileLineIterator(
+                  None,
+                  source
+                ),
+                fields
+              )
+            }
+          }
         } else {
           dataSetService.updateFields(dsa.fieldRepo, fields, true, true)
         }
@@ -146,19 +148,22 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
     // save, or update the dictionary
       _ <- {
         if (importInfo.mappingPath.isDefined) {
-          importTranSMARTDictionary(
-            importInfo.dataSetId,
-            dsa.fieldRepo,
-            dsa.categoryRepo,
-            tranSmartFieldGroupSize,
-            tranSmartDelimeter.toString,
-            createCsvFileLineIterator(
-              importInfo.mappingPath.get,
-              importInfo.charsetName,
-              None
-            ),
-            fields
-          )
+          using(getResource(importInfo.mappingPath.get, importInfo.charsetName)){
+            source => {
+              importTranSMARTDictionary(
+                importInfo.dataSetId,
+                dsa.fieldRepo,
+                dsa.categoryRepo,
+                tranSmartFieldGroupSize,
+                tranSmartDelimeter.toString,
+                createCsvFileLineIterator(
+                  None,
+                  source
+                ),
+                fields
+              )
+            }
+          }
         } else {
           dataSetService.updateFields(dsa.fieldRepo, fields, true, true)
         }

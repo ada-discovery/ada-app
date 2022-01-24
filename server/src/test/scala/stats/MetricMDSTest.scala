@@ -1,4 +1,4 @@
-package stats
+package scala.stats
 
 import akka.stream.scaladsl.Source
 import org.scalatest._

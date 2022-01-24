@@ -1,4 +1,4 @@
-package field
+package org.ada.server.field
 
 import org.ada.server.field.FieldTypeHelper
 import org.ada.server.models.{FieldTypeId, FieldTypeSpec}

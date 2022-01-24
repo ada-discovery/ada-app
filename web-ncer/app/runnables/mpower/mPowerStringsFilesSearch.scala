@@ -2,6 +2,7 @@ package runnables.mpower
 
 import java.io.File
 import scala.io.Source
+import org.ada.server.util.ManageResource.using
 
 object mPowerStringsFilesSearch extends App {
 
@@ -31,22 +32,25 @@ object mPowerStringsFilesSearch extends App {
   }
 
   private def getCounts(file: File): (File, Int, Int) = {
-    val lines = Source.fromFile(file).getLines().toSeq
-    val linesWithEntries = lines.filter(_.contains(" = "))
+    using(Source.fromFile(file)){
+      source => {
+        val lines = source.getLines().toSeq
+        val linesWithEntries = lines.filter(_.contains(" = "))
 
-    val totalLinesCount = lines.size
-    val linesWithEntriesCount = linesWithEntries.size
+        val linesWithEntriesCount = linesWithEntries.size
 
-    val wordCounts = linesWithEntries.map { line =>
-      val entryWithQuotes = line.split(" = ")(1).split(";")(0)
-      val entry = entryWithQuotes.substring(1, entryWithQuotes.length - 1)
+        val wordCounts = linesWithEntries.map { line =>
+          val entryWithQuotes = line.split(" = ")(1).split(";")(0)
+          val entry = entryWithQuotes.substring(1, entryWithQuotes.length - 1)
 
-      entry.count(_.isSpaceChar) + 1
+          entry.count(_.isSpaceChar) + 1
+        }
+
+        val totalWordCount = wordCounts.sum
+
+        (file, linesWithEntriesCount, totalWordCount)
+      }
     }
-
-    val totalWordCount = wordCounts.sum
-
-    (file, linesWithEntriesCount, totalWordCount)
   }
 
   private def report(file: File, entryCount: Int, wordCount: Int) =

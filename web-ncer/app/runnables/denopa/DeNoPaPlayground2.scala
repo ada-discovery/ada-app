@@ -1,7 +1,6 @@
 package runnables.denopa
 
 import javax.inject.Inject
-
 import org.ada.server.models.FieldTypeId
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.incal.core.dataaccess.Criterion.Infix
@@ -13,6 +12,7 @@ import org.ada.server.dataaccess.JsonUtil
 import org.incal.core.runnables.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import org.ada.server.dataaccess.RepoTypes.TranslationRepo
+import org.ada.server.util.ManageResource.using
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -77,8 +77,13 @@ class DeNoPaPlayground2 @Inject() (
     }
 
   private def getRecords(filename : String) : Seq[String] = {
-    val lines = Source.fromFile(filename).getLines
-    lines.map(_.trim).toSeq
+    using(Source.fromFile(filename)){
+      source => {
+        val lines = source.getLines
+        lines.map(_.trim).toSeq
+      }
+    }
+
   }
 
   private def collectEnumTexts(dsa: DataSetAccessor): Future[Seq[String]] =

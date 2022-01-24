@@ -2,7 +2,6 @@ package runnables.denopa
 
 import java.io.{File, PrintWriter}
 import javax.inject.Inject
-
 import org.ada.server.models.FieldTypeId
 import org.ada.server.dataaccess.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.incal.core.dataaccess.Criterion.Infix
@@ -14,6 +13,7 @@ import org.ada.server.dataaccess.JsonUtil
 import org.incal.core.runnables.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import org.ada.server.dataaccess.RepoTypes.TranslationRepo
+import org.ada.server.util.ManageResource.using
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -122,18 +122,22 @@ class DeNoPaPlayground @Inject() (
 
       println("Export cleaned merged translations")
 
-      val pw = new PrintWriter(new File("all_translations_de"))
-      pw.write(cleanedMergedFileTexts.map(_._1).mkString("\n"))
-      pw.close
+      using(new PrintWriter(new File("all_translations_de"))){
+        source => source.write(cleanedMergedFileTexts.map(_._1).mkString("\n"))
+      }
 
-      val pw2 = new PrintWriter(new File("all_translations_en"))
-      pw2.write(cleanedMergedFileTexts.map(_._2).mkString("\n"))
-      pw2.close
+      using(new PrintWriter(new File("all_translations_en"))){
+        source => source.write(cleanedMergedFileTexts.map(_._2).mkString("\n"))
+      }
     }
 
   private def getRecords(filename : String) : Seq[String] = {
-    val lines = Source.fromFile(filename).getLines
-    lines.map(_.trim).toSeq
+    using(Source.fromFile(filename)){
+      source => {
+        val lines = source.getLines
+        lines.map(_.trim).toSeq
+      }
+    }
   }
 
   private def collectEnumTexts(dsa: DataSetAccessor): Future[Seq[String]] =

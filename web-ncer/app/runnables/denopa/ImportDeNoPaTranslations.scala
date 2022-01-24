@@ -1,11 +1,11 @@
 package runnables.denopa
 
 import javax.inject.{Inject, Named}
-
 import org.ada.server.models.Translation
 import org.incal.core.runnables.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 import org.ada.server.dataaccess.RepoTypes._
+import org.ada.server.util.ManageResource.using
 import play.api.Configuration
 
 import scala.io.Source
@@ -47,8 +47,12 @@ class ImportDeNoPaTranslations @Inject()(
   }
 
   private def getRecords(filename : String) : Seq[String] = {
-    val lines = Source.fromFile(filename).getLines
-    lines.map(_.trim.replaceAll("\"\"","\"")).toSeq
+    using(Source.fromFile(filename)){
+      source => {
+        val lines = source.getLines
+        lines.map(_.trim.replaceAll("\"\"","\"")).toSeq
+      }
+    }
   }
 }
 

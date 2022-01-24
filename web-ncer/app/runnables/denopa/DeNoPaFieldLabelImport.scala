@@ -1,9 +1,9 @@
 package runnables.denopa
 
 import javax.inject.Inject
-
 import org.ada.server.dataaccess.JsonUtil
 import org.ada.server.dataaccess.dataset.DataSetAccessorFactory
+import org.ada.server.util.ManageResource.using
 import org.incal.core.runnables.FutureRunnable
 import org.incal.core.util.nonAlphanumericToUnderscore
 
@@ -50,23 +50,26 @@ class DeNoPaFieldLabelImport @Inject() (dsaf: DataSetAccessorFactory) extends Fu
     }
 
   private def readNameAndLabelsFromFile = {
-    // Exam;group;label;sub group;original field name;associated question;type;values;note
+    using(Source.fromFile(inputFile)){
+      source => {
+        // Exam;group;label;sub group;original field name;associated question;type;values;note
+        val lines = source.getLines()
+        lines.flatMap { line =>
+          val values = line.split(delimiter, -1)
 
-    val lines = Source.fromFile(inputFile).getLines()
-    lines.flatMap { line =>
-      val values = line.split(delimiter, -1)
+          def value(index: Int) =
+            if (index < values.length) {
+              val string = values(index).trim
+              if (string.isEmpty) None else Some(string)
+            } else
+              None
 
-      def value(index: Int) =
-        if (index < values.length) {
-          val string = values(index).trim
-          if (string.isEmpty) None else Some(string)
-        } else
-          None
-
-      val group = value(1)
-      val label = value(2)
-      val name = value(4).map(nonAlphanumericToUnderscore)
-      (name, label).zipped.headOption
+          val group = value(1)
+          val label = value(2)
+          val name = value(4).map(nonAlphanumericToUnderscore)
+          (name, label).zipped.headOption
+        }
+      }
     }
   }
 }

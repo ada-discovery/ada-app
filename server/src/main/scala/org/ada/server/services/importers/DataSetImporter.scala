@@ -1,7 +1,6 @@
 package org.ada.server.services.importers
 
 import java.nio.charset.{Charset, MalformedInputException, UnsupportedCharsetException}
-
 import javax.inject.Inject
 import org.ada.server.models.dataimport.DataSetImport
 import org.ada.server.AdaParseException
@@ -18,7 +17,7 @@ import play.api.libs.json.{JsNumber, JsObject, Json}
 import play.api.Logger
 
 import scala.concurrent.Future
-import scala.io.Source
+import scala.io.{BufferedSource, Source}
 import scala.reflect.runtime.universe.{TypeTag, typeOf}
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -33,6 +32,7 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
   protected val logger = Logger
   protected val defaultCharset = "UTF-8"
   private val defaultFtf = FieldTypeHelper.fieldTypeFactory()
+  private val defaultEOL = List("\n", "\r\n")
 
   protected def createDataSetAccessor(
     importInfo: DataSetImport
@@ -101,28 +101,34 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
     (jsons, fields)
   }
 
-  protected def createCsvFileLineIterator(
-    path: String,
-    charsetName: Option[String],
-    eol: Option[String]
-  ): Iterator[String] = {
-    def createSource = {
-      val charset = Charset.forName(charsetName.getOrElse(defaultCharset))
-      Source.fromFile(path)(charset)
-    }
 
+  protected def getResource(
+    path: String,
+    charsetName: Option[String]): BufferedSource = {
+     try {
+       val charset = Charset.forName(charsetName.getOrElse(defaultCharset))
+       Source.fromFile(path)(charset)
+     } catch {
+       case e: java.io.FileNotFoundException => throw AdaParseException(s"File '${path}' cannot be found.", e)
+       case e: UnsupportedCharsetException => throw AdaParseException(s"Unsupported charset '${charsetName.get}' detected.", e)
+     }
+  }
+
+  protected def createCsvFileLineIterator(
+    eol: Option[String],
+    source: BufferedSource
+  ): Iterator[String] = {
     try {
       eol match {
+        case Some(eol) if defaultEOL.contains(eol) => source.getLines()
         case Some(eol) =>
           // TODO: not effective... if a custom eol is used we need to read the whole file into memory and split again. It'd be better to use a custom BufferedReader
-          createSource.mkString.split(eol).iterator
+          source.mkString.split(eol).iterator
 
         case None =>
-          createSource.getLines
+          source.getLines
       }
     } catch {
-      case e: java.io.FileNotFoundException => throw AdaParseException(s"File '${path}' cannot be found.", e)
-      case e: UnsupportedCharsetException => throw AdaParseException(s"Unsupported charset '${charsetName.get}' detected.", e)
       case e: MalformedInputException => throw AdaParseException("Malformed input detected. It's most likely due to some special characters. Try a different chartset.", e)
     }
   }

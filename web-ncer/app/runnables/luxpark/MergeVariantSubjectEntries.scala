@@ -4,6 +4,7 @@ import org.ada.server.{AdaException, AdaParseException}
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.runnables.{InputRunnable, InputRunnableExt}
 import org.incal.core.util.writeStringAsStream
+import org.ada.server.util.ManageResource.using
 
 import scala.io.Source
 
@@ -15,33 +16,40 @@ class MergeVariantSubjectEntries extends InputRunnableExt[MergeVariantSubjectEnt
 
   override def run(input: MergeVariantSubjectEntriesSpec) = {
     val delimiter = StringEscapeUtils.unescapeJava(input.delimiter.getOrElse(defaultDelimiter))
+    using(Source.fromFile(input.subjectVariantInputFileName)){
+      source => {
+        val lines = source.getLines()
+        val header = lines.next
 
-    val lines = Source.fromFile(input.subjectVariantInputFileName).getLines()
-    val header = lines.next
+        val aliquotIdLines = lines.zipWithIndex.map { case (line, variantIndex) =>
+          val items = line.split(delimiter, -1).map(_.trim)
 
-    val aliquotIdLines = lines.zipWithIndex.map { case (line, variantIndex) =>
-      val items = line.split(delimiter, -1).map(_.trim)
+          val aliquotId	= items(0)
 
-      val aliquotId	= items(0)
+          (aliquotId, line)
+        }.toSeq
 
-      (aliquotId, line)
-    }.toSeq
+        val existingAliquotIds = aliquotIdLines.map(_._1)
+        val existingLines = aliquotIdLines.map(_._2).map(_ + delimiter + true)
+        using(Source.fromFile(input.fullAliquotIdsInputFileName)){
+          source => {
+            val allAliquotIds = source.getLines().toSet
 
-    val existingAliquotIds = aliquotIdLines.map(_._1)
-    val existingLines = aliquotIdLines.map(_._2).map(_ + delimiter + true)
-    val allAliquotIds = Source.fromFile(input.fullAliquotIdsInputFileName).getLines().toSet
+            val extraAliquotIds = allAliquotIds.--(existingAliquotIds)
 
-    val extraAliquotIds = allAliquotIds.--(existingAliquotIds)
+            val newLines = extraAliquotIds.toSeq.sorted.map { aliquotId =>
+              val kitId = aliquotId.substring(0, 15)
 
-    val newLines = extraAliquotIds.toSeq.sorted.map { aliquotId =>
-      val kitId = aliquotId.substring(0, 15)
+              (Seq(aliquotId, kitId) ++ Seq.fill(booleanColumnNum)("false") ++ Seq.fill(numericColumnNum)(0) ++ Seq(false)).mkString(delimiter)
+            }
 
-      (Seq(aliquotId, kitId) ++ Seq.fill(booleanColumnNum)("false") ++ Seq.fill(numericColumnNum)(0) ++ Seq(false)).mkString(delimiter)
+            val newHeader = header + delimiter + "Any_PD_Variant"
+            val content = (Seq(newHeader) ++ existingLines ++ newLines).mkString("\n")
+            writeStringAsStream(content, new java.io.File(outputFileName(input.subjectVariantInputFileName)))
+          }
+        }
+      }
     }
-
-    val newHeader = header + delimiter + "Any_PD_Variant"
-    val content = (Seq(newHeader) ++ existingLines ++ newLines).mkString("\n")
-    writeStringAsStream(content, new java.io.File(outputFileName(input.subjectVariantInputFileName)))
   }
 
   private def outputFileName(inputFileName: String): String = {

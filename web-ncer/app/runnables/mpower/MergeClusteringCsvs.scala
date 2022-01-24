@@ -1,6 +1,7 @@
 package runnables.mpower
 
 import org.incal.core.util.{writeStringAsStream, listFiles}
+import org.ada.server.util.ManageResource.using
 
 import scala.io.Source
 
@@ -55,59 +56,67 @@ object MergeClusteringCsvs extends App {
   }
 
   def processTSNEFile(fileName: String) = {
-    val lines = Source.fromFile(folderName + fileName).getLines()
+    using(Source.fromFile(folderName + fileName)){
+      source => {
+        val lines = source.getLines()
 
-    val header = lines.next
-    val newHeder = (tsneHeader ++ Seq(header)).mkString(delimiter)
+        val header = lines.next
+        val newHeder = (tsneHeader ++ Seq(header)).mkString(delimiter)
 
-    val headerSize = header.split(delimiter, -1).length
+        val headerSize = header.split(delimiter, -1).length
 
-    val newLines = lines.map { line =>
-      val parts = line.split(delimiter, -1)
+        val newLines = lines.map { line =>
+          val parts = line.split(delimiter, -1)
 
-      val extraPart = if (parts.length != headerSize) {
-        Seq.fill(headerSize - parts.length)("")
-      } else
-        Nil
+          val extraPart = if (parts.length != headerSize) {
+            Seq.fill(headerSize - parts.length)("")
+          } else
+            Nil
 
-      val dataSetId = parts(0)
-      val info = extractForTSNE(dataSetId)
+          val dataSetId = parts(0)
+          val info = extractForTSNE(dataSetId)
 
-      val allItems = Seq(info.subchallengeName, info.k, info.isBiskmeans, info.perplexity, info.pca.map(_.toString).getOrElse(""), line) ++ extraPart
-      allItems.mkString(delimiter)
+          val allItems = Seq(info.subchallengeName, info.k, info.isBiskmeans, info.perplexity, info.pca.map(_.toString).getOrElse(""), line) ++ extraPart
+          allItems.mkString(delimiter)
+        }
+
+        val newContent = (Seq(newHeder) ++ newLines).mkString("\n")
+
+        writeStringAsStream(newContent, new java.io.File(folderName + "new_" + fileName))
+      }
     }
-
-    val newContent = (Seq(newHeder) ++ newLines).mkString("\n")
-
-    writeStringAsStream(newContent, new java.io.File(folderName + "new_" + fileName))
   }
 
   def processMDSFile(fileName: String) = {
-    val lines = Source.fromFile(folderName + fileName).getLines()
+    using(Source.fromFile(folderName + fileName)){
+      source => {
+        val lines = source.getLines()
 
-    val header = lines.next
-    val newHeder = (mdsHeader ++ Seq(header)).mkString(delimiter)
+        val header = lines.next
+        val newHeder = (mdsHeader ++ Seq(header)).mkString(delimiter)
 
-    val headerSize = header.split(delimiter, -1).length
+        val headerSize = header.split(delimiter, -1).length
 
-    val newLines = lines.map { line =>
-      val parts = line.split(delimiter, -1)
+        val newLines = lines.map { line =>
+          val parts = line.split(delimiter, -1)
 
-      val extraPart = if (parts.length != headerSize) {
-        Seq.fill(headerSize - parts.length)("")
-      } else
-        Nil
+          val extraPart = if (parts.length != headerSize) {
+            Seq.fill(headerSize - parts.length)("")
+          } else
+            Nil
 
-      val dataSetId = parts(0)
-      val info = extractForMDS(dataSetId)
+          val dataSetId = parts(0)
+          val info = extractForMDS(dataSetId)
 
-      val allItems = Seq(info.subchallengeName, info.k, info.isBiskmeans, line) ++ extraPart
-      allItems.mkString(delimiter)
+          val allItems = Seq(info.subchallengeName, info.k, info.isBiskmeans, line) ++ extraPart
+          allItems.mkString(delimiter)
+        }
+
+        val newContent = (Seq(newHeder) ++ newLines).mkString("\n")
+
+        writeStringAsStream(newContent, new java.io.File(folderName + "new_" + fileName))
+      }
     }
-
-    val newContent = (Seq(newHeder) ++ newLines).mkString("\n")
-
-    writeStringAsStream(newContent, new java.io.File(folderName + "new_" + fileName))
   }
 
   case class TSNEClusteringInfo(

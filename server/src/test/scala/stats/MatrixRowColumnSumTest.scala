@@ -1,4 +1,4 @@
-package stats
+package scala.stats
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer

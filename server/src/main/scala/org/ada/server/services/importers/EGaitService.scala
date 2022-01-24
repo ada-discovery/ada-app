@@ -18,6 +18,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.xml.{Node, XML}
+import org.ada.server.util.ManageResource.using
 
 trait EGaitServiceFactory {
   def apply(
@@ -414,10 +415,12 @@ protected[services] class EGaitServiceWSImpl @Inject() (
     request.withRequestTimeout(timeout)
 
   private def loadFileAsBase64(fileName : String):String = {
-    val source = scala.io.Source.fromFile(fileName, "ISO-8859-1")
-    val byteArray = source.map(_.toByte).toArray
-    source.close()
-    val encoded = Base64.encodeBase64(byteArray)
-    new String(encoded, "ASCII")
+    using(scala.io.Source.fromFile(fileName, "ISO-8859-1")){
+      source => {
+        val byteArray = source.map(_.toByte).toArray
+        val encoded = Base64.encodeBase64(byteArray)
+        new String(encoded, "ASCII")
+      }
+    }
   }
 }
