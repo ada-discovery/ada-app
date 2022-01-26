@@ -32,7 +32,7 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
   protected val logger = Logger
   protected val defaultCharset = "UTF-8"
   private val defaultFtf = FieldTypeHelper.fieldTypeFactory()
-  private val defaultEOL = List("\n", "\r\n")
+  protected val defaultEol = List("\\n", "\\r\\n")
 
   protected def createDataSetAccessor(
     importInfo: DataSetImport
@@ -120,12 +120,10 @@ private[importers] abstract class AbstractDataSetImporter[T <: DataSetImport](im
   ): Iterator[String] = {
     try {
       eol match {
-        case Some(eol) if defaultEOL.contains(eol) => source.getLines()
-        case Some(eol) =>
+        case Some(eol) if !defaultEol.contains(eol) =>
           // TODO: not effective... if a custom eol is used we need to read the whole file into memory and split again. It'd be better to use a custom BufferedReader
           source.mkString.split(eol).iterator
-
-        case None =>
+        case _ =>
           source.getLines
       }
     } catch {

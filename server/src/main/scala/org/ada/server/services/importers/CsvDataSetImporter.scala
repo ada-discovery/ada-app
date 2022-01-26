@@ -1,19 +1,14 @@
 package org.ada.server.services.importers
 
-import org.ada.server.AdaParseException
-
-import java.util.Date
+import org.ada.server.dataaccess.dataset.DataSetAccessor
 import org.ada.server.field.FieldTypeHelper
 import org.ada.server.models.dataimport.CsvDataSetImport
-import org.ada.server.dataaccess.dataset.DataSetAccessor
-import org.ada.server.field.inference.FieldTypeInferrerFactory
-import org.ada.server.util.ManageResource
-import org.ada.server.util.ManageResource.using
+import org.ada.server.util.ManageResource.{closeResource, closeResourceWithFutureFailed}
 
-import java.nio.charset.{Charset, UnsupportedCharsetException}
-import scala.concurrent.Future
+import java.util.Date
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.io.Source
+import scala.concurrent.Future
+import scala.io.BufferedSource
 
 private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImport] {
 
@@ -22,34 +17,32 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
   override def runAsFuture(importInfo: CsvDataSetImport): Future[Unit] = {
     logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
-
+    var source: BufferedSource = null
     try {
-      using(getResource(importInfo.path.get, importInfo.charsetName)) {
-        source => {
-          val lines = createCsvFileLineIterator(importInfo.eol, source)
-          // collect the column names and labels
-          val columnsInfo = dataSetService.getColumnsInfo(importInfo.delimiter, lines)
-          // parse lines
-          logger.info(s"Parsing lines...")
-          val prefixSuffixSeparators = if (importInfo.matchQuotes) Seq(quotePrefixSuffix) else Nil
-          val values = dataSetService.parseLines(columnsInfo, lines, importInfo.delimiter, importInfo.eol.isDefined, prefixSuffixSeparators)
+      source = getResource(importInfo.path.get, importInfo.charsetName)
+      val lines = createCsvFileLineIterator(importInfo.eol, source)
+      // collect the column names and labels
+      val columnsInfo = dataSetService.getColumnsInfo(importInfo.delimiter, lines)
+      // parse lines
+      logger.info(s"Parsing lines...")
+      val prefixSuffixSeparators = if (importInfo.matchQuotes) Seq(quotePrefixSuffix) else Nil
+      val values = dataSetService.parseLines(columnsInfo, lines, importInfo.delimiter, importInfo.eol.isDefined, prefixSuffixSeparators)
 
-          for {
-            // create/retrieve a dsa
-            dsa <- createDataSetAccessor(importInfo)
+      for {
+        // create/retrieve a dsa
+        dsa <- createDataSetAccessor(importInfo)
 
-            // save the jsons and dictionary
-            _ <-
-              if (importInfo.inferFieldTypes)
-                saveDataAndDictionaryWithTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo)
-              else
-                saveStringsAndDictionaryWithoutTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo.saveBatchSize)
-          } yield
-            ()
-        }
-      }
+        // save the jsons and dictionary
+        _ <-
+          if (importInfo.inferFieldTypes)
+            saveDataAndDictionaryWithTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo)
+          else
+            saveStringsAndDictionaryWithoutTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo.saveBatchSize)
+      } yield
+        closeResource(source)
+
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => closeResourceWithFutureFailed(e, source)
     }
   }
 

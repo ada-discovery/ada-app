@@ -1,12 +1,13 @@
 package org.ada.server.util
 
-import org.ada.server.{AdaException, AdaParseException}
 import org.ada.server.util.ManageResource._
+import org.ada.server.{AdaNotCloseResourceException, AdaParseException}
 import org.scalatest._
 
 import java.io.{FileNotFoundException, IOException}
 import java.nio.charset.UnsupportedCharsetException
 import scala.io.{BufferedSource, Source}
+import scala.util.Failure
 
 class ManageResourceTest extends FlatSpec with Matchers {
 
@@ -16,8 +17,8 @@ class ManageResourceTest extends FlatSpec with Matchers {
 
   def getResourceUnsupCharsetExc: BufferedSource = Source.fromFile(getClass.getResource("/dummyResource.txt").getPath, "NotExistEncoding")
 
-  it should " throw AdaException 'using Fn' if a null resource is passed" in {
-    a [AdaException] should be thrownBy {
+  it should " throw AdaNotCloseResourceException 'using Fn' if a null resource is passed" in {
+    a [AdaNotCloseResourceException] should be thrownBy {
       using(null) (_ => println("Error test resource"))
     }
   }
@@ -32,8 +33,8 @@ class ManageResourceTest extends FlatSpec with Matchers {
     a [IOException] should be thrownBy(bufferedResource.getLines())
   }
 
-  it should " throw AdaException 'closeResource Fn' if a null resource is passed" in {
-    a [AdaException] should be thrownBy {
+  it should " throw AdaNotCloseResourceException 'closeResource Fn' if a null resource is passed" in {
+    a [AdaNotCloseResourceException] should be thrownBy {
       closeResource(null)
     }
   }
@@ -70,5 +71,19 @@ class ManageResourceTest extends FlatSpec with Matchers {
     }
   }
 
+  it should "return an instance of AdaNotCloseResourceException" in {
+    val res = closeResourceWithFutureFailed(new AdaNotCloseResourceException("Error not close resource test"), getResource)
+    res.value.get.asInstanceOf[Failure[Exception]].exception.isInstanceOf[AdaNotCloseResourceException] should be (true)
+  }
+
+  it should "not return an instance of AdaNotCloseResourceException" in {
+    val res = closeResourceWithFutureFailed(new AdaParseException("Error parsing test"), getResource)
+    res.value.get.asInstanceOf[Failure[Exception]].exception.isInstanceOf[AdaNotCloseResourceException] should be (false)
+  }
+
+  it should "not return an instance of AdaParseException with null resource" in {
+    val res = closeResourceWithFutureFailed(new AdaParseException("Error parsing test"), null)
+    res.value.get.asInstanceOf[Failure[Exception]].exception.isInstanceOf[AdaParseException] should be (true)
+  }
 
 }
