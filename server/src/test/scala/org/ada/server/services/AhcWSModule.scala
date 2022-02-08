@@ -1,4 +1,4 @@
-package services
+package org.ada.server.services
 
 import javax.inject.Singleton
 import net.codingwell.scalaguice.ScalaModule

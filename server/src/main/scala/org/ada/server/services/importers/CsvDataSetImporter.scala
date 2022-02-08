@@ -1,14 +1,14 @@
 package org.ada.server.services.importers
 
-import java.util.Date
-
+import org.ada.server.dataaccess.dataset.DataSetAccessor
 import org.ada.server.field.FieldTypeHelper
 import org.ada.server.models.dataimport.CsvDataSetImport
-import org.ada.server.dataaccess.dataset.DataSetAccessor
-import org.ada.server.field.inference.FieldTypeInferrerFactory
+import org.ada.server.util.ManageResource.{closeResource, closeResourceWithFutureFailed}
 
-import scala.concurrent.Future
+import java.util.Date
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.io.BufferedSource
 
 private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImport] {
 
@@ -17,17 +17,12 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
   override def runAsFuture(importInfo: CsvDataSetImport): Future[Unit] = {
     logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
-
+    var source: BufferedSource = null
     try {
-      val lines = createCsvFileLineIterator(
-        importInfo.path.get,
-        importInfo.charsetName,
-        importInfo.eol
-      )
-
+      source = getResource(importInfo.path.get, importInfo.charsetName)
+      val lines = createCsvFileLineIterator(importInfo.eol, source)
       // collect the column names and labels
       val columnsInfo = dataSetService.getColumnsInfo(importInfo.delimiter, lines)
-
       // parse lines
       logger.info(s"Parsing lines...")
       val prefixSuffixSeparators = if (importInfo.matchQuotes) Seq(quotePrefixSuffix) else Nil
@@ -44,9 +39,10 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
           else
             saveStringsAndDictionaryWithoutTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo.saveBatchSize)
       } yield
-        ()
+        closeResource(source)
+
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => closeResourceWithFutureFailed(e, source)
     }
   }
 

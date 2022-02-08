@@ -1,7 +1,6 @@
 package org.ada.server.services.importers
 
 import java.util.Date
-
 import org.ada.server.models.dataimport.TranSmartDataSetImport
 import org.ada.server.AdaParseException
 import org.ada.server.dataaccess.dataset.CategoryRepo._
@@ -10,12 +9,14 @@ import org.ada.server.dataaccess.RepoTypes.{CategoryRepo, FieldRepo}
 import org.ada.server.models.{Category, Field}
 import org.ada.server.dataaccess.dataset.DataSetAccessor
 import org.ada.server.field.inference.FieldTypeInferrerFactory
+import org.ada.server.util.ManageResource.{closeResource, closeResourceWithFutureFailed, using}
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.util.seqFutures
 
 import collection.mutable.{Map => MMap}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.io.{BufferedSource, Source}
 
 private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmartDataSetImport] {
 
@@ -29,17 +30,12 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
     val delimiter = tranSmartDelimeter.toString
-
+    var source: BufferedSource = null
     try {
-      val lines = createCsvFileLineIterator(
-        importInfo.dataPath.get,
-        importInfo.charsetName,
-        None
-      )
-
+      source = getResource(importInfo.dataPath.get, importInfo.charsetName)
+      val lines = createCsvFileLineIterator(None, source)
       // collect the column names and labels
       val columnsInfo = dataSetService.getColumnsInfo(delimiter, lines)
-
       // parse lines
       logger.info(s"Parsing lines...")
       val prefixSuffixSeparators = if (importInfo.matchQuotes) Seq(quotePrefixSuffix) else Nil
@@ -56,10 +52,39 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
           else
             saveJsonsWithoutTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo)
       } yield
-        ()
+        closeResource(source)
+
     } catch {
-      case e: Exception => Future.failed(e)
+      case e: Exception => closeResourceWithFutureFailed(e, source)
     }
+  }
+
+  private def saveOrUpdateDirectory(
+    dsa: DataSetAccessor,
+    importInfo: TranSmartDataSetImport,
+    fields: Seq[Field]): Future[Unit] = {
+      if (importInfo.mappingPath.isDefined) {
+        var source: BufferedSource = null
+        try {
+          source = getResource(importInfo.mappingPath.get, importInfo.charsetName)
+          importTranSMARTDictionary(
+            importInfo.dataSetId,
+            dsa.fieldRepo,
+            dsa.categoryRepo,
+            tranSmartFieldGroupSize,
+            tranSmartDelimeter.toString,
+            createCsvFileLineIterator(
+              None,
+              source
+            ),
+            fields
+          ).map(_ => closeResource(source))
+        } catch {
+          case e: Exception => closeResourceWithFutureFailed(e, source)
+        }
+      } else {
+        dataSetService.updateFields(dsa.fieldRepo, fields, true, true)
+      }
   }
 
   private def saveJsonsWithoutTypeInference(
@@ -73,26 +98,7 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
     val (jsons, fields) = createJsonsWithStringFields(columnNamesAndLabels, values)
 
     for {
-      // save, or update the dictionary
-      _ <- {
-        if (importInfo.mappingPath.isDefined) {
-          importTranSMARTDictionary(
-            importInfo.dataSetId,
-            dsa.fieldRepo,
-            dsa.categoryRepo,
-            tranSmartFieldGroupSize,
-            tranSmartDelimeter.toString,
-            createCsvFileLineIterator(
-              importInfo.mappingPath.get,
-              importInfo.charsetName,
-              None
-            ),
-            fields
-          )
-        } else {
-          dataSetService.updateFields(dsa.fieldRepo, fields, true, true)
-        }
-      }
+      _ <- saveOrUpdateDirectory(dsa, importInfo, fields)
 
       // since we possible changed the dictionary (the data structure) we need to update the data set repo
       _ <- dsa.updateDataSetRepo
@@ -143,26 +149,7 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
     val (jsons, fields) = createJsonsWithFields(columnNamesAndLabels, values.toSeq, fti)
 
     for {
-    // save, or update the dictionary
-      _ <- {
-        if (importInfo.mappingPath.isDefined) {
-          importTranSMARTDictionary(
-            importInfo.dataSetId,
-            dsa.fieldRepo,
-            dsa.categoryRepo,
-            tranSmartFieldGroupSize,
-            tranSmartDelimeter.toString,
-            createCsvFileLineIterator(
-              importInfo.mappingPath.get,
-              importInfo.charsetName,
-              None
-            ),
-            fields
-          )
-        } else {
-          dataSetService.updateFields(dsa.fieldRepo, fields, true, true)
-        }
-      }
+      _ <- saveOrUpdateDirectory(dsa, importInfo, fields)
 
       // since we possible changed the dictionary (the data structure) we need to update the data set repo
       _ <- dsa.updateDataSetRepo

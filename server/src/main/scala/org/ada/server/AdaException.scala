@@ -7,3 +7,7 @@ class AdaException(message: String, cause: Throwable) extends RuntimeException(m
 case class AdaParseException(message: String, cause: Throwable) extends AdaException(message, cause) {
   def this(message: String) = this(message, null)
 }
+
+case class AdaNotCloseResourceException(message: String, cause: Throwable) extends AdaException(message, cause){
+  def this(message: String) = this(message, null)
+}

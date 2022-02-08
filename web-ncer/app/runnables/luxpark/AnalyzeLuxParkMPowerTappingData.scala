@@ -7,10 +7,11 @@ import play.api.Configuration
 import org.incal.play.GuiceRunnableApp
 import Criterion.Infix
 import org.ada.server.dataaccess.RepoTypes.JsonCrudRepo
+import org.ada.server.util.ManageResource.using
 import org.incal.core.runnables.FutureRunnable
-
 import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 import scala.io.Source
 
 class AnalyzeLuxParkMPowerTappingData @Inject()(
@@ -86,8 +87,12 @@ class AnalyzeLuxParkMPowerTappingData @Inject()(
 
   private def readSubFieldJsonArray(tapping: JsObject, fieldName: String): Seq[JsValue] = {
     val fileName = (tapping \ fieldName).get.as[String]
-    val string = Source.fromFile(synapseDataFolder + fileName).mkString
-    Json.parse(string).asInstanceOf[JsArray].value
+    using(Source.fromFile(synapseDataFolder + fileName)){
+      source => {
+        val string = source.mkString
+        Json.parse(string).asInstanceOf[JsArray].value
+      }
+    }
   }
 }
 

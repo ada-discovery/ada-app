@@ -1,4 +1,4 @@
-package services
+package org.ada.server.services
 
 import org.ada.server.services.importers.{RedCapLockAction, RedCapServiceFactory}
 import org.ada.server.services.GuiceApp
@@ -15,7 +15,7 @@ class RedCapServiceTest extends AsyncFlatSpec with Matchers {
     new org.ada.server.services.ConfigModule(),
     new org.ada.server.akka.guice.AkkaModule(),
     new org.ada.server.services.WebServiceModule(),
-    new services.AhcWSModule()
+    new org.ada.server.services.AhcWSModule()
   ))
 
   private val redCapServiceFactory = injector.instance[RedCapServiceFactory]

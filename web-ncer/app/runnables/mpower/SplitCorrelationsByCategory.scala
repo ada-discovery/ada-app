@@ -12,6 +12,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 import org.ada.server.field.FieldTypeHelper
 import org.ada.server.AdaException
+import org.ada.server.util.ManageResource.using
 
 import scala.io.Source
 
@@ -61,47 +62,51 @@ class SplitCorrelationsByCategory @Inject()(
     outputCorrelationFileName: String,
     filterFeatureNames: Set[String]
   ) = {
-    val lines = Source.fromFile(inputCorrelationFileName).getLines()
+    using(Source.fromFile(inputCorrelationFileName)){
+      source => {
+        val lines = source.getLines()
 
-    val header = lines.take(1).toSeq.head
-    val headerParts = header.split(",", -1)
+        val header = lines.take(1).toSeq.head
+        val headerParts = header.split(",", -1)
 
-    val featureName = headerParts(0)
-    val featureNames  = headerParts.drop(1)
+        val featureName = headerParts(0)
+        val featureNames  = headerParts.drop(1)
 
-    val filteredFeatureNameAndIndeces = featureNames.zipWithIndex.filter{ case (featureName, _) => filterFeatureNames.contains(featureName)}
-    val filteredFeatureIndeces = filteredFeatureNameAndIndeces.map(_._2)
+        val filteredFeatureNameAndIndeces = featureNames.zipWithIndex.filter{ case (featureName, _) => filterFeatureNames.contains(featureName)}
+        val filteredFeatureIndeces = filteredFeatureNameAndIndeces.map(_._2)
 
-    val newLines = lines.flatMap { line =>
-      val parts = line.split(",", -1)
-      val featureName = parts(0)
+        val newLines = lines.flatMap { line =>
+          val parts = line.split(",", -1)
+          val featureName = parts(0)
 
-      if (filterFeatureNames.contains(featureName)) {
-        val featureValues = parts.drop(1)
-        val featureValuesCount = featureValues.size
-        val filteredFeatureValues = filteredFeatureIndeces.map { index =>
-          if (index < featureValuesCount)
-            featureValues(index)
-          else
-            throw new AdaException(s"Index $index is out of bounds. Feature counts: $featureValuesCount.\n Line: $line")
+          if (filterFeatureNames.contains(featureName)) {
+            val featureValues = parts.drop(1)
+            val featureValuesCount = featureValues.size
+            val filteredFeatureValues = filteredFeatureIndeces.map { index =>
+              if (index < featureValuesCount)
+                featureValues(index)
+              else
+                throw new AdaException(s"Index $index is out of bounds. Feature counts: $featureValuesCount.\n Line: $line")
+            }
+            val newLine = (Seq(featureName) ++ filteredFeatureValues.toSeq).mkString(",")
+            Some(newLine + "\n")
+          } else
+            None
         }
-        val newLine = (Seq(featureName) ++ filteredFeatureValues.toSeq).mkString(",")
-        Some(newLine + "\n")
-      } else
-        None
+
+        // new header
+        val filteredFeatureNames = filteredFeatureNameAndIndeces.map(_._1)
+        val newHeader = (Seq(featureName) ++ filteredFeatureNames).mkString(",") + "\n"
+        val headerBytes = newHeader.getBytes(StandardCharsets.UTF_8)
+
+        // new content
+        val rowBytesStream = newLines.toStream.map(_.getBytes(StandardCharsets.UTF_8))
+
+        // write the stream to a file
+        val outputStream = Stream(headerBytes) #::: rowBytesStream
+        writeByteArrayStream(outputStream, new java.io.File(outputCorrelationFileName))
+      }
     }
-
-    // new header
-    val filteredFeatureNames = filteredFeatureNameAndIndeces.map(_._1)
-    val newHeader = (Seq(featureName) ++ filteredFeatureNames).mkString(",") + "\n"
-    val headerBytes = newHeader.getBytes(StandardCharsets.UTF_8)
-
-    // new content
-    val rowBytesStream = newLines.toStream.map(_.getBytes(StandardCharsets.UTF_8))
-
-    // write the stream to a file
-    val outputStream = Stream(headerBytes) #::: rowBytesStream
-    writeByteArrayStream(outputStream, new java.io.File(outputCorrelationFileName))
   }
 }
 

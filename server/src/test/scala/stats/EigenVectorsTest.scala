@@ -1,4 +1,4 @@
-package stats
+package scala.stats
 
 import org.scalatest._
 import org.ada.server.services.{StatsService, GuicePlayServerTestApp}
