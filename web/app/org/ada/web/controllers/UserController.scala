@@ -1,13 +1,16 @@
 package org.ada.web.controllers
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
+import org.ada.server.AdaException
+
 import javax.inject.Inject
 import org.ada.web.controllers.core.AdaCrudControllerImpl
 import org.ada.web.controllers.dataset._
-import org.ada.server.dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
+import org.ada.server.dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo, UserSettingsRepo}
 import play.api.data.Form
-import play.api.data.Forms.{email, optional, ignored, mapping, boolean, nonEmptyText, seq, text}
-import org.ada.server.models.{DataSpaceMetaInfo, User}
+import play.api.data.Forms.{boolean, email, ignored, mapping, nonEmptyText, optional, seq, text}
+import org.ada.server.models.{DataSpaceMetaInfo, User, UserSettings}
+import org.ada.web.services.UserSettingsService
 import org.incal.core.dataaccess.AscSort
 import reactivemongo.bson.BSONObjectID
 import views.html.{user => view}
@@ -16,7 +19,7 @@ import reactivemongo.play.json.BSONFormats._
 import org.incal.core.util.ReflectionUtil.getMethodNames
 import org.incal.play.Page
 import org.incal.play.controllers.{AdminRestrictedCrudController, CrudControllerImpl, HasBasicListView, HasFormShowEqualEditView}
-import play.api.libs.json.{JsArray, Json}
+import play.api.libs.json.{JsArray, JsError, JsSuccess, Json}
 import play.api.libs.mailer.{Email, MailerClient}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -25,7 +28,8 @@ import scala.concurrent.Future
 class UserController @Inject() (
     userRepo: UserRepo,
     mailerClient: MailerClient,
-    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
+    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
+    userSettingsService: UserSettingsService
   ) extends AdaCrudControllerImpl[User, BSONObjectID](userRepo)
     with AdminRestrictedCrudController[BSONObjectID]
     with HasFormShowEqualEditView[User, BSONObjectID]
@@ -193,6 +197,21 @@ class UserController @Inject() (
       )
       Ok(JsArray(idAndNames))
     }
+  }
+
+  def getUsersSettings: Action[AnyContent] = restrictAdminAny() { implicit request =>
+    for(res <- userSettingsService.getUsersSettings) yield Ok(Json.toJson(res))
+  }
+
+  def updateUsersSettings(): Action[AnyContent] = restrictAdminAny() { implicit request =>
+    request.body.asJson.map{ json =>
+      json.validate[UserSettings] match {
+        case success: JsSuccess[UserSettings] =>
+          for(res <- userSettingsService.updateUsersSettings(success.get))
+            yield Ok(Json.toJson(res))
+        case error: JsError => Future(BadRequest(JsError.toJson(error)))
+      }
+    }.getOrElse(Future(BadRequest("JSON request expected")))
   }
 }
 

@@ -54,4 +54,6 @@ object RepoTypes {
   type ClusteringRepo = AsyncCrudRepo[Clustering, BSONObjectID]
 
   type HtmlSnippetRepo = AsyncCrudRepo[HtmlSnippet, BSONObjectID]
+
+  type UserSettingsRepo = AsyncCrudRepo[UserSettings, BSONObjectID]
 }

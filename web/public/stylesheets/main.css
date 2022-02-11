@@ -682,3 +682,12 @@ a.carousel-control.right{
     line-height: 1.5;
     border-radius: 3px;
 }
+
+.login-rights-pd-left{
+    padding-left: 10px;
+}
+
+.row-margin-bottom{
+    margin-bottom: 5px;
+}
+

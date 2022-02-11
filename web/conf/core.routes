@@ -86,7 +86,7 @@ GET         /admin/dataSetTransformation/resultDataSetIdAndName                 
 GET         /admin/dataSetTransformation/filterIdAndNames                           org.ada.web.controllers.dataset.datatrans.DataSetTransformationController.filterIdAndNames(dataSetId: String)
 
 
-# User Management
+# User ManagementexportToDataSet
 GET         /users                                                                  org.ada.web.controllers.UserController.find(p: Int ?= 0, s: String ?= "userId", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
 GET         /users/all                                                              org.ada.web.controllers.UserController.listAll(s: String ?= "userId")
 GET         /users/new                                                              org.ada.web.controllers.UserController.create
@@ -98,6 +98,8 @@ POST        /users/:id/delete                                                   
 GET         /users/listUsersForPermissionPrefix                                     org.ada.web.controllers.UserController.listUsersForPermissionPrefix(permissionPrefix: Option[String] ?= None)
 POST        /users/copyPermissions                                                  org.ada.web.controllers.UserController.copyPermissions(sourceUserId: BSONObjectID, targetUserId: BSONObjectID)
 GET         /users/idAndNames                                                       org.ada.web.controllers.UserController.idAndNames
+GET         /users/settings                                                         org.ada.web.controllers.UserController.getUsersSettings
+PUT         /users/settings                                                         org.ada.web.controllers.UserController.updateUsersSettings
 
 # Translations
 GET         /translations                                                           org.ada.web.controllers.TranslationController.find(p: Int ?= 0, s: String ?= "original", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
