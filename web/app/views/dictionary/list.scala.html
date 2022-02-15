@@ -21,6 +21,7 @@
 @import org.incal.core.FilterCondition
 @import org.ada.server.models.DataSetSetting
 
+@import views.html.dictionary.updateLabelsByFile
 @(
     domainName : String,
     page: Page[Field],
@@ -88,6 +89,7 @@
 }
 
 @table = {
+    @updateLabelsByFile()
     <div class="pull-right dropdown">
         <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To
@@ -182,7 +184,8 @@
 )
 
 @helper.javascriptRouter("dictionaryJsRoutes")(
-    dictionaryJsRouter.updateLabel
+    dictionaryJsRouter.updateLabel,
+    dictionaryJsRouter.updateLabelsByFile
 )
 
 @helper.javascriptRouter("categoryJsRoutes")(

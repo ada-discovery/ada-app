@@ -1,0 +1,44 @@
+@import org.ada.web.controllers.dataset.DataSetWebContext._
+@import org.ada.web.controllers.dataset.DataSetWebContext
+@()(implicit context: DataSetWebContext)
+
+<div class="row row-margin-bottom">
+    <span class="list-group-item list-group-item-action flex-column align-items-start">
+        <div class="d-flex w-100 justify-content-between">
+            <h4 class="mb-1">Update labels by tsv file</h4>
+        </div>
+        <div class="form-group">
+            <input type="file" class="form-control-file" id="labelsFile" name="labelsFile" />
+        </div>
+        <div style="margin-top: 10px">
+            <button type="button" class="btn btn-primary" onclick="updateLabelsByFile()">Update labels</button>
+        </div>
+    </span>
+</div>
+
+
+<script type="text/javascript">
+
+    function updateLabelsByFile(){
+        var formData = new FormData();
+        var file = $("#labelsFile")[0].files[0];
+        var fileName = file.name
+        formData.append(fileName, file)
+
+        dictionaryJsRoutes.org.ada.web.controllers.dataset.DictionaryDispatcher.updatesLabelsByFile(fileName).ajax({
+            data: formData,
+            contentType: false,
+            processData: false,
+            beforeSend: function (data){
+                showMessage("Upload started")
+            },
+            success: function (res){
+                showMessage(res)
+            },
+            error: function (err){
+                showErrorResponse(err)
+            }
+        })
+    }
+
+</script>

@@ -173,6 +173,7 @@ GET         /dataSets/dictionary/exportAsCsv                                    
 GET         /dataSets/dictionary/exportAsJson                                        org.ada.web.controllers.dataset.DictionaryDispatcher.exportRecordsAsJson(filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
 GET         /dataSets/dictionary/setDefaultLabels                                    org.ada.web.controllers.dataset.DictionaryDispatcher.setDefaultLabels
 GET         /dataSets/dictionary/convertLabelsToCamelCase                            org.ada.web.controllers.dataset.DictionaryDispatcher.convertLabelsToCamelCase
+PUT         /dataSets/dictionary/updateLabels/:fileName                              org.ada.web.controllers.dataset.DictionaryDispatcher.updatesLabelsByFile(fileName: String)
 
 # CategoryDispatcher
 GET         /dataSets/categories                                                     org.ada.web.controllers.dataset.CategoryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[org.incal.core.FilterCondition] ?= Nil)

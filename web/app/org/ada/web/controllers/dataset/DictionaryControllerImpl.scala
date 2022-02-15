@@ -1,6 +1,7 @@
 package org.ada.web.controllers.dataset
 
 import akka.stream.Materializer
+
 import javax.inject.Inject
 import org.ada.server.models.DistributionWidgetSpec
 
@@ -24,7 +25,7 @@ import org.incal.play.controllers.{CrudControllerImpl, HasFormShowEqualEditView,
 import org.incal.play.formatters.{EnumFormatter, MapJsonFormatter}
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.mvc.{Action, Request}
+import play.api.mvc.{Action, AnyContent, MultipartFormData, Request}
 import reactivemongo.bson.BSONObjectID
 import org.ada.server.services._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -33,12 +34,14 @@ import org.ada.server.field.FieldUtil
 import org.ada.server.dataaccess.JsonUtil.unescapeKey
 import org.ada.server.models.ml.classification.ClassificationResult
 import org.ada.server.field.FieldUtil.caseClassToFlatFieldTypes
+import org.ada.server.util.ManageResource.using
 import org.ada.web.services.{DataSpaceService, WidgetGenerationService}
 import views.html.{dataview, dictionary => view}
 import org.incal.core.util.toHumanReadableCamel
 import org.incal.play.security.AuthAction
 
 import scala.concurrent.Future
+import scala.io.Source
 
 trait DictionaryControllerFactory {
   def apply(dataSetId: String): DictionaryController
@@ -334,4 +337,18 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   override protected def filterValueConverters(
     fieldNames: Traversable[String]
   ) = FieldUtil.valueConverters(fieldCaseClassRepo, fieldNames)
+
+
+  override def updatesLabelsByFile(fileName: String): Action[AnyContent] = AuthAction { request =>
+    val labelsFile = request.body.asMultipartFormData.flatMap(_.file(fileName))
+                      .getOrElse(throw new AdaRestException("Error loading labels by file")).ref.file
+
+    using(Source.fromFile(labelsFile)){
+      source => {
+        source.getLines().foreach(println(_))
+        Future(Ok("File Uploaded"))
+      }
+    }
+  }
+
 }

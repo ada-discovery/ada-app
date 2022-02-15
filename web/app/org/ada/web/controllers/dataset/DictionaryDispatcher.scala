@@ -1,6 +1,9 @@
 package org.ada.web.controllers.dataset
 
 import org.incal.core.FilterCondition
+import play.api.libs.Files
+import play.api.mvc.{Action, AnyContent, MultipartFormData}
+
 import javax.inject.Inject
 
 class DictionaryDispatcher @Inject() (
@@ -47,4 +50,6 @@ class DictionaryDispatcher @Inject() (
   override def setDefaultLabels = dispatch(_.setDefaultLabels)
 
   override def convertLabelsToCamelCase = dispatch(_.convertLabelsToCamelCase)
+
+  override def updatesLabelsByFile(fileName: String): Action[AnyContent] = dispatchAjax(_.updatesLabelsByFile(fileName))
 }
