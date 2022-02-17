@@ -7,6 +7,7 @@ import org.ada.server.models.DistributionWidgetSpec
 
 import scala.reflect.runtime.universe.TypeTag
 import com.google.inject.assistedinject.Assisted
+import org.ada.server.{AdaException, AdaParseException}
 import org.ada.web.controllers._
 import org.ada.web.controllers.core.AdaCrudControllerImpl
 import org.ada.web.controllers.core.{ExportableAction, WidgetRepoController}
@@ -34,14 +35,14 @@ import org.ada.server.field.FieldUtil
 import org.ada.server.dataaccess.JsonUtil.unescapeKey
 import org.ada.server.models.ml.classification.ClassificationResult
 import org.ada.server.field.FieldUtil.caseClassToFlatFieldTypes
-import org.ada.server.util.ManageResource.using
+import org.ada.server.util.ManageResource.{closeResource}
 import org.ada.web.services.{DataSpaceService, WidgetGenerationService}
 import views.html.{dataview, dictionary => view}
 import org.incal.core.util.toHumanReadableCamel
 import org.incal.play.security.AuthAction
 
 import scala.concurrent.Future
-import scala.io.Source
+import scala.io.{BufferedSource, Source}
 
 trait DictionaryControllerFactory {
   def apply(dataSetId: String): DictionaryController
@@ -341,14 +342,42 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   override def updatesLabelsByFile(fileName: String): Action[AnyContent] = AuthAction { request =>
     val labelsFile = request.body.asMultipartFormData.flatMap(_.file(fileName))
-                      .getOrElse(throw new AdaRestException("Error loading labels by file")).ref.file
+      .getOrElse(throw new AdaRestException("Error loading labels by file")).ref.file
 
-    using(Source.fromFile(labelsFile)){
-      source => {
-        source.getLines().foreach(println(_))
-        Future(Ok("File Uploaded"))
-      }
+    val source = Source.fromFile(labelsFile)
+    val updateRes = for {
+      fields <- repo.find()
+      fieldsUpdatedLabel <- Future(getFieldsWithUpdatedLabels(source, fields))
+      _ <- repo.update(fieldsUpdatedLabel)
+    } yield {
+      closeResource(source)
+      Ok(s"Fields updated from file $fileName")
+    }
+
+    updateRes.recoverWith{
+      case ex: Exception =>
+        closeResource(source)
+        Future(InternalServerError(ex.getMessage))
     }
   }
+
+  private def getFieldsWithUpdatedLabels(source: BufferedSource, fields: Traversable[Field]) = {
+    val fieldsRes = for(line <- source.getLines()) yield {
+      val cols = line.split(';')
+      if (cols.length != 2)
+        throw new AdaParseException(s"Number of columns is different than 2. Line: $line")
+      else {
+        val name = cols(0)
+        val label = cols(1)
+        fields.filter(_.name == name)
+          .map(field => field.copy(label = Some(label)))
+      }
+    }
+    fieldsRes.flatten.toTraversable
+  }
+
+
+
+
 
 }

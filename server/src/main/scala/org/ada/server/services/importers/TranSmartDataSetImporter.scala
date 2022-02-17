@@ -41,7 +41,7 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
       val prefixSuffixSeparators = if (importInfo.matchQuotes) Seq(quotePrefixSuffix) else Nil
       val values = dataSetService.parseLines(columnsInfo, lines, delimiter, false, prefixSuffixSeparators)
 
-      for {
+      val saveRes = for {
         // create/retrieve a dsa
         dsa <- createDataSetAccessor(importInfo)
 
@@ -53,6 +53,8 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
             saveJsonsWithoutTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo)
       } yield
         closeResource(source)
+
+      saveRes.recoverWith{case ex: Exception => closeResourceWithFutureFailed(ex, source)}
 
     } catch {
       case e: Exception => closeResourceWithFutureFailed(e, source)
@@ -78,7 +80,7 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
               source
             ),
             fields
-          ).map(_ => closeResource(source))
+          ).map(_ => closeResource(source)).recoverWith{case ex: Exception => closeResourceWithFutureFailed(ex, source)}
         } catch {
           case e: Exception => closeResourceWithFutureFailed(e, source)
         }

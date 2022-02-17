@@ -28,7 +28,7 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
       val prefixSuffixSeparators = if (importInfo.matchQuotes) Seq(quotePrefixSuffix) else Nil
       val values = dataSetService.parseLines(columnsInfo, lines, importInfo.delimiter, importInfo.eol.isDefined, prefixSuffixSeparators)
 
-      for {
+      val saveRes = for {
         // create/retrieve a dsa
         dsa <- createDataSetAccessor(importInfo)
 
@@ -40,6 +40,8 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
             saveStringsAndDictionaryWithoutTypeInference(dsa, columnsInfo.namesAndLabels, values, importInfo.saveBatchSize)
       } yield
         closeResource(source)
+
+      saveRes.recoverWith{ case ex: Exception => closeResourceWithFutureFailed(ex, source)}
 
     } catch {
       case e: Exception => closeResourceWithFutureFailed(e, source)
