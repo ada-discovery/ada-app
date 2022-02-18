@@ -39,7 +39,7 @@
                     </td>
                 }
                 @columns.map { case (fieldName, _, content) =>
-                    <td @if(fieldName.isDefined) {id="@fieldName.get"}>
+                    <td @if(fieldName.isDefined) {id="@fieldName.get" class="overflow-wrap-text"}>
                         @content(item)
                     </td>
                 }

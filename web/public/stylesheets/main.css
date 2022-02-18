@@ -691,3 +691,10 @@ a.carousel-control.right{
     margin-bottom: 5px;
 }
 
+.overflow-wrap-text{
+    max-width: 150px;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+
