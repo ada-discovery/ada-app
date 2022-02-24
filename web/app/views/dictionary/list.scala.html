@@ -22,6 +22,7 @@
 @import org.ada.server.models.DataSetSetting
 
 @import views.html.dictionary.updateLabelsByFile
+@import views.html.`export`.exportDictionaryModalDropdown
 @(
     domainName : String,
     page: Page[Field],
@@ -47,11 +48,7 @@
         <div class="pull-right">
             <ul class="list-inline">
                 <li>
-                    @exportDropdown(
-                        dictionaryRouter.exportCsv(_, true, None, _, _),
-                        dictionaryRouter.exportJson,
-                        conditions
-                    )
+                    @exportDictionaryModalDropdown(dictionaryRouter.exportCsv(_, true, None, _, _))
                 </li>
                 <li>
                     <div class="dropdown">

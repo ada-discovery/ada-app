@@ -1,0 +1,13 @@
+@import org.incal.core.FilterCondition
+@import views.html.export._
+@(
+   exportCsvCall: (String, Seq[FilterCondition], Boolean) => Call
+)
+
+@modalDropdown(
+    "Dictionary export ",
+    Seq(Left((
+            "exportAllConfirmationCsvModal", "Export as CSV",
+            exportAllCsvModal(exportCsvCall)
+    )))
+)
