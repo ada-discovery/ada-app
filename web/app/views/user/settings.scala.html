@@ -1,0 +1,104 @@
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
+
+@import views.html.elements.labelValue
+@()(implicit context: WebContext)
+
+<div class="row row-margin-bottom">
+    <span class="list-group-item list-group-item-action flex-column align-items-start">
+        <div class="d-flex w-100 justify-content-between">
+            <h4 class="mb-1">Default permissions on initial login &nbsp;&nbsp;&nbsp;<a class="btn btn-sm btn-help-modal" data-toggle="modal" data-target="#modalInfoPermission">?</a></h4>
+        </div>
+        <div class="form-check">
+            <input type="radio" class="form-check-input" id="@org.ada.server.models.LoginRights.viewOnly" name="loginRightsRadio" value="@org.ada.server.models.LoginRights.viewOnly">
+            <label class="form-check-label"><span class="login-rights-pd-left">View Only - <i>User has read only access</i></span></label>
+        </div>
+        <div class="form-check">
+            <input type="radio" class="form-check-input" id="@org.ada.server.models.LoginRights.standard" name="loginRightsRadio" value="@org.ada.server.models.LoginRights.standard">
+            <label class="form-check-label"><span class="login-rights-pd-left">Standard - <i>User can edit dataset views</i></span></label>
+        </div>
+        <div style="margin-top: 10px">
+            <button type="button" class="btn btn-primary" onclick="updateUsersSettings()">Save</button>
+        </div>
+    </span>
+</div>
+
+<div class="modal" id="modalInfoPermission" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Details</h4>
+            </div>
+            <div class="modal-body">
+                <ul>
+                    <li>Standard permissions on initial user login for users who already have a dataset access record in DAISY.</li>
+                    <li>Standard permissions will not overwrite existing permissions, given previously by the Ada admin.</li>
+                    <li>It is safe to delete all user permissions for a given dataset with a DAISY record and use standard permissions as a default.</li>
+                    <li>This feature only works for datasets with a DAISY record.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@helper.javascriptRouter("getUsersSettingsJsRoute")(
+    org.ada.web.controllers.routes.javascript.UserController.getUsersSettings
+)
+
+@helper.javascriptRouter("updateUsersSettingsJsRoute")(
+    org.ada.web.controllers.routes.javascript.UserController.updateUsersSettings
+)
+
+<script type="text/javascript">
+
+    var userSettingsId = null;
+
+    function setUserSettingsId(userSettingsId) {
+        this.userSettingsId = userSettingsId
+    }
+
+    function getUserSettingsId() {
+        return this.userSettingsId
+    }
+
+    $(function (){
+        getUsersSettingsJsRoute.org.ada.web.controllers.UserController.getUsersSettings().ajax({
+            success: function (res) {
+                setUserSettingsId(res["_id"])
+                var defaultLoginRights = res["defaultLoginRights"]
+                $("input[name='loginRightsRadio']").each(function (){
+                    if(this.value === defaultLoginRights)
+                        $(this).prop('checked', true)
+                    else
+                        $(this).prop('checked', false)
+                })
+            },
+            error: function (err){
+                showErrorResponse(err)
+            }
+        })
+    })
+
+    function updateUsersSettings() {
+        var userSettingsId = getUserSettingsId()
+        var defaultLoginRights = $("input[name='loginRightsRadio']:checked").val()
+        const userSettings = {
+            '_id': userSettingsId,
+            'defaultLoginRights': defaultLoginRights
+        }
+        updateUsersSettingsJsRoute.org.ada.web.controllers.UserController.updateUsersSettings().ajax({
+            data: JSON.stringify(userSettings),
+            contentType: 'application/json',
+            success: function (res) {
+                showMessage("Users settings updated")
+            },
+            error: function (err){
+                showErrorResponse(err)
+            }
+        })
+    }
+</script>
+

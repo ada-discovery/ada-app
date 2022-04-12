@@ -686,3 +686,19 @@ a.carousel-control.right{
 .omics-pd-left{
     padding-left: 10px;
 }
+
+.login-rights-pd-left{
+    padding-left: 10px;
+}
+
+.row-margin-bottom{
+    margin-bottom: 5px;
+}
+
+.overflow-wrap-text{
+    max-width: 150px;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+

@@ -19,8 +19,10 @@ class DictionaryRouter(dataSetId: String) extends GenericRouter(routes.Dictionar
   val exportJson  = routes.exportRecordsAsJson _ map route
   val setDefaultLabels = routeFun(_.setDefaultLabels)
   val convertLabelsToCamelCase = routeFun(_.convertLabelsToCamelCase)
+  val updatesLabelsByFile = routes.updatesLabelsByFile _ map route
 }
 
 final class DictionaryJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.DictionaryDispatcher, "dataSet", dataSetId) {
   val updateLabel = routeFun(_.updateLabel)
+  val updateLabelsByFile = routeFun(_.updatesLabelsByFile)
 }

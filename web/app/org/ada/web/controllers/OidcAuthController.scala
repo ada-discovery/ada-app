@@ -5,11 +5,12 @@ import com.nimbusds.oauth2.sdk.token.{BearerAccessToken, RefreshToken}
 import jp.t2v.lab.play2.auth.Login
 import org.ada.server.AdaException
 import org.ada.server.dataaccess.RepoTypes.{DataSetSettingRepo, UserRepo}
-import org.ada.server.models.User
+import org.ada.server.models.{LoginRights, User, UserSettings}
 import org.ada.server.services.UserManager
-import org.ada.web.controllers.UserDataSetPermissions.viewOnly
+import org.ada.web.controllers.UserDataSetPermissions.{standard, viewOnly}
 import org.ada.web.models.JwtTokenInfo
 import org.ada.web.security.AdaAuthConfig
+import org.ada.web.services.UserSettingsService
 import org.incal.core.dataaccess.Criterion._
 import org.incal.play.security.SecurityRole
 import org.pac4j.core.config.Config
@@ -36,6 +37,7 @@ class OidcAuthController @Inject() (
   userRepo: UserRepo,
   dataSettingRepo: DataSetSettingRepo,
   configuration: Configuration,
+  userSettingsService: UserSettingsService,
   @NamedCache("jwt-user-cache") jwtUserCache: CacheApi
 ) extends Controller
     with Security[CommonProfile]            // PAC4J
@@ -123,8 +125,16 @@ class OidcAuthController @Inject() (
         RolesDataSetIdsInfo(userAdminRole, dataSetIdsGlobalRef)
       }
 
-      def createViewOnlyPermission(dataSetsIds: Set[String]) =
-        dataSetsIds.flatMap(dataSetId => viewOnly.map(permission => s"DS:${dataSetId}.$permission"))
+      def createPermissions(dataSetsIds: Set[String], defaultLoginRights: LoginRights.Value) =
+        defaultLoginRights match {
+          case LoginRights.viewOnly => generatePermissionsFromTemplate(dataSetsIds, viewOnly)
+          case LoginRights.standard => generatePermissionsFromTemplate(dataSetsIds, standard)
+          case _ => throw new AdaException(s"Default rights: $defaultLoginRights not found")
+      }
+
+      def generatePermissionsFromTemplate(dataSetsIds: Set[String], permissionTemplate: Seq[String]) =
+        dataSetsIds.flatMap(dataSetId => permissionTemplate.map(permission => s"DS:${dataSetId}.$permission"))
+
 
       /**
         * Class containing datasets ids
@@ -165,7 +175,8 @@ class OidcAuthController @Inject() (
         * @return permission info
         */
       def verifyPermissions(localUserPermissions: Seq[String],
-                            dataSetIds: DataSetIds): PermissionInfo = {
+                            dataSetIds: DataSetIds,
+                            userSettings: UserSettings): PermissionInfo = {
 
         val dataSetIdsWithGlobalIdRef = dataSetIds.dataSetIdsWithGlobalIdRef
         val dataSetIdsOidc = dataSetIds.dataSetIdsOidc
@@ -196,7 +207,7 @@ class OidcAuthController @Inject() (
           PermissionInfo(isPermissionsUpdate = true,
             (userLocalPermissionWithoutGlobalIdRef.toSet ++
               userLocalPermissionOidcIntersection.toSet ++
-              createViewOnlyPermission(dataSetIdsOidcDiff)).toSeq.sorted)
+              createPermissions(dataSetIdsOidcDiff, userSettings.defaultLoginRights)).toSeq.sorted)
         }
       }
 
@@ -211,9 +222,10 @@ class OidcAuthController @Inject() (
         */
       def manageExistingUser(existingUser: User,
                              oidcUser: User,
-                             dataSetIds: DataSetIds) = {
+                             dataSetIds: DataSetIds,
+                             userSettings: UserSettings) = {
 
-        val permissionInfo = verifyPermissions(existingUser.permissions, dataSetIds)
+        val permissionInfo = verifyPermissions(existingUser.permissions, dataSetIds, userSettings)
         val isRoleNotChange = existingUser.roles.diff(oidcUser.roles).isEmpty && oidcUser.roles.diff(existingUser.roles).isEmpty
 
         if (existingUser.oidcUserName.isEmpty)
@@ -235,10 +247,10 @@ class OidcAuthController @Inject() (
         * @param oidcUser user from OpenID provider
         * @return Saving information
         */
-      def manageNewUser(oidcUser: User, dataSetIds: DataSetIds) = {
+      def manageNewUser(oidcUser: User, dataSetIds: DataSetIds, userSettings: UserSettings) = {
           for {user <- userManager.findById(oidcUser.userId)
-               result <- user.map(manageExistingUser(_, oidcUser, dataSetIds))
-                 .getOrElse(addNewUser(oidcUser, createViewOnlyPermission(dataSetIds.dataSetIdsOidc)))
+               result <- user.map(manageExistingUser(_, oidcUser, dataSetIds, userSettings))
+                 .getOrElse(addNewUser(oidcUser, createPermissions(dataSetIds.dataSetIdsOidc, userSettings.defaultLoginRights)))
                } yield result
       }
 
@@ -289,9 +301,10 @@ class OidcAuthController @Inject() (
         for {
           user <- userManager.findByEmail(userEmail)
           dataSetIds <- getDateSetIds(rolesDataSetIdsInfo.dataSetIdsGlobalRef)
+          userSettings <- userSettingsService.getUsersSettings
           result <- user
-            .map(manageExistingUser(_, oidcUser, dataSetIds))
-            .getOrElse(manageNewUser(oidcUser, dataSetIds))
+            .map(manageExistingUser(_, oidcUser, dataSetIds, userSettings))
+            .getOrElse(manageNewUser(oidcUser, dataSetIds, userSettings))
         } yield result
       }
     }

@@ -2,7 +2,8 @@ package org.ada.web.controllers.dataset
 
 import org.incal.core.FilterCondition
 import org.incal.play.controllers.CrudController
-import play.api.mvc.{Action, AnyContent}
+import play.api.libs.Files
+import play.api.mvc.{Action, AnyContent, MultipartFormData}
 
 trait DictionaryController extends CrudController[String] {
 
@@ -21,4 +22,6 @@ trait DictionaryController extends CrudController[String] {
   def setDefaultLabels: Action[AnyContent]
 
   def convertLabelsToCamelCase: Action[AnyContent]
+
+  def updatesLabelsByFile(fileName: String): Action[AnyContent]
 }

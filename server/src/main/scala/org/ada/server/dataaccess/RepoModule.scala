@@ -81,6 +81,11 @@ private object RepoDef extends Enumeration {
   val BaseRunnableSpecRepo = Repo[BaseRunnableSpecRepo](
     new RunnableSpecCrudRepo()
   )
+
+  val UserSettingsRepo = Repo[UserSettingsRepo](
+    new MongoAsyncCrudRepo[UserSettings, BSONObjectID]("users_settings")
+  )
+
 }
 
 // repo module used to bind repo types/instances withing Guice IoC container

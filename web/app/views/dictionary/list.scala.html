@@ -21,6 +21,8 @@
 @import org.incal.core.FilterCondition
 @import org.ada.server.models.DataSetSetting
 
+@import views.html.dictionary.updateLabelsByFile
+@import views.html.`export`.exportDictionaryModalDropdown
 @(
     domainName : String,
     page: Page[Field],
@@ -46,11 +48,7 @@
         <div class="pull-right">
             <ul class="list-inline">
                 <li>
-                    @exportDropdown(
-                        dictionaryRouter.exportCsv(_, true, None, _, _),
-                        dictionaryRouter.exportJson,
-                        conditions
-                    )
+                    @exportDictionaryModalDropdown(dictionaryRouter.exportCsv(_, true, None, _, _))
                 </li>
                 <li>
                     <div class="dropdown">
@@ -88,6 +86,7 @@
 }
 
 @table = {
+    @updateLabelsByFile()
     <div class="pull-right dropdown">
         <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To
@@ -182,7 +181,8 @@
 )
 
 @helper.javascriptRouter("dictionaryJsRoutes")(
-    dictionaryJsRouter.updateLabel
+    dictionaryJsRouter.updateLabel,
+    dictionaryJsRouter.updateLabelsByFile
 )
 
 @helper.javascriptRouter("categoryJsRoutes")(
