@@ -43,7 +43,7 @@ class OmicsDataSetController @Inject()(
       dSettings <- dataSettings
       mInfos <- dataSetMetaInfos
       if dSettings.dataSetId == mInfos.id &&
-         dSettings.dataSetInfo.get.dataSetType == DataSetType.joinable
+         dSettings.dataSetInfo.get.dataSetType == DataSetType.omics
     } yield mInfos
 
     for {mInfoFilter <- mInfosFiltered} yield {
