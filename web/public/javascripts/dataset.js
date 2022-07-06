@@ -69,53 +69,61 @@ function saveFilterToView(viewId) {
 }
 
 
-function refreshViewForFilter(widgetEngine, viewId, filterOrId, filterElement, widgetGridElementWidth, enforceWidth, tableSelection, dataSetId) {
+function refreshViewForFilter(widgetEngine, viewId, filterOrId, filterElement, widgetGridElementWidth, enforceWidth, tableSelection) {
 
-    cacheFilterOrIdsJsRoute.org.ada.web.controllers.dataset.omics.OmicsDataSetController.cacheFilterOrIds(filterOrId, dataSetId).ajax({
+    cacheFilterOrIdsJsRoute.org.ada.web.controllers.dataset.omics.OmicsDataSetController.cacheFilterOrIds(filterOrId).ajax({
         success: function (response) {
-            var filterTmpId = response["filterTmpId"]
-            var index = $("#filtersTr").find(".filter-div").index(filterElement);
+            try {
+                var filterTmpId = response["filterTmpId"]
+                var index = $("#filtersTr").find(".filter-div").index(filterElement);
 
-            var counts = $("#filtersTr").find(".count-hidden").map(function(index, element) {
-                return parseInt($(element).val());
-            }).toArray();
+                var counts = $("#filtersTr").find(".count-hidden").map(function(index, element) {
+                    return parseInt($(element).val());
+                }).toArray();
 
-            // add the old count to the params
-            var totalCount = counts.reduce(function (a, b) {return a + b;}, 0);
-            var oldCountDiff = totalCount - counts[index];
+                // add the old count to the params
+                var totalCount = counts.reduce(function (a, b) {return a + b;}, 0);
+                var oldCountDiff = totalCount - counts[index];
 
-            dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getViewElementsAndWidgetsCallback(viewId, "", oldCountDiff, tableSelection, filterTmpId, null).ajax({
-                success: function(data) {
-                    hideErrors();
+                dataSetJsRoutes.org.ada.web.controllers.dataset.DataSetDispatcher.getViewElementsAndWidgetsCallback(viewId, "", oldCountDiff, tableSelection, filterTmpId, null).ajax({
+                    success: function(data) {
+                        try {
+                            hideErrors();
 
-                    // filter
-                    filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
-                    addDragAndDropSupportForFilter(filterElement)
+                            // filter
+                            filterElement.multiFilter("replaceModelAndPanel", data.filterModel, data.conditionPanel);
+                            addDragAndDropSupportForFilter(filterElement)
 
-                    // display count
-                    var countDisplayElement = filterElement.closest(".row").parent().find(".count-div")
-                    countDisplayElement.html("<h3>" + data.count + "</h3>");
+                            // display count
+                            var countDisplayElement = filterElement.closest(".row").parent().find(".count-div")
+                            countDisplayElement.html("<h3>" + data.count + "</h3>");
 
-                    // (hidden) count
-                    var countHiddenElement = filterElement.parent().find(".count-hidden")
-                    countHiddenElement.val(data.count);
+                            // (hidden) count
+                            var countHiddenElement = filterElement.parent().find(".count-hidden")
+                            countHiddenElement.val(data.count);
 
-                    // page header
-                    $(".page-header").html("<h3>" + data.pageHeader + "</h3>");
+                            // page header
+                            $(".page-header").html("<h3>" + data.pageHeader + "</h3>");
 
-                    // table
-                    var tableElement = $("#tablesTr").find(".table-div:eq(" + index + ")")
-                    tableElement.html(data.table);
+                            // table
+                            var tableElement = $("#tablesTr").find(".table-div:eq(" + index + ")")
+                            tableElement.html(data.table);
 
-                    // widgets
-                    var widgetsDiv = $("#widgetsTr > td:eq(" + index + ")")
-                    updateWidgetsFromCallback(widgetEngine, data.widgetsCallbackId, widgetsDiv, filterElement, widgetGridElementWidth, enforceWidth)
-                },
-                error: function(data) {
-                    showErrorResponse(data)
-                    filterElement.multiFilter("rollbackModelOnError");
-                }
-            });
+                            // widgets
+                            var widgetsDiv = $("#widgetsTr > td:eq(" + index + ")")
+                            updateWidgetsFromCallback(widgetEngine, data.widgetsCallbackId, widgetsDiv, filterElement, widgetGridElementWidth, enforceWidth)
+                        }catch (error) {
+                            showError(error)
+                        }
+                    },
+                    error: function(data) {
+                        showErrorResponse(data)
+                        filterElement.multiFilter("rollbackModelOnError");
+                    }
+                });
+            }catch (error){
+                showError(error)
+            }
         },
         error: function(response) {
             showErrorResponse(response)

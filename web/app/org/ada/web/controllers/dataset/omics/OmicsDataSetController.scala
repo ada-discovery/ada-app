@@ -32,7 +32,7 @@ class OmicsDataSetController @Inject()(
 {
 
 
-  private def dataSetRequestPermission(dataSetId: String) = s"DS:$dataSetId.dataSet.getView"
+  private def dataSetRequestPermission(dataSetId: String) = s"DS:$dataSetId.dataSet"
 
   def dataSetIds(currentDataSetId: String) =
     restrictAdminOrPermissionAny(dataSetRequestPermission(currentDataSetId)) { implicit request =>
@@ -94,8 +94,8 @@ class OmicsDataSetController @Inject()(
     }
 
 
-  def cacheFilterOrIds(filterOrId: FilterOrId, currentDataSetId: String): Action[AnyContent] =
-    restrictAdminOrPermissionAny(dataSetRequestPermission(currentDataSetId)){ implicit request =>
+  def cacheFilterOrIds(filterOrId: FilterOrId): Action[AnyContent] =
+    restrictSubjectPresentAny(){ implicit request =>
         val filterTmpId =  UUID.randomUUID().toString
         filtersCache.set(filterTmpId, filterOrId, 3.seconds)
         Future(Ok(Json.obj("filterTmpId" -> filterTmpId)))
