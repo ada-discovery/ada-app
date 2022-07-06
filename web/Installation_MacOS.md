@@ -1,4 +1,4 @@
-# Ada Installation Guide (MacOS) - Version 0.8.1
+# Ada Installation Guide (MacOS) - Version 0.10.1
 
 (Expected time: 30-45 mins)
 
@@ -92,12 +92,12 @@ mongod
 
 ## 3. **Elastic Search**
 
-* Install ES (5.6.10)
+* Install ES (5.6.16)
 
 ```sh
-curl -L -O https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.10.tar.gz
-tar -xvf elasticsearch-5.6.10.tar.gz
-mv elasticsearch-5.6.10 elasticsearch
+curl -L -O wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.16.tar.gz
+tar -xzf elasticsearch-5.6.16.tar.gz
+mv elasticsearch-5.6.16 elasticsearch
 ```
 
 * Modify the configuration in `<es_installation_folder>/config/elasticsearch.yml`
@@ -145,6 +145,12 @@ MAX_LOCKED_MEMORY=unlimited
 -Xmx5g
 ```
 
+* Fix Apache Log4j2 Vulnerability. In `/etc/elasticsearch/jvm.options`, add property:
+```
+-Dlog4j2.formatMsgNoLookups=true
+```
+
+
 * Add Elastic Search to PATH environment variable `/etc/paths`
 
 ~~~
@@ -183,10 +189,10 @@ tar -xvf cerebro-0.8.3.zip
 
 ### 4. Application Server (Netty)
 
-* Download the version 0.8.1
+* Download the version 0.10.1
 
 ```
-wget https://webdav-r3lab.uni.lu/public/ada-artifacts/ada-web-0.8.1.zip
+wget https://webdav-r3lab.uni.lu/public/ada-artifacts/ada-web-0.10.1.zip
 ```
 
 * Unzip the server binaries
@@ -352,52 +358,103 @@ University of Seven Kingdoms</br></br>
 
 &nbsp; 
 
-### 5. LDAP
+### 5. OpenID
 
-* If your Ada is accessible from outside/the internet or having two users (admin: `/loginAdmin` and basic `/loginBasic`) without authentication is not sufficient you **must** configure LDAP users with authentication
- 
-* Configure LDAP in `set_env.sh`
+* Ada is working with OpenID provider. We recommend to use [Keycloak](https://www.keycloak.org/) and follow related documentation.
+
+
+* After Keycloak installation and configuration is necessary to set up Ada with following parameters in `custom.conf` file:
 
 ```
-export ADA_LDAP_HOST="XXX"
-export ADA_LDAP_BIND_PASSWORD="XXX"
-```
-  
-* Go to `custom.conf`and remove `mode` (default: remote) and `port` (default: 389) and configure the LDAP groups, example: 
+oidc {
+  clientId = "ADA_OIDC_CLIENT_ID"
+  secret = "ADA_OIDC_SECRET"
+  discoveryUrl = "ADA_OIDC_DISCOVERY_URL"
+  adaBaseUrl = "ADA_BASE_URL"
+  tokenEndPointUrl = "ADA_OIDC_TOKEN_ENDPOINT_URL"
+  logoutUrl = "ADA_OIDC_LOGOUT_URL"
 
-```sh
-ldap {
-  dit = "cn=users,cn=accounts,dc=north,dc=edu"
-  groups = ["cn=my-group-name,cn=groups,cn=accounts,dc=north,dc=edu"]
-  bindDN = "uid=my-ldap-reader-xxx,cn=users,cn=accounts,dc=north,dc=edu"
-  debugusers = true
+  returnAttributeIdName = "sub"
+  accessTokenName = "access_token"
+  refreshTokenName = "refresh_token"
+  rolesAttributeName = "roles"
+  realmAccessAttribute = "realm_access"
+  resourceAccessAttribute = "resource_access"
+  roleAdminName = "ROLE_ADA_ADMIN"
+  dataSetGlobalIdPrefix = "DATASET_GLOBAL_ID_PREFIX"
+  dataSetGlobalIdRegex = "DATASET_GLOBAL_ID_REGEX"
+  clientAuthenticationMethod = "client_secret_post"    // optional
+  preferredJwsAlgorithm = "RS256"                      // optional
+//  responseType = "code" // id_token token            // optional
+//  scope = "openid email profile phone"               // optional
+//  useNonce = "true"                                  // optional
+//  enableCentralLogout = false                        // optional - true by default
 }
 ```
-* Restart Ada
 
-```sh
-./stopme
-```
-and
-```sh
-./runme
-```
-* Log in to Ada
+where some parameters must be substituted with a proper value:
 
-* Import LDAP users by clicking
-*Admin → User Actions → Import from LDAP*
+* **ADA_OIDC_CLIENT_ID**: Client id name;
 
-* Assign admin role to at least one user (yourself)
-*Admin → Users → double click on a user → Roles → [+] → write `admin` → Update*
 
-* Disable `debugusers` by removing it from `custom.conf` or setting it to `false`
+* **ADA_OIDC_SECRET**: Client secret credential;
 
-* Restart Ada
 
-* Check if `debugusers` have been disabled by trying to access `http://localhost:8080/loginAdmin` (must not allow you in)
+* **ADA_OIDC_DISCOVERY_URL**: The url to identify openid configuration end points.
 
-* Login using your LDAP username and password
+    ```
+    https://<host_name>:<port_number>/auth/realms/<realm_name>/.well-known/openid-configuration 
+    ```
+  where:
 
-* Start by importing your first data set in *Admin →  Data Set Imports → [+]*
+  * **host_name**: The host name of the OpenID provider;
+  * **port_number**: The host port number;
+  * **realm_name**: The OpenID Connect realm name.
 
-* Have fun!
+
+* **ADA_BASE_URL**: The host name of Ada application. Ex: https://ada.parkinson.lu;
+
+
+* **ADA_OIDC_TOKEN_ENDPOINT_URL**: Token end point url.
+
+    ```
+    https://<host_name>:<port_number>/auth/realms/<realm_name>/protocol/openid-connect/token 
+    ```
+
+  * **host_name**: The host name of the OpenID provider;
+  * **port_number**: The host port number;
+  * **realm_name**: The OpenID realm name.
+
+
+* **ADA_OIDC_LOGOUT_URL**: Logout url.
+
+  ```
+  https://<host_name>:<port_number>/auth/realms/<realm_name>/protocol/openid-connect/logout
+  ```
+  * **host_name**: The host name of the OpenID Connect provider;
+  * **port_number**: The host port number;
+  * **realm_name**: The OpenID Connect realm name.
+
+
+* **ROLE_ADA_ADMIN**: Administrator role name (set up role must be done even on OpenID provider side).
+
+
+* **DATASET_GLOBAL_ID_PREFIX**: Prefix role to identify dataset and give access to the user.
+
+  For instance writing a role on OpenID provider side:
+  ```
+  ACCESS::datasetName
+  ```
+  Imply DATASET_GLOBAL_ID_PREFIX is `ACCESS::`
+
+
+* **DATASET_GLOBAL_ID_REGEX**: Regex of the role to identify dataset and give access to the user.
+
+  For instance writing a role on OpenID provider side:
+  ```
+  ACCESS::datasetName
+  ```
+  Imply DATASET_GLOBAL_ID_REGEX is `(ACCESS::)(.*)`
+
+
+The rest of the configuration should remain unchanged using [Keycloak](https://www.keycloak.org).
