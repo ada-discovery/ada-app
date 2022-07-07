@@ -192,7 +192,7 @@ tar -xvf cerebro-0.8.3.zip
 * Download the version 0.10.1
 
 ```
-wget https://webdav-r3lab.uni.lu/public/ada-artifacts/ada-web-0.10.1.zip
+wget https://webdav-r3lab.uni.lu/public/ada-artifacts/ada-web-0.10.x/ada-web-0.10.1.zip
 ```
 
 * Unzip the server binaries

@@ -1,4 +1,4 @@
-# Ada Installation Guide (Linux) - Version 0.8.1
+# Ada Installation Guide (Linux) - Version 0.10.1
 
 (Expected time: 30-45 mins)
 
@@ -14,35 +14,21 @@ Recommended resources:
 * **Mongo DB**: 8 GB RAM, 4 CPUs, 50 GB disc space
 * **Elastic Search DB**: 8 GB RAM, 4 CPUs, 50 GB disc space
 
-&nbsp; 
+&nbsp;
 
 ### 1. **Java** 1.8
-
-```sh
-sudo apt-get install software-properties-common
-sudo add-apt-repository ppa:webupd8team/java
-sudo apt-get update
-sudo apt-get install oracle-java8-installer
-sudo apt install oracle-java8-set-default
-```
-Depending on your Linux distribution you might need to add a different repository, such as
-
-```
-sudo add-apt-repository "deb http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main"
-```
-or install JDK from a different provider, such as
 
 ```
 sudo apt install openjdk-8-jdk
 ```
 
-&nbsp; 
+&nbsp;
 
 ### 2. **Mongo** DB
 
 * Install MongoDB (4.0.10)
-(Note that Ada is compatible with *any* 3.2, 3.4, 3.6, and 4.0 relaease of Mongo in case you fail to install the recommended version)
-(Also if you want to use a non-Ubuntu Linux distribution check the supported platforms/OS [here](https://docs.mongodb.com/manual/installation/#supported-platforms]))
+  (Note that Ada is compatible with *any* 3.2, 3.4, 3.6, and 4.0 release of Mongo in case you fail to install the recommended version)
+  (Also if you want to use a non-Ubuntu Linux distribution check the supported platforms/OS [here](https://docs.mongodb.com/manual/installation/#supported-platforms]))
 
 ```sh
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4
@@ -52,7 +38,7 @@ sudo apt-get install -y mongodb-org=4.0.10 mongodb-org-server=4.0.10 mongodb-org
 ```
 
 * Configure memory and other settings in `/etc/mongod.conf`
-(set a reasonable `cacheSizeGB`, recommended to 50% of available RAM, [ref](https://docs.mongodb.com/v4.0/reference/configuration-options/#storage.wiredTiger.engineConfig.cacheSizeGB))
+  (set a reasonable `cacheSizeGB`, recommended to 50% of available RAM, [ref](https://docs.mongodb.com/v4.0/reference/configuration-options/#storage.wiredTiger.engineConfig.cacheSizeGB))
 
 ```sh
   ...
@@ -65,7 +51,7 @@ sudo apt-get install -y mongodb-org=4.0.10 mongodb-org-server=4.0.10 mongodb-org
 ```
 
 * Create a limits file `/etc/security/limits.d/mongodb.conf`
-(if you are using Red Hat Enterprise Linux or CentOS read [this](https://docs.mongodb.com/v4.0/reference/ulimit/))
+  (if you are using Red Hat Enterprise Linux or CentOS read [this](https://docs.mongodb.com/v4.0/reference/ulimit/))
 
 ```sh
 mongodb    soft    nofile          1625538
@@ -116,12 +102,12 @@ sudo service mongod start
 
 ## 3. **Elastic Search**
 
-* Install ES (5.6.10)
+* Install ES (5.6.16)
 
 ```sh
 sudo apt-get update
-wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.10.deb
-sudo dpkg -i elasticsearch-5.6.10.deb
+wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.16.deb
+sudo dpkg -i elasticsearch-5.6.16.deb
 sudo systemctl enable elasticsearch.service
 ```
 
@@ -142,7 +128,7 @@ sudo systemctl enable elasticsearch.service
 ```
 
 * If you want to store data in a special directory set also
- 
+
 ```
 path.data: /your_custom_path
 ```
@@ -176,7 +162,13 @@ LimitMEMLOCK=infinity
 -Xms5g
 -Xmx5g
 ```
-*  and finally apply the settings for `systemd`
+
+* Fix Apache Log4j2 Vulnerability. In `/etc/elasticsearch/jvm.options`, add property:
+```
+-Dlog4j2.formatMsgNoLookups=true
+```
+
+* and finally apply the settings for `systemd`
 ```
 sudo systemctl daemon-reload
 ```
@@ -205,7 +197,7 @@ sudo service elasticsearch start
 ```
  sudo ./bin/cerebro -Dhttp.port=9209
 ```
-(Cerebro web client is then accessible at [http://localhost:9209](http://localhost:9209)) 
+(Cerebro web client is then accessible at [http://localhost:9209](http://localhost:9209))
 
 * Alternatively you can install *Kibana*, which also allows execution of Elastic queries and many more, as follows (more info [here](https://www.elastic.co/guide/en/kibana/5.6/deb.html)):
 ```
@@ -216,23 +208,23 @@ sudo /bin/systemctl daemon-reload
 sudo /bin/systemctl enable kibana.service
 sudo service start kibana
 ```
- 
+
 &nbsp;
 
 ### 4. Application Server (Netty)
 
-* Download the version 0.8.1
+* Download the version 0.10.1
 
 ```
-wget https://webdav-r3lab.uni.lu/public/ada-artifacts/ada-web-0.8.1.zip
+wget https://webdav-r3lab.uni.lu/public/ada-artifacts/ada-web-0.10.x/ada-web-0.10.1.zip
 ```
 
 * Unzip the server binaries
 
 ```sh
 sudo apt-get install unzip
-unzip ada-web-0.8.1.zip
-cd ada-web-0.8.1/bin
+unzip ada-web-0.10.1.zip
+cd ada-web-0.10.1/bin
 ```
 
 * Create a temp folder wherever you want,  e.g.
@@ -246,14 +238,14 @@ mkdir ada_temp
 * Configure DB connections in `set_env.sh` (`bin` folder)
 
 1 . *Mongo*
-     
+
 if not password-protected (default) set `ADA_MONGO_DB_URI`
 
 ```sh
 export ADA_MONGO_DB_URI="mongodb://localhost:27017/ada?rm.nbChannelsPerNode=20"
 ```
-     
- if password-protected set the following variables
+
+if password-protected set the following variables
 
 
 ```
@@ -271,7 +263,7 @@ if non-localhost server is used set `ADA_ELASTIC_DB_HOST`
 export ADA_ELASTIC_DB_HOST=x.x.x.x:9200
 ```
 
-Also set the custom ES cluster name if it was configured in Section 3 (see `/etc/elasticsearch/elasticsearch.yml`) 
+Also set the custom ES cluster name if it was configured in Section 3 (see `/etc/elasticsearch/elasticsearch.yml`)
 
 ```
 export ADA_ELASTIC_DB_CLUSTER_NAME="ada-cluster"
@@ -279,7 +271,7 @@ export ADA_ELASTIC_DB_CLUSTER_NAME="ada-cluster"
 
 3 . *General Setting*
 
-* Configure `project`, `ldap` (to enable access **without** authentication), and `datasetimport` in `custom.conf` (Ada `conf` folder) 
+* Configure `project`, `ldap` (to enable access **without** authentication), and `datasetimport` in `custom.conf` (Ada `conf` folder)
 
 ```sh
 project {
@@ -360,7 +352,7 @@ http://localhost:8080/loginAdmin
 </div>
 <br/>
 ```
- 
+
 `Contact` example:
 ```html
 <strong>Dr. John Snow</strong></br>
@@ -381,54 +373,107 @@ University of Seven Kingdoms</br></br>
 <li><a href="https://uni.lu/lcsb">LCSB Home</a></li>
 ```
 
-&nbsp; 
+&nbsp;
 
-### 5. LDAP
+### 5. OpenID
 
-* If your Ada is accessible from outside/the internet or having two users (admin: `/loginAdmin` and basic `/loginBasic`) without authentication is not sufficient you **must** configure LDAP users with authentication
- 
-* Configure LDAP in `set_env.sh`
+* Ada is working with OpenID provider. We recommend to use [Keycloak](https://www.keycloak.org/) and follow related documentation.
+
+
+* After Keycloak installation and configuration is necessary to set up Ada with following parameters in `custom.conf` file:
 
 ```
-export ADA_LDAP_HOST="XXX"
-export ADA_LDAP_BIND_PASSWORD="XXX"
-```
-  
-* Go to `custom.conf`and remove `mode` (default: remote) and `port` (default: 389) and configure the LDAP groups, example: 
+oidc {
+  clientId = "ADA_OIDC_CLIENT_ID"
+  secret = "ADA_OIDC_SECRET"
+  discoveryUrl = "ADA_OIDC_DISCOVERY_URL"
+  adaBaseUrl = "ADA_BASE_URL"
+  tokenEndPointUrl = "ADA_OIDC_TOKEN_ENDPOINT_URL"
+  logoutUrl = "ADA_OIDC_LOGOUT_URL"
 
-```sh
-ldap {
-  dit = "cn=users,cn=accounts,dc=north,dc=edu"
-  groups = ["cn=my-group-name,cn=groups,cn=accounts,dc=north,dc=edu"]
-  bindDN = "uid=my-ldap-reader-xxx,cn=users,cn=accounts,dc=north,dc=edu"
-  debugusers = true
+  returnAttributeIdName = "sub"
+  accessTokenName = "access_token"
+  refreshTokenName = "refresh_token"
+  rolesAttributeName = "roles"
+  realmAccessAttribute = "realm_access"
+  resourceAccessAttribute = "resource_access"
+  roleAdminName = "ROLE_ADA_ADMIN"
+  dataSetGlobalIdPrefix = "DATASET_GLOBAL_ID_PREFIX"
+  dataSetGlobalIdRegex = "DATASET_GLOBAL_ID_REGEX"
+  clientAuthenticationMethod = "client_secret_post"    // optional
+  preferredJwsAlgorithm = "RS256"                      // optional
+//  responseType = "code" // id_token token            // optional
+//  scope = "openid email profile phone"               // optional
+//  useNonce = "true"                                  // optional
+//  enableCentralLogout = false                        // optional - true by default
 }
 ```
-* Restart Ada
 
-```sh
-./stopme
-```
-and
-```sh
-./runme
-```
-* Log in to Ada
+where some parameters must be substituted with a proper value:
 
-* Import LDAP users by clicking
-*Admin → User Actions → Import from LDAP*
+* **ADA_OIDC_CLIENT_ID**: Client id name;
 
-* Assign admin role to at least one user (yourself)
-*Admin → Users → double click on a user → Roles → [+] → write `admin` → Update*
 
-* Disable `debugusers` by removing it from `custom.conf` or setting it to `false`
+* **ADA_OIDC_SECRET**: Client secret credential;
 
-* Restart Ada
 
-* Check if `debugusers` have been disabled by trying to access `http://localhost:8080/loginAdmin` (must not allow you in)
+* **ADA_OIDC_DISCOVERY_URL**: The url to identify openid configuration end points.
 
-* Login using your LDAP username and password
+    ```
+    https://<host_name>:<port_number>/auth/realms/<realm_name>/.well-known/openid-configuration 
+    ```
+  where:
 
-* Start by importing your first data set in *Admin →  Data Set Imports → [+]*
+    * **host_name**: The host name of the OpenID provider;
+    * **port_number**: The host port number;
+    * **realm_name**: The OpenID Connect realm name.
 
-* Have fun!
+
+* **ADA_BASE_URL**: The host name of Ada application. Ex: https://ada.parkinson.lu;
+
+
+* **ADA_OIDC_TOKEN_ENDPOINT_URL**: Token end point url.
+
+    ```
+    https://<host_name>:<port_number>/auth/realms/<realm_name>/protocol/openid-connect/token 
+    ```
+
+    * **host_name**: The host name of the OpenID provider;
+    * **port_number**: The host port number;
+    * **realm_name**: The OpenID realm name.
+
+
+* **ADA_OIDC_LOGOUT_URL**: Logout url.
+
+  ```
+  https://<host_name>:<port_number>/auth/realms/<realm_name>/protocol/openid-connect/logout
+  ```
+    * **host_name**: The host name of the OpenID Connect provider;
+    * **port_number**: The host port number;
+    * **realm_name**: The OpenID Connect realm name.
+
+
+* **ROLE_ADA_ADMIN**: Administrator role name (set up role must be done even on OpenID provider side).
+
+
+* **DATASET_GLOBAL_ID_PREFIX**: Prefix role to identify dataset and give access to the user.
+
+  For instance writing a role on OpenID provider side:
+  ```
+  ACCESS::datasetName
+  ```
+  Imply DATASET_GLOBAL_ID_PREFIX is `ACCESS::`
+
+
+* **DATASET_GLOBAL_ID_REGEX**: Regex of the role to identify dataset and give access to the user.
+
+  For instance writing a role on OpenID provider side:
+  ```
+  ACCESS::datasetName
+  ```
+  Imply DATASET_GLOBAL_ID_REGEX is `(ACCESS::)(.*)`
+
+
+The rest of the configuration should remain unchanged using [Keycloak](https://www.keycloak.org).
+
+

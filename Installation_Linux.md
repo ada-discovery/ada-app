@@ -14,7 +14,7 @@ Recommended resources:
 * **Mongo DB**: 8 GB RAM, 4 CPUs, 50 GB disc space
 * **Elastic Search DB**: 8 GB RAM, 4 CPUs, 50 GB disc space
 
-&nbsp; 
+&nbsp;
 
 ### 1. **Java** 1.8
 
@@ -22,13 +22,13 @@ Recommended resources:
 sudo apt install openjdk-8-jdk
 ```
 
-&nbsp; 
+&nbsp;
 
 ### 2. **Mongo** DB
 
 * Install MongoDB (4.0.10)
-(Note that Ada is compatible with *any* 3.2, 3.4, 3.6, and 4.0 release of Mongo in case you fail to install the recommended version)
-(Also if you want to use a non-Ubuntu Linux distribution check the supported platforms/OS [here](https://docs.mongodb.com/manual/installation/#supported-platforms]))
+  (Note that Ada is compatible with *any* 3.2, 3.4, 3.6, and 4.0 release of Mongo in case you fail to install the recommended version)
+  (Also if you want to use a non-Ubuntu Linux distribution check the supported platforms/OS [here](https://docs.mongodb.com/manual/installation/#supported-platforms]))
 
 ```sh
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4
@@ -38,7 +38,7 @@ sudo apt-get install -y mongodb-org=4.0.10 mongodb-org-server=4.0.10 mongodb-org
 ```
 
 * Configure memory and other settings in `/etc/mongod.conf`
-(set a reasonable `cacheSizeGB`, recommended to 50% of available RAM, [ref](https://docs.mongodb.com/v4.0/reference/configuration-options/#storage.wiredTiger.engineConfig.cacheSizeGB))
+  (set a reasonable `cacheSizeGB`, recommended to 50% of available RAM, [ref](https://docs.mongodb.com/v4.0/reference/configuration-options/#storage.wiredTiger.engineConfig.cacheSizeGB))
 
 ```sh
   ...
@@ -51,7 +51,7 @@ sudo apt-get install -y mongodb-org=4.0.10 mongodb-org-server=4.0.10 mongodb-org
 ```
 
 * Create a limits file `/etc/security/limits.d/mongodb.conf`
-(if you are using Red Hat Enterprise Linux or CentOS read [this](https://docs.mongodb.com/v4.0/reference/ulimit/))
+  (if you are using Red Hat Enterprise Linux or CentOS read [this](https://docs.mongodb.com/v4.0/reference/ulimit/))
 
 ```sh
 mongodb    soft    nofile          1625538
@@ -128,7 +128,7 @@ sudo systemctl enable elasticsearch.service
 ```
 
 * If you want to store data in a special directory set also
- 
+
 ```
 path.data: /your_custom_path
 ```
@@ -197,7 +197,7 @@ sudo service elasticsearch start
 ```
  sudo ./bin/cerebro -Dhttp.port=9209
 ```
-(Cerebro web client is then accessible at [http://localhost:9209](http://localhost:9209)) 
+(Cerebro web client is then accessible at [http://localhost:9209](http://localhost:9209))
 
 * Alternatively you can install *Kibana*, which also allows execution of Elastic queries and many more, as follows (more info [here](https://www.elastic.co/guide/en/kibana/5.6/deb.html)):
 ```
@@ -208,7 +208,7 @@ sudo /bin/systemctl daemon-reload
 sudo /bin/systemctl enable kibana.service
 sudo service start kibana
 ```
- 
+
 &nbsp;
 
 ### 4. Application Server (Netty)
@@ -216,7 +216,7 @@ sudo service start kibana
 * Download the version 0.10.1
 
 ```
-wget https://webdav-r3lab.uni.lu/public/ada-artifacts/ada-web-0.10.1.zip
+wget https://webdav-r3lab.uni.lu/public/ada-artifacts/ada-web-0.10.x/ada-web-0.10.1.zip
 ```
 
 * Unzip the server binaries
@@ -238,14 +238,14 @@ mkdir ada_temp
 * Configure DB connections in `set_env.sh` (`bin` folder)
 
 1 . *Mongo*
-     
+
 if not password-protected (default) set `ADA_MONGO_DB_URI`
 
 ```sh
 export ADA_MONGO_DB_URI="mongodb://localhost:27017/ada?rm.nbChannelsPerNode=20"
 ```
-     
- if password-protected set the following variables
+
+if password-protected set the following variables
 
 
 ```
@@ -263,7 +263,7 @@ if non-localhost server is used set `ADA_ELASTIC_DB_HOST`
 export ADA_ELASTIC_DB_HOST=x.x.x.x:9200
 ```
 
-Also set the custom ES cluster name if it was configured in Section 3 (see `/etc/elasticsearch/elasticsearch.yml`) 
+Also set the custom ES cluster name if it was configured in Section 3 (see `/etc/elasticsearch/elasticsearch.yml`)
 
 ```
 export ADA_ELASTIC_DB_CLUSTER_NAME="ada-cluster"
@@ -271,7 +271,7 @@ export ADA_ELASTIC_DB_CLUSTER_NAME="ada-cluster"
 
 3 . *General Setting*
 
-* Configure `project`, `ldap` (to enable access **without** authentication), and `datasetimport` in `custom.conf` (Ada `conf` folder) 
+* Configure `project`, `ldap` (to enable access **without** authentication), and `datasetimport` in `custom.conf` (Ada `conf` folder)
 
 ```sh
 project {
@@ -352,7 +352,7 @@ http://localhost:8080/loginAdmin
 </div>
 <br/>
 ```
- 
+
 `Contact` example:
 ```html
 <strong>Dr. John Snow</strong></br>
@@ -373,7 +373,7 @@ University of Seven Kingdoms</br></br>
 <li><a href="https://uni.lu/lcsb">LCSB Home</a></li>
 ```
 
-&nbsp; 
+&nbsp;
 
 ### 5. OpenID
 
@@ -409,7 +409,7 @@ oidc {
 }
 ```
 
-where some parameters must be substituted with a proper value: 
+where some parameters must be substituted with a proper value:
 
 * **ADA_OIDC_CLIENT_ID**: Client id name;
 
@@ -422,8 +422,8 @@ where some parameters must be substituted with a proper value:
     ```
     https://<host_name>:<port_number>/auth/realms/<realm_name>/.well-known/openid-configuration 
     ```
-    where:
-   
+  where:
+
   * **host_name**: The host name of the OpenID provider;
   * **port_number**: The host port number;
   * **realm_name**: The OpenID Connect realm name.
@@ -438,12 +438,12 @@ where some parameters must be substituted with a proper value:
     https://<host_name>:<port_number>/auth/realms/<realm_name>/protocol/openid-connect/token 
     ```
 
-    * **host_name**: The host name of the OpenID provider;
-    * **port_number**: The host port number;
-    * **realm_name**: The OpenID realm name.
+  * **host_name**: The host name of the OpenID provider;
+  * **port_number**: The host port number;
+  * **realm_name**: The OpenID realm name.
 
 
-* **ADA_OIDC_LOGOUT_URL**: Logout url. 
+* **ADA_OIDC_LOGOUT_URL**: Logout url.
 
   ```
   https://<host_name>:<port_number>/auth/realms/<realm_name>/protocol/openid-connect/logout
@@ -451,7 +451,7 @@ where some parameters must be substituted with a proper value:
   * **host_name**: The host name of the OpenID Connect provider;
   * **port_number**: The host port number;
   * **realm_name**: The OpenID Connect realm name.
-  
+
 
 * **ROLE_ADA_ADMIN**: Administrator role name (set up role must be done even on OpenID provider side).
 
