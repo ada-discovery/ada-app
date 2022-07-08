@@ -271,19 +271,13 @@ export ADA_ELASTIC_DB_CLUSTER_NAME="ada-cluster"
 
 3 . *General Setting*
 
-* Configure `project`, `ldap` (to enable access **without** authentication), and `datasetimport` in `custom.conf` (Ada `conf` folder)
+* Configure `project` and `datasetimport` in `custom.conf` (Ada `conf` folder)
 
 ```sh
 project {
   name = "Ultimate"
   url = "https://ada-discovery.github.io"
   logo = "images/logos/ada_logo_v4.png"
-}
-
-ldap {
-  mode = "local"
-  port = "65505"
-  debugusers = true
 }
 
 datasetimport.import.folder = "/custom_path"
@@ -380,6 +374,10 @@ University of Seven Kingdoms</br></br>
 * Ada is working with OpenID provider. We recommend to use [Keycloak](https://www.keycloak.org/) and follow related documentation.
 
 
+* For a rapid deployment it's possible to run Keycloak using docker. [Keycloak-postgres](https://github.com/keycloak/keycloak-containers/tree/main/docker-compose-examples) 
+  template creates a volume for PostgreSQL and starts Keycloak connected to a PostgreSQL instance.
+
+
 * After Keycloak installation and configuration is necessary to set up Ada with following parameters in `custom.conf` file:
 
 ```
@@ -453,7 +451,7 @@ where some parameters must be substituted with a proper value:
     * **realm_name**: The OpenID Connect realm name.
 
 
-* **ROLE_ADA_ADMIN**: Administrator role name (set up role must be done even on OpenID provider side).
+* **ROLE_ADA_ADMIN**: Administrator role name (role must be set up in the client within the OIDC provider).
 
 
 * **DATASET_GLOBAL_ID_PREFIX**: Prefix role to identify dataset and give access to the user.

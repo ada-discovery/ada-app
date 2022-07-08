@@ -1,4 +1,4 @@
-# Ada Installation Guide (Linux) - Version 0.10.1
+# Ada Installation Guide (MacOS) - Version 0.10.1
 
 (Expected time: 30-45 mins)
 
@@ -6,7 +6,7 @@
 
 ### 0. Preparation
 
-Recommended OS: *Ubuntu 16.04/18.04*
+Recommended OS: *MacOS* 10.14.4
 
 Recommended resources:
 
@@ -18,8 +18,8 @@ Recommended resources:
 
 ### 1. **Java** 1.8
 
-```
-sudo apt install openjdk-8-jdk
+```sh
+brew cask install java8
 ```
 
 &nbsp;
@@ -27,18 +27,18 @@ sudo apt install openjdk-8-jdk
 ### 2. **Mongo** DB
 
 * Install MongoDB (4.0.10)
-  (Note that Ada is compatible with *any* 3.2, 3.4, 3.6, and 4.0 release of Mongo in case you fail to install the recommended version)
-  (Also if you want to use a non-Ubuntu Linux distribution check the supported platforms/OS [here](https://docs.mongodb.com/manual/installation/#supported-platforms]))
+(Note that Ada is compatible with *any* 3.2, 3.4, 3.6, and 4.0 relaease of Mongo in case you fail to install the recommended version)
 
 ```sh
-sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4
-echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu "$(lsb_release -sc)"/mongodb-org/4.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.0.list
-sudo apt-get update
-sudo apt-get install -y mongodb-org=4.0.10 mongodb-org-server=4.0.10 mongodb-org-shell=4.0.10 mongodb-org-mongos=4.0.10 mongodb-org-tools=4.0.10
+curl -L -O https://fastdl.mongodb.org/osx/mongodb-osx-ssl-x86_64-4.0.10.tgz
+tar -xvf mongodb-osx-ssl-x86_64-4.0.10.tgz
+mv mongodb-osx-x86_64-4.0.10 mongodb
+mkdir -p /data/db
+sudo chown -R `id -un` /data/db
 ```
 
-* Configure memory and other settings in `/etc/mongod.conf`
-  (set a reasonable `cacheSizeGB`, recommended to 50% of available RAM, [ref](https://docs.mongodb.com/v4.0/reference/configuration-options/#storage.wiredTiger.engineConfig.cacheSizeGB))
+* Configure memory and other settings in `/usr/local/etc/mongod.conf`
+(set a reasonable `cacheSizeGB`, recommended to 50% of available RAM, [ref](https://docs.mongodb.com/v4.0/reference/configuration-options/#storage.wiredTiger.engineConfig.cacheSizeGB))
 
 ```sh
   ...
@@ -51,7 +51,6 @@ sudo apt-get install -y mongodb-org=4.0.10 mongodb-org-server=4.0.10 mongodb-org
 ```
 
 * Create a limits file `/etc/security/limits.d/mongodb.conf`
-  (if you are using Red Hat Enterprise Linux or CentOS read [this](https://docs.mongodb.com/v4.0/reference/ulimit/))
 
 ```sh
 mongodb    soft    nofile          1625538
@@ -69,28 +68,19 @@ mongodb    hard    as              unlimited
 ```
 * To force your new limits to be loaded log out of all your current sessions and log back in.
 
-* If your Linux distribution uses systemd to manage services, create the following file `/etc/systemd/system/mongod.service.d/ulimit.conf`
-```
-[Service]
+* Add MongoDB installation folder to PATH environment variable `/etc/paths`
 
-LimitNOFILE=1625538
-LimitNPROC=64000
-LimitFSIZE=infinity
-LimitCPU=infinity
-LimitAS=infinity
 ```
-*  and apply the settings for `systemd`
-```
-sudo systemctl daemon-reload
+<mongo_installation_folder>/bin
 ```
 
 * Start Mongo
 
 ```sh
-sudo service mongod start
+mongod
 ```
 
-* To check  if everything works as expected see the log file `/var/log/mongodb/mongod.log`.
+* To check  if everything works as expected see the log file `/usr/local/var/log/mongodb`.
 
 * *Recommendation*: For convenient DB exploration and query execution install [Robomongo (Robo3T)](https://robomongo.org/download) UI client.
 
@@ -105,13 +95,12 @@ sudo service mongod start
 * Install ES (5.6.16)
 
 ```sh
-sudo apt-get update
-wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.16.deb
-sudo dpkg -i elasticsearch-5.6.16.deb
-sudo systemctl enable elasticsearch.service
+curl -L -O wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.16.tar.gz
+tar -xzf elasticsearch-5.6.16.tar.gz
+mv elasticsearch-5.6.16 elasticsearch
 ```
 
-* Modify the configuration in `/etc/elasticsearch/elasticsearch.yml`
+* Modify the configuration in `<es_installation_folder>/config/elasticsearch.yml`
 
 ```sh
   cluster.name: ada-cluster       (if not changed "elasticsearch" is used by default)
@@ -145,19 +134,12 @@ elasticsearch    hard    memlock         unlimited
 
 * To force your new limits to be loaded log out of all your current sessions and log back in.
 
-* Configure open-file and locked memory constraints in `/etc/init.d/elasticsearch` (and/or `/etc/default/elasticsearch`)
+* Configure open-file and locked memory constraints in `/etc/default/elasticsearch`
 ```
 MAX_OPEN_FILES=1625538
 MAX_LOCKED_MEMORY=unlimited
 ```
-
-* Depending on the Linux installation configure also `/usr/lib/systemd/system/elasticsearch.service`
-```
-LimitNOFILE=1625538
-LimitMEMLOCK=infinity
-```
-
-* Set a reasonable heap size; recommended to 50% of available RAM, but no more than 31g in `/etc/elasticsearch/jvm.options`, e.g.
+* Set a reasonable heap size; recommended to 50% of available RAM, but no more than 31g in `<es_installation_folder>/elasticsearch/config/jvm.options`, e.g.
 ```
 -Xms5g
 -Xmx5g
@@ -168,23 +150,25 @@ LimitMEMLOCK=infinity
 -Dlog4j2.formatMsgNoLookups=true
 ```
 
-* and finally apply the settings for `systemd`
-```
-sudo systemctl daemon-reload
-```
+
+* Add Elastic Search to PATH environment variable `/etc/paths`
+
+~~~
+<es_installation_folder>/bin
+~~~
 
 * Start ES
 ```
-sudo service elasticsearch start
+elasticsearch
 ```
 
-* To check if everything works as expected see the log file(s) at `/var/log/elasticsearch/` and/or curl the server info by `curl -XGET localhost:9200`.
+* To check if everything works as expected see the log file(s) at `/usr/local/var/log/elasticsearch` and/or curl the server info by `curl -XGET localhost:9200`.
 
 * *Recommendation*: For convenient DB exploration and query execution you might want to install the *cerebro* app:
 
 ```sh
- sudo wget https://github.com/lmenezes/cerebro/releases/download/v0.8.3/cerebro-0.8.3.zip
- sudo unzip cerebro-0.8.3.zip
+curl -L -O https://github.com/lmenezes/cerebro/releases/download/v0.8.3/cerebro-0.8.3.zip
+tar -xvf cerebro-0.8.3.zip
 ```
 * Open the configuration file `conf/application.conf` and add the host and name of your Elastic server to the `hosts` section, e.g.,
 ```
@@ -197,17 +181,9 @@ sudo service elasticsearch start
 ```
  sudo ./bin/cerebro -Dhttp.port=9209
 ```
-(Cerebro web client is then accessible at [http://localhost:9209](http://localhost:9209))
+(Cerebro web client is then accessible at [http://localhost:9209](http://localhost:9209)) 
 
-* Alternatively you can install *Kibana*, which also allows execution of Elastic queries and many more, as follows (more info [here](https://www.elastic.co/guide/en/kibana/5.6/deb.html)):
-```
-echo "deb https://artifacts.elastic.co/packages/5.x/apt stable main" | sudo tee -a /etc/apt/sources.list.d/elastic-5.x.list
-sudo apt-get update
-sudo apt-get install kibana
-sudo /bin/systemctl daemon-reload
-sudo /bin/systemctl enable kibana.service
-sudo service start kibana
-```
+* Alternatively you can install *Kibana*, which also allows execution of Elastic queries and many more, as described [here](https://www.elastic.co/guide/en/beats/libbeat/5.6/kibana-installation.html).
 
 &nbsp;
 
@@ -223,8 +199,8 @@ wget https://webdav-r3lab.uni.lu/public/ada-artifacts/ada-web-0.10.x/ada-web-0.1
 
 ```sh
 sudo apt-get install unzip
-unzip ada-web-0.10.1.zip
-cd ada-web-0.10.1/bin
+unzip ada-web-$VERSION.zip
+cd ada-web-$VERSION/bin
 ```
 
 * Create a temp folder wherever you want,  e.g.
@@ -271,7 +247,8 @@ export ADA_ELASTIC_DB_CLUSTER_NAME="ada-cluster"
 
 3 . *General Setting*
 
-* Configure `project`, `ldap` (to enable access **without** authentication), and `datasetimport` in `custom.conf` (Ada `conf` folder)
+
+* Configure `project` and `datasetimport` in `custom.conf` (Ada `conf` folder)
 
 ```sh
 project {
@@ -280,13 +257,13 @@ project {
   logo = "images/logos/ada_logo_v4.png"
 }
 
-ldap {
-  mode = "local"
-  port = "65505"
-  debugusers = true
-}
-
 datasetimport.import.folder = "/custom_path"
+```
+
+* Switch a Netty transport implementation to `jdk` (in `custom.conf`), which is required for MacOS deployments
+
+```sh
+play.server.netty.transport = "jdk"
 ```
 
 * Optionally if you want to use external images not shipped by default with Ada you must register your resource folder(s) placed in the Ada root by editing `custom.conf`
@@ -380,6 +357,10 @@ University of Seven Kingdoms</br></br>
 * Ada is working with OpenID provider. We recommend to use [Keycloak](https://www.keycloak.org/) and follow related documentation.
 
 
+* For a rapid deployment it's possible to run Keycloak using docker. [Keycloak-postgres](https://github.com/keycloak/keycloak-containers/tree/main/docker-compose-examples)
+  template creates a volume for PostgreSQL and starts Keycloak connected to a PostgreSQL instance.
+
+
 * After Keycloak installation and configuration is necessary to set up Ada with following parameters in `custom.conf` file:
 
 ```
@@ -424,9 +405,9 @@ where some parameters must be substituted with a proper value:
     ```
   where:
 
-    * **host_name**: The host name of the OpenID provider;
-    * **port_number**: The host port number;
-    * **realm_name**: The OpenID Connect realm name.
+  * **host_name**: The host name of the OpenID provider;
+  * **port_number**: The host port number;
+  * **realm_name**: The OpenID Connect realm name.
 
 
 * **ADA_BASE_URL**: The host name of Ada application. Ex: https://ada.parkinson.lu;
@@ -438,9 +419,9 @@ where some parameters must be substituted with a proper value:
     https://<host_name>:<port_number>/auth/realms/<realm_name>/protocol/openid-connect/token 
     ```
 
-    * **host_name**: The host name of the OpenID provider;
-    * **port_number**: The host port number;
-    * **realm_name**: The OpenID realm name.
+  * **host_name**: The host name of the OpenID provider;
+  * **port_number**: The host port number;
+  * **realm_name**: The OpenID realm name.
 
 
 * **ADA_OIDC_LOGOUT_URL**: Logout url.
@@ -448,12 +429,12 @@ where some parameters must be substituted with a proper value:
   ```
   https://<host_name>:<port_number>/auth/realms/<realm_name>/protocol/openid-connect/logout
   ```
-    * **host_name**: The host name of the OpenID Connect provider;
-    * **port_number**: The host port number;
-    * **realm_name**: The OpenID Connect realm name.
+  * **host_name**: The host name of the OpenID Connect provider;
+  * **port_number**: The host port number;
+  * **realm_name**: The OpenID Connect realm name.
 
 
-* **ROLE_ADA_ADMIN**: Administrator role name (set up role must be done even on OpenID provider side).
+* **ROLE_ADA_ADMIN**: Administrator role name (role must be set up in the client within the OIDC provider).
 
 
 * **DATASET_GLOBAL_ID_PREFIX**: Prefix role to identify dataset and give access to the user.
@@ -475,5 +456,3 @@ where some parameters must be substituted with a proper value:
 
 
 The rest of the configuration should remain unchanged using [Keycloak](https://www.keycloak.org).
-
-
