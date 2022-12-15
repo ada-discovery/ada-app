@@ -1,4 +1,4 @@
-# Ada Installation Guide (MacOS) - Version 0.10.1
+# Ada Installation Guide (MacOS) - Version 0.10.2
 
 (Expected time: 30-45 mins)
 
@@ -189,10 +189,10 @@ tar -xvf cerebro-0.8.3.zip
 
 ### 4. Application Server (Netty)
 
-* Download the version 0.10.1
+* Download the version 0.10.2
 
 ```
-wget https://webdav-r3lab.uni.lu/public/ada-artifacts/ada-web-0.10.x/ada-web-0.10.1.zip
+wget https://webdav-r3lab.uni.lu/public/ada-artifacts/ada-web-0.10.x/ada-web-0.10.2.zip
 ```
 
 * Unzip the server binaries
