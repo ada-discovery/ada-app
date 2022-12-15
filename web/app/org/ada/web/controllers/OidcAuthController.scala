@@ -232,6 +232,7 @@ class OidcAuthController @Inject() (
           updateUser(existingUser, oidcUser, permissionInfo.permissions)
         else if (existingUser.oidcUserName.isDefined &&
           (!existingUser.name.equalsIgnoreCase(oidcUser.name)
+            || !existingUser.userId.equals(oidcUser.userId)
             || !existingUser.email.equalsIgnoreCase(oidcUser.email)
             || permissionInfo.isPermissionsUpdate
             || !isRoleNotChange))
